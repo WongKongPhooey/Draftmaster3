@@ -31,10 +31,16 @@ whenever the paint or the sponsors change.
 | File | What it holds |
 |---|---|
 | `<livery>_mask.png` | Paintable body. Alpha marks what can be painted; grey sets shading (255 = full colour, darker = shaded rim). |
-| `<livery>_detail.png` | Everything that isn't paint (glass, number, tyres, lights). Drawn on top. |
+| `<livery>_detail.png` | Everything that isn't paint (glass, tyres, lights). Drawn on top. No number. |
+| `<livery>_blank.png` | The livery as drawn with its number painted out — what FACTORY PAINT shows. |
 
-Order: base coat × shading → pattern in the accent colour → detail → sponsor decals (`LiveryCompositor`,
-then `SponsorLiveryBaker`). A livery without layers keeps its drawn paint; only its sponsors can change.
+Order: base coat × shading (or the `_blank` art for factory paint) → pattern in the accent colour → detail →
+car number → sponsor decals (`LiveryCompositor`, then `SponsorLiveryBaker`). The number is never in the
+layers: `PaintShop` stamps `Resources/cup20num<n>` (n read off the livery name) centred on the roof, tinted
+by the scheme's NUMBER COLOUR (multiply — white digits take the colour, the dark outline stays dark). The
+number sprites aren't Read/Write, so their pixels are copied through the GPU once. The base
+`Resources/cup26livery89.png` still has its number drawn in for places that show the raw art (popup garages,
+co-op guests); anything that goes through `PaintShop.Render` gets the stamped one. A livery without layers keeps its drawn paint; only its sponsors can change.
 `cup26livery89`'s layers were split automatically from the drawn art: grey 175 is the body, the red rim
 tones (140/112) became shading at 200/160, everything else is detail. Hand-drawn layers can replace them
 at the same names.

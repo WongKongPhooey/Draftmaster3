@@ -8,7 +8,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 // The Paint Scheme Designer's screen at Team HQ: base coat, a livery pattern over it and the colour it is
-// sprayed in, then who goes where — PRIMARY on the hood, SECONDARY on both rear quarters, TRUNK on the
+// sprayed in, the colour of the car number, then who goes where — PRIMARY on the hood, SECONDARY on both rear quarters, TRUNK on the
 // decklid — chosen from the deals the player has signed. Everything previews live on the car; nothing is
 // kept until SAVE, which writes the scheme to PaintBook and the layout to SponsorBook in one go.
 //
@@ -25,14 +25,14 @@ public class PaintShopPanel : MonoBehaviour
     readonly Dictionary<SponsorSlot, Text> _slotText = new();
     readonly List<(Image ring, Color32 colour)> _baseSwatches = new();
     readonly List<(Image ring, Color32 colour)> _accentSwatches = new();
+    readonly List<(Image ring, Color32 colour)> _numberSwatches = new();
     GameObject _accentRow;
     Button _firstButton;
     Font _font;
     Action _onClosed;
 
-    // Working copy — the car as it will be if the player saves.
+    // Working copy — the car as it will be if the player saves. _scheme.factory = the body exactly as drawn.
     PaintScheme _scheme;
-    bool _factory;                                   // true = the livery exactly as drawn, no repaint
     readonly Dictionary<SponsorSlot, int> _assign = new();
     string _livery;
     bool _canRepaint;
@@ -76,8 +76,7 @@ public class PaintShopPanel : MonoBehaviour
         _canRepaint = PaintShop.CanRepaint(_livery);
 
         var saved = PaintBook.Current;
-        _factory = saved == null;
-        _scheme = saved != null ? saved.Clone() : new PaintScheme { baseColour = PaintShop.Palette[0] };
+        _scheme = saved != null ? saved.Clone() : new PaintScheme { factory = true, baseColour = PaintShop.Palette[0] };
 
         _assign.Clear();
         foreach (var slot in kSlots) _assign[slot] = 0;
@@ -101,7 +100,7 @@ public class PaintShopPanel : MonoBehaviour
         {
             if (_canRepaint)
             {
-                if (_factory) PaintBook.ClearAll();
+                if (_scheme.IsStock) PaintBook.ClearAll();
                 else PaintBook.Save(_scheme);
             }
             SponsorBook.Arrange(_assign);
@@ -120,7 +119,7 @@ public class PaintShopPanel : MonoBehaviour
     {
         if (!_canRepaint) return;
         _scheme.baseColour = c;
-        _factory = false;
+        _scheme.factory = false;
         Refresh();
     }
 
@@ -128,7 +127,15 @@ public class PaintShopPanel : MonoBehaviour
     {
         if (!_canRepaint) return;
         _scheme.accentColour = c;
-        _factory = false;
+        _scheme.factory = false;
+        Refresh();
+    }
+
+    // The number is its own layer, so it can be recoloured over factory paint too.
+    void PickNumber(Color32 c)
+    {
+        if (!_canRepaint) return;
+        _scheme.numberColour = c;
         Refresh();
     }
 
@@ -139,14 +146,14 @@ public class PaintShopPanel : MonoBehaviour
         int i = Mathf.Max(0, IndexOf(list, _scheme.pattern));
         i = (i + step + list.Count) % list.Count;
         _scheme.pattern = list[i];
-        _factory = false;
+        _scheme.factory = false;
         Refresh();
     }
 
     void FactoryPaint()
     {
         if (!_canRepaint) return;
-        _factory = true;
+        _scheme.factory = true;
         _status.text = "Back to the paint the car was built in.";
         Refresh();
     }
@@ -184,7 +191,7 @@ public class PaintShopPanel : MonoBehaviour
             var deal = _assign[slot] != 0 ? SponsorBook.ById(_assign[slot]) : null;
             if (deal != null) logos[slot] = deal.logoKey;
         }
-        var sprite = PaintShop.RenderWithSponsors(_livery, _factory ? null : _scheme, logos);
+        var sprite = PaintShop.RenderWithSponsors(_livery, _scheme, logos);
         if (sprite != null)
         {
             var tex = sprite.texture;
@@ -196,13 +203,16 @@ public class PaintShopPanel : MonoBehaviour
         }
         else _preview.color = new Color(1, 1, 1, 0);
 
+        bool factory = _scheme.factory;
         foreach (var (ring, colour) in _baseSwatches)
-            ring.enabled = !_factory && Same(colour, _scheme.baseColour);
+            ring.enabled = !factory && Same(colour, _scheme.baseColour);
         foreach (var (ring, colour) in _accentSwatches)
-            ring.enabled = !_factory && Same(colour, _scheme.accentColour);
+            ring.enabled = !factory && Same(colour, _scheme.accentColour);
+        foreach (var (ring, colour) in _numberSwatches)
+            ring.enabled = _canRepaint && Same(colour, _scheme.numberColour);
 
-        _pattern.text = _factory ? "FACTORY PAINT" : PaintShop.PatternLabel(_scheme.pattern);
-        if (_accentRow != null) _accentRow.SetActive(!_factory && _scheme.HasPattern);
+        _pattern.text = factory ? "FACTORY PAINT" : PaintShop.PatternLabel(_scheme.pattern);
+        if (_accentRow != null) _accentRow.SetActive(!factory && _scheme.HasPattern);
 
         int income = 0;
         foreach (var slot in kSlots)
@@ -267,7 +277,7 @@ public class PaintShopPanel : MonoBehaviour
 
         // --- car preview, left ---
         var plate = Box("PreviewPlate", crt, PixelGUI.PlateDeep);
-        At(plate.rectTransform, 44, 150, 720, 400);
+        At(plate.rectTransform, 44, 150, 720, 360);
         var pgo = new GameObject("Preview", typeof(RectTransform));
         pgo.transform.SetParent(plate.transform, false);
         _preview = pgo.AddComponent<RawImage>();
@@ -275,10 +285,14 @@ public class PaintShopPanel : MonoBehaviour
         prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(0.5f, 0.5f);
         prt.sizeDelta = new Vector2(640, 320);           // 64x32 livery at 10x
 
+        // --- number colour, under the preview: one row of the whole palette ---
+        float ny = Heading(crt, "NUMBER COLOUR", 516f, x: 44f);
+        ny = SwatchGrid(crt, ny, _numberSwatches, PickNumber, x0: 44f, perRow: 16, size: 40f, gap: 5f);
+
         _income = Label("Income", crt, _font, 28, PixelGUI.Confirm, TextAnchor.UpperLeft);
-        At(_income.rectTransform, 44, 570, 720, 40);
+        At(_income.rectTransform, 44, ny + 4f, 720, 40);
         _paintNote = Label("PaintNote", crt, _font, 22, PixelGUI.TextDisabled, TextAnchor.UpperLeft);
-        At(_paintNote.rectTransform, 44, 614, 720, 60);
+        At(_paintNote.rectTransform, 44, ny + 44f, 720, 30);
 
         // --- right column ---
         float y = 150f;
@@ -312,7 +326,7 @@ public class PaintShopPanel : MonoBehaviour
 
         // --- footer ---
         _status = Label("Status", crt, _font, 24, PixelGUI.TextDim, TextAnchor.UpperLeft);
-        At(_status.rectTransform, 44, 690, 720, 60);
+        At(_status.rectTransform, 44, ny + 76f, 720, 56);
 
         MakeButton("FACTORY PAINT", crt, 44, CardH - 92, 260, FactoryPaint);
         MakeButton("CANCEL", crt, CardW - 44 - 220 - 20 - 260, CardH - 92, 260, () => Close(save: false));
@@ -331,22 +345,23 @@ public class PaintShopPanel : MonoBehaviour
         _ => "",
     };
 
-    float Heading(RectTransform parent, string text, float y)
+    float Heading(RectTransform parent, string text, float y, float x = ColX)
     {
         var t = Label("Heading", parent, BrandFonts.Display, 20, PixelGUI.Gold, TextAnchor.LowerLeft);
         t.text = text;
-        At(t.rectTransform, ColX, y, 700, 32);
+        At(t.rectTransform, x, y, 700, 32);
         return y + 40f;
     }
 
-    // Two rows of eight colour chips. The ring behind a chip shows which is chosen.
-    float SwatchGrid(RectTransform parent, float y, List<(Image, Color32)> into, Action<Color32> pick)
+    // The palette as rows of colour chips (two rows of eight by default). The ring behind a chip shows which
+    // is chosen.
+    float SwatchGrid(RectTransform parent, float y, List<(Image, Color32)> into, Action<Color32> pick,
+                     float x0 = ColX, int perRow = 8, float size = 44f, float gap = 6f)
     {
-        const float size = 44f, gap = 6f;
         for (int i = 0; i < PaintShop.Palette.Length; i++)
         {
-            int col = i % 8, row = i / 8;
-            float x = ColX + col * (size + gap), yy = y + row * (size + gap);
+            int col = i % perRow, row = i / perRow;
+            float x = x0 + col * (size + gap), yy = y + row * (size + gap);
 
             var ring = Box("Ring", parent, Color.white);
             At(ring.rectTransform, x - 4, yy - 4, size + 8, size + 8);
@@ -364,7 +379,7 @@ public class PaintShopPanel : MonoBehaviour
             b.onClick.AddListener(() => pick(c));
             into.Add((ring, c));
         }
-        int rows = (PaintShop.Palette.Length + 7) / 8;
+        int rows = (PaintShop.Palette.Length + perRow - 1) / perRow;
         return y + rows * (size + gap) + 4f;
     }
 

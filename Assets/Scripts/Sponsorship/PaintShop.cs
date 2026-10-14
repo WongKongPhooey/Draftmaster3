@@ -8,14 +8,22 @@ using UnityEngine;
 //
 // A livery can be repainted when it has been split into layers under Resources/PaintShop/:
 //   <livery>_mask.png    paintable body — alpha = paintable, grey = shading (255 full colour)
-//   <livery>_detail.png  everything that isn't paint: glass, number, tyres, lights
+//   <livery>_detail.png  everything that isn't paint: glass, tyres, lights
+//   <livery>_blank.png   the livery as drawn with its number painted out — what FACTORY PAINT shows
 // Patterns are Resources/PaintShop/Patterns/<name>.png, 64x32, sprayed in the accent colour.
-// A livery without layers keeps its drawn paint whatever the scheme says.
+// A layered livery carries no number of its own: the number art (Resources/cup20num<n>, the same sprites the
+// paddock and the old garage use) is stamped on the roof in the scheme's number colour.
+// A livery without layers keeps its drawn paint (and number) whatever the scheme says.
 public static class PaintShop
 {
     const string Folder = "PaintShop/";
     const string PatternFolder = "PaintShop/Patterns";
+    const string NumberPrefix = "cup20num";
     public const string PaintedTag = "_painted";
+
+    // Where the number art is centred on a cup26 livery, in texture pixels from the bottom-left: the middle of
+    // the roof, where the art used to have the number drawn in.
+    static readonly Vector2 kRoofNumberCentre = new Vector2(37.5f, 16f);
 
     // Colours on the designer's swatch rows. Stock-car loud, plus the factory grey.
     public static readonly Color32[] Palette =
@@ -52,7 +60,14 @@ public static class PaintShop
     public static string PlayerLiveryName => $"cup26livery{PlayerDriver.CarNumber}";
 
     public static bool CanRepaint(string liveryName) =>
-        Layer(liveryName, "_mask") != null && Layer(liveryName, "_detail") != null;
+        Layer(liveryName, "_mask") != null && Layer(liveryName, "_detail") != null && Layer(liveryName, "_blank") != null;
+
+    // The number art a livery wears, e.g. cup26livery89 -> Resources/cup20num89. Null when there is none.
+    public static Texture2D NumberArt(string liveryName)
+    {
+        int number = CarIdentity.NumberFromSpriteName(liveryName);
+        return number < 0 ? null : Resources.Load<Texture2D>(NumberPrefix + number);
+    }
 
     // "cup26livery89_painted_..._sponsored" -> "cup26livery89": the name of the art in Resources.
     public static string OriginalName(string spriteName)
@@ -68,34 +83,51 @@ public static class PaintShop
 
     static readonly Dictionary<string, Sprite> _cache = new();
 
-    // `original` repainted in `scheme`, or `original` itself when there is no scheme or no layers for it.
-    // Results are cached per (livery, scheme), so the AI-sized poll in SponsorPaintDirector costs nothing.
+    // `original` repainted in `scheme` (null = factory paint, white number) with its number stamped on, or
+    // `original` itself when it has no layers. Results are cached per (livery, scheme), so the AI-sized poll in
+    // SponsorPaintDirector costs nothing.
     public static Sprite Render(Sprite original, PaintScheme scheme)
     {
-        if (original == null || scheme == null) return original;
+        if (original == null) return null;
         string livery = original.name;
         var mask = Layer(livery, "_mask");
         var detail = Layer(livery, "_detail");
-        if (mask == null || detail == null) return original;
+        var blank = Layer(livery, "_blank");
+        if (mask == null || detail == null || blank == null) return original;
+        scheme ??= new PaintScheme { factory = true };
 
         string key = livery + PaintedTag + "_" + scheme.Signature;
         if (_cache.TryGetValue(key, out var cached) && cached != null) return cached;
 
         int w = mask.width, h = mask.height;
-        if (detail.width != w || detail.height != h || !mask.isReadable || !detail.isReadable)
+        if (detail.width != w || detail.height != h || blank.width != w || blank.height != h
+            || !mask.isReadable || !detail.isReadable || !blank.isReadable)
         {
             Debug.LogWarning($"PaintShop: layers for {livery} must be the same size and Read/Write enabled — keeping its drawn paint.");
             return original;
         }
 
-        Color32[] pattern = null;
-        if (scheme.HasPattern)
+        Color32[] px;
+        if (scheme.factory) px = blank.GetPixels32();
+        else
         {
-            var pt = Resources.Load<Texture2D>(PatternFolder + "/" + scheme.pattern);
-            if (pt != null && pt.isReadable && pt.width == w && pt.height == h) pattern = pt.GetPixels32();
+            Color32[] pattern = null;
+            if (scheme.HasPattern)
+            {
+                var pt = Resources.Load<Texture2D>(PatternFolder + "/" + scheme.pattern);
+                if (pt != null && pt.isReadable && pt.width == w && pt.height == h) pattern = pt.GetPixels32();
+            }
+            px = LiveryCompositor.Compose(mask.GetPixels32(), detail.GetPixels32(), pattern, w, h, scheme);
         }
 
-        var px = LiveryCompositor.Compose(mask.GetPixels32(), detail.GetPixels32(), pattern, w, h, scheme);
+        var number = NumberArt(livery);
+        if (number != null)
+        {
+            int x0 = Mathf.FloorToInt(kRoofNumberCentre.x - number.width / 2f);
+            int y0 = Mathf.FloorToInt(kRoofNumberCentre.y - number.height / 2f);
+            LiveryCompositor.StampNumber(px, w, h, ReadPixels(number), number.width, number.height, x0, y0, scheme.numberColour);
+        }
+        else Debug.LogWarning($"PaintShop: no number art Resources/{NumberPrefix}{CarIdentity.NumberFromSpriteName(livery)} for {livery} — car goes out without a number.");
         var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
         {
             name = key,
@@ -147,6 +179,30 @@ public static class PaintShop
         if (string.IsNullOrEmpty(spriteName)) return null;
         int at = spriteName.IndexOf("livery", System.StringComparison.OrdinalIgnoreCase);
         return at > 0 ? spriteName.Substring(0, at) : null;
+    }
+
+    static readonly Dictionary<string, Color32[]> _numberPixels = new();
+
+    // The number sprites aren't imported Read/Write, so copy them through the GPU once and keep the pixels.
+    static Color32[] ReadPixels(Texture2D tex)
+    {
+        if (tex.isReadable) return tex.GetPixels32();
+        if (_numberPixels.TryGetValue(tex.name, out var known)) return known;
+
+        var rt = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        var previous = RenderTexture.active;
+        Graphics.Blit(tex, rt);
+        RenderTexture.active = rt;
+        var copy = new Texture2D(tex.width, tex.height, TextureFormat.RGBA32, false);
+        copy.ReadPixels(new Rect(0, 0, tex.width, tex.height), 0, 0);
+        copy.Apply(false, false);
+        RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(rt);
+
+        var px = copy.GetPixels32();
+        if (Application.isPlaying) Object.Destroy(copy); else Object.DestroyImmediate(copy);
+        _numberPixels[tex.name] = px;
+        return px;
     }
 
     static Texture2D Layer(string liveryName, string suffix) =>

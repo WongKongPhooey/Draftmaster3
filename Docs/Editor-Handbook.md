@@ -348,7 +348,7 @@ Objective types, stat keys and where quests show: `Docs/NPCs-and-Quests.md` §3.
   result.
 - Sponsor art: `Resources/Sponsors/Full|Hood|Small/<key>.png` (import settings are automatic).
 - Paint shop at Team HQ: repaintable liveries need `Resources/PaintShop/<livery>_mask.png` +
-  `_detail.png`; patterns live in `Resources/PaintShop/Patterns/`. `Draftmaster > Team HQ > Install Paint
+  `_detail.png` + `_blank.png` (no number in any of them — the number is stamped from `cup20num<n>`); patterns live in `Resources/PaintShop/Patterns/`. `Draftmaster > Team HQ > Install Paint
   Shop In Open Scene` puts the Paint Scheme Designer into TeamGarage.
 
 `Docs/Sponsorship.md`.
