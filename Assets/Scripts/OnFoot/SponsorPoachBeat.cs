@@ -46,6 +46,16 @@ public class SponsorPoachBeat : MonoBehaviour
         saveKey = "sponsor.poach.winnerscircle",
     };
 
+    // The weekend the player left the shoot without walking — fast travel, or a skip that reloads the scene
+    // into the motorhome. The rep was stood at the doorway and nobody came out of it, so they went home; the
+    // offer is gone for this weekend (not for good — the next shoot can bring somebody else). That is the
+    // cost of skipping the walk: these chance meetings are what the walk is for.
+    public AppearanceConditions missed = new AppearanceConditions
+    {
+        repeat = AppearanceConditions.Repeat.OncePerWeekend,
+        saveKey = "sponsor.poach.missed",
+    };
+
     Vector3 _triggerAt, _repAt, _facing;
 
     // The square itself, and how far its rail stands off the middle: what "inside the pen" means.
@@ -94,6 +104,13 @@ public class SponsorPoachBeat : MonoBehaviour
         if (!appear.IsMet())
         {
             Debug.Log($"SponsorPoachBeat: not this time — {appear.FirstUnmet()}.", this);
+            Destroy(gameObject);
+            yield break;
+        }
+        if (missed.AlreadySeen())
+        {
+            Debug.Log("SponsorPoachBeat: the player fast travelled away from the shoot this weekend — " +
+                      "the rep went home. Beat skipped.", this);
             Destroy(gameObject);
             yield break;
         }
@@ -167,12 +184,15 @@ public class SponsorPoachBeat : MonoBehaviour
 
     // The way out, not the way in — see the header. Being inside the rail once opens the trigger's gate.
     //
-    // The gap is not the only way out, though. TRAVEL THERE (the T key, the phone) lifts the player straight
-    // to their next booking, and a player who walks out briskly can be through the gap before the rep has
-    // even been stood up (the shoot is polled twice a second). Either way nobody ever crossed the trigger and
-    // the rep waited at an empty doorway for the rest of the weekend. So once the player is clearly clear of
-    // the pen without having tripped it, the rep catches them up wherever they are — "bumping into" them
-    // outside the next place rather than at this one.
+    // A player who walks out briskly can be through the gap before the rep has even been stood up (the shoot
+    // is polled twice a second), and never crosses the trigger. So once a player who WALKED out is clearly
+    // clear of the pen without having tripped it, the rep catches them up wherever they are — "bumping into"
+    // them a few steps on rather than at the doorway.
+    //
+    // The gap is not the only way out, though: TRAVEL THERE (the T key, the phone) lifts the player straight
+    // to their next booking, and the sheet's SKIP reloads the scene with them in the motorhome. Neither is a
+    // walk past the rep, and neither gets caught up — the offer is missed for the weekend (see `missed`).
+    // Meetings like this one are what the walk is for; fast travel skips them along with the walk.
     void Update()
     {
         if (_player == null || _circle == null) return;
@@ -183,6 +203,42 @@ public class SponsorPoachBeat : MonoBehaviour
         if (fromCircle <= _insideRadius + triggerBeyondRail + triggerRadius + 2f) return;   // the trigger's job
         if (ScreenFade.Busy || _player.MovementLocked || NPCInteractable.AnyConversationActive) return;
         CatchUp();
+    }
+
+    void OnEnable() => WeekendObjectiveHUD.FastTravelled += OnFastTravelled;
+    void OnDisable() => WeekendObjectiveHUD.FastTravelled -= OnFastTravelled;
+
+    // A walk out is caught (trigger or catch-up) as soon as the player is free to move, so a rep still waiting
+    // when the player fast travels means they travelled instead of walking. Before the rep is stood up, only a
+    // shoot really done on a real sheet counts — a scene with no sheet reads as Done from the start.
+    void OnFastTravelled()
+    {
+        if (_played) return;
+        if (_walkUp != null || (WeekendDirector.Timetable != null && Shoot() == PhotoShootState.Done))
+            Miss("fast travelled away from the photo shoot");
+    }
+
+    bool _quitting;
+
+    // The player left the shoot without walking past the rep. Remembered for the weekend, because a skip
+    // reloads the scene and the beat that arms in the new one would otherwise find the player outside the pen
+    // and catch them up in the motorhome.
+    void Miss(string why, bool destroy = true)
+    {
+        if (_played) return;
+        _played = true;
+        missed.MarkSeen();
+        Debug.Log($"SponsorPoachBeat: the player {why} — the rep went home. Beat skipped this weekend.", this);
+        if (destroy) Destroy(gameObject);
+    }
+
+    void OnApplicationQuit() => _quitting = true;
+
+    // The scene going away under a rep still waiting: a skip to the motorhome, or leaving for the title.
+    void OnDestroy()
+    {
+        if (_quitting || _played || _walkUp == null) return;
+        Miss("left the photo shoot without walking out", destroy: false);
     }
 
     void CatchUp()

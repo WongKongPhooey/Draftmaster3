@@ -440,6 +440,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
         return TravelTo(to);
     }
 
+    // Raised behind the wipe, once the player has been moved. For whatever was waiting for them to walk past
+    // it — SponsorPoachBeat's rep — and is skipped along with the walk.
+    public static event System.Action FastTravelled;
+
     // The same wipe-and-move to any point in the paddock — the phone uses it to take the player to whoever
     // is waiting on a side quest. Puts the phone away first: arriving with it still up would leave them
     // stood at the venue unable to walk.
@@ -467,6 +471,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
             var body = player.GetComponent<Rigidbody2D>();
             if (body != null) body.position = to;       // the body owns the pose; moving only the transform snaps back
             player.position = new Vector3(to.x, to.y, player.position.z);
+            FastTravelled?.Invoke();
 
             float lost = PracticeDirector.SpendSessionTime(metres * SessionSecondsPerMetre);
             if (lost >= 1f)
