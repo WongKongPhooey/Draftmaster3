@@ -215,7 +215,7 @@ public static class PlacedNPCDefaults
         npc.triggerRadius = 1.5f;
         npc.stopDistance = 1.3f;
 
-        // Once per half-day: she is telling you today's plan, not every session's.
+        // Not every time: she turns up now and then (LiaisonVisit, rolled in PlacedNPC.TryBuild for her role).
         npc.appear.repeat = AppearanceConditions.Repeat.EveryTime;
         npc.appear.saveKey = "rv.door.liaison";
         npc.appear.inPractice = true;
@@ -226,34 +226,16 @@ public static class PlacedNPCDefaults
         return npc;
     }
 
-    // What she says, filled in from the sheet. No booking left today and she says so rather than sending
-    // the player somewhere that is not on.
+    // What she says, filled in from the sheet: one of several line sets (LiaisonVisit), never the same one
+    // twice running. No booking left today and she says so rather than sending the player somewhere that is
+    // not on.
     public static string[] LiaisonLines()
     {
         var next = Draftmaster.Weekend.WeekendSchedulePlan.NextWorthDoing();
         string clock = Draftmaster.Weekend.WeekendSlots.DaySpoken(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + ", " +
                        Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
-
-        if (next == null)
-        {
-            return new[]
-            {
-                "Morning, {playerfirst}. You're clear for now — nothing on the sheet until later.",
-                "I'll come and find you when you're needed. #player",
-                "That's the idea. Enjoy the quiet, it doesn't last.",
-            };
-        }
-
-        return new[]
-        {
-            // Not interpolated across the name token: the fill happens when the line is spoken, and a
-            // {playerfirst} inside a $"" would be read as a C# hole rather than a dialogue one.
-            "There you are, {playerfirst}. " + clock + ", and you're already wanted.",
-            $"You're down for {Draftmaster.Weekend.WeekendSchedulePlan.Describe(next)}.",
-            "Do I have time for a coffee first? #player",
-            "Only if you walk as fast as you drive. Follow the marker and don't be late, they " +
-            "don't like delays.",
-        };
+        return Draftmaster.Weekend.LiaisonVisit.PickLines(
+            clock, next == null ? null : Draftmaster.Weekend.WeekendSchedulePlan.Describe(next));
     }
 
     public static PlacedNPC CreateChief(Transform parent = null)

@@ -317,6 +317,11 @@ public class PlacedNPC : MonoBehaviour
 
         if (!appear.IsMet()) { _skipped = true; return false; }
 
+        // The liaison only turns up now and then — always the first time, never twice running. Rolled here,
+        // after her conditions, so only a real chance to meet her counts; when she stays away the weekend
+        // books its own next thing (PitLaneStart reports no objective giver in the cast).
+        if (role == Role.TeamLiaison && !Draftmaster.Weekend.LiaisonVisit.Roll()) { _skipped = true; return false; }
+
         // Somebody whose job is to tell you the schedule has to be reading today's, not the one that was on
         // the sheet when their marker was placed. Refreshed here, at the moment they stand up, so the liaison
         // can be an authored marker (moved, re-anchored, edited) and still name the real next booking.
