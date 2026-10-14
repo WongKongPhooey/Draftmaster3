@@ -33,6 +33,14 @@ namespace Draftmaster.Weekend
             _ => "SUNDAY",
         };
 
+        // "Friday". The sheet prints the day in capitals; this is how a person says it in a sentence.
+        public static string DaySpoken(WeekendSlot s) => (int)s switch
+        {
+            0 or 1 => "Friday",
+            2 or 3 => "Saturday",
+            _ => "Sunday",
+        };
+
         // The short form the timetable strip uses across the top of the screen.
         public static string DayShort(WeekendSlot s) => (int)s switch
         {

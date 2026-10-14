@@ -231,7 +231,7 @@ public static class PlacedNPCDefaults
     public static string[] LiaisonLines()
     {
         var next = Draftmaster.Weekend.WeekendSchedulePlan.NextWorthDoing();
-        string clock = Draftmaster.Weekend.WeekendSlots.Day(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + ", " +
+        string clock = Draftmaster.Weekend.WeekendSlots.DaySpoken(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + ", " +
                        Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
 
         if (next == null)

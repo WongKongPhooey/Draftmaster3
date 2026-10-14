@@ -10,6 +10,18 @@ using NUnit.Framework;
 // scenes, IMGUI and PlayerPrefs, and it holds no rules of its own.
 public class WeekendTimetableTests
 {
+    // ------------------------------------------------------------------ day names
+
+    [Test]
+    public void DaySpoken_IsSentenceCase_AndMatchesTheSheetDay()
+    {
+        Assert.AreEqual("Friday", WeekendSlots.DaySpoken(WeekendSlot.FridayAM));
+        Assert.AreEqual("Saturday", WeekendSlots.DaySpoken(WeekendSlot.SaturdayPM));
+        Assert.AreEqual("Sunday", WeekendSlots.DaySpoken(WeekendSlot.SundayAM));
+        foreach (var slot in WeekendSlots.All)
+            Assert.AreEqual(WeekendSlots.Day(slot), WeekendSlots.DaySpoken(slot).ToUpperInvariant());
+    }
+
     // ------------------------------------------------------------------ determinism
 
     [Test]
