@@ -5,7 +5,7 @@ using UnityEngine;
 // that tells you whose box you are looking at, because it is painted in the car's colours.
 //
 // Drawn from above: a dark cart body, a canopy in the car's PRIMARY colour, a stripe in its SECONDARY, and
-// the car number on the roof. Placeholder geometry — quads, like the rest of the paddock props — so it
+// the car number on the roof (the cars' own number art). Placeholder geometry — quads, like the rest of the paddock props — so it
 // reads correctly now and can be swapped for a sprite later without moving anything.
 //
 // Built one per pit box by PitCrewSpawner, on the wall side of the box. The colours come from CarColours,
@@ -96,7 +96,11 @@ public class PitBoxStand : MonoBehaviour
         SetColour(_stripeMat, secondary);
 
         if (carNumber >= 0) EnsureNumber(carNumber, primary);
-        else if (_number != null) _number.gameObject.SetActive(false);
+        else
+        {
+            if (_number != null) _number.gameObject.SetActive(false);
+            if (_numberSprite != null) _numberSprite.gameObject.SetActive(false);
+        }
     }
 
     static void SetColour(Material m, Color c)
@@ -106,15 +110,49 @@ public class PitBoxStand : MonoBehaviour
         if (m.HasProperty("_Color")) m.SetColor("_Color", c);
     }
 
-    // The number on the roof, in whichever of black or white actually reads against the canopy.
+    // The number on the roof: the same Resources art the cars wear on theirs (white numerals, black outline,
+    // so it reads on any canopy), at the cars' pixel density. Numbers without art fall back to plain text in
+    // whichever of black or white reads against the canopy.
+    const string NumberSpritePrefix = "cup20num";
+    const float NumberHeightM = 1.25f;   // 16 px at the cars' 12.8 px/m — fills the canopy's width
+
+    SpriteRenderer _numberSprite;
+
     void EnsureNumber(int carNumber, Color canopy)
     {
+        var sprite = Resources.Load<Sprite>(NumberSpritePrefix + carNumber);
+        if (sprite != null)
+        {
+            if (_number != null) _number.gameObject.SetActive(false);
+            if (_numberSprite == null)
+            {
+                var go = new GameObject("Number");
+                go.transform.SetParent(transform, false);
+                go.transform.localPosition = new Vector3(0f, -0.28f, -0.03f);
+                go.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);   // read along the lane, like the box lines
+
+                _numberSprite = go.AddComponent<SpriteRenderer>();
+                _numberSprite.sharedMaterial = SpriteMaterial();
+            }
+
+            _numberSprite.gameObject.SetActive(true);
+            _numberSprite.sprite = sprite;
+            float h = sprite.bounds.size.y;
+            if (h > 0.0001f)
+            {
+                float scale = NumberHeightM / h;
+                _numberSprite.transform.localScale = new Vector3(scale, scale, 1f);
+            }
+            return;
+        }
+
+        if (_numberSprite != null) _numberSprite.gameObject.SetActive(false);
         if (_number == null)
         {
-            var go = new GameObject("Number");
+            var go = new GameObject("NumberText");
             go.transform.SetParent(transform, false);
             go.transform.localPosition = new Vector3(0f, -0.28f, -0.03f);
-            go.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);   // read along the lane, like the box lines
+            go.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
 
             _number = go.AddComponent<TextMesh>();
             _number.anchor = TextAnchor.MiddleCenter;
@@ -130,5 +168,15 @@ public class PitBoxStand : MonoBehaviour
         _number.text = carNumber.ToString();
         float luma = 0.299f * canopy.r + 0.587f * canopy.g + 0.114f * canopy.b;
         _number.color = luma > 0.55f ? new Color(0.08f, 0.08f, 0.1f) : Color.white;
+    }
+
+    static Material _spriteMat;
+    static Material SpriteMaterial()
+    {
+        if (_spriteMat != null) return _spriteMat;
+        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
+        _spriteMat = new Material(sh) { name = "PitBoxStandNumber" };
+        return _spriteMat;
     }
 }
