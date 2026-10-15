@@ -97,6 +97,7 @@ public class OnFootController : MonoBehaviour
     NPCInteractable _activeNpc;
     bool _interactHeldPrev;
     bool _hasHorizontal, _hasVertical, _hasSpeed;
+    bool _wasTalking;              // last step's conversation state, to catch the step one starts
     // The way the body is facing when it is not being driven by the stick. Set by every walk step and by
     // anything that turns the player deliberately — a conversation, a cutscene, sitting down in a stand —
     // and held while they stand still, because a directional rig asked to face (0,0) faces nothing and
@@ -271,7 +272,23 @@ public class OnFootController : MonoBehaviour
             // Belt and braces: pause the rig while standing so the walk cycle can't treadmill in place.
             // Same walk clip while running, just played faster.
             _animator.speed = legs > 0.0001f ? (running ? runMultiplier : 1f) : 0f;
+
+            // That pause freezes the walk wherever it was, which is fine for a moment's stop but leaves the
+            // player stood mid-stride for a whole conversation. Going into one puts them back on the first
+            // frame of the walk.
+            bool talking = _activeNpc != null && _activeNpc.IsTalking;
+            if (talking && !_wasTalking) RewindWalk();
+            _wasTalking = talking;
         }
+    }
+
+    // Back to the first frame of whatever the rig is playing. The animator is paused (speed 0) while the
+    // player stands, so the pose is evaluated here rather than left to a next tick that never advances.
+    void RewindWalk()
+    {
+        if (!_animator.isActiveAndEnabled || _animator.runtimeAnimatorController == null) return;
+        _animator.Play(_animator.GetCurrentAnimatorStateInfo(0).fullPathHash, 0, 0f);
+        _animator.Update(0f);
     }
 
     void Update()
