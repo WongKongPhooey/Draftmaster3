@@ -2,7 +2,7 @@ using UnityEngine;
 
 // One person stood in the paddock, built the way every other person in this game is built.
 //
-// The weekend's venues need a lot of bodies — the crew chief at the box, the engineer at the dinette, the
+// The weekend's venues need a lot of bodies — the crew chief at the box, the engineer up in the RV cab, the
 // official at the top table, the sponsor's rep under the awning, the queue at the fence, a driver in every
 // chair in the drivers' room — and they are all the same thing: a paper-doll sprite from the part library,
 // normalised to a person's height, with an interactable bolted on if they have something to say.

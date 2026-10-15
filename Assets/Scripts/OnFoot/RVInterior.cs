@@ -124,12 +124,18 @@ public class RVInterior : MonoBehaviour
 
     // The interior's own frame: +Y points at the doorway, (0,0) is where the player stands on entry.
     // Public so things that belong INSIDE the RV can be parented into it — the weekend's debrief happens
-    // at this dinette, with the engineer sat across the table, and it has to be inside the mask or it draws
+    // in here, with the engineer sat up in the cab, and it has to be inside the mask or it draws
     // over the blackout with the rest of the world.
     public Transform InteriorRoot { get; private set; }
 
     // Where the dinette table is in that frame, so anything put "at the table" agrees with the table.
     public static Vector2 TableLocal => kTablePos;
+
+    // Where the engineer sits for the debrief, in that frame: the cab's passenger seat, by the satnav.
+    // The authored prefab marks it with a "DebriefSeat" empty; the procedural room puts him beside the
+    // driver's seat it builds behind the satnav.
+    public Vector2 DebriefSeatLocal { get; private set; }
+    static readonly Vector2 kDebriefSeatFromSatnav = new(1.2f, -0.85f);
 
     // Local z the interior's props sit at.
     public static float InteriorPropZ => kPropZ;
@@ -253,6 +259,11 @@ public class RVInterior : MonoBehaviour
         // The authored prefab carries its own satnav; only generate one when it doesn't.
         if (interior.GetComponentInChildren<SatnavInteractable>(true) == null)
             BuildSatnav(interior);
+
+        Transform debriefSeat = interior.Find("DebriefSeat");
+        DebriefSeatLocal = debriefSeat != null
+            ? (Vector2)debriefSeat.localPosition
+            : (Vector2)interior.GetComponentInChildren<SatnavInteractable>(true).transform.localPosition + kDebriefSeatFromSatnav;
 
         // The laptop is two things — a laptop to look at and the empty that carries the interactable —
         // and a hand-authored room usually wants one without the other. An authored marker keeps its own

@@ -260,7 +260,7 @@ public class WeekendVenueSites : MonoBehaviour
             if (existing.venue == venue) return;
 
         // The debrief is had sitting down in your own motorhome, so the engineer is INSIDE it — parented
-        // into the interior's masked frame at the dinette, across the table from the laptop. Anywhere else
+        // into the interior's masked frame up in the cab, in the passenger seat by the satnav. Anywhere else
         // in that scene-within-a-scene and he would draw over the blackout with the rest of the world.
         //
         // He is also the one host who is not there all weekend. The motorhome is the driver's own room
@@ -275,8 +275,8 @@ public class WeekendVenueSites : MonoBehaviour
                 var seated = PaddockPerson.SpawnTalker<WeekendVenueHost>(
                     rv.InteriorRoot, Vector3.zero, "Host_" + venue, speaker.GetHashCode(), speaker, idle,
                     interactRange: 1.8f, heightM: PaddockPerson.SeatedHeightM);
-                seated.transform.localPosition = new Vector3(RVInterior.TableLocal.x + 0.75f,
-                                                            RVInterior.TableLocal.y,
+                seated.transform.localPosition = new Vector3(rv.DebriefSeatLocal.x,
+                                                            rv.DebriefSeatLocal.y,
                                                             RVInterior.InteriorPropZ - 0.05f);
                 seated.venue = venue;
                 seated.idleLines = idle;
