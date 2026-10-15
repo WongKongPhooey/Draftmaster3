@@ -9,8 +9,8 @@ using UnityEngine;
 // so nothing is drawn twice. Turn `enabled` off and they come back.
 //
 // Everything is read live: RacePositionTracker for the order, LapTimingManager and RaceDirector for the
-// lap, the player car's speed readout, and TireModel for wear. Draft is the closing-speed gauge the
-// design shows in telemetry blue.
+// lap, the player car's speed readout, and TireModel for wear. Draft is the car's own slipstream tow
+// (PlayerVehicleController.TowFactor), shown in the design's telemetry blue.
 public class IronOvalRaceHUD : MonoBehaviour
 {
     public static IronOvalRaceHUD Instance { get; private set; }
@@ -28,12 +28,17 @@ public class IronOvalRaceHUD : MonoBehaviour
     [Tooltip("Blink period (s) of the caution flag.")]
     public float cautionBlinkSeconds = 0.6f;
 
+    [Header("Draft meter")]
+    [Tooltip("How fast (1/s) the draft bar eases toward the car's tow. Higher is twitchier.")]
+    public float draftEaseRate = 4f;
+
     Transform _player;
     IVehicleSpeedReadout _speed;
     TireModel _tires;
     PlayerVehicleController _pvc;
     float _rebindTimer;
     float _shownMph;
+    float _shownDraft;
     bool _standDownApplied;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -238,27 +243,19 @@ public class IronOvalRaceHUD : MonoBehaviour
         return $"LAP {Mathf.Min(lap, total)}/{total}";
     }
 
-    // How much tow the player is getting, 0..1. Read off the car ahead's proximity in the running order
-    // rather than a physics probe: the gauge is a driver aid, not telemetry.
+    // How much tow the player is getting, 0..1 — the same TowFactor the car's physics runs on. That is
+    // already gated on speed (nothing below VehicleInfo.draftingMinSpeed less DraftAero.SpeedRampMph, full
+    // from draftingMinSpeed up), needs the car ahead to be in our lane, and ignores pitted cars. The old
+    // gauge read straight-line distance to the next car in the running order at any speed, so trundling
+    // down the pit lane past parked cars made it pump up and down. Eased so a single physics step's
+    // wobble doesn't flick a cell on and off.
     float Draft01()
     {
-        var tracker = RacePositionTracker.Instance;
-        if (tracker == null || _player == null) return 0f;
-
-        var order = tracker.Order;
-        RacePositionTracker.Entry me = null, ahead = null;
-        for (int i = 0; i < order.Count; i++)
-        {
-            if (order[i] == null || order[i].tf != _player) continue;
-            me = order[i];
-            if (i > 0) ahead = order[i - 1];
-            break;
-        }
-        if (me == null || ahead == null || ahead.tf == null) return 0f;
-
-        float gap = Vector2.Distance(ahead.tf.position, _player.position);
-        // Full bar within 6 m, nothing past 30 — roughly the span where a tow is worth having.
-        return Mathf.Clamp01(Mathf.InverseLerp(30f, 6f, gap));
+        float tow = _pvc != null && _pvc.isActiveAndEnabled ? Mathf.Clamp01(_pvc.TowFactor) : 0f;
+        // OnGUI runs more than once a frame; ease on the repaint pass only so the rate holds.
+        if (Event.current.type == EventType.Repaint)
+            _shownDraft = Mathf.Lerp(_shownDraft, tow, 1f - Mathf.Exp(-draftEaseRate * Time.unscaledDeltaTime));
+        return _shownDraft;
     }
 
     // ------------------------------------------------------------------ drawing helpers
