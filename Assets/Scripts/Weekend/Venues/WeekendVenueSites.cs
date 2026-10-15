@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Draftmaster.Sponsors;
 using Draftmaster.Weekend;
 using UnityEngine;
 
@@ -57,7 +58,7 @@ public class WeekendVenueSites : MonoBehaviour
     const float StageDepth = 5f;
 
     // The winner's circle: a chequered square to be photographed standing in, fenced off with crowd
-    // barriers, with the sponsors' boards round the outside of it.
+    // barriers, with the sponsors' boards in an arc across the top of it.
     const float CircleSize = 9f;          // the chequered square itself
     const int CircleSquares = 6;          // squares across it
     const float BarrierRing = 12.5f;      // where the barriers stand, measured across
@@ -69,8 +70,14 @@ public class WeekendVenueSites : MonoBehaviour
     const float GuestFacingJitter = 18f;  // degrees either side of dead-centre, so they are not a drilled squad
     const float BarrierLength = 2.4f;     // one barrier section
     const float BarrierThickness = 0.3f;
-    const float BoardWidth = 4.5f;
-    const float BoardDepth = 0.9f;
+    // The sponsors' boards: three in an arc across the top of the chequers, the big one in the middle.
+    static readonly Vector2 MainBoardSize = new(3.0f, 1.5f);
+    static readonly Vector2 SideBoardSize = new(2.0f, 0.7f);
+    const float MainBoardY = 3.55f;       // centre of the middle board, up from the middle of the square
+    const float SideBoardRadius = 3.7f;   // the side boards sit on this arc round the middle of the square
+    const float SideBoardAngle = 45f;     // and are turned this far to follow it
+    const float BoardFrame = 0.12f;       // dark edge round each board
+    const float BoardLogoFill = 0.86f;    // of the board's face the logo may cover
 
     Transform _root;
     readonly List<Material> _materials = new();
@@ -725,8 +732,9 @@ public class WeekendVenueSites : MonoBehaviour
     //
     // So it is built the other way round now. The middle is FLOOR — a chequered square, drawn behind
     // everybody — and every solid thing is outside it: crowd barriers ringing the square with a gap to walk
-    // in through, the sponsors' boards behind them, a billboard across the back. The player stands on the
-    // chequers with nothing over them, which is the whole point of a photograph.
+    // in through. The sponsors' boards stand on the chequers themselves, in an arc across the back, drawn
+    // under everybody like the floor. The player stands on the chequers with nothing over them, which is the
+    // whole point of a photograph.
     //
     // Placeholder art, deliberately: flat colour blocked out to be walked around now and repainted later,
     // the same way the drivers' room and the intro stage were.
@@ -752,33 +760,7 @@ public class WeekendVenueSites : MonoBehaviour
         BarrierRingAround(circle.transform);
         GuestsAround(circle.transform);
 
-        // The sponsors' furniture: two boards at the back corners and a billboard across the back, all
-        // outside the barriers so none of them can be stood in front of the player.
-        var boardFace = Mat(new Color(0.82f, 0.80f, 0.76f));
-        float back = BarrierRing * 0.5f + 1.2f;
-        float side = BarrierRing * 0.5f - BoardWidth * 0.35f;
-
-        // Behind everybody, like the chequers: these stand at the BACK of the shot, and a board that draws
-        // over the person being photographed is the bug this whole place was rebuilt to fix.
-        const int BehindPeople = -10;
-
-        PaddockProps.Quad(circle.transform, "Billboard", new Vector2(0f, back + 1.4f),
-                          new Vector2(BoardWidth * 2f, BoardDepth * 1.6f), PaddockProps.WallZ, boardFace,
-                          sortingOrder: BehindPeople);
-        PaddockProps.Sign(circle.transform, "SPONSOR BOARD", new Vector2(0f, back + 1.4f), BoardWidth * 1.8f,
-                          new Color(0.16f, 0.16f, 0.18f));
-
-        PaddockProps.Quad(circle.transform, "SponsorBoardLeft", new Vector2(-side, back),
-                          new Vector2(BoardWidth, BoardDepth), PaddockProps.PropZ, boardFace,
-                          sortingOrder: BehindPeople);
-        PaddockProps.Sign(circle.transform, "SPONSOR", new Vector2(-side, back), BoardWidth * 0.8f,
-                          new Color(0.16f, 0.16f, 0.18f));
-
-        PaddockProps.Quad(circle.transform, "SponsorBoardRight", new Vector2(side, back),
-                          new Vector2(BoardWidth, BoardDepth), PaddockProps.PropZ, boardFace,
-                          sortingOrder: BehindPeople);
-        PaddockProps.Sign(circle.transform, "SPONSOR", new Vector2(side, back), BoardWidth * 0.8f,
-                          new Color(0.16f, 0.16f, 0.18f));
+        SponsorBoardsArc(circle.transform);
 
         LocationTitle.Attach(circle, "WINNER'S CIRCLE", BarrierRing, "Sponsor duty");
 
@@ -795,6 +777,78 @@ public class WeekendVenueSites : MonoBehaviour
         if (authored) return;
         Vector3 mark = Walkable(circle.transform.TransformPoint(Vector3.zero));
         PaddockProps.Anchor(_root, WeekendVenue.SponsorSuite, mark, mark, arriveRange: 4f);
+    }
+
+    // The sponsors' boards: three in an arc across the top of the chequers, behind the mark, so standing on
+    // it puts the brands in the back of the shot. The middle one is the big one and carries a hood logo;
+    // the two either side are turned 45 degrees to follow the arc and carry the small (trunk) logo.
+    //
+    // Each board shows a sponsor that is on the player's car right now, picked at random per board.
+    void SponsorBoardsArc(Transform circle)
+    {
+        float sx = SideBoardRadius * Mathf.Sin(SideBoardAngle * Mathf.Deg2Rad);
+        float sy = SideBoardRadius * Mathf.Cos(SideBoardAngle * Mathf.Deg2Rad);
+
+        SponsorBoard(circle, "SponsorBoardMain", new Vector2(0f, MainBoardY), 0f, MainBoardSize,
+                     BoardArt(BoardLogoKey(), SponsorSlot.Hood));
+        SponsorBoard(circle, "SponsorBoardLeft", new Vector2(-sx, sy), SideBoardAngle, SideBoardSize,
+                     BoardArt(BoardLogoKey(), SponsorSlot.Tail));
+        SponsorBoard(circle, "SponsorBoardRight", new Vector2(sx, sy), -SideBoardAngle, SideBoardSize,
+                     BoardArt(BoardLogoKey(), SponsorSlot.Tail));
+    }
+
+    // A brand on the player's car, at random. With nothing on it the demo's own brand stands in.
+    static string BoardLogoKey()
+    {
+        var onCar = new List<string>();
+        foreach (var deal in SponsorBook.Deals)
+            if (deal.IsPlaced && deal.IsActive && !string.IsNullOrEmpty(deal.logoKey)) onCar.Add(deal.logoKey);
+        return onCar.Count > 0 ? onCar[Random.Range(0, onCar.Count)] : SponsorKeys.LogoKey(StarterSponsor.BrandName);
+    }
+
+    // The decal that brand wears in that slot, or its full-size image if it has no decal there (Aces & Spades
+    // has a hood decal and no small one yet, so its side boards fall back to the hood art).
+    static Texture2D BoardArt(string logoKey, SponsorSlot slot) =>
+        SponsorArt.Load(logoKey, slot) ?? SponsorArt.LoadFull(logoKey);
+
+    void SponsorBoard(Transform circle, string name, Vector2 centre, float angleDeg, Vector2 size, Texture2D art)
+    {
+        // Behind everybody, like the chequers: the boards stand at the BACK of the shot, and a board that
+        // draws over the person being photographed is the bug this whole place was rebuilt to fix.
+        const int BehindPeople = -10;
+
+        var board = new GameObject(name);
+        board.transform.SetParent(circle, false);
+        board.transform.localPosition = new Vector2(centre.x, centre.y);
+        board.transform.localRotation = Quaternion.Euler(0f, 0f, angleDeg);
+
+        PaddockProps.Quad(board.transform, "Frame", Vector2.zero, size + Vector2.one * (BoardFrame * 2f),
+                          PaddockProps.PropZ, Mat(new Color(0.16f, 0.16f, 0.18f)), sortingOrder: BehindPeople - 2);
+        PaddockProps.Quad(board.transform, "Face", Vector2.zero, size, PaddockProps.PropZ - 0.01f,
+                          Mat(new Color(0.94f, 0.93f, 0.90f)), sortingOrder: BehindPeople - 1);
+
+        if (art == null)
+        {
+            PaddockProps.Sign(board.transform, "SPONSOR", Vector2.zero, size.x * 0.8f, new Color(0.16f, 0.16f, 0.18f));
+            return;
+        }
+
+        var logo = new GameObject("Logo");
+        logo.transform.SetParent(board.transform, false);
+        logo.transform.localPosition = new Vector3(0f, 0f, PaddockProps.PropZ - 0.02f);
+        var sr = logo.AddComponent<SpriteRenderer>();
+        sr.sprite = Sprite.Create(art, new Rect(0f, 0f, art.width, art.height), new Vector2(0.5f, 0.5f), 1f,
+                                  0, SpriteMeshType.FullRect);
+        sr.sortingOrder = BehindPeople;
+
+        // Hood art is drawn the way it lies on the car — nose at -X, so taller than it is wide and lying on
+        // its side. A quarter turn anticlockwise stands it up the right way on a board.
+        bool onItsSide = art.height > art.width;
+        if (onItsSide) logo.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        float w = onItsSide ? art.height : art.width;
+        float h = onItsSide ? art.width : art.height;
+        float scale = Mathf.Min(size.x * BoardLogoFill / w, size.y * BoardLogoFill / h);
+        logo.transform.localScale = new Vector3(scale, scale, 1f);
     }
 
     // The people you are actually talking to: the sponsor's guests, stood round the edge of the chequers.
