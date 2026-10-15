@@ -29,6 +29,10 @@ public class PitCrewRepair : MonoBehaviour
     // how bad it still is.
     float _startedAt;
 
+    // The box crew stood round the car while the work runs, so the repair is something you can see
+    // happening rather than a number going down. Null while they are on the wall.
+    PitCrewBox _crew;
+
     public static PitCrewRepair Active { get; private set; }
 
     // Fraction of the job done, 0 to 1. -1 when no crew are working on anything.
@@ -55,11 +59,15 @@ public class PitCrewRepair : MonoBehaviour
         repair._bodywork = car.GetComponentInChildren<VehicleDamage>();
         repair._startedAt = repair._bodywork != null ? repair._bodywork.DamageLevel : 0f;
         repair.enabled = true;
+        // Already out round it from an earlier tow: re-measure, because the car may have landed elsewhere.
+        if (repair._crew != null && !repair._crew.BeginRepair(car.transform)) repair._crew = null;
         Active = repair;
         return repair;
     }
 
-    void OnDestroy() { if (Active == this) Active = null; }
+    void OnDestroy() { if (Active == this) Active = null; StandCrewDown(); }
+
+    void OnDisable() => StandCrewDown();
 
     void Update()
     {
@@ -67,9 +75,11 @@ public class PitCrewRepair : MonoBehaviour
 
         // The driver is back in it. Work stops until they are out again — which also means a driver who
         // climbs in early and goes back out is taking a bent car with them, exactly as they should.
-        if (pauseWhileDriven && _car != null && _car.enabled) return;
+        if (pauseWhileDriven && _car != null && _car.enabled) { StandCrewDown(); return; }
 
         if (_bodywork.DamageLevel <= doneBelow) { _bodywork.RepairFull(); Finish(); return; }
+
+        CallCrewOut();
 
         // A fixed fraction of what is LEFT each second would approach straight without ever arriving, so
         // the rate is set against the damage the crew started with. That makes the wait proportional to
@@ -82,6 +92,24 @@ public class PitCrewRepair : MonoBehaviour
     void Finish()
     {
         if (Active == this) Active = null;
+        StandCrewDown();
         enabled = false;
+    }
+
+    // The car's own box crew — the player's reserved box, or whichever is nearest when the session has none.
+    void CallCrewOut()
+    {
+        if (_crew != null && _crew.IsRepairing) return;
+        if (_car == null) return;
+        var crew = PitLane.Configured && PitLane.PlayerBox >= 0 ? PitCrewRegistry.ForBox(PitLane.PlayerBox) : null;
+        if (crew == null) crew = PitCrewRegistry.Nearest(_car.transform.position);
+        // A box mid-stop says no; ask again next frame rather than pull its men off somebody else's car.
+        if (crew != null && crew.BeginRepair(_car.transform)) _crew = crew;
+    }
+
+    void StandCrewDown()
+    {
+        if (_crew != null) _crew.EndRepair();
+        _crew = null;
     }
 }

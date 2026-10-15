@@ -54,6 +54,12 @@ public class PitCrewMember : MonoBehaviour
     public float wheelFitSeconds = 0.6f;
     [Tooltip("Turn to face the car on arrival instead of keeping the walk-in heading. The sign man does — he works facing the nose he is holding the board over.")]
     public bool faceCarWhenWorking;
+    [Tooltip("Repair work: how far (m) either side of his spot along the car a man shuffles while he works a panel.")]
+    public float repairShuffle = 0.35f;
+    [Tooltip("Repair work: seconds he stays on one spot before shuffling to the next (random between x and y).")]
+    public Vector2 repairPause = new(0.8f, 2.2f);
+    [Tooltip("Repair work: shuffle speed as a fraction of moveSpeed — a step along the panel, not a run.")]
+    public float repairShuffleSpeed = 0.3f;
 
     NPCLayeredAppearance _appearance;
     SpriteRenderer _itemRenderer;
@@ -66,6 +72,10 @@ public class PitCrewMember : MonoBehaviour
     bool _keepsGear;    // holds the same thing all stop (fuel can, sign) rather than fitting it and letting go
     bool _gearSpent;    // the held wheel is on the car; empty-handed until restocked at standby
     float _workTimer;
+    bool _repairing;        // working the bodywork of a parked car rather than a stop: no gear, faces the car
+    bool _repairOnStation;  // reached his repair spot once — from here on he only shuffles along the panel
+    Vector3 _repairAxisLocal;
+    float _repairTimer;
     float _frameTimer;
     int _frame;
 
@@ -75,6 +85,8 @@ public class PitCrewMember : MonoBehaviour
     public bool WheelFitted => _gearSpent;
     // Where (box-local) he is currently working — which side of the car that is, is the whole point here.
     public Vector3 WorkStation => _workLocal;
+    // Out on a repair (PitCrewBox.BeginRepair) rather than a stop.
+    public bool IsRepairing => _repairing;
 
     public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer, bool keepsGear)
     {
@@ -113,9 +125,24 @@ public class PitCrewMember : MonoBehaviour
         _hasCar = true;
     }
 
+    // A repair rather than a stop: no gear in his hands, square to the car once he is at it, and shuffling
+    // along `axisLocal` (box-local, the car's length) around his spot so he reads as working the panel in
+    // front of him rather than stood there. SetWorking does the walking out and back.
+    public void SetRepairing(bool repairing, Vector3 axisLocal = default)
+    {
+        _repairing = repairing;
+        _repairOnStation = false;
+        _repairTimer = 0f;
+        axisLocal.z = 0f;
+        _repairAxisLocal = axisLocal.sqrMagnitude > 1e-6f ? axisLocal.normalized : Vector3.up;
+        _gearSpent = false;
+        ShowItem(true);
+    }
+
     public void SetWorking(bool working)
     {
         _working = working;
+        if (!working) _repairOnStation = false;
         _targetLocal = working ? _workLocal : _standbyLocal;
         BuildPath(transform.localPosition, _targetLocal);
         if (working) _workTimer = 0f;
@@ -202,8 +229,13 @@ public class PitCrewMember : MonoBehaviour
             Vector3 dir = to / dist;
             // Never step past the station: at a long frame (or a coarse test delta) a crew running at
             // moveSpeed can overshoot by more than arriveRadius and hop back and forth over it forever.
-            transform.localPosition = cur + dir * Mathf.Min(moveSpeed * dt, dist);
-            FaceLocal(dir, dt);
+            // Shuffling along the panel on a repair is a step sideways, still square to the car — not a turn
+            // and a run.
+            bool shuffling = _repairing && _working && _repairOnStation;
+            float speed = shuffling ? moveSpeed * Mathf.Clamp01(repairShuffleSpeed) : moveSpeed;
+            transform.localPosition = cur + dir * Mathf.Min(speed * dt, dist);
+            if (shuffling && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition, dt);
+            else FaceLocal(dir, dt);
             Animate(dt);
             ShowItem(!_gearSpent);       // carry the wheel to the car; run back empty-handed after fitting it
         }
@@ -221,11 +253,27 @@ public class PitCrewMember : MonoBehaviour
             {
                 // Standing at the station, the walk-in heading is meaningless — the sign man in particular
                 // has to be square to the car, because what he is holding points where he is looking.
-                if (faceCarWhenWorking && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition, dt);
+                if ((faceCarWhenWorking || _repairing) && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition, dt);
+
+                // On a repair, keep moving along the panel: a beat on one spot, then a step to another near
+                // his station. The station itself never changes, so he can't wander off down the car.
+                if (_repairing)
+                {
+                    _repairOnStation = true;
+                    _repairTimer -= dt;
+                    if (_repairTimer <= 0f)
+                    {
+                        float lo = Mathf.Max(0.05f, Mathf.Min(repairPause.x, repairPause.y));
+                        float hi = Mathf.Max(lo, Mathf.Max(repairPause.x, repairPause.y));
+                        _repairTimer = Random.Range(lo, hi);
+                        _targetLocal = _workLocal + _repairAxisLocal * Random.Range(-repairShuffle, repairShuffle);
+                        BuildPath(transform.localPosition, _targetLocal);
+                    }
+                }
 
                 // At the corner: the wheel goes on after a beat and the held one disappears.
                 _workTimer += dt;
-                if (!_keepsGear && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
+                if (!_keepsGear && !_repairing && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
             }
             else
             {
@@ -259,7 +307,8 @@ public class PitCrewMember : MonoBehaviour
 
     void ShowItem(bool show)
     {
-        if (_itemRenderer != null) _itemRenderer.enabled = show;
+        // A wheel or a fuel can has no part in straightening bodywork.
+        if (_itemRenderer != null) _itemRenderer.enabled = show && !_repairing;
     }
 }
 
@@ -290,6 +339,9 @@ public class PitCrewBox : MonoBehaviour
     [Tooltip("Send the crew round for the left side after this long (s) even if a wheel man never got his wheel on, so one member who cannot reach his corner can't strand the stop on one side.")]
     public float sideChangeTimeout = 4f;
 
+    [Tooltip("Repair work: how far (m) in front of the nose the fifth man works, clear of the bodywork.")]
+    public float repairNoseStandoff = 0.9f;
+
     [Tooltip("How often (s) the crew check who is racing out of their box once they are dressed, and change kit when the box changes hands — the next championship's field taking over pit road.")]
     public float redressInterval = 0.5f;
     [Tooltip("Give up on an announced arrival after this long (s) and put the board back up. A car that called the box and then wrecked, pitted through, or ran out of race must not leave a man standing in the lane holding a sign forever.")]
@@ -311,12 +363,15 @@ public class PitCrewBox : MonoBehaviour
     float _sideTimer;
     readonly Vector3[] _rightStations = new Vector3[WheelMen];
     readonly Vector3[] _leftStations = new Vector3[WheelMen];
+    bool _repairing;         // the crew are out round a parked car straightening it (PitCrewRepair)
 
     public bool IsServicing => _servicingCar != null;
     public bool IsSignDown => _signMan != null && _signMan.IsDown;
     public int BoxIndex => _boxIndex;
     // The crew have finished the right-hand side and are working the left.
     public bool WorkingLeftSide => _onLeftSide;
+    // The crew are out round a parked car working on its bodywork.
+    public bool IsRepairing => _repairing;
 
     public void Configure(int boxIndex)
     {
@@ -400,8 +455,75 @@ public class PitCrewBox : MonoBehaviour
     // forward, +X the wall side the crew work from).
     Vector3 NominalSignStation => new(wheelLateral * signLateralFrac, wheelLongitudinal + signStandoff, 0f);
 
+    // The crew go out to a parked, damaged car and stay round it for as long as the repair runs: one man on
+    // each corner and one at the nose, square to the car, with nothing in their hands, each shuffling along
+    // the panel in front of him. Unlike a stop there is no sequence — nobody changes sides and nothing is
+    // fitted — because the job is minutes of bodywork, not a set of tyres. The sign man stays on the wall:
+    // nobody is going anywhere.
+    //
+    // Calling it again re-measures the car (a second tow lands it somewhere new). A stop takes priority —
+    // the crew will not walk off a car mid-stop to start on another — so this returns false while one runs.
+    public bool BeginRepair(Transform car)
+    {
+        if (car == null || _servicing) return false;
+        _repairing = true;
+
+        CarAxes(car, out Vector3 fwd, out Vector3 side);
+        Vector3 origin = car.position;
+        Vector3 f = fwd * wheelLongitudinal;
+        Vector3 r = side * wheelLateral;
+
+        Vector3 carLocal = ToBoxLocal(origin);
+        var carHalf = NominalCarHalf;
+        // The way each man shuffles along his panel, box-local: down the car's length for the four on its
+        // sides, across it for the man at the nose.
+        Vector3 alongLocal = transform.InverseTransformDirection(fwd);
+        Vector3 acrossLocal = transform.InverseTransformDirection(side);
+
+        for (int i = 0; i < _members.Count; i++)
+        {
+            var m = _members[i];
+            if (m == null) continue;
+            Vector3 station = i switch
+            {
+                0 => origin + f + r,                                            // right front
+                1 => origin - f + r,                                            // right rear
+                2 => origin + f - r,                                            // left front
+                3 => origin - f - r,                                            // left rear
+                4 => origin + fwd * (wheelLongitudinal + repairNoseStandoff),   // the nose
+                _ => origin - fwd * (wheelLongitudinal + repairNoseStandoff),   // anyone else: the tail
+            };
+            m.SetCarRect(carLocal, carHalf);
+            m.SetWorkTarget(ToBoxLocal(station));
+            m.SetRepairing(true, i < WheelMen ? alongLocal : acrossLocal);
+            m.SetWorking(true);
+        }
+        return true;
+    }
+
+    // The repair is done, or the driver has got back in: the crew walk back to the wall and pick their
+    // gear back up. Does nothing unless a repair is what they were out for, so it can never cut a stop short.
+    public void EndRepair()
+    {
+        if (!_repairing) return;
+        _repairing = false;
+        for (int i = 0; i < _members.Count; i++)
+        {
+            if (_members[i] == null) continue;
+            _members[i].SetRepairing(false);
+            _members[i].SetWorking(false);
+        }
+    }
+
     public void BeginService(Transform car)
     {
+        // A stop overrides a repair: same men, back to their stop jobs and their gear.
+        if (_repairing)
+        {
+            _repairing = false;
+            for (int i = 0; i < _members.Count; i++) _members[i]?.SetRepairing(false);
+        }
+
         _servicingCar = car;
         _approaching = false;
         _servicing = true;
