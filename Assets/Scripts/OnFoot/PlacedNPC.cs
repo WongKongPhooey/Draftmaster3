@@ -325,11 +325,7 @@ public class PlacedNPC : MonoBehaviour
         // Somebody whose job is to tell you the schedule has to be reading today's, not the one that was on
         // the sheet when their marker was placed. Refreshed here, at the moment they stand up, so the liaison
         // can be an authored marker (moved, re-anchored, edited) and still name the real next booking.
-        if (linesFromTheWeekendSheet)
-        {
-            var fromSheet = PlacedNPCDefaults.LiaisonLines();
-            if (fromSheet != null && fromSheet.Length > 0) lines = fromSheet;
-        }
+        RefreshLinesFromSheet();
 
         GameObject prefab = prefabOverride != null ? prefabOverride : ctx.prefab;
         if (prefab == null)
@@ -387,6 +383,18 @@ public class PlacedNPC : MonoBehaviour
         return true;
     }
 
+    // Read the speaker's lines off today's sheet, for a marker that takes them from there. Done when they
+    // stand up and again when a waiting beat plays, so what they say is the next booking at the moment
+    // they say it.
+    void RefreshLinesFromSheet()
+    {
+        if (!linesFromTheWeekendSheet) return;
+        var fromSheet = PlacedNPCDefaults.LiaisonLines();
+        if (fromSheet == null || fromSheet.Length == 0) return;
+        lines = fromSheet;
+        if (_npc != null) _npc.lines = fromSheet;
+    }
+
     // "This beat has now actually happened" — for interactions the scene flow drives (the crew chief's
     // briefing fires when the player climbs in, which may never happen).
     public void MarkPlayed() => appear.MarkSeen();
@@ -442,7 +450,14 @@ public class PlacedNPC : MonoBehaviour
             _trigger.target = _ctx.player;
             if (requireOutsideRV && _ctx.rvInterior != null)
                 _trigger.Gate = () => !_ctx.rvInterior.IsInside; // never fire behind the interior mask
-            _trigger.Triggered = () => { appear.MarkSeen(); _walkUp.Play(); };
+            _trigger.Triggered = () =>
+            {
+                appear.MarkSeen();
+                // The sheet has moved on since she stood up if a session was driven in between — practice
+                // ends in this scene, not with a reload — so read it again now she is actually speaking.
+                RefreshLinesFromSheet();
+                _walkUp.Play();
+            };
             return;
         }
 
