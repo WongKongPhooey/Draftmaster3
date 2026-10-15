@@ -35,6 +35,23 @@ public class DriveOrientationController : MonoBehaviour
     // Whether the screen has been turned upright for the drive.
     public static bool Portrait => _instance != null && _instance._applied;
 
+    // The swing camera's turn away from nose-up, for the screen as it actually is this frame (see
+    // DriveOrientation.ViewTurnDegrees). Read off the screen's real shape rather than the orientation this
+    // component asked for, because the OS takes a moment to turn it: the view has to turn on the frame the
+    // picture does, not the frame the request went in.
+    public static float ViewTurnDegrees
+    {
+        get
+        {
+            var o = UnityEngine.Device.Screen.orientation;
+            if (o != ScreenOrientation.LandscapeLeft && o != ScreenOrientation.LandscapeRight)
+                o = _instance != null ? _instance._home : ScreenOrientation.LandscapeLeft;
+            return DriveOrientation.ViewTurnDegrees(PixelGUI.Handheld, UnityEngine.Device.Screen.width,
+                                                    UnityEngine.Device.Screen.height,
+                                                    o == ScreenOrientation.LandscapeRight);
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Install()
     {

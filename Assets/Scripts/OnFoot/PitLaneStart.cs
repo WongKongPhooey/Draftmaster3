@@ -174,6 +174,12 @@ public class PitLaneStart : MonoBehaviour
     static PitLaneStart _gettingIn;
     static PitLaneStart _current;   // the scene's on-foot walk-up, when it has one
 
+    // Strictly the seat: the player is in the car and the briefing or the setup panel is up. Unlike
+    // GettingIn, never true while they are still on foot. The swing camera holds its turn until this clears
+    // (DrivingCameraFeel).
+    public static bool SeatedBeforeDriving => _gettingIn != null;
+    public static bool InSetup => _gettingIn != null && _gettingIn._phase == EntryPhase.Setup;
+
     // What the orientation log prints when the screen turns.
     public static string DescribeEntry() =>
         _current == null ? "no walk-up" :

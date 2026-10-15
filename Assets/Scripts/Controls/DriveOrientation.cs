@@ -37,6 +37,21 @@ namespace Draftmaster.Controls
         public static float PortraitZoom(float screenWidth, float screenHeight)
             => screenWidth > 0f && screenHeight > screenWidth ? screenHeight / screenWidth : 1f;
 
+        // How far, in degrees, the swing camera's roll is turned away from "nose up the screen" so the car's
+        // nose points at the top of the phone itself rather than the top of the picture.
+        //
+        // Upright the two are the same: 0. On a handheld held sideways the top of the phone is to one side of
+        // the picture — the left for LandscapeLeft (turned counter-clockwise from portrait), the right for
+        // LandscapeRight — so the nose is put there: -90 or +90. That is what the setup panel shows, and what
+        // makes the turn to portrait invisible: the screen turns a quarter one way, this offset drops to 0 the
+        // same frame and turns the view a quarter back, and the car and the road stay where they were in the
+        // hand. A desktop never turns, so it is always 0 there.
+        public static float ViewTurnDegrees(bool handheld, float screenWidth, float screenHeight, bool landscapeRight)
+        {
+            if (!handheld || screenHeight > screenWidth) return 0f;
+            return landscapeRight ? 90f : -90f;
+        }
+
         // How long a scene change waits for the screen to come back round before going anyway. The OS animates
         // the turn over about half a second; a phone with rotation locked, or one that never reports the new
         // size, must not strand the player on the old scene.

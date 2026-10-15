@@ -115,6 +115,9 @@ public class DrivingCameraFeel : MonoBehaviour
     float _swingVelocity;   // and how fast it is turning, degrees per second
     float _swingTarget;     // last heading worth chasing, held while the car crawls
     bool _hasSwingTarget;
+    float _viewTurn;        // the screen's turn last frame (DriveOrientationController.ViewTurnDegrees)
+    bool _hasViewTurn;
+    bool _swingWasOn;       // whether last frame swung, so a screen turn is only carried across a live swing
 
     // Kinematic-target fallback: differentiate the transform when there is no controller to ask.
     Vector2 _prevPos;
@@ -204,7 +207,15 @@ public class DrivingCameraFeel : MonoBehaviour
         RollDegrees = _roll + shakeRoll;
 
         // --- Swing.
-        TickSwing(CameraViewMode.Swinging, speedMph, headingDeg, dt);
+        // Sat in the car but not handed it yet — the chief's briefing, then the setup panel — the view stays as
+        // it was on foot: it turns when the car is drivable, not when the door shuts. The one exception is the
+        // setup panel on a phone that is about to turn upright: there the nose is put at the top of the phone
+        // (pointing left on a LandscapeLeft screen; see DriveOrientation.ViewTurnDegrees), so the turn to
+        // portrait that follows leaves the picture where it is.
+        bool swinging = CameraViewMode.Swinging;
+        if (swinging && PitLaneStart.SeatedBeforeDriving)
+            swinging = PitLaneStart.InSetup && PixelGUI.Handheld;
+        TickSwing(swinging, speedMph, headingDeg, dt);
     }
 
     // Drag the hinge toward the car's heading, or back to square when the swing is off. Separate from the
@@ -213,6 +224,16 @@ public class DrivingCameraFeel : MonoBehaviour
     // parked, or left behind entirely.
     void TickSwing(bool swinging, float speedMph, float headingDeg, float dt)
     {
+        // The phone's screen turned since last frame (upright for the drive, or back): turn the view the same
+        // amount the other way, at once and outside the spring, so the car and the road stay put in the hand
+        // instead of spinning round with the screen and then being swung back.
+        float viewTurn = DriveOrientationController.ViewTurnDegrees;
+        if (_hasViewTurn && swinging && _swingWasOn)
+            _swingAngle = CameraSwing.Normalise(_swingAngle + Mathf.DeltaAngle(_viewTurn, viewTurn));
+        _viewTurn = viewTurn;
+        _hasViewTurn = true;
+        _swingWasOn = swinging;
+
         // The heading is worth chasing once the car is actually going somewhere — and always on the first
         // frame behind a new car, so a swing camera picked up at a standstill lines itself up straight away
         // instead of sitting square until the car reaches walking pace.
@@ -222,7 +243,7 @@ public class DrivingCameraFeel : MonoBehaviour
             _hasSwingTarget = true;
         }
 
-        float target = swinging && _hasSwingTarget ? _swingTarget : 0f;
+        float target = swinging && _hasSwingTarget ? CameraSwing.Normalise(_swingTarget + _viewTurn) : 0f;
         if (!swinging && CameraSwing.Settled(_swingAngle, _swingVelocity, 0f))
         {
             // Fully unwound: put it exactly on zero so a fixed camera is left where its author placed it,

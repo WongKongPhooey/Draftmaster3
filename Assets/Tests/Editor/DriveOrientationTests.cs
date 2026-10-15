@@ -107,6 +107,33 @@ public class DriveOrientationTests
         }
     }
 
+    // --- the swing camera's turn -------------------------------------------------------------------------
+
+    [Test]
+    public void SidewaysPhonePutsTheNoseAtTheTopOfThePhone()
+    {
+        // LandscapeLeft has the top of the phone on the left of the picture; LandscapeRight on the right.
+        Assert.AreEqual(-90f, DriveOrientation.ViewTurnDegrees(true, 2400f, 1080f, landscapeRight: false));
+        Assert.AreEqual(90f, DriveOrientation.ViewTurnDegrees(true, 2400f, 1080f, landscapeRight: true));
+    }
+
+    [Test]
+    public void UprightPhoneAndDesktopAreNoseUp()
+    {
+        Assert.AreEqual(0f, DriveOrientation.ViewTurnDegrees(true, 1080f, 2400f, false), "upright phone");
+        Assert.AreEqual(0f, DriveOrientation.ViewTurnDegrees(false, 1920f, 1080f, false), "desktop never turns");
+    }
+
+    [Test]
+    public void TurningUprightCancelsTheScreensTurn()
+    {
+        // The nose sits at the top of the phone before the turn and after it: the view's roll changes by
+        // exactly the quarter turn the screen makes, in the opposite sense, so nothing moves in the hand.
+        float before = DriveOrientation.ViewTurnDegrees(true, 2400f, 1080f, false);
+        float after = DriveOrientation.ViewTurnDegrees(true, 1080f, 2400f, false);
+        Assert.AreEqual(90f, after - before);
+    }
+
     // --- camera zoom ----------------------------------------------------------------------------------------
 
     [Test]
