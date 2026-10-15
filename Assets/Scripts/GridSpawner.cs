@@ -118,6 +118,9 @@ public class GridSpawner : MonoBehaviour
     // reach in and clear a grid the player is sat on.
     bool _playerField;
     bool _followingTheClock;
+    // The player's own field, while it is out (null for a co-op field, whose cars live at the scene root).
+    // A weekend session ends in the same scene it was driven in, so this outlives the session: see Update.
+    Transform _playerFieldRoot;
 
     // Subscribed from Start rather than OnEnable, and only on the walk-around side: reading the weekend's
     // sheet can itself settle the ledger on the first read of a fresh weekend, and a Changed callback
@@ -141,6 +144,39 @@ public class GridSpawner : MonoBehaviour
         if (_playerField || GameSession.IsMultiplayer) return;
         if (track == null || carPrefab == null || !isActiveAndEnabled) return;
         StartCoroutine(SyncAmbientField());
+    }
+
+    // The player's own session is over (a routed practice, qualifying or race hands back to the sheet without
+    // a scene load) but its field is still parked in the boxes — or still out finishing its runs. Nobody is
+    // out there any more, so it goes: the moment the player steps into a motorhome, where the interior mask
+    // hides the circuit and the cars can be taken in to their garages unseen. From then on this spawner
+    // follows the weekend clock like one that opened on foot.
+    void Update()
+    {
+        if (_playerFieldRoot == null || RaceWeekend.SessionLive) return;
+        if (RVInterior.Occupied != null) StandDownPlayerField();
+    }
+
+    // Backstop for anything that needs the circuit empty before the player has been home: the pit-stop
+    // challenge runs down the pit road this field is parked in. Does nothing while a session is live.
+    public static void ClearFinishedSessionField()
+    {
+        if (RaceWeekend.SessionLive) return;
+        foreach (var gs in FindObjectsByType<GridSpawner>(FindObjectsSortMode.None))
+            if (gs._playerFieldRoot != null) gs.StandDownPlayerField();
+    }
+
+    void StandDownPlayerField()
+    {
+        Destroy(_playerFieldRoot.gameObject);
+        _playerFieldRoot = null;
+        _playerField = false;
+        _ambientFor = "";
+
+        if (_followingTheClock || GameSession.IsMultiplayer || Coop.Active) return;
+        _followingTheClock = true;
+        WeekendLedger.Changed += OnWeekendClockMoved;
+        WeekendTrackState.HoldChanged += OnWeekendClockMoved;
     }
 
 #if UNITY_EDITOR
@@ -415,6 +451,7 @@ public class GridSpawner : MonoBehaviour
             coopField = false;
         }
         var spawnPrefab = coopField ? networkedAiPrefab : carPrefab;
+        if (!coopField) _playerFieldRoot = parent;
 
         for (int i = 0; i < count; i++)
         {

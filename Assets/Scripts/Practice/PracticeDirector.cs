@@ -130,8 +130,8 @@ public class PracticeDirector : MonoBehaviour
         _tick -= Time.deltaTime;
         if (_tick > 0f) return;
         _tick = 1f;
-        // Nobody new goes out under the chequered flag.
-        if (_sessionOver) return;
+        // Nobody new goes out under the chequered flag, or once the session has been ended early.
+        if (_sessionOver || _ended) return;
 
         int onTrack = 0;
         for (int i = _stints.Count - 1; i >= 0; i--)
@@ -210,6 +210,12 @@ public class PracticeDirector : MonoBehaviour
         if (_ended) return;
         _ended = true;
         if (_wrapUp != null) _wrapUp.MarkClosed();
+
+        // Ended before the clock ran out (END SESSION): the field finishes the lap it is on and parks, the
+        // same as under the flag, rather than carrying on its runs round a session that no longer exists.
+        if (!_sessionOver)
+            for (int i = 0; i < _stints.Count; i++)
+                if (_stints[i] != null) _stints[i].EndAfterThisLap();
 
         // Qualifying always publishes its grid, however the session was reached.
         if (_isQualifying) CaptureGrid();

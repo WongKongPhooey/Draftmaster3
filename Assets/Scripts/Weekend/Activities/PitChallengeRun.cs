@@ -84,6 +84,11 @@ public class PitChallengeRun : MonoBehaviour
 
     void PutCarOnPitRoad()
     {
+        // The circuit is meant to be empty. A practice that ended in this scene leaves its field parked in
+        // the boxes until the player goes home to the motorhome; one who came straight here would be running
+        // the lane through it. Behind the cut, so they just aren't there.
+        GridSpawner.ClearFinishedSessionField();
+
         float pitLength = _pit[_pit.Count - 1].distance;
 
         // The box: the player's own when this session has fitted one, otherwise where the car is parked at
