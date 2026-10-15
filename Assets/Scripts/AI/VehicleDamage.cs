@@ -98,6 +98,14 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     public float DamageLevel { get; private set; }
     // Signed left/right damage bias (−1 = left side battered, +1 = right). Drives a steering pull.
     public float DamageBiasX { get; private set; }
+    // 0..1 how dented the bodywork actually is: the mean fold of every panel that can fold, as a share of
+    // how far it could go. Read off the mesh, so it is the denting you can see. DamageDragSparks reads it.
+    public float DentAmount { get; private set; }
+    // Where the bodywork is folded furthest — the lowest-hanging metal, which is what drags on the track.
+    public Vector2 DragPointWorld =>
+        _current != null && _deepest >= 0 && _deepest < _current.Length
+            ? (Vector2)transform.TransformPoint(_current[_deepest])
+            : (Vector2)transform.position;
 
     Mesh _mesh;
     Vector3[] _base;
@@ -110,6 +118,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // is a rigidity mask the crumple pass uses as a lerp factor, where anything over 1 overshoots.
     float[] _dentGain;
     float _biasAccum;
+    // Per-vertex fold limit (maxDent x deform weight x end gain) and the vertex folded furthest, for DentAmount.
+    float[] _dentLimit;
+    int _deepest = -1;
 
     // Scratch for one press: the displacement field, which vertices the press reached, and the buffers
     // BodyDeform smooths through. Allocated once in Build so an impact costs no garbage.
@@ -163,6 +174,8 @@ public class VehicleDamage : MonoBehaviour, IDamageable
                 _dentGain[idx] = ComputeDentGain(fx);
             }
         }
+        _dentLimit = new float[vx * vy];
+        for (int i = 0; i < _dentLimit.Length; i++) _dentLimit[i] = maxDent * _deformWeight[i] * _dentGain[i];
 
         // Double-sided (12 indices/quad) so the car shows regardless of camera-facing / winding.
         var tris = new int[gridX * gridY * 12];
@@ -191,6 +204,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _mesh.triangles = tris;
         _mesh.RecalculateBounds();
         mf.sharedMesh = _mesh;
+        RefreshDent();
     }
 
     // Per-vertex deform weight, 0 = rigid, 1 = fully deformable. fx/fy are sprite-normalized [0,1].
@@ -378,6 +392,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
+        RefreshDent();
         BodyChanged?.Invoke();
 
         // Accumulate a 0..1 damage level + a left/right bias (from where the fold landed) for handling effects.
@@ -404,6 +419,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
+        RefreshDent();
 
         DamageLevel = Mathf.Max(0f, DamageLevel * (1f - t));
         _biasAccum *= 1f - t;
@@ -474,12 +490,18 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         }
     }
 
+    void RefreshDent()
+    {
+        DentAmount = DamageDrag.DentAmount(_base, _current, _dentLimit, out _deepest);
+    }
+
     public void RepairFull()
     {
         if (_base == null || _mesh == null) return;
         _current = (Vector3[])_base.Clone();
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
+        RefreshDent();
         DamageLevel = 0f;
         DamageBiasX = 0f;
         _biasAccum = 0f;
