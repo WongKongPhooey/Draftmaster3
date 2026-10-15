@@ -56,10 +56,14 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         pvc != null && pvc.isActiveAndEnabled && pvc.GetComponent<SplineInputDriver>() == null;
 
     [Header("Collision Response")]
-    [Tooltip("Bounce-back along the wall normal. 0 = no bounce (slide), 0.3 = lively armco kick.")]
+    [Tooltip("Bounce-back along the wall normal on a hard hit. 0 = no bounce (slide), 0.3 = lively armco kick.")]
     [Range(0f, 0.8f)] public float restitution = 0.25f;
-    [Tooltip("Speed retained tangent to the wall on a scrape. 1 = no loss, 0.9 = slight scrub.")]
-    [Range(0.5f, 1f)] public float tangentialRetention = 0.94f;
+    [Tooltip("Speed into the wall (m/s) below which a contact doesn't bounce at all — the car stays on the wall and scrapes.")]
+    public float wallBounceThreshold = 3f;
+    [Tooltip("Speed into the wall (m/s) above the threshold over which bounce ramps up to the full restitution.")]
+    public float wallBounceRamp = 10f;
+    [Tooltip("Wall friction: speed lost along the wall per m/s of impulse taken across it. Scrub follows how hard the car meets the wall, so a light scrape costs little and a steep hit a lot. 0 = frictionless.")]
+    [Range(0f, 1f)] public float wallFriction = 0.2f;
     [Tooltip("How much yaw spin an off-centre hit imparts. 0 = none (slide only), 1 = realistic, >1 = arcadey.")]
     [Range(0f, 2f)] public float spinSensitivity = 1f;
     [Tooltip("Max yaw rate a single impact can add (deg/sec). Caps how violent a spin-out gets.")]
@@ -888,20 +892,19 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float cos = Mathf.Cos(hr), sin = Mathf.Sin(hr);
         Vector2 vel = new Vector2(_vx * cos - _vy * sin, _vx * sin + _vy * cos);
 
-        float vn = Vector2.Dot(vel, n);
-        if (vn < 0f) // moving into the surface — reflect momentum.
+        // Moving into the surface — stop it, bounce only a real hit, scrub by friction (see WallContact: this
+        // runs every step the car touches the wall, so the response must not compound along a scrape).
+        vel = Draftmaster.Sim.WallContact.Resolve(vel, n, restitution, wallFriction,
+                                                  wallBounceThreshold, wallBounceRamp, out float dvn);
+        if (dvn > 0f)
         {
-            Vector2 normalComp = vn * n;
-            Vector2 tangentComp = vel - normalComp;
-            vel = tangentComp * tangentialRetention - normalComp * restitution;
-
-            // Convert reflected world velocity back to the body frame.
+            // Convert resolved world velocity back to the body frame.
             _vx = vel.x * cos + vel.y * sin;
             _vy = -vel.x * sin + vel.y * cos;
 
             // Off-centre hit → yaw torque. Lever arm × normal impulse, divided by yaw inertia → Δ yaw rate.
             Vector2 rArm = contactPoint - (Vector2)transform.position;
-            float impulse = (1f + restitution) * (-vn) * Mass; // N·s along the normal
+            float impulse = dvn * Mass; // N·s along the normal
             float crossZ = rArm.x * n.y - rArm.y * n.x;
             float deltaOmega = (crossZ * impulse / Mathf.Max(_iz, 1f)) * spinSensitivity; // rad/s
             float cap = maxImpactSpinDeg * Mathf.Deg2Rad;
