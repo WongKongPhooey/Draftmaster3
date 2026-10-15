@@ -89,6 +89,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // Raised whenever the shape of the bodywork changes — a dent, a repair. VehicleCollision listens to keep
     // its box the length of the metal that is actually left.
     public event System.Action BodyChanged;
+    // Raised after a dent lands (not a repair): where the metal moved most, in world space, and how much
+    // DentAmount grew. DamageDebris knocks bits off the car from there.
+    public event System.Action<Vector2, float> Dented;
 
     [Header("Damage Severity → Handling")]
     [Tooltip("Accumulated damage per unit impact severity. Higher = a few hits cripple the car.")]
@@ -377,6 +380,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         BodyDeform.Crumple(_disp, gridX + 1, gridY + 1, _deformWeight, _region,
                            crumpleSpread, crumplePasses, ref _dispScratch);
 
+        // Where the metal moved, weighted by how far, so Dented can say where the bits come off.
+        Vector3 movedAt = Vector3.zero;
+        float movedSum = 0f;
         for (int i = 0; i < _current.Length; i++)
         {
             if (!_region[i]) continue;
@@ -387,13 +393,20 @@ public class VehicleDamage : MonoBehaviour, IDamageable
             // room to move however hard the panel around it is dragged by the crumple pass.
             float vertexMaxDent = maxDent * weight * gain;
             if (fromBase.magnitude > vertexMaxDent) fromBase = fromBase.normalized * vertexMaxDent;
-            _current[i] = _base[i] + fromBase;
+            Vector3 next = _base[i] + fromBase;
+            float moved = (next - _current[i]).magnitude;
+            movedAt += next * moved;
+            movedSum += moved;
+            _current[i] = next;
         }
 
+        float dentBefore = DentAmount;
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
         RefreshDent();
         BodyChanged?.Invoke();
+        if (movedSum > 1e-6f && DentAmount > dentBefore)
+            Dented?.Invoke(transform.TransformPoint(movedAt / movedSum), DentAmount - dentBefore);
 
         // Accumulate a 0..1 damage level + a left/right bias (from where the fold landed) for handling effects.
         DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual * TrackConditions.DamageMultiplier);

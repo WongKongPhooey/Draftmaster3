@@ -208,6 +208,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public bool impactDebris = true;
     [Tooltip("Once the bodywork is dented enough, it drags on the track and leaves a trail of sparks (DamageDragSparks).")]
     public bool damageDragSparks = true;
+    [Tooltip("Small bits fall off the car where it dents, and a knocked-loose panel sheds a few more for a while after (DamageDebris).")]
+    public bool damageDebris = true;
 
     public VehicleInfo vehicleInfo;
 
@@ -428,6 +430,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (tyreSmoke && GetComponent<TyreSmoke>() == null) gameObject.AddComponent<TyreSmoke>();
         if (impactDebris && GetComponent<ImpactParticles>() == null) gameObject.AddComponent<ImpactParticles>();
         if (damageDragSparks && GetComponent<DamageDragSparks>() == null) gameObject.AddComponent<DamageDragSparks>();
+        if (damageDebris && GetComponent<DamageDebris>() == null) gameObject.AddComponent<DamageDebris>();
 
         if (enableWear)
         {
