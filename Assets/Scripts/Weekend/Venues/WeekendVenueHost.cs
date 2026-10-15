@@ -44,6 +44,11 @@ public class WeekendVenueHost : NPCInteractable
 
     public override bool IsTalking => base.IsTalking || _choiceOpen || _walking;
 
+    // A host somebody you can walk into, whoever built them. The generated ones come out of
+    // PaddockPerson.SpawnTalker already solid; one authored into a track package may not have been given a
+    // collider, and would be walked straight over. Leaves any collider already on the body alone.
+    void Start() => PaddockPerson.MakeSolid(gameObject);
+
     // Whether this host has something to run right now: an appointment, made for this venue, whose window
     // the weekend has reached.
     public bool HasBusiness

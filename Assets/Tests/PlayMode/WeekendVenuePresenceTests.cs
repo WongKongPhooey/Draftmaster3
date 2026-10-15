@@ -24,6 +24,18 @@ public class WeekendVenuePresenceTests
 
     static bool _loaded;
 
+    // Somebody stood at a venue rather than something built there. Hosts and the briefing crew carry a small
+    // collider so the player cannot walk over them; that is a person in the way, not a wall.
+    static bool IsPerson(Transform t)
+    {
+        foreach (var name in new[] { "NPCInteractable", "NPCLayeredAppearance" })
+        {
+            var type = System.Type.GetType(name + ", Assembly-CSharp");
+            if (type != null && t.GetComponentInParent(type, true) != null) return true;
+        }
+        return false;
+    }
+
     [UnitySetUp]
     public IEnumerator ArriveAtTheTrack()
     {
@@ -176,6 +188,7 @@ public class WeekendVenuePresenceTests
         {
             if (hit == null || hit.isTrigger) continue;
             if (!hit.transform.IsChildOf(venues.transform)) continue;
+            if (IsPerson(hit.transform)) continue;   // a host is solid, but a person never walls anybody in
 
             Assert.Fail($"'{PathOf(hit.transform)}' is solid within 4 m of the player's motorhome door — " +
                         "the weekend has built something around where they wake up.");
@@ -188,7 +201,7 @@ public class WeekendVenuePresenceTests
             var bounds = lot.GetComponent<Collider2D>().bounds;
             foreach (var solid in venues.GetComponentsInChildren<Collider2D>(true))
             {
-                if (solid.isTrigger) continue;
+                if (solid.isTrigger || IsPerson(solid.transform)) continue;
                 Assert.IsFalse(bounds.Intersects(solid.bounds),
                                $"'{PathOf(solid.transform)}' is built into the motorhome row.");
             }

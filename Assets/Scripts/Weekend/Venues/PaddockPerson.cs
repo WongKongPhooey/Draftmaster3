@@ -65,11 +65,40 @@ public static class PaddockPerson
         where T : NPCInteractable
     {
         var body = Spawn(parent, position, name, seed, heightM, fallbackTint);
+        MakeSolid(body);
         var talker = body.AddComponent<T>();
         talker.speakerName = speaker;
         if (lines != null && lines.Length > 0) talker.lines = lines;
         talker.interactRange = interactRange;
         return talker;
+    }
+
+    // How much ground somebody stood here takes up, as a radius in world metres — the same footprint as the
+    // paddock crowd's (PaddockSpawner.npcColliderSize, 0.30m across).
+    public const float FootprintRadiusM = 0.15f;
+
+    // Give a body a footprint the player cannot walk through.
+    //
+    // A plain Spawn is not solid, on purpose: the sponsor's guests ring the winner's circle and the fans
+    // queue behind a rail, and none of them may ever stand in a doorway. But the people the player actually
+    // goes to see — a venue's host, the crew round the chief at the briefing — were the same bodies, so the
+    // driver walked straight over the crew chief and through the middle of his crew. The player is a dynamic
+    // body, so a collider on this kinematic one stops them and OnFootController slides them round it.
+    //
+    // Sized in world metres and divided back out of the scale, which is ~8x once the figure is normalised to
+    // a person's height — a collider scales with its transform. A circle, so turning to face somebody never
+    // swings a corner into the player.
+    public static void MakeSolid(GameObject body)
+    {
+        if (body == null || body.GetComponent<Collider2D>() != null) return;
+
+        Vector3 lossy = body.transform.lossyScale;
+        float scale = Mathf.Max(Mathf.Abs(lossy.x), Mathf.Abs(lossy.y));
+        if (scale < 0.0001f) return;
+
+        var circle = body.AddComponent<CircleCollider2D>();
+        circle.radius = FootprintRadiusM / scale;
+        circle.offset = Vector2.zero;
     }
 
     static void Dress(GameObject go, int seed, float heightM, Color fallback)

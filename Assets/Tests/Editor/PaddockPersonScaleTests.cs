@@ -125,6 +125,53 @@ public class PaddockPersonScaleTests
         }
     }
 
+    // ------------------------------------------------------------------ solid people
+
+    static GameObject SpawnBody(string name)
+    {
+        var spawn = Runtime("PaddockPerson").GetMethod("Spawn", BindingFlags.Public | BindingFlags.Static);
+        Assert.IsNotNull(spawn, "PaddockPerson.Spawn is gone; this test builds a body through it.");
+        return (GameObject)spawn.Invoke(null, new object[] { null, Vector3.zero, name, 4242, StandingHeight, null });
+    }
+
+    [Test]
+    public void APlainBodyIsNotSolid()
+    {
+        // The sponsor's guests and the fans at the rail are built this way and must never block a doorway.
+        var body = SpawnBody("PlainBodyUnderTest");
+        try { Assert.IsNull(body.GetComponent<Collider2D>(), "A plain PaddockPerson body should not be solid."); }
+        finally { Object.DestroyImmediate(body); }
+    }
+
+    [Test]
+    public void ASolidBodyHasAPersonSizedFootprint()
+    {
+        // The crew chief and the crew at the briefing were walked straight over: no collider at all.
+        var makeSolid = Runtime("PaddockPerson").GetMethod("MakeSolid", BindingFlags.Public | BindingFlags.Static);
+        Assert.IsNotNull(makeSolid, "PaddockPerson.MakeSolid is gone; this test is written against it.");
+        float expected = Constant(Runtime("PaddockPerson"), "FootprintRadiusM");
+
+        var body = SpawnBody("SolidBodyUnderTest");
+        try
+        {
+            makeSolid.Invoke(null, new object[] { body });
+            var circle = body.GetComponent<CircleCollider2D>();
+            Assert.IsNotNull(circle, "MakeSolid left the body without a collider.");
+            Assert.IsFalse(circle.isTrigger, "A trigger never stops the player.");
+
+            // The body is scaled ~8x to stand person-high; the footprint must come out in world metres.
+            Vector3 lossy = body.transform.lossyScale;
+            float world = circle.radius * Mathf.Max(Mathf.Abs(lossy.x), Mathf.Abs(lossy.y));
+            Assert.AreEqual(expected, world, 1e-4f,
+                            $"The footprint came out {world:0.###}m in radius, not {expected:0.###}m — the " +
+                            "collider has to have the body's scale divided back out of it.");
+
+            makeSolid.Invoke(null, new object[] { body });
+            Assert.AreEqual(1, body.GetComponents<Collider2D>().Length, "MakeSolid twice stacked a second collider.");
+        }
+        finally { Object.DestroyImmediate(body); }
+    }
+
     // ------------------------------------------------------------------ the way it went wrong
 
     [Test]

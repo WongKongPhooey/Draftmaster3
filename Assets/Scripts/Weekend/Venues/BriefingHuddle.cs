@@ -281,6 +281,7 @@ public class BriefingHuddle : MonoBehaviour
         for (int i = 0; i < crewCount; i++)
         {
             var body = PaddockPerson.Spawn(_root, chief.transform.position, "Crew_" + (i + 1), seedBase + i * 7919);
+            PaddockPerson.MakeSolid(body);   // people the player has come to meet, not a crowd to walk through
             _crew.Add(body);
             _stuck.Add(0f);
         }
