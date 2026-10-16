@@ -171,13 +171,31 @@ public class TravelMapScreen : MonoBehaviour
 
         noticeLabel.text = "";
         // Between two rounds the next race is already decided, so the route to it is drawn from the off.
-        if (TravelState.BookNextCalendarRace())
+        // Not while this week's weekend is still running: the map is only a look at the road until then.
+        if (WeekendHoldsTheCar) Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason);
+        else if (TravelState.BookNextCalendarRace())
             Notice(TravelTutorial.LegBooked
                 ? Draftmaster.Tracks.TravelTutorialRoute.Prompt
                 : $"Next race: {TravelGraph.Get(TravelState.DestinationId).name}. Tap a place to call in there on the way.");
         SetUpView();
         Refresh();
         OpenView();
+    }
+
+    // A career parked at this week's race stays there until its weekend is done (WeekendDeparture). The map
+    // still opens — it is where the next round is — but nothing on it moves the car. Only at the venue the
+    // weekend belongs to: somebody already on the road, or a co-op guest carried along on the host's travel,
+    // is not held.
+    public static bool WeekendHoldsTheCar
+    {
+        get
+        {
+            if (!GameSession.CareerActive || Coop.IsGuest) return false;
+            if (Draftmaster.Weekend.WeekendDeparture.WeekendDone(RaceWeekend.WeekendId, WeekendObjectiveHUD.RoadCalled))
+                return false;
+            var here = TravelGraph.Get(TravelState.CurrentNodeId);
+            return here != null && here.isCircuit && here.id == TrackSelection.CurrentId;
+        }
     }
 
     void OnDestroy()
@@ -555,6 +573,7 @@ public class TravelMapScreen : MonoBehaviour
         bool isCurrent = n == current;
 
         if (isCurrent) { Refresh(); return; }
+        if (WeekendHoldsTheCar) { Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason); return; }
         if (choosing)
         {
             if (n.isCircuit && !TravelTutorial.CanChoose(n.id))
@@ -603,6 +622,7 @@ public class TravelMapScreen : MonoBehaviour
     // One stop along the route. The tutorial can hold the car back (Team HQ not on the route yet).
     void DriveTo(TravelNode n)
     {
+        if (WeekendHoldsTheCar) { Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason); return; }
         if (!TravelTutorial.CanMoveTo(n.id)) { Notice(TravelTutorial.BlockedReason(n.id)); return; }
         if (TravelState.MoveTo(n.id))
         {
@@ -792,6 +812,14 @@ public class TravelMapScreen : MonoBehaviour
         if (walkButton != null) walkButton.gameObject.SetActive(false);
         shopHeader.gameObject.SetActive(false);
 
+        // Mid-weekend: no destination, no DRIVE TO, no tow — just where you are and why you are staying.
+        if (WeekendHoldsTheCar)
+        {
+            locationHeader.text = current.name.ToUpperInvariant();
+            flavorLabel.text = Draftmaster.Weekend.WeekendDeparture.HeldReason;
+            return;
+        }
+
         if (choosing)
         {
             locationHeader.text = "";
@@ -977,6 +1005,7 @@ public class TravelMapScreen : MonoBehaviour
 
     void StartRaceWeekend(TravelNode circuit)
     {
+        if (WeekendHoldsTheCar) { Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason); return; }
         if (TravelTutorial.LegBooked) TravelTutorial.Complete();
         TravelState.ArriveAndClearDestination();
         // The race scene builds whatever TrackSelection names, and a saved selection beats the travel
