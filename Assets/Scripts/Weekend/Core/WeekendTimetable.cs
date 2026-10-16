@@ -274,10 +274,6 @@ namespace Draftmaster.Weekend
                 "Souvenir midway", 750);
             BuildPitChallenge();
 
-            // ---- Saturday morning ----
-            Team(WeekendSlot.SaturdayAM, 8 * 60 + 15, 30, ActivityKind.Debrief, "BREAKFAST DEBRIEF",
-                "What the engineers found in Friday's data while you slept.", "Engineering truck");
-
             // ---- Saturday afternoon ----
             Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "PRESS CONFERENCE",
                 "Top table, three microphones, and the story they already decided to write.", "Media centre");
@@ -470,10 +466,6 @@ namespace Draftmaster.Weekend
             a.skipReason = skipReason;
             return a;
         }
-
-        WeekendActivity Team(WeekendSlot slot, int start, int mins, ActivityKind kind,
-                             string title, string subtitle, string location)
-            => Add(new SessionTime(slot, start, mins), kind, playerSeries, title, subtitle, location);
 
         // Stable across rebuilds: the same weekend always produces the same ids, so the ledger's record of
         // what has been done survives the scene reloads the weekend does between sessions.
