@@ -89,8 +89,8 @@ public class VehicleCollision : MonoBehaviour
         _prevPos = transform.position;
     }
 
-    void OnEnable()  { if (_bodywork != null) _bodywork.BodyChanged += ApplyBoxShape; }
-    void OnDisable() { if (_bodywork != null) _bodywork.BodyChanged -= ApplyBoxShape; }
+    void OnEnable()  { if (_bodywork != null) _bodywork.BodyChanged += ApplyBoxShape; PerfLog.CarsActive++; }
+    void OnDisable() { if (_bodywork != null) _bodywork.BodyChanged -= ApplyBoxShape; PerfLog.CarsActive--; }
 
     // The box is the undamaged car less however far each end has been folded back. See BodyDeform.CrushedSpan.
     void ApplyBoxShape()
@@ -227,7 +227,14 @@ public class VehicleCollision : MonoBehaviour
                     share = Draftmaster.Sim.BodyDeform.Share(_responder != null ? _responder.Mass : 1500f, myC,
                                                              otherResponder.Mass, theirC);
                 }
-                _damage.OnImpact(StrikerFor(other, d.pointB, -d.normal), severity, share);
+                PerfLog.Impacts++;
+                if (PerfLog.Enabled)
+                {
+                    long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                    _damage.OnImpact(StrikerFor(other, d.pointB, -d.normal), severity, share);
+                    PerfLog.AddDamageTicks(System.Diagnostics.Stopwatch.GetTimestamp() - t0);
+                }
+                else _damage.OnImpact(StrikerFor(other, d.pointB, -d.normal), severity, share);
             }
 
             if (otherResponder != null)

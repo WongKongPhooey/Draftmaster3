@@ -400,6 +400,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
             _current[i] = next;
         }
 
+        PerfLog.Dents++;
         float dentBefore = DentAmount;
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
