@@ -193,7 +193,7 @@ walk away mid-sentence, which counts as not having done it.
 | Where | What happens there |
 |---|---|
 | **The pit box** | The pre-weekend plan meeting with the crew chief, where a broadcaster catches you for a media hit, and the race-day VIP grid walk with the car. |
-| **Your motorhome** | Session debriefs, with the engineer sat in the cab's passenger seat by the satnav (`DebriefSeat` in `Resources/OnFoot/RVInterior.prefab`). |
+| **Your motorhome** | Session debriefs and the race-morning race plan, with the engineer sat in the cab's passenger seat by the satnav (`DebriefSeat` in `Resources/OnFoot/RVInterior.prefab`). |
 | **The drivers' room** | The drivers meeting and the press conference. A top table, and a chair for every driver entered in all three championships. |
 | **The fan fence** | Signing sessions. A barrier along the public edge of the paddock with the crowd behind it — you sign from the inside. |
 | **The hospitality tent** | Sponsor appearances and photo shoots, under the awning in the middle of the paddock. |
@@ -212,7 +212,8 @@ it is only replaced when the clock has moved past it.
 | Activity | What it is | Scored on |
 |---|---|---|
 | **Rookie orientation** | Not on the generated schedule (removed 2026-10-03); a hand-authored plan can still book `team-orientation`. The crew chief shows you the phone: the key that opens it, TASKS for what is outstanding, NOTES for who asked you for what. | Team morale, and a crib sheet left in the phone's NOTES |
-| **Team strategy briefing** / **race plan meeting** | The crew chief lays out the weekend and asks what you want the car to be. | Setup knowledge, team morale |
+| **Team strategy briefing** | The crew chief lays out the weekend and asks what you want the car to be. | Setup knowledge, team morale |
+| **Race plan** | Race morning, first thing (Cup: Sunday 08:00; National: Saturday 08:00; trucks: Friday 09:00, after the strategy briefing), in the motorhome you woke up in. The engineer asks one question, then the setup sheet opens (`CarSetupPanelUI`, titled RACE PLAN): fuel, tyres, balance. Confirming saves it as the weekend's race plan (`CarSetup.SaveAsRacePlan`, stamped with the weekend id). Practice and qualifying still offer the setup panel at the pit box; the **race does not** — `PitLaneStart` applies `CarSetup.ForRace` (the plan, or the last pit-box setup if the player skipped the meeting). Replaced the old race-morning "race plan meeting" at the pit box (2026-10-16). | Setup knowledge, team morale |
 | **Practice debrief** | The same question with data behind it. Worth far more if you actually ran the practice session. | Setup knowledge |
 | **Press conference** / **media availability** / **broadcast hit** | A reporter asks, three answers on the desk. | Press standing, fans, sponsor mood, rivalry |
 | **Signing session** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. At least ten fans (one per 5 min of window, capped at the cast of 12), and the window is cut into one slot fewer than there are fans. Sign it and move (1 slot), sign it and ask their name or pose for the photo (2 slots), or wave and keep walking (free). Plain signatures alone leave the last fan unreached, so reaching the whole fence takes at least one wave, plus another wave for every name or photo — a photo with every fan meets half of them; 3 photos, 4 waves and 3 plain signatures clears a fence of ten. The sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support, and waving past costs a little with every fan; stop to talk and the people you did reach are worth far more. | Fan appeal, sponsor mood, `autographs` counter |

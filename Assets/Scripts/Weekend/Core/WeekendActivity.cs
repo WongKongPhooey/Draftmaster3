@@ -13,6 +13,7 @@ namespace Draftmaster.Weekend
         TeamBriefing = 10,    // pre-weekend strategy meeting: where the weekend's plan is set
         Debrief = 11,         // after a session: what the R&D run told us, and what to change
         Orientation = 12,     // first weekend only: the crew chief walks you through the phone you run your life on
+        RacePlan = 13,        // race morning, in the motorhome: fuel, tyres and balance for the race, locked from here on
 
         // --- obligations to the sport ---
         DriversMeeting = 20,  // mandatory, two hours before the green flag of the race you are in
@@ -69,7 +70,8 @@ namespace Draftmaster.Weekend
             k == ActivityKind.SponsorDuty || k == ActivityKind.PhotoShoot;
 
         public static bool IsTeam(ActivityKind k) =>
-            k == ActivityKind.TeamBriefing || k == ActivityKind.Debrief || k == ActivityKind.Orientation;
+            k == ActivityKind.TeamBriefing || k == ActivityKind.Debrief || k == ActivityKind.Orientation ||
+            k == ActivityKind.RacePlan;
 
         // Ceremony: no skill in it, but the sport requires you there.
         public static bool IsCeremony(ActivityKind k) =>

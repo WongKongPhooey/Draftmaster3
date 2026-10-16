@@ -17,6 +17,7 @@ public static class WeekendScripts
         {
             case ActivityKind.TeamBriefing:
             case ActivityKind.Debrief:
+            case ActivityKind.RacePlan:
                 return TeamMeetingContent.Build(a);
 
             case ActivityKind.Orientation:

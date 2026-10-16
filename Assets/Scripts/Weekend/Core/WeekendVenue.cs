@@ -40,6 +40,9 @@ namespace Draftmaster.Weekend
                 case ActivityKind.TeamBriefing: return WeekendVenue.PitBox;
                 case ActivityKind.Debrief:      return WeekendVenue.Motorhome;
 
+                // The race plan is the first thing on race morning, had in the motorhome you woke up in.
+                case ActivityKind.RacePlan:     return WeekendVenue.Motorhome;
+
                 // Being shown how the phone works happens where a new driver is stood about anyway: at the
                 // team's garage, with the crew chief who is going to be sending them half of what is on it.
                 case ActivityKind.Orientation:  return WeekendVenue.PitBox;

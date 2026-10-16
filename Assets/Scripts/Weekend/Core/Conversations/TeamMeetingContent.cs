@@ -1,8 +1,8 @@
 namespace Draftmaster.Weekend
 {
     // The meetings, as they are actually had: the crew chief stood at the box with the car in bits behind
-    // him before the weekend starts, and the engineer sat across the dinette in your own motorhome after
-    // you have driven it.
+    // him before the weekend starts, the engineer sat across the dinette in your own motorhome after you
+    // have driven it, and the same engineer back in that seat on race morning to settle the race car.
     //
     // There is no right answer, only a shape: a qualifying car is not a race car, and a driver who tells
     // the truth about a bad car gets a better car and a worse room. What a meeting is worth is setup
@@ -19,6 +19,7 @@ namespace Draftmaster.Weekend
 
         public static WeekendConversation Build(WeekendActivity a)
         {
+            if (a != null && a.kind == ActivityKind.RacePlan) return RacePlan();
             bool debrief = a != null && a.kind == ActivityKind.Debrief;
             return debrief ? Debrief() : Briefing();
         }
@@ -67,6 +68,42 @@ namespace Draftmaster.Weekend
                 o.setupGain >= 0.12f ? "You left with a plan and the engineers left with a job. That is a good debrief."
                 : o.teamMorale < 0f ? "Honest, useful, and the room did not enjoy it."
                 : "Plan agreed. Everybody knows what the car is now.";
+            return c;
+        }
+
+        // ------------------------------------------------------------------ race morning, in the RV
+
+        // The talk is short on purpose: the meeting's real business is the setup sheet (fuel, tyres,
+        // balance) that the motorhome host opens once the engineer has finished, and that sheet is what the
+        // race session runs on — the pit-box setup panel is not offered on race day.
+        static WeekendConversation RacePlan()
+        {
+            var c = new WeekendConversation
+            {
+                statKey = "teammeetings",
+                greeting = new[] { "Morning, {playerfirst}. Coffee's on. Let's get the race plan down before anybody else wants you." },
+                farewell = new[] { "Fuel, tyres, balance. Put it on the sheet and that's the car you race." },
+            };
+
+            c.Add(new WeekendBeat
+            {
+                speaker = "ENGINEER",
+                line = "Once they fire engines nobody touches the setup, so we settle it now. What's the race about today?",
+                question = "What's the race about today?",
+                choices =
+                {
+                    WeekendConversation.Say(
+                        "Long runs. Build it to be good at the end of a stint.",
+                        "Then we don't chase the first five laps. Good.",
+                        setup: 0.05f, morale: 4f, score: 0.7f),
+                    WeekendConversation.Say(
+                        "Restarts and track position. I want it sharp off the line.",
+                        "It'll bite late in a run. Just so you know what you asked for.",
+                        setup: 0.04f, morale: 1f, appeal: 0.6f, score: 0.6f),
+                },
+            });
+
+            c.headline = o => "Race plan agreed. The car is set for the race.";
             return c;
         }
 

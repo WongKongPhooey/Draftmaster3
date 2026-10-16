@@ -31,6 +31,10 @@ public class WeekendVenueHost : NPCInteractable
     int _answered;
     bool _finished;
 
+    // The race plan's setup sheet is up: the engineer has had his say and the player is filling it in. The
+    // player stays planted until it is confirmed.
+    bool _planSheetOpen;
+
     // The signing session is worked along a line (SigningQueue): between fans the player is walked to the
     // next place at the rail and turned to face whoever is stood there, and that fan speaks their beat.
     SigningQueue _queue;
@@ -42,7 +46,7 @@ public class WeekendVenueHost : NPCInteractable
     float _walkGiveUpAt;      // somebody in the way: stop trying and sign from where they got to
     OnFootController _walker;
 
-    public override bool IsTalking => base.IsTalking || _choiceOpen || _walking;
+    public override bool IsTalking => base.IsTalking || _choiceOpen || _walking || _planSheetOpen;
 
     // A host somebody you can walk into, whoever built them. The generated ones come out of
     // PaddockPerson.SpawnTalker already solid; one authored into a track package may not have been given a
@@ -63,7 +67,7 @@ public class WeekendVenueHost : NPCInteractable
     public override bool Interact()
     {
         if (Time.frameCount < _swallowUntilFrame) return true;
-        if (_choiceOpen || _walking) return true;
+        if (_choiceOpen || _walking || _planSheetOpen) return true;
 
         if (!base.IsTalking)
         {
@@ -297,6 +301,21 @@ public class WeekendVenueHost : NPCInteractable
         {
             if (!PitChallengeRun.Launch(a))
                 WeekendDirector.Finish(a, WeekendOutcome.Nothing.WithHeadline("No car to run the pit-stop challenge in."), inWorld: true);
+            return;
+        }
+
+        // The race plan's talk only frames it: the meeting is the setup sheet, and it is settled when the
+        // sheet is confirmed. What is confirmed is the car the race runs (PitLaneStart reads it back).
+        if (a.kind == ActivityKind.RacePlan)
+        {
+            var outcome = script.Settle(_running, Mathf.Max(1, _answered));
+            _planSheetOpen = true;
+            CarSetupPanelUI.Open(CarSetup.ForRace(RaceWeekend.WeekendId), setup =>
+            {
+                _planSheetOpen = false;
+                setup?.SaveAsRacePlan(RaceWeekend.WeekendId);
+                WeekendDirector.Finish(a, outcome, inWorld: true);
+            }, "RACE PLAN");
             return;
         }
 

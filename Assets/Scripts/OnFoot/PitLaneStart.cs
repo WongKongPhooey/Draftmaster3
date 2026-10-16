@@ -1046,6 +1046,16 @@ public class PitLaneStart : MonoBehaviour
         ControlHints.Hide("advance");
         _orthoTarget = drivingOrthoSize; // the talking is over — now pull back to driving distance
         if (!showSetupPanel || _briefed) { StartDriving(null); return; }
+
+        // Race day: the setup was settled at the race plan on race morning, in the motorhome. The pit box
+        // only offers the panel in practice and qualifying — here the car runs the plan as agreed (or, when
+        // the player never sat down for it, whatever the crew last had on it).
+        if (GameSession.CareerActive && RaceWeekend.Current == RaceWeekend.Session.Race)
+        {
+            StartDriving(CarSetup.ForRace(RaceWeekend.WeekendId));
+            return;
+        }
+
         SetPhase(EntryPhase.Setup);
         CarSetupPanelUI.Open(CarSetup.Load(), StartDriving);
     }

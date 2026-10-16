@@ -54,7 +54,7 @@ namespace Draftmaster.Weekend
                     return true;
                 case CareerMode.Minimal:
                     return kind == ActivityKind.TeamBriefing || kind == ActivityKind.Debrief ||
-                           kind == ActivityKind.Orientation;
+                           kind == ActivityKind.Orientation || kind == ActivityKind.RacePlan;
                 default:
                     return false;
             }

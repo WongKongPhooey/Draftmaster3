@@ -44,8 +44,9 @@ public class CarSetupPanelUI : MonoBehaviour
     public static bool IsOpen { get; private set; }
 
     // Spawn the panel from Resources and hand back the instance. `setup` seeds the controls (pass
-    // CarSetup.Load() for the driver's last choices); onConfirm fires once, with the chosen setup.
-    public static CarSetupPanelUI Open(CarSetup setup, Action<CarSetup> onConfirm)
+    // CarSetup.Load() for the driver's last choices); onConfirm fires once, with the chosen setup. `title`
+    // replaces the authored heading when given (the race-morning plan in the motorhome).
+    public static CarSetupPanelUI Open(CarSetup setup, Action<CarSetup> onConfirm, string title = null)
     {
         var prefab = Resources.Load<GameObject>(PrefabPath);
         if (prefab == null)
@@ -63,6 +64,7 @@ public class CarSetupPanelUI : MonoBehaviour
         var ui = go.GetComponent<CarSetupPanelUI>();
         if (ui == null) ui = go.AddComponent<CarSetupPanelUI>();
         ui.Bind(setup ?? new CarSetup(), onConfirm);
+        if (!string.IsNullOrEmpty(title) && ui.titleText != null) ui.titleText.text = title;
         return ui;
     }
 

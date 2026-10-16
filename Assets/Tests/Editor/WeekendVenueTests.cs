@@ -79,7 +79,7 @@ public class WeekendVenueTests
         {
             WeekendConversation script = a.kind switch
             {
-                ActivityKind.TeamBriefing or ActivityKind.Debrief => TeamMeetingContent.Build(a),
+                ActivityKind.TeamBriefing or ActivityKind.Debrief or ActivityKind.RacePlan => TeamMeetingContent.Build(a),
                 ActivityKind.DriversMeeting or ActivityKind.DriverIntros => CeremonyContent.Build(a),
                 ActivityKind.SponsorDuty or ActivityKind.PhotoShoot => SponsorContent.Build(a, "Cutler Fuels"),
                 ActivityKind.Autographs or ActivityKind.HaulerParade => SigningContent.Build(a),

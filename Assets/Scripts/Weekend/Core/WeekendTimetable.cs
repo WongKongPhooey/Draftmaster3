@@ -205,7 +205,8 @@ namespace Draftmaster.Weekend
         }
 
         // Behind closed doors with the crew chief. The pre-weekend meeting sets the plan; the debrief after
-        // your own practice is where the R&D run turns into a setup change.
+        // your own practice is where the R&D run turns into a setup change; the race plan on race morning is
+        // where the race car is settled.
         void BuildTeamMeetings()
         {
             var briefing = Add(new SessionTime(WeekendSlot.FridayAM, 8 * 60, 60), ActivityKind.TeamBriefing, playerSeries,
@@ -232,19 +233,24 @@ namespace Draftmaster.Weekend
             var practice = PlayerSession(ActivityKind.Practice);
             if (practice != null) debriefActivity.requiresId = practice.id;
 
-            // Race morning: the last plan of the weekend, agreed over coffee.
-            var race = RaceTime(playerSeries);
-            var raceMorning = WeekendSlots.MorningOf(race.slot);
-            int planStart = raceMorning == race.slot
-                ? System.Math.Max(WeekendSlots.OpensAt(raceMorning), race.startMinute - 300)
-                : 11 * 60 + 15;
-            if (planStart + 30 <= WeekendSlots.ClosesAt(raceMorning))
-            {
-                Add(new SessionTime(raceMorning, planStart, 30), ActivityKind.TeamBriefing, playerSeries,
-                    "RACE PLAN MEETING",
-                    "Fuel windows, pit calls, and what the spotter says about the first ten laps.",
-                    "Engineering truck");
-            }
+            // Race morning: the race plan, first thing, in the motorhome the driver has just woken up in. This
+            // is where fuel, tyres and balance for the race are set; once the race session starts the car runs
+            // what was agreed here and the pit-box setup panel stays shut.
+            var plan = Add(RacePlanTime(playerSeries), ActivityKind.RacePlan, playerSeries,
+                "RACE PLAN",
+                "Race morning in the motorhome: fuel, tyres and balance. Once the engines fire, the plan is locked.",
+                "Motorhome");
+            plan.skipReason = "The crew set the race plan without you.";
+        }
+
+        // When the race plan is held: the moment the day opens on the morning of the player's own race. A Cup
+        // driver's is Sunday morning. A truck driver races on Friday, whose morning already opens with the
+        // strategy briefing, so theirs follows it rather than landing on top of it.
+        public static SessionTime RacePlanTime(RacingSeries s)
+        {
+            var morning = WeekendSlots.MorningOf(RaceTime(s).slot);
+            int start = morning == WeekendSlot.FridayAM ? 9 * 60 : WeekendSlots.OpensAt(morning);
+            return new SessionTime(morning, start, 30);
         }
 
         // Media, fans and sponsors. Deliberately booked over the top of sessions in places - the sponsor

@@ -99,6 +99,13 @@ namespace Draftmaster.Weekend
             },
             new EventType
             {
+                id = "team-raceplan", kind = ActivityKind.RacePlan, minutes = 30,
+                title = "RACE PLAN",
+                subtitle = "Race morning in the motorhome: fuel, tyres and balance. Once the engines fire, the plan is locked.",
+                skipReason = "The crew set the race plan without you.",
+            },
+            new EventType
+            {
                 id = "team-orientation", kind = ActivityKind.Orientation, minutes = 15,
                 title = "ROOKIE ORIENTATION",
                 subtitle = "Two minutes on the phone in your pocket: what is on today, what you have agreed to do for people, and where to read it back.",

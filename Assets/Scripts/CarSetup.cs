@@ -6,7 +6,8 @@ using UnityEngine;
 //   compound → TireModel.SetCompound (grip / wear / warm-up)
 //   fuel     → FuelTank.fuelLitres   (mass, and the engine cuts when dry)
 //   balance  → PlayerVehicleController.understeerBias (front/rear grip split)
-// Persisted to PlayerPrefs so the next session opens on what the driver last ran.
+// Persisted to PlayerPrefs so the next session opens on what the driver last ran. In a career race the car
+// runs the race plan instead (SaveAsRacePlan / ForRace), set on race morning in the motorhome.
 [System.Serializable]
 public class CarSetup
 {
@@ -76,4 +77,48 @@ public class CarSetup
         fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyFuel, 12f), MinFuel, MaxFuel),
         balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyBalance, 0f), -1f, 1f),
     };
+
+    // ---- the race plan
+    //
+    // Agreed on race morning in the motorhome (the RacePlan booking) and kept apart from the pit-box setup
+    // above, so a session driven after it (a truck driver's Friday qualifying) cannot quietly change the race
+    // car. Stamped with the weekend it was made for: last week's plan is not this week's.
+    const string KeyPlanWeekend = "raceplan.weekend";
+    const string KeyPlanCompound = "raceplan.compound";
+    const string KeyPlanFuel = "raceplan.fuel";
+    const string KeyPlanBalance = "raceplan.balance";
+
+    public void SaveAsRacePlan(int weekendId)
+    {
+        PlayerPrefs.SetInt(KeyPlanWeekend, weekendId);
+        PlayerPrefs.SetInt(KeyPlanCompound, (int)compound);
+        PlayerPrefs.SetFloat(KeyPlanFuel, fuelLitres);
+        PlayerPrefs.SetFloat(KeyPlanBalance, balance);
+        PlayerPrefs.Save();
+    }
+
+    // The race plan made for this weekend, or null when nobody sat down to make one.
+    public static CarSetup LoadRacePlan(int weekendId)
+    {
+        if (!PlayerPrefs.HasKey(KeyPlanWeekend) || PlayerPrefs.GetInt(KeyPlanWeekend) != weekendId) return null;
+        return new CarSetup
+        {
+            compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyPlanCompound, (int)TireModel.Compound.Soft),
+            fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanFuel, 12f), MinFuel, MaxFuel),
+            balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanBalance, 0f), -1f, 1f),
+        };
+    }
+
+    // What the car runs in the race: the plan when there is one, otherwise whatever the crew left on it
+    // from the last session the driver set up — the crew made the plan without them.
+    public static CarSetup ForRace(int weekendId) => LoadRacePlan(weekendId) ?? Load();
+
+    public static void ClearRacePlan()
+    {
+        PlayerPrefs.DeleteKey(KeyPlanWeekend);
+        PlayerPrefs.DeleteKey(KeyPlanCompound);
+        PlayerPrefs.DeleteKey(KeyPlanFuel);
+        PlayerPrefs.DeleteKey(KeyPlanBalance);
+        PlayerPrefs.Save();
+    }
 }

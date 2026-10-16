@@ -50,6 +50,7 @@ namespace Draftmaster.Weekend
                 case ActivityKind.TeamBriefing:
                 case ActivityKind.Debrief:
                 case ActivityKind.Orientation:
+                case ActivityKind.RacePlan:
                     o.teamMorale = -4f;
                     break;
                 case ActivityKind.DriversMeeting:
