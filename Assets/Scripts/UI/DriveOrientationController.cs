@@ -208,7 +208,10 @@ public class DriveOrientationController : MonoBehaviour
         bool handheld = PixelGUI.Handheld;
         if (!handheld && !_applied) return;
 
-        bool want = DriveOrientation.WantsPortrait(handheld, CameraViewMode.Swinging, InCar, RaceDirector.InResults);
+        // Across the finishing line the AI has the car and the camera stops on the line: landscape again, ready
+        // for the results table that follows.
+        bool finished = RaceDirector.InResults || RaceEndPitIn.HandedOverAtLine;
+        bool want = DriveOrientation.WantsPortrait(handheld, CameraViewMode.Swinging, InCar, finished);
         bool portrait = _latch.Update(want, Time.unscaledDeltaTime);
         if (portrait == _applied) return;
 
@@ -222,6 +225,6 @@ public class DriveOrientationController : MonoBehaviour
         Debug.Log($"[Orientation] {(portrait ? "PORTRAIT" : "landscape")}: onFoot={PadInput.OnFoot} " +
                   $"gettingIn={PitLaneStart.GettingIn} ({PitLaneStart.DescribeEntry()}) setupOpen={CarSetupPanelUI.IsOpen} " +
                   $"human={(human != null ? human.name : "none")} broadcast={(mode != null && !mode.IsDriving)} " +
-                  $"results={RaceDirector.InResults}");
+                  $"results={RaceDirector.InResults} finished={RaceEndPitIn.HandedOverAtLine}");
     }
 }

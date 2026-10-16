@@ -148,6 +148,13 @@ public class EngineAudio : MonoBehaviour
             }
         }
 
+        // Re-read the host's spatial settings onto the sources already playing.
+        public void Reconfigure(EngineAudio host)
+        {
+            if (_src == null) return;
+            for (int i = 0; i < _src.Length; i++) if (_src[i] != null) host.ConfigureSpatial(_src[i]);
+        }
+
         // Triangular crossfade between the two layers bracketing the current RPM.
         float Weight(int i, float rpm, int n)
         {
@@ -179,6 +186,21 @@ public class EngineAudio : MonoBehaviour
     {
         _rolloffCurve = null;
         Build();
+    }
+
+    // Change how the engine is heard without restarting it: Rebuild would stop the loops and crank the engine
+    // again on the next frame. The player's car at the chequered flag uses this to turn from a 2D in-car sound
+    // into a 3D one that drives away from the camera parked on the line (FinishLineCamera).
+    public void SetSpatial(float blend, float minDist, float maxDist, float doppler)
+    {
+        spatialBlend = blend;
+        minDistance = minDist;
+        maxDistance = maxDist;
+        dopplerLevel = doppler;
+        _rolloffCurve = null;
+        _onBank?.Reconfigure(this);
+        _offBank?.Reconfigure(this);
+        if (_oneShot != null) ConfigureSpatial(_oneShot);
     }
 
     void Build()

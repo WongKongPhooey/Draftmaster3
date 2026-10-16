@@ -102,7 +102,7 @@ public class DriveModeController : MonoBehaviour
     public void Toggle()
     {
         // The session is over and the AI is bringing the player's car home: it is not theirs to take back.
-        if (PracticeDirector.BringingPlayerIn) return;
+        if (PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine) return;
         SetDriving(!_driving);
     }
 

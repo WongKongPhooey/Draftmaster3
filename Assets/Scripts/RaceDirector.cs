@@ -10,7 +10,9 @@ using UnityEngine.SceneManagement;
 //
 // Runs alongside RacePositionTracker (positions/laps) and LapTimingManager (best laps for the results
 // table). Once a car has taken the chequer it runs a cool-down lap and comes in to park in its pit box
-// (PitStopController for the AI, RaceEndPitIn for the player's car); TookChequer is what they key off.
+// (PitStopController for the AI, RaceEndPitIn for the player's car); TookChequer is what they key off. The
+// player's car is the AI's from the moment it crosses the line, and the camera stays there (FinishLineCamera),
+// so the rest of the field is heard coming home behind the results table, finishing as it crosses.
 public class RaceDirector : MonoBehaviour
 {
     public static RaceDirector Instance { get; private set; }
@@ -53,12 +55,14 @@ public class RaceDirector : MonoBehaviour
         public bool finished;
         public float raceTime;   // s from green to the line; -1 for classified-unfinished cars
         public int lapsDown;     // >0 only for classified-unfinished cars
+        public bool onLastLap;   // on the lead lap and still coming to the flag when the table went up
     }
 
     readonly Dictionary<Transform, int> _lapBaseline = new();
     readonly Dictionary<Transform, Result> _finishedBy = new();
     readonly Dictionary<Transform, int> _lapAtChequer = new();
     readonly List<Result> _results = new();
+    readonly HashSet<Transform> _onLastLap = new();
     float _greenTime = -1f;
     float _checkeredTime;
     bool _panelHidden;
@@ -148,6 +152,10 @@ public class RaceDirector : MonoBehaviour
                     RecordCareerResult();
                     _phase = Phase.Results;
                 }
+                break;
+
+            case Phase.Results:
+                CheckLateFinishes(rt);
                 break;
         }
     }
@@ -248,6 +256,12 @@ public class RaceDirector : MonoBehaviour
 
     void ClassifyRemaining(RacePositionTracker rt)
     {
+        // With the player home, the table goes up while the rest of the field is still coming to the line
+        // behind them, and those on the lead lap are finished as they cross it (CheckLateFinishes). Not when
+        // the stragglers' clock ran out on the player: their own place is already in the career books.
+        bool playerHome = false;
+        foreach (var done in _results) if (done.isPlayer && done.finished) { playerHome = true; break; }
+
         for (int i = 0; i < rt.Order.Count; i++)   // running order = classification order
         {
             var e = rt.Order[i];
@@ -262,8 +276,48 @@ public class RaceDirector : MonoBehaviour
                 raceTime = -1f,
                 lapsDown = Mathf.Max(1, raceLaps - RacingLaps(e)),
             };
+            if (playerHome && !e.isPlayer && RacingLaps(e) == raceLaps - 1 && !TookChequer(e.tf))
+            {
+                r.onLastLap = true;
+                _onLastLap.Add(e.tf);
+            }
             _finishedBy[e.tf] = r;
             _results.Add(r);
+        }
+    }
+
+    // A lead-lap car crossing the line behind the results table is finished there and then, behind everybody
+    // already home, with its time from the green. One that never arrives (parked, despawned) is left a lap
+    // down once the stragglers' time is up.
+    void CheckLateFinishes(RacePositionTracker rt)
+    {
+        if (_onLastLap.Count == 0) return;
+
+        if (Time.time - _checkeredTime > stragglerTimeout)
+        {
+            foreach (var tf in _onLastLap)
+                if (tf != null && _finishedBy.TryGetValue(tf, out var gone)) gone.onLastLap = false;
+            _onLastLap.Clear();
+            return;
+        }
+
+        for (int i = 0; i < rt.Order.Count; i++)
+        {
+            var e = rt.Order[i];
+            if (e == null || e.tf == null || !_onLastLap.Contains(e.tf) || RacingLaps(e) < raceLaps) continue;
+            _onLastLap.Remove(e.tf);
+            if (!_finishedBy.TryGetValue(e.tf, out var r)) continue;
+
+            r.finished = true;
+            r.onLastLap = false;
+            r.lapsDown = 0;
+            r.raceTime = Time.time - _greenTime;
+
+            // Finishers are kept together at the top in the order they crossed.
+            _results.Remove(r);
+            int at = 0;
+            while (at < _results.Count && _results[at].finished) at++;
+            _results.Insert(at, r);
         }
     }
 
@@ -583,7 +637,8 @@ public class RaceDirector : MonoBehaviour
 
             string name = string.IsNullOrEmpty(r.name) ? "?" : (r.name.Length > nameChars ? r.name.Substring(0, nameChars) : r.name);
             string result;
-            if (!r.finished) result = "+" + r.lapsDown + "L";
+            if (r.onLastLap) result = "LAST LAP";
+            else if (!r.finished) result = "+" + r.lapsDown + "L";
             else if (i == 0) result = "WINNER";
             else if (winnerTime > 0f) result = "+" + (r.raceTime - winnerTime).ToString("0.000");
             else result = LapTimingManager.Format(r.raceTime);
