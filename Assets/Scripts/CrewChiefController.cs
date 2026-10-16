@@ -611,7 +611,7 @@ public class CrewChiefController : MonoBehaviour
 
             string name = string.IsNullOrEmpty(e.name) ? "?" : (e.name.Length > 14 ? e.name.Substring(0, 14) : e.name);
             GUI.Label(new Rect(cx, cy, c.width, row),
-                $"{("P" + e.position),-4}{("#" + e.carNumber),-5}{name,-16}{(e.lap + 1),-6}{pitStr,-7}{fuelStr,-6}", style);
+                $"{("P" + e.position),-4}{("#" + e.carNumber),-5}{name,-16}{Mathf.Max(1, e.lap + 1),-6}{pitStr,-7}{fuelStr,-6}", style);
             cy += row;
         }
         style.normal.textColor = prev;

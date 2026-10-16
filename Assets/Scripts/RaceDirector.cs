@@ -107,7 +107,7 @@ public class RaceDirector : MonoBehaviour
                 if (RaceStart.IsGreen)
                 {
                     _greenTime = Time.time;
-                    BaselineLaps(rt);       // line crossings before green (formation) don't count
+                    BaselineLapsAtGreen(rt);   // line crossings before green (formation) don't count
                     // Career ledger: taking the green counts as a start. When the player's career gains a
                     // manufacturer, also increment "starts.<manufacturer>" here for sponsor-style quests.
                     PlayerStatsLedger.Increment("starts");
@@ -152,6 +152,27 @@ public class RaceDirector : MonoBehaviour
         }
     }
 
+    // The whole field starts counting from one lap, set off the leader (RaceLaps.StartBaseline). A car's own
+    // lap at the green is no good as its baseline: a car still short of the line when the leader was already
+    // over it would be handed the start crossing as a free lap, and the classification would disagree with
+    // the running order the position readout had been showing all race.
+    void BaselineLapsAtGreen(RacePositionTracker rt)
+    {
+        var order = rt.Order;
+        float len = rt.TrackLength;
+        if (order.Count == 0 || order[0] == null || order[0].tf == null || len <= 0f) { BaselineLaps(rt); return; }
+
+        var leader = order[0];
+        int baseLap = Draftmaster.Sim.RaceLaps.StartBaseline(leader.lap, Mathf.Repeat(leader.progress, len), len);
+        for (int i = 0; i < order.Count; i++)
+        {
+            var e = order[i];
+            if (e == null || e.tf == null) continue;
+            _lapBaseline[e.tf] = baseLap;
+        }
+    }
+
+    // Cars that join after the green start from the lap they join on.
     void BaselineLaps(RacePositionTracker rt)
     {
         for (int i = 0; i < rt.Order.Count; i++)

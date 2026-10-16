@@ -235,7 +235,8 @@ public class IronOvalRaceHUD : MonoBehaviour
     {
         var tracker = RacePositionTracker.Instance;
         if (tracker == null || _player == null) return "";
-        int lap = tracker.LapOf(_player) + 1;
+        // A car that starts short of the line is on lap -1 until it crosses it (RaceLaps.FirstLap).
+        int lap = Mathf.Max(1, tracker.LapOf(_player) + 1);
 
         var director = RaceDirector.Instance;
         int total = director != null ? director.raceLaps : 0;

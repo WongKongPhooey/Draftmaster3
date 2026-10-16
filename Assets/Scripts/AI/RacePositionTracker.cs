@@ -33,6 +33,7 @@ public class RacePositionTracker : MonoBehaviour
         public int lap;
         public float prevDist;
         public bool hasPrev;
+        public bool seeded;           // its starting lap has been set from where it was first seen
         public float prevProgress;
         public float progress;
         // Where the car is along the centerline measured from segment[0] — the scale every SplineDriver
@@ -248,6 +249,13 @@ public class RacePositionTracker : MonoBehaviour
         {
             float sf = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             if (sf != 0f) dist = Mathf.Repeat(dist - sf, len);
+        }
+
+        // First sight of the car: one sat short of the line has not started the lap yet (RaceLaps.FirstLap).
+        if (!e.seeded)
+        {
+            e.lap = Draftmaster.Sim.RaceLaps.FirstLap(dist, len);
+            e.seeded = true;
         }
 
         bool hadPrev = e.hasPrev;
