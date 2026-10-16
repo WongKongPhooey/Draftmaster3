@@ -26,7 +26,7 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
      │                       └─ EXIT door ──▶ back on the road  BACK ◀────────────┘
      │                                                   (returns to whichever scene opened it)
      │
-     └──OPTIONS──▶  Options   (the player's name)  ── BACK / Esc ──▶  TitleScreen
+     └──OPTIONS──▶  Options   (name, career, sound)  ── BACK / Esc ──▶  TitleScreen
 ```
 
 * **NEW SEASON** starts a fresh weekend at `TitleScreenUI.newSeasonTrackId` (WatkinsGlen).
@@ -43,6 +43,11 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   else had to learn about the screen. The screen draws itself at runtime, like SINGLE RACE; rebuild the
   scene with `Draftmaster > UI > Build Options Scene` and re-wire the title row with
   `Draftmaster > UI > Wire OPTIONS Row To Options Screen`. Add a setting by adding a `MenuRow`.
+  Its **SOUND** row opens a second page of levels — MASTER, ENGINES, EFFECTS, CROWD, PHONE — in 10% steps,
+  saved as `Sound.<Channel>` ints (kept by CareerReset). Rules in `Draftmaster.Audio.SoundMix`, values in
+  `SoundVolumes`. There is no AudioMixer: MASTER is `AudioListener.volume`, and each voice multiplies its
+  own level by its channel (`SoundVolumes.Engines` etc.). A new sound must do the same, or only MASTER
+  reaches it.
 * **The garage sheet is not on the menu.** It is opened from a `LaptopInteractable` — one on the dinette
   table in the RV, one on the desk in the team factory. `GarageScreenLoader` remembers which scene
   opened it so BACK returns there; opened cold it falls back to the title.

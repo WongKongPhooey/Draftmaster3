@@ -93,7 +93,7 @@ public class AmbienceLoop : MonoBehaviour
         // Faded at a rate set by the loudest the bed ever gets, so a change of session arrives at the same
         // pace whether it is going up or down and whatever the crowd happens to be doing.
         _level = Mathf.MoveTowards(_level, target, (raceDayCeiling / Mathf.Max(0.05f, fadeSeconds)) * dt);
-        _src.volume = _level;
+        _src.volume = _level * SoundVolumes.Crowd;   // OPTIONS > SOUND, outside the fade so a change is heard at once
 
         // The cutoff is swept in octaves, not in Hz: 22000 -> 700 linearly would spend the first second of
         // the fade somewhere nobody can hear the difference and then slam the last few hundred Hz shut.

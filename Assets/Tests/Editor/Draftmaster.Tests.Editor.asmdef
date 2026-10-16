@@ -2,6 +2,7 @@
     "name": "Draftmaster.Tests.Editor",
     "rootNamespace": "",
     "references": [
+        "Draftmaster.Audio",
         "Draftmaster.Chatter",
         "Draftmaster.Controls",
         "Draftmaster.Controls.Input",

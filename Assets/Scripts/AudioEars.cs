@@ -33,7 +33,6 @@ public class AudioEars : MonoBehaviour
     Vector3 _last;
     bool _hasLast;
     float _duck;          // seconds of recovery left after a cut
-    float _duckBaseline;  // the master volume we ducked from, so a settings volume isn't overwritten
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
@@ -85,7 +84,6 @@ public class AudioEars : MonoBehaviour
         // hundreds of metres in one frame and bends every engine in the field. Ride across it muted.
         if (_hasLast && Vector3.Distance(want, _last) > cutMetres && cutRecoverSeconds > 0f)
         {
-            if (_duck <= 0f) _duckBaseline = AudioListener.volume;
             _duck = cutRecoverSeconds;
         }
 
@@ -97,8 +95,10 @@ public class AudioEars : MonoBehaviour
         {
             _duck -= Time.unscaledDeltaTime;
             float back = cutRecoverSeconds > 0f ? Mathf.Clamp01(1f - _duck / cutRecoverSeconds) : 1f;
-            AudioListener.volume = _duckBaseline * back;
-            if (_duck <= 0f) AudioListener.volume = _duckBaseline;
+            // Back up to the OPTIONS > SOUND master level, never to 1, or a cut would undo the setting.
+            float master = SoundVolumes.Master;
+            AudioListener.volume = master * back;
+            if (_duck <= 0f) AudioListener.volume = master;
         }
     }
 

@@ -13,6 +13,7 @@
   <Project Path="Ink-Libraries.csproj" />
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
+  <Project Path="Draftmaster.Audio.csproj" />
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Controls.Input.csproj" />

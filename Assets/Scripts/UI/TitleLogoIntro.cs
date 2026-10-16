@@ -208,8 +208,8 @@ public class TitleLogoIntro : MonoBehaviour
         if (_t < at + slideSeconds * lockAt) return;
         _crunched[i] = true;
         if (_audio[i] == null || _crunch == null) return;
-        _audio[i].PlayOneShot(_crunch, crunchVolume);
-        if (_sub[i] != null && subVolume > 0f) _sub[i].PlayOneShot(_crunch, subVolume);
+        _audio[i].PlayOneShot(_crunch, crunchVolume * SoundVolumes.Effects);
+        if (_sub[i] != null && subVolume > 0f) _sub[i].PlayOneShot(_crunch, subVolume * SoundVolumes.Effects);
     }
 
     // Leaving early (a scene change mid-entrance) puts everything back where the prefab has it.

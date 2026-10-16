@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Draftmaster.Audio;
 using Draftmaster.Controls;
 
 // OPTIONS: the screen behind the title menu's last row.
@@ -30,6 +31,10 @@ using Draftmaster.Controls;
 // not survive a save in this project, so a menu that wires itself in Start is the durable half of the
 // authored-canvas pattern. It uses the same kit helpers the authored screens do, so it matches them.
 //
+// And SOUND: a second page of levels, one per part of the mix — MASTER, ENGINES, EFFECTS, CROWD and PHONE.
+// The rules are Draftmaster.Audio.SoundMix, the saved values SoundVolumes; this page only moves them. It is a
+// page rather than more rows because the 640x360 sheet has no room left under CAREER MODE.
+//
 // The row list below is where a future setting goes — add a MenuRow and it gets navigation, drawing and
 // the cursor for nothing.
 public class OptionsUI : MonoBehaviour
@@ -42,8 +47,12 @@ public class OptionsUI : MonoBehaviour
     {
         Text,   // opens for typing: ENTER edits, ENTER again saves, ESC puts it back
         Choice, // one of a fixed set: ENTER / tap / right steps forward, left steps back
-        Back,   // leaves the screen
+        Page,   // opens another page of rows
+        Back,   // leaves the screen (or, on a sub-page, goes back to the first)
     }
+
+    // Which sheet of rows is up.
+    enum Page { Main, Sound }
 
     class MenuRow
     {
@@ -55,6 +64,9 @@ public class OptionsUI : MonoBehaviour
         public string emptyHint = "";       // drawn instead of a blank value
         public Action<int> step;            // Choice rows: move the setting by +1 / -1
         public Func<string> describe;       // Choice rows: one line under the row about the current value
+        public Action cycle;                // Choice rows: what ENTER / a tap does, when it isn't step(+1)
+        public Action open;                 // Page rows: show the page
+        public string hint;                 // drawn in the footer while this row is selected
         public string heading;              // a section title drawn above this row
         public float gapBefore;             // extra design pixels above the row
 
@@ -70,6 +82,8 @@ public class OptionsUI : MonoBehaviour
     const int PlayerDriverNameLimit = PlayerDriver.MaxNameHalfLength;
 
     readonly List<MenuRow> _rows = new();
+    Page _page = Page.Main;
+    RectTransform _pageRoot;    // everything BuildChrome draws, so a page change can throw it away
     int _index;
     int _editing = -1;      // row being typed into, -1 when just walking the menu
     string _buffer = "";
@@ -113,6 +127,7 @@ public class OptionsUI : MonoBehaviour
     void BuildRows()
     {
         _rows.Clear();
+        if (_page == Page.Sound) { BuildSoundRows(); return; }
 
         _rows.Add(new MenuRow
         {
@@ -151,8 +166,52 @@ public class OptionsUI : MonoBehaviour
             },
         });
 
-        // BACK sits clear of the fields — it is leaving the screen, not another thing to set.
+        // SOUND takes the space CAREER MODE's line leaves under it, and BACK follows straight on: there is no
+        // room on the sheet for another heading.
+        _rows.Add(new MenuRow
+        {
+            label = "SOUND",
+            kind = RowKind.Page,
+            gapBefore = 26f,
+            read = () => "MASTER  " + SoundMix.Format(SoundVolumes.Percent(SoundChannel.Master)),
+            open = () => ShowPage(Page.Sound, 0),
+        });
+
+        _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back });
+    }
+
+    // One row per part of the mix. Left / right move a level a step and stop at the ends; ENTER and a tap go
+    // up a step and round from full to OFF, so a phone can reach every level.
+    void BuildSoundRows()
+    {
+        foreach (var channel in SoundMix.All)
+        {
+            var c = channel;
+            _rows.Add(new MenuRow
+            {
+                label = SoundMix.Label(c),
+                kind = RowKind.Choice,
+                hint = SoundMix.Describe(c),
+                read = () => SoundMix.Format(SoundVolumes.Percent(c)),
+                step = dir => SoundVolumes.SetPercent(c, SoundMix.Step(SoundVolumes.Percent(c), dir)),
+                cycle = () => SoundVolumes.SetPercent(c, SoundMix.Cycle(SoundVolumes.Percent(c))),
+            });
+        }
+
         _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back, gapBefore = 26f });
+    }
+
+    // Swap the sheet: new rows, new chrome, cursor on `index`.
+    void ShowPage(Page page, int index)
+    {
+        _page = page;
+        BuildRows();
+        _index = Mathf.Clamp(index, 0, _rows.Count - 1);
+        if (_pageRoot != null) Destroy(_pageRoot.gameObject);
+        _pageRoot = null;
+        BuildChrome();
+        SetStatus("");
+        Redraw();
     }
 
     // ------------------------------------------------------------------ input
@@ -312,7 +371,14 @@ public class OptionsUI : MonoBehaviour
                 break;
 
             case RowKind.Choice:
-                Step(1);
+                if (row.cycle == null) { Step(1); break; }
+                row.cycle();
+                SetStatus($"{row.label}: {(row.read != null ? row.read() : "")}");
+                Redraw();
+                break;
+
+            case RowKind.Page:
+                row.open?.Invoke();
                 break;
 
             case RowKind.Back:
@@ -351,6 +417,15 @@ public class OptionsUI : MonoBehaviour
 
     void Back()
     {
+        // A sub-page's BACK (and ESC) goes back to the first page, cursor on the row that opened it.
+        if (_page != Page.Main)
+        {
+            ShowPage(Page.Main, 0);
+            int at = _rows.FindIndex(r => r.kind == RowKind.Page);
+            if (at >= 0) { _index = at; Redraw(); }
+            return;
+        }
+
         if (string.IsNullOrEmpty(titleSceneName) || !Application.CanStreamedLevelBeLoaded(titleSceneName))
         {
             SetStatus($"{titleSceneName} isn't in the build settings.");
@@ -397,7 +472,14 @@ public class OptionsUI : MonoBehaviour
         foreach (var row in _rows)
             if (row.describeText != null && row.describe != null) row.describeText.text = row.describe();
 
-        if (_preview != null)
+        if (_preview != null && _page != Page.Main)
+        {
+            // A sub-page's footer says what the selected row covers.
+            var at = _index >= 0 && _index < _rows.Count ? _rows[_index] : null;
+            _preview.text = at?.hint ?? "";
+            _preview.color = theme.plateLight;
+        }
+        else if (_preview != null)
         {
             string full = PlayerDriver.CareerName;
             _preview.text = full.Length > 0
@@ -447,7 +529,12 @@ public class OptionsUI : MonoBehaviour
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         }
 
-        var root = (RectTransform)canvas.transform;
+        // Everything below hangs off one page object, so ShowPage can throw a page away whole.
+        var pageGo = new GameObject(_page + "Page", typeof(RectTransform));
+        pageGo.transform.SetParent(canvas.transform, false);
+        _pageRoot = (RectTransform)pageGo.transform;
+        Stretch(_pageRoot);
+        var root = _pageRoot;
 
         var backdrop = new GameObject("Backdrop", typeof(Image)).GetComponent<Image>();
         backdrop.transform.SetParent(root, false);
@@ -458,13 +545,15 @@ public class OptionsUI : MonoBehaviour
         Place((RectTransform)title.transform, new Vector2(0f, 1f), new Vector2(24f, -20f),
               new Vector2(400f, 28f), TextAlignmentOptions.TopLeft);
 
-        var section = IronOvalUI.Label(root, "Section", "DRIVER", IronOvalUI.Role.HeaderSmall, theme.gold);
+        bool sound = _page == Page.Sound;
+        var section = IronOvalUI.Label(root, "Section", sound ? "SOUND" : "DRIVER", IronOvalUI.Role.HeaderSmall, theme.gold);
         section.characterSpacing = 4f;
         Place((RectTransform)section.transform, new Vector2(0f, 1f), new Vector2(24f, -56f),
               new Vector2(560f, 12f), TextAlignmentOptions.TopLeft);
 
         var blurb = IronOvalUI.Label(root, "Blurb",
-                                     "WHAT THE SPOTTER, THE CREW AND THE TIMING TOWER CALL YOU.",
+                                     sound ? "HOW LOUD EACH PART OF THE MIX IS. OFF SILENCES IT."
+                                           : "WHAT THE SPOTTER, THE CREW AND THE TIMING TOWER CALL YOU.",
                                      IronOvalUI.Role.Body, theme.plateLight);
         Place((RectTransform)blurb.transform, new Vector2(0f, 1f), new Vector2(24f, -74f),
               new Vector2(560f, 18f), TextAlignmentOptions.TopLeft);
@@ -526,7 +615,7 @@ public class OptionsUI : MonoBehaviour
         }
 
         _preview = IronOvalUI.Label(root, "Preview", "", IronOvalUI.Role.Body, theme.gold);
-        Place((RectTransform)_preview.transform, new Vector2(0f, 0f), new Vector2(24f, 84f),
+        Place((RectTransform)_preview.transform, new Vector2(0f, 0f), new Vector2(24f, 64f),   // a line lower than it was, for the SOUND row
               new Vector2(560f, 20f), TextAlignmentOptions.BottomLeft);
 
         _status = IronOvalUI.Label(root, "Status", "", IronOvalUI.Role.Body, theme.text);

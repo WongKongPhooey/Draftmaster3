@@ -232,7 +232,7 @@ public class ChiefCheckInBeat : MonoBehaviour
             _audio.playOnAwake = false;
             _audio.spatialBlend = 0f;   // in the driver's pocket, not somewhere in the paddock
         }
-        _audio.PlayOneShot(TextTone(), bleepVolume);
+        _audio.PlayOneShot(TextTone(), bleepVolume * SoundVolumes.Interface);
     }
 
     static AudioClip _tone;

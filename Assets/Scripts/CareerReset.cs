@@ -19,6 +19,11 @@ public static class CareerReset
     static readonly string[] KeptInts =
     {
         "AudioOn", "CommsOn", "Volume",         // sound
+        Draftmaster.Audio.SoundMix.PrefKey(Draftmaster.Audio.SoundChannel.Master),     // OPTIONS > SOUND levels
+        Draftmaster.Audio.SoundMix.PrefKey(Draftmaster.Audio.SoundChannel.Engines),
+        Draftmaster.Audio.SoundMix.PrefKey(Draftmaster.Audio.SoundChannel.Effects),
+        Draftmaster.Audio.SoundMix.PrefKey(Draftmaster.Audio.SoundChannel.Crowd),
+        Draftmaster.Audio.SoundMix.PrefKey(Draftmaster.Audio.SoundChannel.Interface),
         "CameraRotate", "CameraZoom", "CameraMode",  // camera (CameraMode = fixed or swing)
         "FPSLimit", "SteeringType",             // performance + controls
         "Difficulty", "AIDifficulty",           // difficulty the player picked

@@ -643,7 +643,7 @@ public class TitleCrashScene : MonoBehaviour
         a.pitch = pass.basePitch * Mathf.Lerp(flybyPitchApproach, flybyPitchAway, sweep);
 
         float near = 1f - Mathf.Clamp01(Mathf.Abs(p.y - half) / half);
-        a.volume = flybyVolume * Mathf.Pow(near, 1.4f);
+        a.volume = flybyVolume * Mathf.Pow(near, 1.4f) * SoundVolumes.Engines;
         a.panStereo = Mathf.Clamp((p.x - TitleCrash.CanvasWidth * 0.5f) / (TitleCrash.CanvasWidth * 0.5f), -1f, 1f) * flybyPan;
     }
 
@@ -655,8 +655,11 @@ public class TitleCrashScene : MonoBehaviour
 
         // The bed: fades up as the title opens and stays there, under everything.
         if (_crowd != null)
-            _crowd.volume = Mathf.MoveTowards(_crowd.volume, crowdVolume,
+        {
+            float crowd = crowdVolume * SoundVolumes.Crowd;
+            _crowd.volume = Mathf.MoveTowards(_crowd.volume, crowd,
                                               dt * crowdVolume / Mathf.Max(0.05f, crowdFadeSeconds));
+        }
 
         // ...and goes dull as time stops: its cutoff falls with the clock's rate, so the mids and treble roll
         // away through the slam and are gone once everything stands still. Open before the accident starts.
@@ -689,7 +692,7 @@ public class TitleCrashScene : MonoBehaviour
             float entry = Mathf.Max(0.0001f, tempo.Rate(0f));
             float rel = Mathf.Clamp01(tempo.Rate(_elapsed) / entry);
             _crashEngine.pitch = Mathf.Lerp(0.3f, 1.1f, rel);
-            float vol = inShot && _elapsed >= 0f ? crashEngineVolume * Mathf.Clamp01(rel * 2f) : 0f;
+            float vol = inShot && _elapsed >= 0f ? crashEngineVolume * Mathf.Clamp01(rel * 2f) * SoundVolumes.Engines : 0f;
             _crashEngine.volume = Mathf.MoveTowards(_crashEngine.volume, vol, dt * 8f);
         }
     }

@@ -270,7 +270,7 @@ public class EngineAudio : MonoBehaviour
 
         float rpm = _gearbox.Rpm;
         float load = _gearbox.Load01;                       // 1 = on power, 0 = coasting
-        float master = masterVolume * Mathf.Lerp(coastVolume, 1f, load) * _gate;
+        float master = masterVolume * Mathf.Lerp(coastVolume, 1f, load) * _gate * SoundVolumes.Engines;  // OPTIONS > SOUND
 
         // If there's no off bank, the on bank carries the whole signal regardless of load.
         float onMix = _offBank.Valid ? load : 1f;
@@ -296,7 +296,7 @@ public class EngineAudio : MonoBehaviour
                 _onBank.SetPlaying(true);
                 _offBank.SetPlaying(true);
                 // The crank belongs to the moment the key is turned, not to the moment the component woke up.
-                if (startClip != null && _oneShot != null) _oneShot.PlayOneShot(startClip, startVolume);
+                if (startClip != null && _oneShot != null) _oneShot.PlayOneShot(startClip, startVolume * SoundVolumes.Engines);
             }
         }
 
@@ -315,6 +315,6 @@ public class EngineAudio : MonoBehaviour
     {
         if (shiftClips == null || shiftClips.Length == 0 || _oneShot == null) return;
         var clip = shiftClips[UnityEngine.Random.Range(0, shiftClips.Length)];
-        if (clip != null) _oneShot.PlayOneShot(clip, shiftVolume);
+        if (clip != null) _oneShot.PlayOneShot(clip, shiftVolume * SoundVolumes.Engines);
     }
 }

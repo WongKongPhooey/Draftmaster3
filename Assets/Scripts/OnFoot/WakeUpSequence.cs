@@ -198,7 +198,7 @@ public class WakeUpSequence : MonoBehaviour
         _alarm.loop = true;
         _alarm.playOnAwake = false;
         _alarm.spatialBlend = 0f;                       // it is on the nightstand, not in the world
-        _alarm.volume = Mathf.Clamp01(_s.alarmVolume);
+        _alarm.volume = Mathf.Clamp01(_s.alarmVolume) * SoundVolumes.Effects;
         _alarm.Play();
     }
 

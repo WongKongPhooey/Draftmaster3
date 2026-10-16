@@ -111,7 +111,7 @@ public class Footsteps : MonoBehaviour
         _leftFoot = !_leftFoot;
         _src.panStereo = remote ? 0f : (_leftFoot ? -footPan : footPan);
         _src.pitch = 1f + Random.Range(-pitchJitter, pitchJitter) + pace * 0.04f;
-        _src.PlayOneShot(clip, volume * Mathf.Lerp(1f, runVolumeScale, pace) * Random.Range(0.85f, 1f));
+        _src.PlayOneShot(clip, volume * Mathf.Lerp(1f, runVolumeScale, pace) * Random.Range(0.85f, 1f) * SoundVolumes.Effects);
     }
 
     AudioClip PickClip()
