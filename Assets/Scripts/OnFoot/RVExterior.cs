@@ -31,23 +31,46 @@ public class RVExterior : MonoBehaviour
     // RVInteriorPrefabBuilder generates), and that room is in the scene from the moment the player spawns
     // inside it — so a plain FindObjectOfType can hand back a doorway in a pocket dimension instead of the
     // rig parked in the paddock. Everything that places itself against "the RV" goes through here.
+    //
+    // Cached. The objective HUD and PitLaneStart read this several times a frame, and the scene-wide search
+    // behind it was 28% of the main thread on a phone (simpleperf, 2026-10-16). The parked rig, once found,
+    // is kept until it is destroyed; while only the room has turned up — the rig is parked a few seconds
+    // after the scene opens — the search is retried, at most RoomRetrySeconds apart.
     public static RVExterior Player
     {
         get
         {
-            var all = FindObjectsByType<RVExterior>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (!Application.isPlaying) return Search(out _);
+            if (_cached != null && !_cachedIsRoom) return _cached;
+            if (_cached != null && Time.unscaledTime < _nextRetry) return _cached;
 
-            RVExterior room = null;
-            for (int i = 0; i < all.Length; i++)
-            {
-                if (all[i] == null) continue;
-                if (all[i].GetComponentInParent<RVInterior>() != null) { room ??= all[i]; continue; }
-                return all[i];
-            }
-
-            // Nothing but the room: better than nothing for anything that only needs a doorway to face.
-            return room;
+            _cached = Search(out _cachedIsRoom);
+            _nextRetry = Time.unscaledTime + RoomRetrySeconds;
+            return _cached;
         }
+    }
+
+    const float RoomRetrySeconds = 0.5f;
+    static RVExterior _cached;
+    static bool _cachedIsRoom;
+    static float _nextRetry;
+
+    static RVExterior Search(out bool isRoom)
+    {
+        var all = FindObjectsByType<RVExterior>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        RVExterior room = null;
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] == null) continue;
+            if (all[i].GetComponentInParent<RVInterior>() != null) { room ??= all[i]; continue; }
+            isRoom = false;
+            return all[i];
+        }
+
+        // Nothing but the room: better than nothing for anything that only needs a doorway to face.
+        isRoom = room != null;
+        return room;
     }
 
     // Raised when the rig is moved after the scene has opened, with the shift it made.

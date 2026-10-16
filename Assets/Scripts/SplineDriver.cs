@@ -661,18 +661,31 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return Mathf.Clamp(lateral, -half, half);
     }
 
+    // Index of the last main-line sample at or before `distance` (0 when it is before them all), among the
+    // first n. Binary search: these lookups run many times per car per physics step, and the linear walk they
+    // replaced crossed every sample on the lap each time — the single biggest cost of a 44-car field under the
+    // pace car on a phone (simpleperf, 2026-10-16). Sample distances only ever increase along the lap.
+    int SampleIndexAtOrBefore(float distance, int n)
+    {
+        n = Mathf.Min(n, _mainSamples.Count);
+        int lo = 0, hi = n - 1;
+        if (n <= 0 || _mainSamples[0].distance > distance) return 0;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) >> 1;
+            if (_mainSamples[mid].distance <= distance) lo = mid;
+            else hi = mid - 1;
+        }
+        return lo;
+    }
+
     void BoundsAt(float distance, out float lo, out float hi)
     {
         lo = -100f; hi = 100f;
         if (_leftBoundProfile == null || _rightBoundProfile == null || _mainSamples == null) return;
         if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
         int n = _leftBoundProfile.Length;
-        int idxLo = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (_mainSamples[i].distance <= distance) idxLo = i;
-            else break;
-        }
+        int idxLo = SampleIndexAtOrBefore(distance, n);
         int idxHi = (idxLo + 1) % n;
         float dLo = _mainSamples[idxLo].distance;
         float dHi = _mainSamples[idxHi].distance;
@@ -690,12 +703,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_lateralProfile == null || _lateralProfile.Length == 0 || _mainSamples == null) return 0f;
         if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
         int n = _lateralProfile.Length;
-        int lo = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (_mainSamples[i].distance <= distance) lo = i;
-            else break;
-        }
+        int lo = SampleIndexAtOrBefore(distance, n);
         int hi = (lo + 1) % n;
         float dLo = _mainSamples[lo].distance;
         float dHi = _mainSamples[hi].distance;
@@ -997,12 +1005,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (profile == null || profile.Length == 0 || _mainSamples == null) return empty;
         if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
         int n = profile.Length;
-        int lo = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (_mainSamples[i].distance <= distance) lo = i;
-            else break;
-        }
+        int lo = SampleIndexAtOrBefore(distance, n);
         int hi = (lo + 1) % n;
         float dLo = _mainSamples[lo].distance;
         float dHi = _mainSamples[hi].distance;
@@ -1346,12 +1349,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             int n = _curvatureProfile.Length;
             float start = DistanceOnTrack;
             // Samples are distance-ordered: find the first at/after the car, then walk only the scan window.
-            int i0 = 0;
-            for (int i = 0; i < n; i++)
-            {
-                if (_mainSamples[i].distance <= start) i0 = i;
-                else break;
-            }
+            float wrapped = ((start % _mainLength) + _mainLength) % _mainLength;
+            int i0 = SampleIndexAtOrBefore(wrapped, n);
             float maxK = 0f;
             for (int k = 0; k < n; k++)
             {

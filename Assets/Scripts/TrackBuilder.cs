@@ -123,6 +123,7 @@ public class TrackBuilder : MonoBehaviour
     {
         if (track == null || track.segments == null || track.segments.Length == 0) return;
         _surfaceCache = null; // invalidate on-surface lookup; rebuilt lazily on next query
+        _surfaceGrid = null;
         _pitSurfaceCache = null;
 
         var mf = GetComponent<MeshFilter>();
@@ -616,6 +617,13 @@ public class TrackBuilder : MonoBehaviour
 
     public Sample SampleAt(float distance, List<Sample> samples = null)
     {
+        // No list given: the cached centreline in Play Mode. Resampling the whole lap per call was a
+        // per-car, per-step cost on a phone (PlayerVehicleController, PlayerLapRecorder). Build() clears it.
+        if (samples == null && Application.isPlaying)
+        {
+            if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+            samples = _surfaceCache;
+        }
         if (samples == null) samples = SampleCenterline();
         return SampleListAt(samples, distance, track != null && track.closedLoop);
     }
@@ -636,7 +644,7 @@ public class TrackBuilder : MonoBehaviour
 
         Vector2 local = transform.InverseTransformPoint(worldPos);
 
-        if (OnSampleSurface(_surfaceCache, local, out lateralAbs)) return true;
+        if (OnMainSurface(local, out lateralAbs)) return true;
         if (_surfaceCache.Count < 2) return true; // no usable main centerline — don't penalise
 
         // The pit lane is drivable too: don't treat it like grass. The band extends past the ribbon on
@@ -792,6 +800,83 @@ public class TrackBuilder : MonoBehaviour
         float denom = ab.sqrMagnitude;
         float t = denom > 1e-6f ? Mathf.Clamp01(Vector2.Dot(local - (Vector2)a.position, ab) / denom) : 0f;
         return Mathf.Lerp(a.distance, b.distance, t);
+    }
+
+    // OnSampleSurface against the main centreline, through a spatial grid. Every car asks this every physics
+    // step, and the brute-force nearest-sample walk over the whole lap was a measurable slice of a 44-car
+    // frame on a phone. Each grid cell lists every sample within GridReach of it, so whenever the true nearest
+    // sample is within GridReach of the point it is in the point's cell list and the answer is identical;
+    // when nothing in the cell is that close (well off the road), the exact full walk runs instead.
+    const float GridCell = 16f;
+    float _gridReach;
+    Vector2 _gridMin;
+    int _gridW, _gridH;
+    List<int>[] _surfaceGrid;
+
+    bool OnMainSurface(Vector2 local, out float lateralAbs)
+    {
+        var samples = _surfaceCache;
+        if (!Application.isPlaying || samples == null || samples.Count < 2)
+            return OnSampleSurface(samples, local, out lateralAbs);
+        if (_surfaceGrid == null) BuildSurfaceGrid(samples);
+
+        int cx = Mathf.FloorToInt((local.x - _gridMin.x) / GridCell);
+        int cy = Mathf.FloorToInt((local.y - _gridMin.y) / GridCell);
+        if (cx >= 0 && cy >= 0 && cx < _gridW && cy < _gridH)
+        {
+            var cell = _surfaceGrid[cy * _gridW + cx];
+            if (cell != null)
+            {
+                float best = float.MaxValue;
+                int bi = -1;
+                for (int k = 0; k < cell.Count; k++)
+                {
+                    float d = ((Vector2)samples[cell[k]].position - local).sqrMagnitude;
+                    if (d < best) { best = d; bi = cell[k]; }
+                }
+                if (bi >= 0 && best <= _gridReach * _gridReach)
+                {
+                    var s = samples[bi];
+                    lateralAbs = Mathf.Abs(Vector2.Dot(local - (Vector2)s.position, s.normal));
+                    return lateralAbs <= s.width * 0.5f;
+                }
+            }
+        }
+        return OnSampleSurface(samples, local, out lateralAbs);
+    }
+
+    void BuildSurfaceGrid(List<Sample> samples)
+    {
+        float maxHalfWidth = 0f, maxStep = 0f;
+        Vector2 min = samples[0].position, max = min;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            Vector2 p = samples[i].position;
+            min = Vector2.Min(min, p);
+            max = Vector2.Max(max, p);
+            maxHalfWidth = Mathf.Max(maxHalfWidth, samples[i].width * 0.5f);
+            if (i > 0) maxStep = Mathf.Max(maxStep, Vector2.Distance(p, samples[i - 1].position));
+        }
+        // Far enough that a point anywhere on the road has its nearest sample inside it.
+        _gridReach = maxHalfWidth + maxStep + 2f;
+        _gridMin = min - Vector2.one * (_gridReach + GridCell);
+        _gridW = Mathf.CeilToInt((max.x - _gridMin.x + _gridReach + GridCell) / GridCell) + 1;
+        _gridH = Mathf.CeilToInt((max.y - _gridMin.y + _gridReach + GridCell) / GridCell) + 1;
+        _surfaceGrid = new List<int>[_gridW * _gridH];
+
+        int reachCells = Mathf.CeilToInt(_gridReach / GridCell);
+        for (int i = 0; i < samples.Count; i++)
+        {
+            Vector2 p = samples[i].position;
+            int cx = Mathf.FloorToInt((p.x - _gridMin.x) / GridCell);
+            int cy = Mathf.FloorToInt((p.y - _gridMin.y) / GridCell);
+            for (int y = Mathf.Max(0, cy - reachCells); y <= Mathf.Min(_gridH - 1, cy + reachCells); y++)
+            for (int x = Mathf.Max(0, cx - reachCells); x <= Mathf.Min(_gridW - 1, cx + reachCells); x++)
+            {
+                ref var cell = ref _surfaceGrid[y * _gridW + x];
+                (cell ??= new List<int>(8)).Add(i);
+            }
+        }
     }
 
     // Nearest-sample test: is local within half-width of this centerline? Outputs |lateral| from it.
