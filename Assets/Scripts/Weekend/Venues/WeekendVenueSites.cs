@@ -717,11 +717,37 @@ public class WeekendVenueSites : MonoBehaviour
             line.Add(body.transform, Walkable(fence.transform.TransformPoint(new Vector3(x, QueueStandY, 0f))));
         }
 
-        // Stand the driver on the paddock side of the rail; the fans queue up on the other one. With an
-        // authored marker the anchor is already there, and the rail was built around it.
-        if (authored) return;
+        // Stand the driver on the paddock side of the rail; the fans queue up on the other one.
         Vector3 inside = Walkable(fence.transform.TransformPoint(new Vector3(0f, -1.1f, 0f)));
-        PaddockProps.Anchor(_root, WeekendVenue.SigningFence, inside, inside, arriveRange: 4.5f);
+        if (!authored)
+        {
+            PaddockProps.Anchor(_root, WeekendVenue.SigningFence, inside, inside, arriveRange: 4.5f);
+            return;
+        }
+
+        // With an authored marker the anchor is already there and the rail was built around it — through the
+        // middle of the marker, which is also where the anchor's stand point was. FAST TRAVEL put the player
+        // on top of the solid rail and the physics pushed them out whichever side it liked, as often as not
+        // in among the fans. Move the stand point off the rail to the paddock side; the arrow still points at
+        // the marker.
+        foreach (var anchor in WeekendVenueAnchor.All)
+        {
+            if (anchor == null || anchor.venue != WeekendVenue.SigningFence || anchor.marker == null) continue;
+            if (Vector2.Distance(anchor.marker.MarkerPosition, at) > 0.01f) continue;
+            if (anchor.standPoint == null || anchor.standPoint == anchor.transform)
+            {
+                var stand = new GameObject("Stand");
+                stand.transform.SetParent(anchor.transform, false);
+                anchor.standPoint = stand.transform;
+            }
+            anchor.standPoint.position = new Vector3(inside.x, inside.y, anchor.standPoint.position.z);
+
+            var perimeter = anchor.marker.Perimeter;
+            if (perimeter != null && !perimeter.OverlapPoint(inside))
+                Debug.LogWarning($"WeekendVenueSites: the signing stand point is outside {anchor.marker.name}'s " +
+                                 "shape, so arriving by FAST TRAVEL will not count as being there. Make the " +
+                                 "marker deeper on the paddock side of the rail.", anchor.marker);
+        }
     }
 
     // The winner's circle: where a driver is stood to be photographed.
