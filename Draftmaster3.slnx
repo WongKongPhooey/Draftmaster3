@@ -1,7 +1,7 @@
 ﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Draftmaster.Sim.csproj" />
   <Project Path="Draftmaster.Progression.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Draftmaster.Tracks.csproj" />
   <Project Path="Draftmaster.Tests.Editor.csproj" />
   <Project Path="PlayFabEditorExtensions.csproj" />
