@@ -34,9 +34,14 @@ public class RacePauseMenu : MonoBehaviour
     // on the way back from a several-second wait, short enough not to outlive the player's next try.
     const float FailureSeconds = 8f;
 
+    // SAVE GAME answers on its own row: SAVED (and what the marker was) until this unscaled time.
+    float _savedUntil;
+    string _savedWhat = "";
+    const float SavedSeconds = 2.5f;
+
     // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
     // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
-    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, EndSession, Coop, QuitToTitle, Resume }
+    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, EndSession, SaveGame, Coop, QuitToTitle, Resume }
     PadRow _padFocus;
     readonly System.Collections.Generic.List<PadRow> _padRows = new();
 
@@ -113,6 +118,7 @@ public class RacePauseMenu : MonoBehaviour
         _padRows.Add(PadRow.SwingCamera);
         _padRows.Add(PadRow.DebugStats);
         if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
+        if (SaveAnytime.CanSave) _padRows.Add(PadRow.SaveGame);
         var launcher = NetworkLauncher.Instance;
         var coop = CoopRowState(launcher != null && launcher.Busy, Coop.Active, Coop.IsGuest, Coop.GuestPresent,
                                 launcher != null && !string.IsNullOrEmpty(launcher.JoinCode),
@@ -148,6 +154,7 @@ public class RacePauseMenu : MonoBehaviour
                 Resume();
                 if (director != null) director.StartRace();
                 break;
+            case PadRow.SaveGame: SaveGame(); break;
             case PadRow.Coop: HostCoop(); break;
             case PadRow.QuitToTitle: QuitToTitle(); break;
             case PadRow.Resume: Resume(); break;
@@ -189,6 +196,13 @@ public class RacePauseMenu : MonoBehaviour
         IsPaused = false;
         Time.timeScale = _prevTimeScale;
         AudioListener.pause = false;
+    }
+
+    // Save Anytime: the career as it stands, with the objective marker that is up right now (SaveAnytime).
+    void SaveGame()
+    {
+        _savedWhat = SaveAnytime.Save();
+        _savedUntil = Time.unscaledTime + SavedSeconds;
     }
 
     // Out of the weekend and back to the front of the game. Unpause first: loading a scene with time
@@ -244,7 +258,8 @@ public class RacePauseMenu : MonoBehaviour
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
         // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
         int toggles = TouchDriveControls.TouchPlatform ? 5 : 4;
-        int tabs = PracticeDirector.PauseMenuExitLabel != null ? 2 : 1;   // [end], co-op
+        int tabs = (PracticeDirector.PauseMenuExitLabel != null ? 2 : 1)   // [end], co-op
+                   + (SaveAnytime.CanSave ? 1 : 0);                        // [save]
         float contentH = headingH + gap * 3f                                // title, rule
                          + toggles * toggleH + gap * 2f                     // toggles, then a breather
                          + tabs * (tabH + gap)
@@ -320,6 +335,26 @@ public class RacePauseMenu : MonoBehaviour
                 Resume();
                 if (director != null) director.StartRace();
             }
+            cy += row + gap;
+        }
+
+        // Save Anytime. Pressed, the row says so for a moment — and which marker was kept, since that is the
+        // one CONTINUE brings back. Career only: a single race has nothing to come back to.
+        if (SaveAnytime.CanSave)
+        {
+            var saveRect = new Rect(content.x, cy, content.width, row);
+            PadCursor(PadRow.SaveGame, saveRect);
+            if (Time.unscaledTime < _savedUntil)
+            {
+                var was = GUI.color;
+                GUI.color = PixelGUI.Gold;
+                // Named only when it fits: a label too wide for its rect is dropped whole, not clipped.
+                string saved = string.IsNullOrEmpty(_savedWhat) ? "  SAVED" : "  SAVED · " + _savedWhat;
+                if (PixelGUI.Label.CalcSize(new GUIContent(saved)).x > saveRect.width) saved = "  SAVED";
+                GUI.Label(saveRect, saved, PixelGUI.Label);
+                GUI.color = was;
+            }
+            else if (PixelGUI.Tab(saveRect, "SAVE GAME", false)) SaveGame();
             cy += row + gap;
         }
 

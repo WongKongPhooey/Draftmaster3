@@ -32,6 +32,11 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
 * **NEW SEASON** starts a fresh weekend at `TitleScreenUI.newSeasonTrackId` (WatkinsGlen).
   **CONTINUE** resumes the saved `TrackSelection`; **EXHIBITION** skips practice and qualifying. Both
   fall back to a track that actually has a layout, so neither can load a race scene with no road.
+* **Save Anytime** — the pause menu (Esc) has **SAVE GAME** in a career (not for a co-op guest). Progress
+  is already PlayerPrefs written as it happens, so it records which objective marker is up
+  (`SavedObjective`, per weekend id), flushes, and dates the CONTINUE row (`CareerSave.Stamp`). CONTINUE
+  calls `SaveAnytime.RestoreMarker`, which re-books that marker only if nothing is booked and the sheet can
+  still do it. Position in the paddock and half-finished conversations are not kept.
 * **OPTIONS** opens `Assets/Scenes/Options.unity` (`OptionsUI`), which is where the player sets their
   first and last name. Both halves are saved, and so is the joined name in `career.drivername` — the one
   key the garage plate, the timing tower and every `{playerfirst}` an NPC speaks already read, so nothing
