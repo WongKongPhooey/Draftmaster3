@@ -255,6 +255,19 @@ public class AIRacingBehaviour : MonoBehaviour
 
     public void SetBasePace(float baseMul) { _basePaceMultiplier = baseMul; }
 
+    // Another championship's race, watched from the grandstand (GridSpawner.SpawnAmbientField). That field runs on
+    // the kinematic brain — it can't spin, slide or bend metal — and is there to be watched, so it races closer and
+    // commits to passes harder than the player's own field. Stock, a road-course field ran single file: a chaser
+    // stepped 3 m off line, still sat inside the 3.4 m it needed to be clear of the car ahead, and was held to its
+    // speed until the move timed out (GrandstandRaceSimTests: 3 places changed hands in 100 s at Watkins Glen).
+    public void RaceAsWatchedField()
+    {
+        corridorClearWidthNoLanes = 2.4f;                 // clear by a lane's width, as on an oval
+        overtakeLineOffset = 5f;                          // a full car width and more out of the tow
+        commitHoldSeconds = 3f;                           // stay with the move until it is alongside
+        followHeadwaySeconds = 0.2f;                      // close enough behind to have a run on them
+    }
+
     // Pick up a sideways offset someone else was holding (the formation's column at the green), so the car
     // carries on from where it is instead of jumping to its line.
     public void TakeLateral(float tactical)

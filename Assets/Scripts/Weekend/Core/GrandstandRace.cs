@@ -5,9 +5,9 @@ namespace Draftmaster.Weekend
 {
     // The rules of a race watched from the stand.
     //
-    // Sitting down for another championship's race starts one: the whole field on a grid behind the line, the
-    // green as the screen comes up, and the chequered flag about five minutes later. This is the scoring half —
-    // who has done how many laps, who is leading, when the flag is out and who has taken it — kept pure so it
+    // Sitting down for another championship's race starts one: the whole field two by two off the last corner
+    // (no formation lap), the green as the screen comes up, and the chequered flag about five minutes later.
+    // This is the scoring half — who has done how many laps, who is leading, when the flag is out and who has taken it — kept pure so it
     // is testable without a scene. GrandstandRaceDirector feeds it the distance each car has driven.
     //
     // Distances are measured from the start/finish line: a car on the grid starts at a negative progress (how
@@ -200,5 +200,75 @@ namespace Draftmaster.Weekend
         // behind the one directly in front of it).
         public static float GridProgress(int slot, float firstRow, float spacing) =>
             -(Mathf.Abs(firstRow) + Mathf.Max(0, slot) * Mathf.Max(0f, spacing));
+
+        // A corner is a stretch of road tighter than CornerRadius that turns through at least MinCornerDegrees in
+        // all. The radius leaves out a tri-oval's dogleg and the drift of a traced straight; the angle leaves out
+        // a single tight wiggle.
+        public const float CornerRadius = 500f;
+        public const float MinCornerDegrees = 25f;
+        // Curvature is measured as the change of heading over this much road (m), so a traced line's
+        // point-to-point noise doesn't read as a corner.
+        const float CurvatureWindow = 12f;
+
+        // How far (m) the exit of the last corner before the start/finish line is short of it, measured along a
+        // closed centreline (points with their distance along the lap, the last point's distance the lap length).
+        // A watched race skips the formation lap: the field appears already racing, coming off that corner onto
+        // the run to the line. -1 when the lap has no corner (or the line is too short to tell).
+        public static float MetresFromLastCorner(IList<Vector2> points, IList<float> distances, float startFinish)
+        {
+            int n = points != null && distances != null ? Mathf.Min(points.Count, distances.Count) : 0;
+            if (n < 8) return -1f;
+            float lap = distances[n - 1];
+            if (lap <= CurvatureWindow * 4f) return -1f;
+
+            // A closed line usually repeats its first point at the lap distance; walk the unique points only.
+            if ((points[n - 1] - points[0]).sqrMagnitude < 0.25f) n--;
+
+            // Heading at every point, from its neighbours round the loop.
+            var heading = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 d = points[(i + 1) % n] - points[(i - 1 + n) % n];
+                heading[i] = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+            }
+
+            // The point at or just before the line, then walk backwards round the lap (at most once).
+            float sf = Mathf.Repeat(startFinish, lap);
+            int start = 0;
+            for (int i = 0; i < n; i++) if (distances[i] <= sf) start = i;
+
+            float kCorner = Mathf.Rad2Deg / CornerRadius;   // degrees of heading per metre at the corner radius
+            float exitBack = -1f, turned = 0f;
+            for (int k = 0; k < n; k++)
+            {
+                int i = ((start - k) % n + n) % n;
+                float back = Mathf.Repeat(sf - distances[i], lap);
+                float tight = Mathf.Abs(TurnRate(distances, heading, i, lap));
+                if (tight >= kCorner)
+                {
+                    if (exitBack < 0f) { exitBack = back; turned = 0f; }
+                    int prev = (i - 1 + n) % n;
+                    turned += Mathf.Abs(Mathf.DeltaAngle(heading[prev], heading[i]));
+                    if (turned >= MinCornerDegrees) return exitBack;
+                }
+                else exitBack = -1f;
+            }
+            return -1f;
+        }
+
+        // Heading change (degrees per metre) over CurvatureWindow of road centred on point i.
+        static float TurnRate(IList<float> distances, float[] heading, int i, float lap)
+        {
+            int n = heading.Length;
+            int a = i, b = i;
+            float span = 0f;
+            for (int guard = 0; guard < n && span < CurvatureWindow; guard++)
+            {
+                int na = ((a - 1) % n + n) % n, nb = (b + 1) % n;
+                a = na; b = nb;
+                span = Mathf.Repeat(distances[b] - distances[a], lap);
+            }
+            return span > 0f ? Mathf.DeltaAngle(heading[a], heading[b]) / span : 0f;
+        }
     }
 }

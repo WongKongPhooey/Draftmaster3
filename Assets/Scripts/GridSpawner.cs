@@ -105,7 +105,7 @@ public class GridSpawner : MonoBehaviour
     [Header("A race watched from the grandstand")]
     [Tooltip("Field size for another championship's race when the player sits in a grandstand to watch it. That race is run for real — grid, green, chequered flag — so it gets a full field rather than the ambient traffic count. 0 = the race field size ('count' above).")]
     public int watchedRaceCount = 0;
-    [Tooltip("Speed (m/s) the watched race's field is rolling at when the green flag waves. NASCAR starts are rolling starts; 0 = a standing start from the grid.")]
+    [Tooltip("Fallback speed (m/s) for the watched race's field at the green. Each car normally starts at its own race pace for where it appears off the last corner; this is only used when that pace can't be read.")]
     public float watchedRaceStartMps = 22f;
 
     // The other championship's cars, while they are out. Null the rest of the weekend.
@@ -882,8 +882,9 @@ public class GridSpawner : MonoBehaviour
         // moment it appears. (FormationDirector stands itself down outside the player's own session, so
         // nothing else is going to write this.)
         //
-        // A race the player has sat down in the stand to watch is the exception: that one starts now, from
-        // the grid, so the green is waved now too (the AI's rolling-start launch window runs off it).
+        // A race the player has sat down in the stand to watch is the exception: that one starts now, the
+        // field two by two off the last corner, so the green is waved now too (the AI's rolling-start launch
+        // window runs off it).
         bool watchedRace = live.WatchedRace;
         if (watchedRace) RaceStart.GreenFlagNow();
         else RaceStart.Current = RaceStart.Phase.Green;
@@ -946,8 +947,15 @@ public class GridSpawner : MonoBehaviour
         // is also what stops a field with no starter arriving at turn one as a single heap.
         float gap = lapLength > 0f ? lapLength / n : Mathf.Max(spacing, 1f);
 
-        // A watched race lines up two by two behind the line instead, and the grandstand's race director
-        // scores it from there.
+        // A watched race lines up two by two instead, and the grandstand's race director scores it from there.
+        // No formation lap: the field appears already racing, the front row coming off the last corner and the
+        // rest strung back through it, so the green and the run to the line are the first thing anybody sees.
+        float firstRow = Mathf.Abs(gridStartDistance);
+        if (watchedRace)
+        {
+            float fromCorner = LastCornerLead(track);
+            if (fromCorner >= 0f) firstRow = Mathf.Max(firstRow, fromCorner);
+        }
         var raceCars = watchedRace ? new List<SplineDriver>(n) : null;
         var raceNames = watchedRace ? new List<string>(n) : null;
         var raceStarts = watchedRace ? new List<float>(n) : null;
@@ -994,11 +1002,11 @@ public class GridSpawner : MonoBehaviour
             splineDriver.speed = speed;
             if (watchedRace)
             {
-                // Grid slot i: same staggered two-wide layout as the player's own race grid, the pole sitter
-                // on the inside of the front row. AIRacingBehaviour eases the stagger off once they are racing.
-                float fromLine = Draftmaster.Weekend.GrandstandRace.GridProgress(i, gridStartDistance, spacing);
+                // Grid slot i: the same staggered two-wide layout as the player's own race grid, the pole sitter
+                // on the inside of the front row. The columns are handed to the racing brain below rather than
+                // parked as a fixed offset, so a car alongside holds its side of the road into the first corner.
+                float fromLine = Draftmaster.Weekend.GrandstandRace.GridProgress(i, firstRow, spacing);
                 splineDriver.startDistance = Wrap(sfAnchor + fromLine, lapLength);
-                splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
                 splineDriver.speed = Mathf.Max(0f, watchedRaceStartMps);
                 raceStarts.Add(fromLine);
             }
@@ -1026,6 +1034,16 @@ public class GridSpawner : MonoBehaviour
             if (rosterDriver != null) binding.driver = rosterDriver;
             else if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();   // adds AIRacingBehaviour/TireState, rebuilds the spline
+
+            var racing = watchedRace ? go.GetComponent<AIRacingBehaviour>() : null;
+            if (racing != null)
+            {
+                racing.RaceAsWatchedField();
+                // Already at racing speed for wherever on the lap the car appears (the profile exists now Apply
+                // has rebuilt the spline), not rolling off a grid.
+                float paceMph = splineDriver.RacePaceMphAt(splineDriver.startDistance, TrackConditions.AiPaceMultiplier);
+                if (paceMph > 1f) splineDriver.speed = paceMph / 2.237f;
+            }
 
             if (aiEngineSound != null)
             {
@@ -1055,6 +1073,14 @@ public class GridSpawner : MonoBehaviour
             // kinematic brain too.
             splineDriver.PlaceAtStartDistance();
 
+            if (racing != null)
+            {
+                // Its column, a lane either side of the centreline, as the tactical offset the formation hands over
+                // at a green flag — wherever the racing line runs at this point of the lap.
+                float column = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
+                racing.TakeLateral(column - splineDriver.UntacticalLateral);
+            }
+
             if (watchedRace)
             {
                 raceCars.Add(splineDriver);
@@ -1064,6 +1090,19 @@ public class GridSpawner : MonoBehaviour
 
         if (watchedRace && lapLength > 0f)
             GrandstandRaceDirector.Begin(raceCars, raceNames, raceStarts, lapLength);
+    }
+
+    // How far (m along the centerline) the exit of the last corner is short of the start/finish line, or -1 if
+    // the lap has no corner to speak of. Read off the sampled centerline — the line SplineDriver drives — not
+    // the segment list: a traced track is cut into many gentle turn segments wherever its curvature drifts.
+    public static float LastCornerLead(TrackBuilder track)
+    {
+        if (track == null || track.track == null) return -1f;
+        var samples = track.SampleCenterline();
+        var points = new List<Vector2>(samples.Count);
+        var distances = new List<float>(samples.Count);
+        foreach (var s in samples) { points.Add(s.position); distances.Add(s.distance); }
+        return Draftmaster.Weekend.GrandstandRace.MetresFromLastCorner(points, distances, track.track.startFinishDistance);
     }
 
     // Pit road, set up for whichever championship is out. Same fit the player's own field gets — the boxes

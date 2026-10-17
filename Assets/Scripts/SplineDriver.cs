@@ -997,6 +997,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     float ProfileAt(float distance) => SampleAlongLine(_speedProfile, distance, 0f);
 
+    // The speed (mph) the car races at here on a clear road, with the profile's pace scaled by paceScale and
+    // capped at the grip limit — what a car placed mid-lap should already be doing.
+    public float RacePaceMphAt(float distance, float paceScale = 1f)
+    {
+        if (_speedProfile == null) return 0f;
+        return Mathf.Min(ProfileAt(distance) * Mathf.Max(0.1f, paceScale), GripLimitAt(distance));
+    }
+
     // The grip ceiling at this distance (mph); MaxValue on a straight or with no profile built.
     float GripLimitAt(float distance) => SampleAlongLine(_gripLimitProfile, distance, float.MaxValue);
 

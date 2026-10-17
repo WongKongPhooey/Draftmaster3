@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Draftmaster.Weekend;
 using NUnit.Framework;
+using UnityEngine;
 
 // A race watched from the grandstand is a real one: the field starts from a grid behind the line, the
 // chequered flag comes out about five minutes after the green, the leader takes it the next time they
@@ -150,5 +151,71 @@ public class GrandstandRaceTests
         race.Advance(0, 100f);
         race.Advance(1, 90f);
         Assert.AreEqual("-", race.GapText(0, 1));
+    }
+
+    // ---- Where a watched race starts: off the last corner before the line ----
+
+    // A closed centreline sampled every 2 m from (straight length, turn radius, turn degrees) pieces; radius 0 = a
+    // straight. The line's distance along it is what MetresFromLastCorner measures against.
+    static void Loop(out List<Vector2> points, out List<float> distances, params (float length, float radius)[] pieces)
+    {
+        points = new List<Vector2>();
+        distances = new List<float>();
+        Vector2 p = Vector2.zero;
+        float heading = 0f, d = 0f;
+        points.Add(p); distances.Add(0f);
+        foreach (var (length, radius) in pieces)
+        {
+            int steps = Mathf.Max(1, Mathf.RoundToInt(length / 2f));
+            float step = length / steps;
+            for (int k = 0; k < steps; k++)
+            {
+                if (radius != 0f) heading += step / radius;
+                p += new Vector2(Mathf.Cos(heading), Mathf.Sin(heading)) * step;
+                d += step;
+                points.Add(p); distances.Add(d);
+            }
+        }
+    }
+
+    const float HalfTurn = Mathf.PI * 100f;   // a 180-degree turn of radius 100 m
+
+    [Test]
+    public void TheField_StartsOffTheLastCorner_BeforeTheLine()
+    {
+        // Front straight, turns 1-2, back straight, turns 3-4: the line is 150 m down the front straight.
+        Loop(out var pts, out var dist, (300f, 0f), (HalfTurn, 100f), (300f, 0f), (HalfTurn, 100f));
+        Assert.AreEqual(150f, GrandstandRace.MetresFromLastCorner(pts, dist, 150f), 6f);
+        // On the back straight instead, the last corner is turns 1-2.
+        Assert.AreEqual(100f, GrandstandRace.MetresFromLastCorner(pts, dist, 300f + HalfTurn + 100f), 6f);
+    }
+
+    [Test]
+    public void TheLine_RightAtTheCornerExit_IsNoDistanceAtAll()
+    {
+        // A lap that starts at the line, the last piece of it the turn onto the front straight.
+        Loop(out var pts, out var dist, (300f, 0f), (HalfTurn, 100f), (300f, 0f), (HalfTurn, 100f));
+        Assert.AreEqual(0f, GrandstandRace.MetresFromLastCorner(pts, dist, 0f), 6f);
+    }
+
+    [Test]
+    public void ADogleg_OrAWiggle_IsNotTheLastCorner()
+    {
+        // Turn 4, then a sweeping 1 km-radius dogleg and a tight little 10-degree wiggle before the line: the
+        // field still starts off turn 4.
+        float dogleg = 1000f * 20f * Mathf.Deg2Rad, wiggle = 30f * 10f * Mathf.Deg2Rad;
+        Loop(out var pts, out var dist,
+             (300f, 0f), (HalfTurn, 100f), (300f, 0f), (HalfTurn, 100f),
+             (100f, 0f), (dogleg, 1000f), (50f, 0f), (wiggle, 30f), (50f, 0f), (200f, 0f));
+        float line = dist[dist.Count - 1] - 200f;   // clear of where this (unclosed) test loop meets itself
+        Assert.AreEqual(100f + dogleg + 50f + wiggle + 50f, GrandstandRace.MetresFromLastCorner(pts, dist, line), 8f);
+    }
+
+    [Test]
+    public void ALapWithNoCorner_HasNowhereToStart()
+    {
+        // A huge circle never gets tighter than the corner radius.
+        Loop(out var pts, out var dist, (2f * Mathf.PI * 800f, 800f));
+        Assert.AreEqual(-1f, GrandstandRace.MetresFromLastCorner(pts, dist, 10f), Tolerance);
     }
 }
