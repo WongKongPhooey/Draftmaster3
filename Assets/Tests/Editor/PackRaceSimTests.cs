@@ -80,6 +80,12 @@ public class PackRaceSimTests
         public Dictionary<string, object> racing; // AIRacingBehaviour field overrides
         public int traceCar = -1;                 // >= 0: log that car's controls every 0.2 s on its second lap
         public int traceHard;                     // > 0: log up to that many hard contacts, both cars' state
+        public bool fastestAtBack;                // the quickest-rated car starts last; its charge is logged lap by lap
+        public float? driverGripSpread;
+        public float? soloStrength;
+        public int traceDrops;
+        public float initialWear;                 // every tyre starts this worn (0..1)                    // > 0: log that many cars falling off the back of the car ahead (gap past 25 m)               // one car alone with this rating (all three stats), for clean-air pace           // AIRatings.DriverGrip spread override (0 = every driver the same grip)
+        public bool traceCharger;                 // with fastestAtBack: log the charger against the car ahead once a second
         public float? sideAwareness;              // TrackConditions.AiSideAwareness override
         public float traceSlowMph;                // > 0: when a car first drops below this (after 25 s), log its last 2 s
         // Rolling start (startSeconds > 0): the field double file as the formation hands it over at the green - the
@@ -112,6 +118,18 @@ public class PackRaceSimTests
         // car with nobody near it strays from its own planned line, and how often a car's intended sideways
         // offset reverses (a weave) per car per lap.
         public float wide2Share, wide3Share, aloneLineRms, aloneLineMax, weavesPerCarLap;
+        // Holding formation. 3-wide runs: how long a car stays in a row of three (s, mean), and the share of 3-wide time
+        // spent in runs of 3 s or more. Lane hold: how long a car keeps to one lateral (within half a groove, 1.3 m)
+        // before changing, changes per car per lap, and its wander round that lateral while holding it (rms, m).
+        // Pack: the field's length leader to last (median, m) and the share of cars in the lead pack (consecutive
+        // gaps under 25 m from the leader).
+        public float wide3RunMean, wide3Sustained, laneHoldMean, laneChangesPerCarLap, laneJitterRms;
+        public float fieldLengthMedian, leadPackShare;
+        // Stuck: episodes of a car running within 25 m directly behind one whose best lap is 0.3 s+ slower, for 10 s
+        // or more (count), and the longest such stretch (s). Charge: the quickest car's position at each of its laps.
+        public int stuckEpisodes;
+        public float stuckLongest;
+        public readonly List<int> charge = new List<int>();
         public int laps;
         // Throttle: share of car-time flat out (>= 0.98), lifts (flat -> under 0.9) per car per lap, share of
         // car-time on the brake, and the share of following gaps that are nose to tail (< 7 m centre to centre,
@@ -229,7 +247,11 @@ public class PackRaceSimTests
         $"2-wide {r.wide2Share:P1}, 3-wide+ {r.wide3Share:P1}, alone off-line rms {r.aloneLineRms:0.00} m (max {r.aloneLineMax:0.0}), " +
         $"{r.weavesPerCarLap:0.00} weaves/car/lap, flat out {r.fullThrottleShare:P1}, {r.liftsPerCarLap:0.00} lifts/car/lap, " +
         $"braking {r.brakeShare:P1}, nose-to-tail {r.noseToTailShare:P0}, speed {r.minMph:0}..mean {r.meanMph:0} mph, " +
-        $"contacts rear {r.rearContacts} / side {r.sideContacts} / HARD {r.hardContacts}\n";
+        $"contacts rear {r.rearContacts} / side {r.sideContacts} / HARD {r.hardContacts}\n" +
+        $"    holding: 3-wide runs {r.wide3RunMean:0.0} s ({r.wide3Sustained:P0} in runs 3 s+), lane hold {r.laneHoldMean:0.0} s, " +
+        $"{r.laneChangesPerCarLap:0.00} lane changes/car/lap, wander {r.laneJitterRms:0.00} m, field {r.fieldLengthMedian:0} m long, " +
+        $"{r.leadPackShare:P0} in the lead pack, stuck 10 s+ {r.stuckEpisodes} (longest {r.stuckLongest:0} s)" +
+        (r.charge.Count > 0 ? ", charge P" + string.Join(" P", r.charge) : "") + "\n";
 
     // The rolling start at Watkins Glen: a full road-course field double file at the green, through Turn 1 and the
     // esses. A field that merges onto the racing line stacks up on one side of the road braking for Turn 1 (the
@@ -275,6 +297,281 @@ public class PackRaceSimTests
             Despawn();
         }
         sb.Append($"\n  total: {p} passes, {c} contacts, HARD {h}, {o} offs");
+        Debug.Log(sb.ToString());
+    }
+
+    // NR2003's lateral field (AIRacingBehaviour.useLateralField) against the pack's lane rules, on a superspeedway.
+    [Explicit("Diagnostic: the lateral field on against off - a 40-car pack, three rosters.")]
+    [Test, Timeout(7200000)]
+    public void LateralFieldCompare([Values("Daytona", "Talladega")] string trackId) => FieldRuns(trackId, false, true);
+
+    [Explicit("Diagnostic: the lateral field alone - a 40-car pack, three rosters.")]
+    [Test, Timeout(7200000)]
+    public void LateralFieldOnly([Values("Daytona", "Talladega")] string trackId) => FieldRuns(trackId, true);
+
+    [Explicit("Diagnostic: the lateral field at Daytona, one roster, hard contacts traced.")]
+    [Test, Timeout(1800000)]
+    public void LateralFieldTrace() =>
+        Log("field trace", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, columns = 2, traceHard = 30,
+                                                     racing = new Dictionary<string, object> { { "useLateralField", true } } }));
+
+    // The racing the AI is judged on. A superspeedway: a pack that holds together, holds its lanes and holds three
+    // wide for long stretches. A road course: on the line, clean passes, and a fast car from the back carving
+    // through - 1-2 places a lap until it is in the top 20 - rather than parking behind slower cars.
+    [Explicit("Diagnostic: the racing goals - Daytona lanes vs field (pack, lanes, 3-wide), Watkins Glen charge from the back.")]
+    [Test, Timeout(7200000)]
+    public void GoalsBaseline()
+    {
+        var sb = new StringBuilder("[PackSim] goals baseline\n");
+        foreach (bool field in new[] { false, true })
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 6, seed = seed, columns = 2,
+                    racing = new Dictionary<string, object> { { "useLateralField", field } } });
+                sb.Append(Summary($"  Daytona {(field ? "FIELD" : "LANES")} seed {seed}", r));
+                Despawn();
+            }
+        foreach (int seed in new[] { 1, 2 })
+        {
+            var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, fastestAtBack = true });
+            sb.Append(Summary($"  WG charge seed {seed}", r));
+            Despawn();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: the fastest car from the back at Watkins Glen, traced once a second.")]
+    [Test, Timeout(1800000)]
+    public void WatkinsGlenChargeTrace() =>
+        Log("WG charge trace", Run("WatkinsGlen", new Settings { cars = 24, laps = 4, seed = 1, columns = 2, fastestAtBack = true, traceCharger = true }));
+
+    [Explicit("Diagnostic: road-course follow headway against the charge from the back - Watkins Glen, two rosters each.")]
+    [Test, Timeout(7200000)]
+    public void WatkinsGlenChargeHeadway()
+    {
+        var sb = new StringBuilder("[PackSim] WG charge headway\n");
+        foreach (float hw in new[] { 0.3f, 0.15f, 0.08f })
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, fastestAtBack = true, followHeadway = hw });
+                sb.Append($"  headway {hw} seed {seed}: {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}, " +
+                          $"median gap {r.medianGap:0.0} m, stuck 10 s+ {r.stuckEpisodes}, charge P{string.Join(" P", r.charge)}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    // Driver grip (NR2003's strength -> traction circle) against the charge from the back at Watkins Glen, and the
+    // plate's pace spread against the pack holding together at Daytona.
+    [Explicit("Diagnostic: driver grip spread at Watkins Glen (charge) and plate pace spread at Daytona (pack).")]
+    [Test, Timeout(7200000)]
+    public void SkillSpreadSweep()
+    {
+        var sb = new StringBuilder("[PackSim] skill spread sweep\n");
+        foreach (float g in new[] { 0f, 0.03f, 0.05f })
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, fastestAtBack = true, driverGripSpread = g });
+                sb.Append($"  WG grip spread {g} seed {seed}: {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}, " +
+                          $"best laps {r.fastestLap:0.00}..{r.slowestBest:0.00} s, stuck 10 s+ {r.stuckEpisodes}, charge P{string.Join(" P", r.charge)}\n");
+                Despawn();
+            }
+        foreach (float ps in new[] { 1f, 0.2f, 0f })
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 6, seed = seed, columns = 2,
+                    racing = new Dictionary<string, object> { { "useLateralField", true }, { "platePaceSpread", ps } } });
+                sb.Append($"  Daytona plate spread {ps} seed {seed}: field {r.fieldLengthMedian:0} m, lead pack {r.leadPackShare:P0}, " +
+                          $"3-wide {r.wide3Share:P0} (runs {r.wide3RunMean:0.0} s), lane changes {r.laneChangesPerCarLap:0.00}/car/lap, " +
+                          $"{r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: one car alone at Watkins Glen - clean-air pace by rating, with and without driver grip.")]
+    [Test, Timeout(1800000)]
+    public void WatkinsGlenSoloPace()
+    {
+        var sb = new StringBuilder("[PackSim] WG solo pace\n");
+        foreach (float g in new[] { 0f, 0.05f })
+            foreach (float s in new[] { 0f, 0.5f, 1f })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 1, laps = 3, seed = 1, soloStrength = s, driverGripSpread = g });
+                sb.Append($"  grip spread {g} strength {s}: best lap {r.fastestLap:0.00} s, {r.offs} offs\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: pass settings against the charge from the back at Watkins Glen, two rosters each.")]
+    [Test, Timeout(7200000)]
+    public void WatkinsGlenChargePassing()
+    {
+        var sb = new StringBuilder("[PackSim] WG charge passing\n");
+        var variants = new (string name, Dictionary<string, object> racing)[]
+        {
+            ("current", null),
+            ("offset 5", new Dictionary<string, object> { { "overtakeLineOffset", 5f } }),
+            ("offset 5 commit 3 clear 2.4", new Dictionary<string, object>
+                { { "overtakeLineOffset", 5f }, { "commitHoldSeconds", 3f }, { "corridorClearWidthNoLanes", 2.4f } }),
+            ("watched field", new Dictionary<string, object>
+                { { "overtakeLineOffset", 5f }, { "commitHoldSeconds", 3f }, { "corridorClearWidthNoLanes", 2.4f }, { "followHeadwaySeconds", 0.2f } }),
+        };
+        foreach (var (name, racing) in variants)
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, fastestAtBack = true, racing = racing });
+                sb.Append($"  {name} seed {seed}: {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}, " +
+                          $"stuck 10 s+ {r.stuckEpisodes}, charge P{string.Join(" P", r.charge)}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: cars falling off the pack at Daytona with the lateral field, traced.")]
+    [Test, Timeout(1800000)]
+    public void DaytonaDropTrace() =>
+        Log("daytona drops", Run("Daytona", new Settings { cars = 40, laps = 4, seed = 1, columns = 2, traceDrops = 40,
+            racing = new Dictionary<string, object> { { "useLateralField", true } } }));
+
+    [Explicit("Diagnostic: the lateral field on a road course against the current AI - the Watkins Glen charge from the back.")]
+    [Test, Timeout(7200000)]
+    public void WatkinsGlenChargeField()
+    {
+        var sb = new StringBuilder("[PackSim] WG charge field\n");
+        var variants = new (string name, Dictionary<string, object> racing)[]
+        {
+            ("current", null),
+            ("field offline 1", new Dictionary<string, object> { { "useLateralField", true }, { "fieldEverywhere", true } }),
+            ("field offline 0.5", new Dictionary<string, object> { { "useLateralField", true }, { "fieldEverywhere", true }, { "fieldOffLineCost", 0.5f } }),
+        };
+        foreach (var (name, racing) in variants)
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, fastestAtBack = true, racing = racing });
+                sb.Append($"  {name} seed {seed}: {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}, " +
+                          $"alone off-line {r.aloneLineRms:0.00} m, stuck 10 s+ {r.stuckEpisodes}, charge P{string.Join(" P", r.charge)}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: draft range against the pack holding together at Daytona - field and lanes.")]
+    [Test, Timeout(7200000)]
+    public void DaytonaDraftRange()
+    {
+        var sb = new StringBuilder("[PackSim] daytona draft range\n");
+        foreach (var (gap, field) in new[] { (35f, true), (70f, true), (120f, true), (70f, false) })
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 6, seed = seed, columns = 2, draftMaxGap = gap,
+                    racing = new Dictionary<string, object> { { "useLateralField", field } } });
+                sb.Append($"  {(field ? "field" : "lanes")} draft {gap} m seed {seed}: field {r.fieldLengthMedian:0} m, lead pack {r.leadPackShare:P0}, " +
+                          $"3-wide {r.wide3Share:P0} (runs {r.wide3RunMean:0.0} s), lane changes {r.laneChangesPerCarLap:0.00}/car/lap, " +
+                          $"lap {r.fastestLap:0.0}s, {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: the superspeedway draft range (VehicleInfo range x TrackTuning.draftRangeScale 2) - Daytona three rosters, Talladega.")]
+    [Test, Timeout(7200000)]
+    public void SuperspeedwayDraftRangeConfirm()
+    {
+        var sb = new StringBuilder("[PackSim] superspeedway draft range confirm\n");
+        foreach (var (track, carGap) in new[] { ("Daytona", 35f), ("Daytona", 45f), ("Daytona", 60f), ("Talladega", 35f) })
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                if (track == "Talladega" && seed == 3) continue;
+                var r = Run(track, new Settings { cars = 40, laps = 6, seed = seed, columns = 2, draftMaxGap = carGap });
+                sb.Append($"  {track} range {carGap * 2f:0} m seed {seed}: lead pack {r.leadPackShare:P0}, field {r.fieldLengthMedian:0} m, " +
+                          $"3-wide {r.wide3Share:P0} (runs {r.wide3RunMean:0.0} s, {r.wide3Sustained:P0} 3 s+), lane changes {r.laneChangesPerCarLap:0.00}/car/lap, " +
+                          $"hold {r.laneHoldMean:0.0} s, lap {r.fastestLap:0.0}s, {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: fresh against worn tyres, one car alone - Watkins Glen and Daytona.")]
+    [Test, Timeout(1800000)]
+    public void TyreFalloff()
+    {
+        var sb = new StringBuilder("[PackSim] tyre falloff\n");
+        foreach (var track in new[] { "WatkinsGlen", "Daytona" })
+            foreach (float w in new[] { 0f, 0.8f })
+            {
+                var r = Run(track, new Settings { cars = 1, laps = 3, seed = 1, soloStrength = 0.5f, initialWear = w });
+                var tm = _cars[0].GetComponent(Runtime("TireModel"));
+                float endWear = tm != null ? ((float[])tm.GetType().GetField("wear").GetValue(tm))[0] : -1f;
+                sb.Append($"  {track} start wear {w}: best lap {r.fastestLap:0.00} s, front-left wear after 3 laps {endWear:0.000}, {r.offs} offs\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: Talladega's draft range and lane count against holding a pack - two rosters each.")]
+    [Test, Timeout(7200000)]
+    public void TalladegaPack()
+    {
+        var sb = new StringBuilder("[PackSim] talladega pack\n");
+        foreach (float carGap in new[] { 13.5f, 35f })   // x the superspeedway's 2.6: 35 m (the car's own) and 90 m
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("Talladega", new Settings { cars = 40, laps = 6, seed = seed, columns = 2, draftMaxGap = carGap });
+                sb.Append($"  range {carGap * 2.6f:0} m seed {seed}: lead pack {r.leadPackShare:P0}, field {r.fieldLengthMedian:0} m, " +
+                          $"3-wide {r.wide3Share:P0} (runs {r.wide3RunMean:0.0} s), lane changes {r.laneChangesPerCarLap:0.00}/car/lap, " +
+                          $"hold {r.laneHoldMean:0.0} s, wander {r.laneJitterRms:0.00} m, {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    // How eager the field is to move: stickiness (m of progress a change must win) and move cost (m per m across).
+    [Explicit("Diagnostic: lateral field eagerness sweep at Daytona, three rosters each.")]
+    [Test, Timeout(7200000)]
+    public void LateralFieldEagerness()
+    {
+        var sb = new StringBuilder("[PackSim] lateral field eagerness Daytona\n");
+        foreach (var (stick, move) in new[] { (1f, 0.1f), (3f, 0.5f), (6f, 1f) })
+        {
+            var racing = new Dictionary<string, object>
+                { { "useLateralField", true }, { "fieldStickiness", stick }, { "fieldMoveCost", move } };
+            int contacts = 0, hard = 0, passes = 0;
+            float w3 = 0, nose = 0, weaves = 0;
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 6, seed = seed, columns = 2, racing = racing });
+                contacts += r.contacts; hard += r.hardContacts; passes += r.passes;
+                w3 += r.wide3Share; nose += r.noseToTailShare; weaves += r.weavesPerCarLap;
+                Despawn();
+            }
+            sb.Append($"  stick {stick} move {move}: {passes / 3f:0} passes, {contacts / 3f:0} contacts, HARD {hard / 3f:0.0}, " +
+                      $"3-wide+ {w3 / 3:P0}, nose-to-tail {nose / 3:P0}, {weaves / 3:0.00} weaves/car/lap\n");
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    void FieldRuns(string trackId, params bool[] variants)
+    {
+        var sb = new StringBuilder($"[PackSim] lateral field compare {trackId}\n");
+        foreach (bool on in variants)
+        {
+            var racing = new Dictionary<string, object> { { "useLateralField", on } };
+            int passes = 0, contacts = 0, hard = 0, offs = 0;
+            float w2 = 0, w3 = 0, nose = 0, flat = 0;
+            sb.Append(on ? "FIELD\n" : "LANES (current)\n");
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                var r = Run(trackId, new Settings { cars = 40, laps = 6, seed = seed, columns = 2, racing = racing });
+                sb.Append(Summary($"  seed {seed}", r));
+                passes += r.passes; contacts += r.contacts; hard += r.hardContacts; offs += r.offs;
+                w2 += r.wide2Share; w3 += r.wide3Share; nose += r.noseToTailShare; flat += r.fullThrottleShare;
+                Despawn();
+            }
+            sb.Append($"  MEAN: {passes / 3f:0} passes, {contacts / 3f:0} contacts, HARD {hard / 3f:0.0}, {offs / 3f:0.0} offs, " +
+                      $"2-wide {w2 / 3:P0}, 3-wide+ {w3 / 3:P0}, nose-to-tail {nose / 3:P0}, flat out {flat / 3:P0}\n");
+        }
         Debug.Log(sb.ToString());
     }
 
@@ -449,16 +746,32 @@ public class PackRaceSimTests
         var inputs = new Component[n];
         var racers = new Component[n];
         var quals = new float[n];
+        // A spread of ratings like the real roster (qualifying 8..20 of 20), shuffled against grid order so the quick
+        // cars start behind slow ones and have to pass. The last index starts at the back in every grid layout.
+        var qs = new float[n]; var cs = new float[n]; var ags = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            float k = n > 1 ? 1f / (n - 1) : 0f;
+            qs[i] = set.soloStrength ?? Mathf.Lerp(0.4f, 1f, ((i * 5) % n) * k);
+            cs[i] = set.soloStrength ?? Mathf.Lerp(0.65f, 0.95f, ((i * 7) % n) * k);
+            ags[i] = Mathf.Lerp(0.3f, 0.9f, ((i * 3) % n) * k);
+        }
+        int charger = -1;
+        if (set.fastestAtBack)
+        {
+            int f = 0;
+            for (int i = 1; i < n; i++) if (qs[i] > qs[f]) f = i;
+            charger = n - 1;
+            (qs[f], qs[charger]) = (qs[charger], qs[f]);
+            (cs[f], cs[charger]) = (cs[charger], cs[f]);
+            (ags[f], ags[charger]) = (ags[charger], ags[f]);
+        }
         for (int i = 0; i < n; i++)
         {
             var go = new GameObject($"Car{i:D2}");
             _cars.Add(go);
 
-            // A spread of ratings like the real roster (qualifying 8..20 of 20), shuffled against grid order so
-            // the quick cars start behind slow ones and have to pass.
-            float q01 = Mathf.Lerp(0.4f, 1f, ((i * 5) % n) / (float)(n - 1));
-            float cons01 = Mathf.Lerp(0.65f, 0.95f, ((i * 7) % n) / (float)(n - 1));
-            float agg01 = Mathf.Lerp(0.3f, 0.9f, ((i * 3) % n) / (float)(n - 1));
+            float q01 = qs[i], cons01 = cs[i], agg01 = ags[i];
             quals[i] = q01;
 
             var spline = go.AddComponent(splineType);
@@ -517,6 +830,7 @@ public class PackRaceSimTests
             Set(spline, "paceMultiplier", basePace);
             float commit = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
             Set(spline, "cornerCommitment", set.skillCornering ? commit : 1f);
+            Set(spline, "driverGrip", AIRatings.DriverGrip(ratings.strength01, set.driverGripSpread ?? AIRatings.DriverGripSpread));
             if (set.followHeadway.HasValue) Set(racing, "followHeadwaySeconds", set.followHeadway.Value);
             if (set.racing != null) foreach (var kv in set.racing) Set(racing, kv.Key, kv.Value);
             Set(racing, "respectYellows", set.respectYellows);
@@ -594,6 +908,15 @@ public class PackRaceSimTests
         var prevTac = new float[n];
         var tacTrend = new float[n];   // sign of the last real move of the intended offset
         int weaves = 0;
+        var wideStart = new float[n]; for (int i = 0; i < n; i++) wideStart[i] = -1f;
+        var wideRuns = new List<float>();
+        var anchorLat = new float[n]; var anchorT = new float[n]; var anchored = new bool[n];
+        var holds = new List<float>();
+        int laneChanges = 0; double jitterSq = 0; int jitterSamples = 0;
+        var fieldLengths = new List<float>(); int packSamples = 0, packCars = 0;
+        var behind = new List<(float t, int i, int j)>();   // who ran close behind whom, sampled
+        int chargerLaps = 0;
+        var dropped = new bool[n];
         float t = 0f;
         var thrProp = inputType.GetProperty("LastThrottle");
         var brkProp = inputType.GetProperty("LastBrake");
@@ -604,6 +927,14 @@ public class PackRaceSimTests
 
         for (int step = 0; step < maxSteps; step++)
         {
+            if (step == 0 && set.initialWear > 0f)
+                for (int i = 0; i < n; i++)
+                {
+                    var tm = _cars[i].GetComponent(Runtime("TireModel"));
+                    if (tm == null) continue;
+                    var w = (float[])tm.GetType().GetField("wear").GetValue(tm);
+                    for (int k = 0; k < w.Length; k++) w[k] = set.initialWear;
+                }
             for (int i = 0; i < n; i++)
             {
                 if (stopped && i == 0) splineType.GetField("aiMaxSpeedMph").SetValue(splines[0], 0f);
@@ -740,6 +1071,28 @@ public class PackRaceSimTests
             }
 
             // A close car's decision-making, twice a second: what it is chasing, what it may do, where it is.
+            if (set.traceCharger && charger >= 0 && step % 50 == 0 && r.lines.Count < 400)
+            {
+                int i = charger;
+                float ahead = float.MaxValue; int aj = -1;
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == i) continue;
+                    float g = progress[j] - progress[i];
+                    if (g > 0f && g < ahead) { ahead = g; aj = j; }
+                }
+                if (aj >= 0)
+                {
+                    var si = splines[i]; var sj = splines[aj];
+                    var nb = BindingFlags.Instance | BindingFlags.NonPublic;
+                    r.lines.Add($"  CH t{t:0} d{(float)distProp.GetValue(si):0} phase {splineType.GetProperty("CurrentPhase").GetValue(si)} -> Car{aj:D2}(q{quals[aj]:0.00}) gap {ahead:0.0} | " +
+                        $"me {Get(si, "CurrentMph"):0} want {Get(si, "DesiredMph"):0} cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(si)):0} " +
+                        $"lat {Get(si, "LateralOnTrack"):0.0} tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(si):0.0} " +
+                        $"commit {(float)racingType.GetField("_commitTimer", nb).GetValue(racers[i]):0.0}/{(float)racingType.GetField("_commitDir", nb).GetValue(racers[i]):0} " +
+                        $"cool {(float)racingType.GetField("_cooldownTimer", nb).GetValue(racers[i]):0.0} | " +
+                        $"them {Get(sj, "CurrentMph"):0} want {Get(sj, "DesiredMph"):0} lat {Get(sj, "LateralOnTrack"):0.0}");
+                }
+            }
             if (set.traceLines > 0 && leaderLaps >= 2 && step % 25 == 0 && r.lines.Count < set.traceLines)
             {
                 for (int i = 0; i < n; i++)
@@ -799,6 +1152,33 @@ public class PackRaceSimTests
             // Pack shape, ten times a second once racing.
             if (leaderLaps >= 2 && step % 5 == 0)
             {
+                var ord = new int[n];
+                for (int k = 0; k < n; k++) ord[k] = k;
+                Array.Sort(ord, (a, b) => progress[b].CompareTo(progress[a]));
+                fieldLengths.Add(progress[ord[0]] - progress[ord[n - 1]]);
+                int inPack = 1;
+                while (inPack < n && progress[ord[inPack - 1]] - progress[ord[inPack]] < 25f) inPack++;
+                packSamples++; packCars += inPack;
+                for (int k = 1; k < n; k++)
+                {
+                    int me = ord[k], them = ord[k - 1];
+                    float gapAhead = progress[them] - progress[me];
+                    if (gapAhead < 25f) { behind.Add((t, me, them)); dropped[me] = false; continue; }
+                    if (dropped[me] || set.traceDrops <= 0 || r.lines.Count >= set.traceDrops) continue;
+                    dropped[me] = true;
+                    var sm = splines[me]; var st = splines[them];
+                    var nb = BindingFlags.Instance | BindingFlags.NonPublic;
+                    r.lines.Add($"  DROP t{t:0.0} P{k + 1} Car{me:D2}(q{quals[me]:0.00}) {gapAhead:0.0} m off Car{them:D2}(q{quals[them]:0.00}) | " +
+                        $"me {Get(sm, "CurrentMph"):0.0} want {Get(sm, "DesiredMph"):0.0} target {Get(sm, "TargetMph"):0.0} cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(sm)):0} " +
+                        $"boost {(float)splineType.GetField("aiSpeedBoostMph").GetValue(sm):0.0} th {Get(inputs[me], "LastThrottle"):0.00} br {Get(inputs[me], "LastBrake"):0.00} " +
+                        $"tow {(float)towProp.GetValue(pvcs[me]):0.00} lat {Get(sm, "LateralOnTrack"):0.0} aim {(float)racingType.GetField("_fieldTarget", nb).GetValue(racers[me]):0.0} | " +
+                        $"them {Get(st, "CurrentMph"):0.0} lat {Get(st, "LateralOnTrack"):0.0} tow {(float)towProp.GetValue(pvcs[them]):0.00}");
+                }
+                if (charger >= 0 && lapsDone[charger] > chargerLaps)
+                {
+                    chargerLaps = lapsDone[charger];
+                    r.charge.Add(Array.IndexOf(ord, charger) + 1);
+                }
                 for (int i = 0; i < n; i++)
                 {
                     int alongside = 0;
@@ -813,6 +1193,24 @@ public class PackRaceSimTests
                     shapeSamples++;
                     if (alongside == 1) wide2++;
                     else if (alongside >= 2) wide3++;
+
+                    // 3-wide runs.
+                    if (alongside >= 2) { if (wideStart[i] < 0f) wideStart[i] = t; }
+                    else if (wideStart[i] >= 0f) { wideRuns.Add(t - wideStart[i]); wideStart[i] = -1f; }
+
+                    // Lane hold: a change is a move of more than half a groove off the lateral being held.
+                    float lh = (float)latProp.GetValue(splines[i]);
+                    if (!anchored[i]) { anchored[i] = true; anchorLat[i] = lh; anchorT[i] = t; }
+                    else if (Mathf.Abs(lh - anchorLat[i]) > 1.3f)
+                    {
+                        holds.Add(t - anchorT[i]); laneChanges++;
+                        anchorLat[i] = lh; anchorT[i] = t;
+                    }
+                    else
+                    {
+                        anchorLat[i] = Mathf.Lerp(anchorLat[i], lh, 0.05f);   // follow a slow drift of the groove itself
+                        jitterSq += (lh - anchorLat[i]) * (lh - anchorLat[i]); jitterSamples++;
+                    }
 
                     // Alone: nobody within 30 m either way. How far off its own planned path the car is running.
                     if (nearest > 30f)
@@ -930,6 +1328,38 @@ public class PackRaceSimTests
         int racedLaps = 0;
         for (int i = 0; i < n; i++) racedLaps += Mathf.Max(0, lapsDone[i] - 1);
         r.weavesPerCarLap = racedLaps > 0 ? weaves / (float)racedLaps : 0f;
+        for (int i = 0; i < n; i++) if (wideStart[i] >= 0f) wideRuns.Add(t - wideStart[i]);
+        float wideTotal = 0f, wideLong = 0f;
+        foreach (var w in wideRuns) { wideTotal += w; if (w >= 3f) wideLong += w; }
+        r.wide3RunMean = wideRuns.Count > 0 ? wideTotal / wideRuns.Count : 0f;
+        r.wide3Sustained = wideTotal > 0f ? wideLong / wideTotal : 0f;
+        for (int i = 0; i < n; i++) if (anchored[i]) holds.Add(t - anchorT[i]);
+        float holdSum = 0f; foreach (var hd in holds) holdSum += hd;
+        r.laneHoldMean = holds.Count > 0 ? holdSum / holds.Count : 0f;
+        r.laneChangesPerCarLap = racedLaps > 0 ? laneChanges / (float)racedLaps : 0f;
+        r.laneJitterRms = jitterSamples > 0 ? (float)System.Math.Sqrt(jitterSq / jitterSamples) : 0f;
+        fieldLengths.Sort();
+        r.fieldLengthMedian = fieldLengths.Count > 0 ? fieldLengths[fieldLengths.Count / 2] : 0f;
+        r.leadPackShare = packSamples > 0 ? packCars / (float)(packSamples * n) : 0f;
+        {
+            // Stuck: continuous stretches of i close behind j where j is the slower car over the run.
+            var runStart = new Dictionary<long, float>(); var last = new Dictionary<long, float>();
+            foreach (var (st, i, j) in behind)
+            {
+                if (!(best[i] < best[j] - 0.3f)) continue;
+                long key = i * 1000L + j;
+                if (last.TryGetValue(key, out float lt) && st - lt < 0.25f) { last[key] = st; continue; }
+                if (last.TryGetValue(key, out lt)) Close(key, lt);
+                runStart[key] = st; last[key] = st;
+            }
+            foreach (var kv in last) Close(kv.Key, kv.Value);
+            void Close(long key, float end)
+            {
+                float len = end - runStart[key];
+                if (len >= 10f) r.stuckEpisodes++;
+                r.stuckLongest = Mathf.Max(r.stuckLongest, len);
+            }
+        }
         r.fullThrottleShare = thrSamples > 0 ? flatSamples / (float)thrSamples : 0f;
         r.brakeShare = thrSamples > 0 ? brakeSamples / (float)thrSamples : 0f;
         r.liftsPerCarLap = racedLaps > 0 ? lifts / (float)racedLaps : 0f;

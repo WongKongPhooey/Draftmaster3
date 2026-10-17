@@ -88,6 +88,14 @@ namespace Draftmaster.Sim
             => Mathf.Lerp(0.93f, 1.04f, strength01)
                * Mathf.Lerp(1f - (1f - consistency01) * 0.04f, 1f, Mathf.Clamp01(jitterRoll01));
 
+        // How much grip the driver gets out of the car: NR2003's strength -> traction circle. The car, the AI's corner
+        // speeds and its grip governor all use it, so a better driver really does corner faster - nothing caps it
+        // back to the field's speed. On a plated superspeedway the turns are flat out with grip to spare, so it barely
+        // shows there, and the draft decides; on a road course it is what separates the field.
+        public const float DriverGripSpread = 0f;   // off until a solo-lap test shows it working
+        public static float DriverGrip(float strength01, float spread = DriverGripSpread)
+            => Mathf.Lerp(1f - spread, 1f + spread, Mathf.Clamp01(strength01));
+
         // How close to the grip limit they corner. The best use all of it; the weakest give up ~4%. Consistency
         // adds a little spread so equal-rated drivers differ. jitterRoll01 is a uniform 0..1 draw.
         public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01)

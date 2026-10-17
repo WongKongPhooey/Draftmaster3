@@ -52,6 +52,15 @@ public static class TrackConditions
     [Tooltip("How much the tow is worth at this track (TrackTuning.draftScale): multiplies the draft's top-speed gain, its extra acceleration and the AI's tow boost. Set per track when it loads.")]
     public static float DraftScale = 1f;
 
+    [Tooltip("How fast tyres wear at this track (TrackTuning.tyreWearScale): a road course and a bullring chew through them, a superspeedway barely touches them. Multiplies TireWearMultiplier. Set per track when it loads.")]
+    public static float TyreWearScale = 1f;
+
+    [Tooltip("How much grip a worn tyre gives up at this track (TrackTuning.tyreGripLossScale): little on a superspeedway's flat-out turns. Set per track when it loads.")]
+    public static float TyreGripLossScale = 1f;
+
+    [Tooltip("How far back the tow reaches at this track (TrackTuning.draftRangeScale): multiplies VehicleInfo.draftingMaxGap. Set per track when it loads.")]
+    public static float DraftRangeScale = 1f;
+
     [Tooltip("How close the AI follows at this track (TrackTuning.draftFollowScale): multiplies their following headway. Set per track when it loads.")]
     public static float AiFollowScale = 1f;
 
@@ -84,6 +93,9 @@ public static class TrackConditions
     public static void ApplyTrackTuning(string trackId)
     {
         DraftScale = 1f;
+        DraftRangeScale = 1f;
+        TyreWearScale = 1f;
+        TyreGripLossScale = 1f;
         AiFollowScale = 1f;
         AiLanes = true;
         TrackGripScale = 1f;
@@ -97,6 +109,9 @@ public static class TrackConditions
         if (string.IsNullOrEmpty(trackId)) return;
         var tuning = TrackProfile.ForTrack(trackId);
         if (tuning.draftScale > 0f) DraftScale = tuning.draftScale;
+        if (tuning.draftRangeScale > 0f) DraftRangeScale = tuning.draftRangeScale;
+        if (tuning.tyreWearScale > 0f) TyreWearScale = tuning.tyreWearScale;
+        if (tuning.tyreGripLossScale > 0f) TyreGripLossScale = tuning.tyreGripLossScale;
         if (tuning.draftFollowScale > 0f) AiFollowScale = tuning.draftFollowScale;
         AiLanes = tuning.raceInLanes;
         AiPackRacing = tuning.packRacing;
@@ -136,6 +151,9 @@ public static class TrackConditions
         AiPaceMultiplier = DefaultAiPace;
         AiGripMultiplier = DefaultAiGrip;
         DraftScale = 1f;
+        DraftRangeScale = 1f;
+        TyreWearScale = 1f;
+        TyreGripLossScale = 1f;
         AiFollowScale = 1f;
         AiLanes = true;
         TrackGripScale = 1f;

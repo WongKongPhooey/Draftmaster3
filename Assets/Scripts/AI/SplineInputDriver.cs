@@ -450,7 +450,7 @@ public class SplineInputDriver : MonoBehaviour
     {
         var vi = _spline.vehicleInfo;
         if (vi == null || vi.maxLateralG <= 0.01f) return 0f;
-        float grip = TrackConditions.AiEffective;
+        float grip = TrackConditions.AiEffective * _spline.driverGrip;
         if (_tireModel != null) grip *= _tireModel.OverallGrip;
         else if (_tireState != null) grip *= _tireState.GripMultiplier;
         // Bent bodywork costs grip in the car's friction circle; without it here a car carrying heavy damage

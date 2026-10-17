@@ -137,7 +137,7 @@ public class TireModel : MonoBehaviour
 
         // Wear: scales with work and accelerates when the tyre runs hot.
         float overheat = 1f + Mathf.Max(0f, tempC[i] - overheatWearStartC) * overheatWearPerDeg;
-        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * CompoundWear * TrackConditions.TireWearMultiplier * work * overheat * dt * 60f);
+        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * CompoundWear * TrackConditions.TireWearMultiplier * TrackConditions.TyreWearScale * work * overheat * dt * 60f);
     }
 
     // Compound multipliers. Soft is the reference (1.0) so the tuned defaults keep their meaning.
@@ -155,7 +155,7 @@ public class TireModel : MonoBehaviour
 
     public float TyreGrip(int i)
     {
-        float wg = Mathf.Lerp(1f, minWearGrip, Mathf.Clamp01(wear[i]));
+        float wg = Mathf.Lerp(1f, minWearGrip, Mathf.Clamp01(wear[i]) * TrackConditions.TyreGripLossScale);
         return wg * TempGrip(tempC[i]) * CompoundGrip;
     }
 

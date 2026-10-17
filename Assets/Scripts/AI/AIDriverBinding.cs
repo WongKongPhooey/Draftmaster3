@@ -85,6 +85,7 @@ public class AIDriverBinding : MonoBehaviour
             // car sits above it, so without it the whole field cornered identically, strung out ~5 lengths
             // apart and never passed.
             _spline.cornerCommitment = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, Random.value);
+            _spline.driverGrip = AIRatings.DriverGrip(ratings.strength01);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
         }

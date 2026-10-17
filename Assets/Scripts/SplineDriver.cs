@@ -268,6 +268,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float TargetMph { get; private set; }
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
     public float LateralOnTrack => _prevLateral;
+    /// Sideways speed across the track (m/s, + = toward + lateral), from the last two steps.
+    public float LateralRate { get; private set; }
     public float TrackLength => _mainLength;
 
     // IFormationMember — lets the formation lap line cars up in grid order (the safety car overrides its grid via
@@ -306,6 +308,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _pitSide;   // +1 / -1: which side of the track the pit lane peels off to. 0 = not measured yet.
     [Tooltip("Share of the grip limit this driver takes corners at (1 = right on the limit). Set per driver by AIDriverBinding from their skill, so the field differs in the corners and not just on the straights. Baked into the speed profile at Rebuild.")]
     [Range(0.5f, 1f)] public float cornerCommitment = 1f;
+    [Tooltip("The driver's own grip out of the car (AIRatings.DriverGrip): scales the corner speeds planned here, the grip governor and the car's physics alike.")]
+    public float driverGrip = 1f;
     [Tooltip("When > 0, GUARANTEES at least this braking rate (mph/sec) regardless of the (possibly weak) decel curve. Set per-frame by the formation/avoidance AI so an emergency slow can actually land. 0 = use the curve.")]
     [HideInInspector] public float aiMinDecelMphPerSec = 0f;
     [Tooltip("Default deceleration used when the vehicle's decel curve is unauthored, in m/s².")]
@@ -930,7 +934,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             // The curve encodes corner speed by radius at nominal (1.0) grip; corner speed scales with √μ.
             baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
+                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective * driverGrip, 0.05f));
             // The curve is a peak-grip speed too; the car only holds part of that in a corner (AIGrip).
             baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
         }
@@ -1039,7 +1043,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // AI's effective grip in (global boost × AI-only bonus) — otherwise the AI corner at raw curve
             // speeds while the physics enjoy the multiplied grip and the targets undersell what the car can do.
             baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
+                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective * driverGrip, 0.05f));
             baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
         }
         else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
@@ -1682,6 +1686,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // No cosmetic lean on top: a top-down car shows body roll as nothing at all, so extra yaw for "leaning
         // into the turn" only pointed the car off its own path — up to 5° on a weave, more than twice the real
         // turn-in, and it read as the car rocking side to side through every line change.
+        LateralRate = lateralRate;
         _prevLateral = totalLateral;
         _hasPrevLateral = true;
         float carHeadingDeg = angleDeg + _pathYawSmoothed + _mergeHeadingBias;

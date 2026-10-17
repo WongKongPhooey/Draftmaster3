@@ -688,6 +688,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Available grip per axle: μ (proxied by maxLateralG) × track × tyre (wear+temperature), biased for balance.
         // AI-driven cars get the AI-only grip bonus on top of the global conditions; the player reads the raw global.
         float trackGrip = externalInput ? TrackConditions.AiEffective : TrackConditions.Effective;
+        if (externalInput && _brainSpline != null) trackGrip *= _brainSpline.driverGrip;   // the AI driver's own grip
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
         float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;

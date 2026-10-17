@@ -137,10 +137,12 @@ public static class DraftAero
         else if (g < -trackLen * 0.5f) g += trackLen;
         float latDelta = Mathf.Abs(otherLat - myLat);
 
-        // Slipstream: behind them, aligned. Strongest bumper-to-bumper on their line.
-        if (g > 0f && g <= vi.draftingMaxGap && latDelta <= TowLateralHalfWidth)
+        // Slipstream: behind them, aligned. Strongest bumper-to-bumper on their line. How far back it reaches is the
+        // car's own range times the track's (TrackConditions.DraftRangeScale).
+        float maxGap = vi.draftingMaxGap * TrackConditions.DraftRangeScale;
+        if (g > 0f && g <= maxGap && latDelta <= TowLateralHalfWidth)
         {
-            float f = (1f - g / Mathf.Max(vi.draftingMaxGap, 0.1f)) * (1f - latDelta / TowLateralHalfWidth);
+            float f = (1f - g / Mathf.Max(maxGap, 0.1f)) * (1f - latDelta / TowLateralHalfWidth);
             if (f > tow) { tow = f; towSource = other; }
         }
 

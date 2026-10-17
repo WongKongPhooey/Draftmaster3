@@ -21,6 +21,7 @@ namespace Draftmaster.Tracks
         public TrackKind kind;
 
         public float draftScale;         // multiplier on the tow from the car ahead
+        public float draftRangeScale;    // multiplier on how far back the tow reaches (0 = the car's own range)
         public float draftFollowScale;   // multiplier on how close the AI follows (NR2003's ai_drafting_distance)
         public bool raceInLanes;         // AI races in lanes (AIRacingBehaviour.useLanes): ovals, where packs run side by side
 
@@ -35,6 +36,7 @@ namespace Draftmaster.Tracks
         public float laneSpacing;        // m between lane centres when racing in lanes (0 = the AI's default)
         public int packLanes;            // pack racing: how many fixed grooves, centred on the centreline (0 = fit the road)
         public float tyreWearScale;      // multiplier on wear rate
+        public float tyreGripLossScale;  // multiplier on how much grip a worn tyre loses (0 = full loss, as everywhere)
         public float fuelBurnScale;      // multiplier on burn rate
 
         public float lineSpread;         // 0-1: how far off the ideal line the AI will race
@@ -65,6 +67,13 @@ namespace Draftmaster.Tracks
                         // A pack: the draft's top-speed gain is a few mph (a 13% slingshot pulled cars out of line
                         // every lap and the field never formed up), the push from a line behind you is what wins.
                         draftScale = 0.5f,
+                        // How far back the tow reaches. At the car's own 35 m a car that slipped that far back had no
+                        // tow anywhere - nothing to come back for - and the pack strung out into trains; NR2003's tow
+                        // fades out at 1.5 s, over 100 m at plate speed. Swept in the 40-car Daytona sim
+                        // (PackRaceSimTests.SuperspeedwayDraftRangeConfirm, three rosters): 35 m kept 44% of the field
+                        // in the lead pack, 3-wide 51% in 10 s rows, ~5 lane changes per car per lap; 90 m kept 92%,
+                        // 3-wide 80% in 30 s rows, 1.3 lane changes, half the hard contacts; 120 m blew up a roster.
+                        draftRangeScale = 2.6f,
                         draftFollowScale = 0.6f,
                         raceInLanes = true,
                         plateMph = 190f,
@@ -75,6 +84,9 @@ namespace Draftmaster.Tracks
                         laneSpacing = 3.6f,        // 40 ft of road, three grooves: a car's width and a metre and a half
                         packLanes = 3,
                         tyreWearScale = 0.7f,
+                        // Flat out with grip to spare in the turns, old tyres cost little here: a full stint's wear
+                        // cost 2.3 s a lap alone at Daytona at the road-course loss (PackRaceSimTests.TyreFalloff).
+                        tyreGripLossScale = 0.3f,
                         fuelBurnScale = 1.15f,
                         lineSpread = 1f,           // three wide as standard
                         cautionProneness = 0.8f,   // the big one

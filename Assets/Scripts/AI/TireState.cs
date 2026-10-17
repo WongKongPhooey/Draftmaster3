@@ -13,7 +13,7 @@ public class TireState : MonoBehaviour
         {
             var vi = _spline != null ? _spline.vehicleInfo : null;
             float minGrip = vi != null ? vi.tireMinGrip : 0.88f;
-            return Mathf.Lerp(1f, minGrip, Mathf.Clamp01(wear));
+            return Mathf.Lerp(1f, minGrip, Mathf.Clamp01(wear) * TrackConditions.TyreGripLossScale);
         }
     }
 
@@ -28,7 +28,7 @@ public class TireState : MonoBehaviour
         float latG = EstimateLateralG();
         float maxG = Mathf.Max(_spline.vehicleInfo.maxLateralG, 0.1f);
         float intensity = Mathf.Clamp01(latG / maxG);
-        wear = Mathf.Min(1f, wear + intensity * _spline.vehicleInfo.tireWearRate * TrackConditions.TireWearMultiplier * Time.fixedDeltaTime);
+        wear = Mathf.Min(1f, wear + intensity * _spline.vehicleInfo.tireWearRate * TrackConditions.TireWearMultiplier * TrackConditions.TyreWearScale * Time.fixedDeltaTime);
     }
 
     float EstimateLateralG()
