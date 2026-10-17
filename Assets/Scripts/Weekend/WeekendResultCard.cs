@@ -28,7 +28,7 @@ public class WeekendResultCard : MonoBehaviour
     bool _inWorld;
 
     // The skip summary rather than one activity's result: what skipping ahead walked past, listed above
-    // the meters it moved, with no grade (nothing was attempted) and no jump back to the sheet afterwards —
+    // the meters it moved, with no jump back to the sheet afterwards —
     // the skip has just taken the player back to their motorhome, and that is where the card leaves them.
     bool _summary;
     List<(string label, string value, Color colour)> _skippedRows;
@@ -221,12 +221,6 @@ public class WeekendResultCard : MonoBehaviour
         PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
         GUI.Label(new Rect(c.x + Px(4f), c.y, c.width - Px(8f), bandH), _activity.title, _heading);
 
-        var meta = _dataDim;
-        var prevAlign = meta.alignment;
-        meta.alignment = TextAnchor.MiddleRight;
-        GUI.Label(new Rect(c.x, c.y, c.width - Px(4f), bandH), _summary ? "" : Grade(_outcome.score), meta);
-        meta.alignment = prevAlign;
-
         float cy = c.y + bandH + Px(6f);
 
         if (!string.IsNullOrEmpty(_outcome.headline))
@@ -307,13 +301,4 @@ public class WeekendResultCard : MonoBehaviour
         string text = (value > 0f ? "+" : "") + (Mathf.Abs(value) < 10f ? value.ToString("0.0") : Mathf.RoundToInt(value).ToString());
         into.Add((label, text, value > 0f ? PixelGUI.Confirm : PixelGUI.Danger));
     }
-
-    static string Grade(float score01) => score01 switch
-    {
-        >= 0.9f => "NAILED IT",
-        >= 0.75f => "WELL DONE",
-        >= 0.5f => "FINE",
-        >= 0.25f => "SCRAPPY",
-        _ => "ROUGH",
-    };
 }
