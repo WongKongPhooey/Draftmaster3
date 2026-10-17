@@ -128,11 +128,15 @@ public class DriveOrientationController : MonoBehaviour
     // driver and the controls (PitLaneStart.GettingIn). Both are landscape screens, and turning upright at
     // the door left the setup panel drawn sideways on a portrait phone. Nor while the setup panel is up for
     // any other reason.
+    //
+    // The pit-stop challenge counts the whole time the driver is sat in its car: the run switches the car off
+    // for the countdown and for the stop in the box, and the screen must not turn round under them for that.
     static bool InCar =>
         !PadInput.OnFoot &&
         !PitLaneStart.GettingIn &&
         !CarSetupPanelUI.IsOpen &&
         (PlayerVehicleController.Human != null ||
+         PitLaneStart.InChallengeCar ||
          (DriveModeController.Current != null && !DriveModeController.Current.IsDriving));
 
     // ------------------------------------------------------------------ leaving the scene

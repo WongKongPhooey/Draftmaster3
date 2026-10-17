@@ -776,6 +776,7 @@ public class PitLaneStart : MonoBehaviour
         RunLocked = false;
         if (_gettingIn == this) _gettingIn = null;
         if (_current == this) _current = null;
+        if (_inChallenge == this) _inChallenge = null;
     }
 
     // No running until the run hint has been shown. The hint itself waits on the phone lesson
@@ -1427,6 +1428,7 @@ public class PitLaneStart : MonoBehaviour
         if (car == null || _player == null || _phase != EntryPhase.Walking || _entered) return false;
 
         _challengeDrive = true;
+        _inChallenge = this;
         _entered = true;
         ShowPrompt(false);
         ControlHints.Hide("entercar");
@@ -1451,6 +1453,13 @@ public class PitLaneStart : MonoBehaviour
 
     public bool ChallengeDriving => _challengeDrive;
 
+    // The player is sat in the challenge car, whether or not the controls are theirs this moment. The run
+    // takes them away for the countdown and while the crew work the car, which takes the car out of
+    // PlayerVehicleController.Human — so the phone's portrait turn reads this as well, or it spun round to
+    // landscape and back for every stop in the box.
+    public static bool InChallengeCar => _inChallenge != null;
+    static PitLaneStart _inChallenge;
+
     public void SetChallengeControls(bool on)
     {
         if (_challengeDrive && car != null) car.enabled = on;
@@ -1461,6 +1470,7 @@ public class PitLaneStart : MonoBehaviour
     {
         if (!_challengeDrive) return;
         _challengeDrive = false;
+        if (_inChallenge == this) _inChallenge = null;
 
         car.enabled = false;
         var body = car.GetComponent<Rigidbody2D>();

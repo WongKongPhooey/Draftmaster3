@@ -24,6 +24,8 @@ public class PitChallengeRun : MonoBehaviour
     const float OvershootMetres = 12f;     // past the box with no stop: the run is over
     const float StartMetres = 2f;          // how far down the pit lane the car is placed
     const float ResultSeconds = 3f;
+    const float SignCallMetres = 35f;      // the sign man goes out with the board when the car is this close
+    const float CrewMatchMetres = 3f;      // a crew already built this near the box is the box's own
     const string BestKeyPrefix = "pitchallenge.best.";
 
     enum Phase { Countdown, Running, Servicing, Leaving, Result }
@@ -50,6 +52,7 @@ public class PitChallengeRun : MonoBehaviour
     float _best;
     WeekendOutcome _outcome;
     PitCrewBox _crew;
+    GameObject _loneCrew;   // a crew built for this run because pit road had none; destroyed with it
     GameObject _boxMarker;
     bool _ready;          // the car is on pit road and the run is on
     bool _handingBack;    // the closing fade has been asked for
@@ -122,6 +125,7 @@ public class PitChallengeRun : MonoBehaviour
         _par = PitChallenge.Par(_boxPitDistance - StartMetres, BoxLength * 0.5f + _carHalf.y);
         _best = PlayerPrefs.GetFloat(BestKey, -1f);
         BuildBoxMarker();
+        FindOrBuildCrew();
         SetPhase(Phase.Countdown);
         _ready = true;
     }
@@ -150,14 +154,17 @@ public class PitChallengeRun : MonoBehaviour
                 break;
 
             case Phase.Running:
+                // The sign man out over the box with the board down before the car gets there, as on a race
+                // stop. SignalApproach ignores the repeats.
+                if (CrewAlive && (_car.transform.position - _boxCentre).sqrMagnitude < SignCallMetres * SignCallMetres)
+                    _crew.SignalApproach(_car.transform);
+
                 if (FullyInsideBox() && _car.SpeedMps < StoppedMps)
                 {
                     // Held still for the crew: the controls go off so a twitch on the throttle can't roll it
                     // out from under the wheel guns. They come back on with the last tyre.
                     _pls.SetChallengeControls(false);
-                    _crew = PitCrewRegistry.Nearest(_boxCentre);
-                    if (_crew != null && (_crew.transform.position - _boxCentre).sqrMagnitude > 12f * 12f) _crew = null;
-                    _crew?.BeginService(_car.transform);
+                    if (CrewAlive) _crew.BeginService(_car.transform);
                     SetPhase(Phase.Servicing);
                 }
                 else if (Overshot() || _clock > PitChallenge.TimeLimitSeconds)
@@ -171,8 +178,7 @@ public class PitChallengeRun : MonoBehaviour
                 if (_serviceTime >= PitChallenge.ServiceSeconds)
                 {
                     _car.PitResetTyres();
-                    _crew?.EndService();
-                    _crew = null;
+                    if (CrewAlive) _crew.EndService();
                     _pls.SetChallengeControls(true);
                     SetPhase(Phase.Leaving);
                 }
@@ -203,8 +209,7 @@ public class PitChallengeRun : MonoBehaviour
     {
         _completed = completed;
         _pls.SetChallengeControls(false);
-        _crew?.EndService();
-        _crew = null;
+        StandCrewDown();
 
         if (completed)
         {
@@ -236,13 +241,14 @@ public class PitChallengeRun : MonoBehaviour
     void Abort()
     {
         if (_pls != null && _pls.ChallengeDriving) _pls.EndChallengeDrive(_pls.BesideCarPosition());
-        _crew?.EndService();
+        StandCrewDown();
         Cleanup();
     }
 
     void Cleanup()
     {
         if (_boxMarker != null) Destroy(_boxMarker);
+        if (_loneCrew != null) Destroy(_loneCrew);
         if (Current == this) Current = null;
         Destroy(gameObject);
     }
@@ -250,7 +256,36 @@ public class PitChallengeRun : MonoBehaviour
     void OnDestroy()
     {
         if (_boxMarker != null) Destroy(_boxMarker);
+        if (_loneCrew != null) Destroy(_loneCrew);
         if (Current == this) Current = null;
+    }
+
+    // ------------------------------------------------------------------ the crew
+
+    // Whoever works the stop. Pit road between sessions is empty — the crews come and go with a field
+    // (PitCrewSpawner builds nothing while PitLane is unconfigured) — so unless the player's own practice
+    // left its boxes up, nobody was there and the car sat in an empty box while the clock ran. The box's
+    // own crew if one is standing at it, otherwise one is built for the run and taken away after it.
+    void FindOrBuildCrew()
+    {
+        _crew = PitLane.Configured && PitLane.PlayerBox >= 0 ? PitCrewRegistry.ForBox(PitLane.PlayerBox) : null;
+        if (_crew != null && (_crew.transform.position - _boxCentre).sqrMagnitude > CrewMatchMetres * CrewMatchMetres)
+            _crew = null;
+        if (_crew != null) return;
+
+        var spawner = FindFirstObjectByType<PitCrewSpawner>();
+        if (spawner == null) return;
+        _crew = spawner.BuildLoneBox(_boxPitDistance);
+        if (_crew != null) _loneCrew = _crew.transform.parent.gameObject;
+    }
+
+    // Unity-null as well: a field coming or going under the run takes its crews with it.
+    bool CrewAlive => _crew != null;
+
+    // Back to the wall if they are out — mid-stop, or the sign man waiting on a car that missed the box.
+    void StandCrewDown()
+    {
+        if (CrewAlive && (_crew.IsServicing || _crew.IsSignDown)) _crew.EndService();
     }
 
     // ------------------------------------------------------------------ the box

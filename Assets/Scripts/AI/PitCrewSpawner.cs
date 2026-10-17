@@ -166,6 +166,31 @@ public class PitCrewSpawner : MonoBehaviour
         }
     }
 
+    // Box index a lone crew is registered under — well clear of any real grid slot, so PitCrewRegistry.ForBox
+    // for a car never lands on it.
+    public const int LoneBoxIndex = 9000;
+
+    // One crew box on its own, for a stop made with no field out: the pit-stop challenge runs between
+    // sessions, when pit road is empty and SpawnWhenReady has built nothing. Same crew, gear and stand a race
+    // box has, built over the given distance down the lane. The caller owns it and destroys it when done.
+    // Null when the track has no pit lane to put it on.
+    public PitCrewBox BuildLoneBox(float boxDist)
+    {
+        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+        if (track == null || track.track == null || !track.track.hasPitLane) return null;
+        if (crewLibrary == null) crewLibrary = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
+
+        var pit = track.SamplePitCenterline();
+        if (pit.Count < 2) return null;
+
+        var root = new GameObject("PitCrewLone").transform;
+        root.SetParent(transform, false);
+        BuildBox(root, LoneBoxIndex, boxDist, pit);
+        var box = root.GetComponentInChildren<PitCrewBox>();
+        if (box == null) Destroy(root.gameObject);
+        return box;
+    }
+
     // Signed lateral offset (m) of the parked box lane from the pit centreline — where the car actually
     // stops, and so where the whole crew box is built.
     //
