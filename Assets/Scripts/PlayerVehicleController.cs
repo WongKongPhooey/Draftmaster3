@@ -119,6 +119,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0f, 0.4f)] public float steerDeadzone = 0.12f;
     [Tooltip("Steering response curve. 1 = linear, higher = softer near centre (small tilt -> small steer). High values make turn-in feel lazy/understeery.")]
     [Range(1f, 3f)] public float steerExpo = 1.4f;
+    [Tooltip("Steering ratio 1:N, set on the setup panel. 8 is the baseline (how the car always steered); higher is a slower, less sensitive rack. Human input only — an AI's command goes to the wheels as given.")]
+    [Range(Draftmaster.Sim.SteeringRatio.Min, Draftmaster.Sim.SteeringRatio.Max)] public float steeringRatio = Draftmaster.Sim.SteeringRatio.Baseline;
 
     [Header("Surface / Grass")]
     [Tooltip("TrackBuilder used to tell on-track from grass. Auto-found at Start if left empty.")]
@@ -574,7 +576,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Steering → front-wheel angle, rate-limited and speed-scaled.
         float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));
         float speedAuthority = Mathf.Lerp(1f, highSpeedSteerScale, speedFraction);
-        float desiredSteer = -steerIn * vehicleInfo.maxSteeringAngle * speedAuthority;
+        float ratioGain = externalInput ? 1f : Draftmaster.Sim.SteeringRatio.Gain(steeringRatio);
+        float desiredSteer = -steerIn * vehicleInfo.maxSteeringAngle * speedAuthority * ratioGain;
         _steerDeg = Mathf.MoveTowards(_steerDeg, desiredSteer, vehicleInfo.steeringRate * dt);
         // Bodywork damage spoils handling: a steering pull toward the battered side, plus grip/drag/top-speed below.
         float dmg = _bodywork != null ? _bodywork.DamageLevel : 0f;

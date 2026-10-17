@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Builds the two demo-flow Canvas prefabs into Assets/Resources/UI/ so the runtime can Instantiate them:
-//   CarSetupPanel — the crew chief's "how do you want the car?" panel (tyres / fuel / balance)
+//   CarSetupPanel — the crew chief's "how do you want the car?" panel (tyres / fuel / balance / steering)
 //   ControlHint   — the bottom-of-screen "LEFT SHIFT — Run" teaching prompt
 //
 // Same approach as the RV interior builder: a menu item lays the prefab out once, after which it's a normal
@@ -46,7 +46,7 @@ public static class DemoUIPrefabMenu
         Stretch(backdrop.rectTransform);
 
         var panel = NewImage("Panel", root.transform, PanelBg);
-        Center(panel.rectTransform, 780f, 560f);
+        Center(panel.rectTransform, 780f, 660f);
 
         var title = NewText("Title", panel.transform, "CAR SETUP", 40, HeadingFont, Ink, TextAnchor.MiddleLeft);
         TopLeft(title.rectTransform, 44f, -34f, 500f, 56f);
@@ -94,12 +94,27 @@ public static class DemoUIPrefabMenu
         var tight = NewText("TightLabel", balance, "UNDERSTEER", 14, BodyFont, Muted, TextAnchor.MiddleRight);
         TopLeft(tight.rectTransform, 440f, -50f, 160f, 26f);
 
+        // --- Steering ratio
+        var steering = NewGroup("Steering", panel.transform);
+        TopLeft(steering, 0f, -476f, 780f, 100f);
+        var steerLabel = NewText("Label", steering, "STEERING", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        TopLeft(steerLabel.rectTransform, 46f, -10f, 240f, 36f);
+        var steerSlider = NewSlider("Slider", steering, Draftmaster.Sim.SteeringRatio.Min, Draftmaster.Sim.SteeringRatio.Max,
+                                    Draftmaster.Sim.SteeringRatio.Baseline, true);
+        TopLeft(steerSlider.GetComponent<RectTransform>(), 260f, -18f, 340f, 24f);
+        var steerValue = NewText("Value", steering, "1:8", 22, HeadingFont, Ink, TextAnchor.MiddleRight);
+        TopLeft(steerValue.rectTransform, 610f, -10f, 130f, 36f);
+        var quick = NewText("QuickLabel", steering, "QUICK", 14, BodyFont, Muted, TextAnchor.MiddleLeft);
+        TopLeft(quick.rectTransform, 260f, -50f, 160f, 26f);
+        var slow = NewText("SlowLabel", steering, "SLOW", 14, BodyFont, Muted, TextAnchor.MiddleRight);
+        TopLeft(slow.rectTransform, 440f, -50f, 160f, 26f);
+
         // --- Confirm
         var confirm = NewButton("ConfirmButton", panel.transform, "CONFIRM", Accent, Ink, ButtonSprite);
-        TopLeft(confirm.GetComponent<RectTransform>(), 260f, -482f, 260f, 60f);
+        TopLeft(confirm.GetComponent<RectTransform>(), 260f, -582f, 260f, 60f);
 
         var confirmHint = NewText("ConfirmHint", panel.transform, "Enter / A", 15, BodyFont, Muted, TextAnchor.MiddleCenter);
-        TopLeft(confirmHint.rectTransform, 260f, -540f, 260f, 24f);
+        TopLeft(confirmHint.rectTransform, 260f, -640f, 260f, 24f);
 
         SaveAndClean(root, SetupPath);
         Debug.Log($"[DemoUI] Built {SetupPath}. Open it in Prefab Mode to restyle; CarSetupPanelUI re-finds its parts by name.");

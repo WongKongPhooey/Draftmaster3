@@ -5,7 +5,8 @@ using UnityEngine.UI;
 
 // Thin binder for the authored pre-race setup panel (Assets/Resources/UI/CarSetupPanel.prefab).
 //
-// The crew chief asks how you want the car; this is the answer. Three choices — compound, fuel load, balance —
+// The crew chief asks how you want the car; this is the answer. Four choices — compound, fuel load, balance,
+// steering ratio —
 // then CONFIRM hands a CarSetup back to whoever opened it (PitLaneStart), which applies it and lets the driver go.
 // Layout, fonts and colours are authored in the prefab; this script only reflects state and reports the result.
 public class CarSetupPanelUI : MonoBehaviour
@@ -21,6 +22,8 @@ public class CarSetupPanelUI : MonoBehaviour
     public Text fuelValueText;
     public Slider balanceSlider;
     public Text balanceValueText;
+    public Slider steeringSlider;
+    public Text steeringValueText;
     public Button confirmButton;
 
     [Header("Selection colours")]
@@ -126,6 +129,16 @@ public class CarSetupPanelUI : MonoBehaviour
             balanceSlider.onValueChanged.AddListener(v => { _setup.balance = v; Refresh(); });
         }
 
+        if (steeringSlider != null)
+        {
+            steeringSlider.minValue = Draftmaster.Sim.SteeringRatio.Min;
+            steeringSlider.maxValue = Draftmaster.Sim.SteeringRatio.Max;
+            steeringSlider.wholeNumbers = true;
+            steeringSlider.SetValueWithoutNotify(Draftmaster.Sim.SteeringRatio.Clamp(_setup.steeringRatio));
+            steeringSlider.onValueChanged.RemoveAllListeners();
+            steeringSlider.onValueChanged.AddListener(v => { _setup.steeringRatio = v; Refresh(); });
+        }
+
         Refresh();
     }
 
@@ -169,6 +182,7 @@ public class CarSetupPanelUI : MonoBehaviour
         if (compoundNoteText != null) compoundNoteText.text = soft ? softNote : hardNote;
         if (fuelValueText != null) fuelValueText.text = $"{Mathf.RoundToInt(_setup.fuelLitres)} L";
         if (balanceValueText != null) balanceValueText.text = _setup.BalanceLabel;
+        if (steeringValueText != null) steeringValueText.text = _setup.SteeringRatioLabel;
     }
 
     void Tint(Button b, bool selected)
@@ -191,6 +205,8 @@ public class CarSetupPanelUI : MonoBehaviour
         if (fuelValueText == null) fuelValueText = Find<Text>("Panel/Fuel/Value");
         if (balanceSlider == null) balanceSlider = Find<Slider>("Panel/Balance/Slider");
         if (balanceValueText == null) balanceValueText = Find<Text>("Panel/Balance/Value");
+        if (steeringSlider == null) steeringSlider = Find<Slider>("Panel/Steering/Slider");
+        if (steeringValueText == null) steeringValueText = Find<Text>("Panel/Steering/Value");
         if (confirmButton == null) confirmButton = Find<Button>("Panel/ConfirmButton");
     }
 

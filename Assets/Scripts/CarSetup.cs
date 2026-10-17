@@ -1,11 +1,14 @@
+using Draftmaster.Data;
+using Draftmaster.Sim;
 using UnityEngine;
 
-// The three choices the driver makes before rolling out: rubber, fuel load, and handling balance.
+// The choices the driver makes before rolling out: rubber, fuel load, handling balance and steering ratio.
 // Authored by the pre-race setup panel (CarSetupPanelUI), applied to the car's own components — there is no
 // separate "setup" system to keep in sync, each field just writes the thing that already models it:
 //   compound → TireModel.SetCompound (grip / wear / warm-up)
 //   fuel     → FuelTank.fuelLitres   (mass, and the engine cuts when dry)
 //   balance  → PlayerVehicleController.understeerBias (front/rear grip split)
+//   steering → PlayerVehicleController.steeringRatio  (1:8 = the car as it always steered; see SteeringRatio)
 // Persisted to PlayerPrefs so the next session opens on what the driver last ran. In a career race the car
 // runs the race plan instead (SaveAsRacePlan / ForRace), set on race morning in the motorhome.
 [System.Serializable]
@@ -24,7 +27,12 @@ public class CarSetup
     [Tooltip("-1 = full oversteer (loose, rotates), 0 = as the team left it, +1 = full understeer (stable, pushes).")]
     [Range(-1f, 1f)] public float balance = 0f;
 
+    [Tooltip("Steering ratio 1:N. 8 = baseline; higher = slower rack, less sensitive. Defaults per track: ovals 1:12, road courses 1:8.")]
+    [Range(SteeringRatio.Min, SteeringRatio.Max)] public float steeringRatio = SteeringRatio.Baseline;
+
     public float UndersteerBias => NeutralBias + balance * BalanceSwing;
+
+    public string SteeringRatioLabel => SteeringRatio.Label(steeringRatio);
 
     // Human-readable balance for the panel label.
     public string BalanceLabel
@@ -39,7 +47,10 @@ public class CarSetup
         }
     }
 
-    public CarSetup Clone() => new CarSetup { compound = compound, fuelLitres = fuelLitres, balance = balance };
+    public CarSetup Clone() => new CarSetup
+    {
+        compound = compound, fuelLitres = fuelLitres, balance = balance, steeringRatio = steeringRatio,
+    };
 
     // Push the setup onto a car. Adds a FuelTank if the car hasn't got one (only the crew-chief HUD did that
     // before, so a car that never opened it had no tank to fill).
@@ -56,27 +67,49 @@ public class CarSetup
         tank.fuelLitres = Mathf.Clamp(fuelLitres, 0f, tank.capacityLitres);
 
         var pvc = car.GetComponent<PlayerVehicleController>();
-        if (pvc != null) pvc.understeerBias = UndersteerBias;
+        if (pvc != null)
+        {
+            pvc.understeerBias = UndersteerBias;
+            pvc.steeringRatio = SteeringRatio.Clamp(steeringRatio);
+        }
     }
 
     const string KeyCompound = "setup.compound";
     const string KeyFuel = "setup.fuel";
     const string KeyBalance = "setup.balance";
+    // The steering ratio is remembered per kind of track, not once: what suits Daytona's long banked turns
+    // is too slow for the Glen's esses, and the next oval should open on the last oval's choice.
+    const string KeySteeringOval = "setup.steering.oval";
+    const string KeySteeringRoad = "setup.steering.road";
+
+    // The track the next drive is on — the one the race scene builds.
+    static bool CurrentIsRoadCourse => TrackSelection.CurrentType == TrackType.RoadCourse;
+
+    static string SteeringKey(bool roadCourse) => roadCourse ? KeySteeringRoad : KeySteeringOval;
+
+    static float LoadSteering(string key, bool roadCourse) =>
+        SteeringRatio.Clamp(PlayerPrefs.GetFloat(key, SteeringRatio.DefaultFor(roadCourse)));
 
     public void Save()
     {
         PlayerPrefs.SetInt(KeyCompound, (int)compound);
         PlayerPrefs.SetFloat(KeyFuel, fuelLitres);
         PlayerPrefs.SetFloat(KeyBalance, balance);
+        PlayerPrefs.SetFloat(SteeringKey(CurrentIsRoadCourse), SteeringRatio.Clamp(steeringRatio));
         PlayerPrefs.Save();
     }
 
-    public static CarSetup Load() => new CarSetup
+    public static CarSetup Load()
     {
-        compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyCompound, (int)TireModel.Compound.Soft),
-        fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyFuel, 12f), MinFuel, MaxFuel),
-        balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyBalance, 0f), -1f, 1f),
-    };
+        bool road = CurrentIsRoadCourse;
+        return new CarSetup
+        {
+            compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyCompound, (int)TireModel.Compound.Soft),
+            fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyFuel, 12f), MinFuel, MaxFuel),
+            balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyBalance, 0f), -1f, 1f),
+            steeringRatio = LoadSteering(SteeringKey(road), road),
+        };
+    }
 
     // ---- the race plan
     //
@@ -87,6 +120,7 @@ public class CarSetup
     const string KeyPlanCompound = "raceplan.compound";
     const string KeyPlanFuel = "raceplan.fuel";
     const string KeyPlanBalance = "raceplan.balance";
+    const string KeyPlanSteering = "raceplan.steering";
 
     public void SaveAsRacePlan(int weekendId)
     {
@@ -94,6 +128,7 @@ public class CarSetup
         PlayerPrefs.SetInt(KeyPlanCompound, (int)compound);
         PlayerPrefs.SetFloat(KeyPlanFuel, fuelLitres);
         PlayerPrefs.SetFloat(KeyPlanBalance, balance);
+        PlayerPrefs.SetFloat(KeyPlanSteering, SteeringRatio.Clamp(steeringRatio));
         PlayerPrefs.Save();
     }
 
@@ -106,6 +141,8 @@ public class CarSetup
             compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyPlanCompound, (int)TireModel.Compound.Soft),
             fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanFuel, 12f), MinFuel, MaxFuel),
             balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanBalance, 0f), -1f, 1f),
+            // A plan saved before the ratio existed opens on the track's default.
+            steeringRatio = LoadSteering(KeyPlanSteering, CurrentIsRoadCourse),
         };
     }
 
@@ -119,6 +156,7 @@ public class CarSetup
         PlayerPrefs.DeleteKey(KeyPlanCompound);
         PlayerPrefs.DeleteKey(KeyPlanFuel);
         PlayerPrefs.DeleteKey(KeyPlanBalance);
+        PlayerPrefs.DeleteKey(KeyPlanSteering);
         PlayerPrefs.Save();
     }
 }
