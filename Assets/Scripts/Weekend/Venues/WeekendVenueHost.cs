@@ -22,6 +22,13 @@ public class WeekendVenueHost : NPCInteractable
     [TextArea]
     public string[] idleLines = { "Nothing from me right now. Check your schedule." };
 
+    [Tooltip("Only these kinds of booking start on this host. Empty = everything kept at the venue, less " +
+             "any kind another host here has claimed — the media manager at the drivers' room's top table " +
+             "takes the press conference, the official by the door keeps the drivers' meeting.")]
+    public ActivityKind[] onlyKinds = new ActivityKind[0];
+
+    public bool IsSpecialist => onlyKinds != null && onlyKinds.Length > 0;
+
     WeekendActivity _activity;
     WeekendConversation _script;
     int _beat;
@@ -60,8 +67,22 @@ public class WeekendVenueHost : NPCInteractable
         get
         {
             var pending = WeekendAppointment.Pending;
-            return pending != null && WeekendVenues.For(pending.kind) == venue;
+            return pending != null && Handles(pending.kind);
         }
+    }
+
+    // Is a booking of this kind run by this host? Kept at their venue, and either one of the kinds they
+    // were put there for or — for the venue's general host — not a kind somebody else here has claimed.
+    public bool Handles(ActivityKind kind)
+    {
+        if (WeekendVenues.For(kind) != venue) return false;
+        if (IsSpecialist) return System.Array.IndexOf(onlyKinds, kind) >= 0;
+
+        foreach (var other in FindObjectsByType<WeekendVenueHost>(FindObjectsSortMode.None))
+            if (other != this && other.venue == venue && other.IsSpecialist &&
+                System.Array.IndexOf(other.onlyKinds, kind) >= 0)
+                return false;
+        return true;
     }
 
     public override bool Interact()
@@ -97,7 +118,7 @@ public class WeekendVenueHost : NPCInteractable
     bool StartBusiness()
     {
         var pending = WeekendAppointment.Pending;
-        if (pending == null || WeekendVenues.For(pending.kind) != venue) return false;
+        if (pending == null || !Handles(pending.kind)) return false;
 
         _activity = pending;
         _script = WeekendScripts.For(pending);

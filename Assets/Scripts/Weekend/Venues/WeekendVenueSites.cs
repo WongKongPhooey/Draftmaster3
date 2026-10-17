@@ -54,6 +54,17 @@ public class WeekendVenueSites : MonoBehaviour
     // the door, and a hundred paper dolls in one place is a frame-rate problem, not a fidelity one.
     const int SeatedDrivers = 24;
 
+    // The top table, and the panel sat behind it facing the room: the media manager at one end, drivers
+    // either side of an empty middle chair, which is the player's — the press conference's objective marker
+    // sits on it. Half the room's width, so it reads as a press table rather than a wall.
+    const float TopTableWidth = (RoomWidth - 4f) * 0.5f;
+    const float TopTableDepth = 1.0f;
+    const float TopTableInset = 1.6f;     // centre of the table, in from the back wall
+    const int PanelChairs = 5;            // media manager, three drivers and the player's chair in the middle
+    const float PanelPitch = 1.15f;
+    const float PanelBehind = 0.85f;      // chairs this far behind the table's centre line
+    public const string PressChairLocation = "PressConferenceChair";
+
     const float StageWidth = 12f;
     const float StageDepth = 5f;
 
@@ -256,8 +267,10 @@ public class WeekendVenueSites : MonoBehaviour
         if (anchor == null) return;
 
         // Somebody already authored a host here (a track package can), so leave it alone.
+        // A specialist (the media manager at the drivers' room's top table) does not count: they run one
+        // kind of booking, and the venue still needs whoever runs the rest.
         foreach (var existing in FindObjectsByType<WeekendVenueHost>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            if (existing.venue == venue) return;
+            if (existing.venue == venue && !existing.IsSpecialist) return;
 
         // The debrief is had sitting down in your own motorhome, so the engineer is INSIDE it — parented
         // into the interior's masked frame up in the cab, in the passenger seat by the satnav. Anywhere else
@@ -567,12 +580,13 @@ public class WeekendVenueSites : MonoBehaviour
                           PaddockProps.WallZ, wallMat, solid: true);
 
         // The top table the officials and the press sit behind, across the back of the room.
-        PaddockProps.Quad(room.transform, "TopTable", new Vector2(0f, hy - 1.6f), new Vector2(RoomWidth - 4f, 1.0f),
-                          PaddockProps.PropZ, tableMat);
+        PaddockProps.Quad(room.transform, "TopTable", new Vector2(0f, hy - TopTableInset),
+                          new Vector2(TopTableWidth, TopTableDepth), PaddockProps.PropZ, tableMat);
         LocationTitle.Attach(room, "DRIVERS' ROOM", RoomWidth * 0.7f, "Drivers' meeting and the press");
 
         int seats = BuildSeats(room.transform, seatMat, hy);
         SeatTheDrivers(room.transform, hy, seats);
+        SeatThePanel(room.transform, seatMat, hy);
 
         // Stand the player just inside the door, facing the table. An authored marker is its own anchor.
         if (authored) return;
@@ -639,7 +653,63 @@ public class WeekendVenueSites : MonoBehaviour
             var body = PaddockPerson.Spawn(seated.transform, Vector3.zero, $"SeatedDriver_{i}", 7700 + i,
                                            heightM: PaddockPerson.SeatedHeightM);
             body.transform.localPosition = new Vector3(x, y + 0.25f, PaddockProps.PropZ - 0.1f);
+            // The art faces -Y and the top table is at +Y: turned round, they face the front of the room
+            // instead of sitting with their backs to it.
+            body.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
         }
+    }
+
+    // The press conference panel, behind the top table and facing the room: a row of chairs with the media
+    // manager in the end one, drivers in the rest, and the middle one left empty for the player. The empty
+    // chair is the press conference's anchor, so the objective marker points at the seat that is theirs;
+    // the drivers' meeting keeps the anchor at the door. The media manager is the press conference's host —
+    // within reach of the middle chair, so the player sits down and is asked the first question.
+    void SeatThePanel(Transform room, Material seatMat, float halfDepth)
+    {
+        var panel = new GameObject("PressPanel");
+        panel.transform.SetParent(room, false);
+
+        float y = halfDepth - TopTableInset + PanelBehind;
+        int middle = PanelChairs / 2;
+        Vector3 emptyChair = Vector3.zero;
+
+        for (int i = 0; i < PanelChairs; i++)
+        {
+            float x = (i - middle) * PanelPitch;
+            PaddockProps.Quad(panel.transform, $"PanelSeat_{i}", new Vector2(x, y),
+                              new Vector2(SeatSize, SeatSize), PaddockProps.PropZ, seatMat);
+
+            // Facing the room (-Y) is the art's own way round, so no turn. Sat a touch towards the table.
+            var local = new Vector3(x, y - 0.25f, PaddockProps.PropZ - 0.1f);
+            if (i == middle)
+            {
+                emptyChair = panel.transform.TransformPoint(new Vector3(x, y, 0f));
+            }
+            else if (i == 0)
+            {
+                var host = PaddockPerson.SpawnTalker<WeekendVenueHost>(
+                    panel.transform, Vector3.zero, "Host_PressConference", 7690, "MEDIA MANAGER",
+                    new[] { "Press conference is on the schedule. Your chair's the one in the middle." },
+                    interactRange: 2.6f, heightM: PaddockPerson.SeatedHeightM);
+                host.transform.localPosition = local;
+                host.transform.localRotation = Quaternion.identity;
+                host.venue = WeekendVenue.MeetingRoom;
+                host.onlyKinds = new[] { ActivityKind.PressConference };
+                host.idleLines = host.lines;
+            }
+            else
+            {
+                var body = PaddockPerson.Spawn(panel.transform, Vector3.zero, $"PanelDriver_{i}", 7680 + i,
+                                               heightM: PaddockPerson.SeatedHeightM);
+                body.transform.localPosition = local;
+                body.transform.localRotation = Quaternion.identity;
+            }
+        }
+
+        emptyChair = Walkable(emptyChair);
+        var anchor = PaddockProps.Anchor(_root, WeekendVenue.MeetingRoom, emptyChair, emptyChair, arriveRange: 1.5f);
+        anchor.namedOnly = true;
+        anchor.markerLocation = PressChairLocation;
     }
 
     // How many drivers are at this circuit this weekend: the three championships' field sizes. The roster

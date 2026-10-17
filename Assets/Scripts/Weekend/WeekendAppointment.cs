@@ -72,7 +72,11 @@ public static class WeekendAppointment
         // A booking may name the exact object it happens at ("markerLocation": "Podium_Marker" in the plan
         // file); without one it goes to whichever anchor of its venue is nearest, as every generated venue does.
         var pending = Pending;
-        return WeekendVenueAnchor.Find(venue, pending != null ? pending.markerLocation : "");
+        string named = pending != null ? pending.markerLocation : "";
+        // A press conference is the empty chair at the top table, not the door of the room it is held in.
+        if (string.IsNullOrWhiteSpace(named) && pending != null && pending.kind == ActivityKind.PressConference)
+            named = WeekendVenueSites.PressChairLocation;
+        return WeekendVenueAnchor.Find(venue, named);
     }
 
     // The thing to walk to: the venue's mark, or — for the player's own sessions, which are not kept

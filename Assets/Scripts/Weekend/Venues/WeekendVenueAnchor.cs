@@ -44,6 +44,11 @@ public class WeekendVenueAnchor : MonoBehaviour
              "test) and the teleport destination.")]
     public WeekendMarker marker;
 
+    [Tooltip("Only a booking that names this anchor's markerLocation is sent here. The press conference's " +
+             "empty chair at the top table is one: it is the drivers' room, but the drivers' meeting is " +
+             "still walked to the door.")]
+    public bool namedOnly;
+
     public string Label => string.IsNullOrEmpty(label) ? WeekendVenues.Label(venue) : label;
 
     public Vector3 StandPosition => standPoint != null ? standPoint.position : transform.position;
@@ -150,7 +155,7 @@ public class WeekendVenueAnchor : MonoBehaviour
         for (int i = 0; i < All.Count; i++)
         {
             var a = All[i];
-            if (a == null || a.venue != venue) continue;
+            if (a == null || a.venue != venue || a.namedOnly) continue;
             float d = (a.transform.position - to).sqrMagnitude;
             if (d < bestSqr) { bestSqr = d; best = a; }
         }
