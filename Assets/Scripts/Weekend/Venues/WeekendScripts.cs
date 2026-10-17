@@ -25,7 +25,9 @@ public static class WeekendScripts
 
             case ActivityKind.PressConference:
             case ActivityKind.MediaHit:
-                return Press(a);
+                return RadioRowContent.Is(a)
+                    ? RadioRowContent.Build(a, RaceWeekend.WeekendId, PlayerField()) ?? Press(a)
+                    : Press(a);
 
             case ActivityKind.DriversMeeting:
             case ActivityKind.DriverIntros:
@@ -156,6 +158,26 @@ public static class WeekendScripts
             : o.sponsorMood < 0f ? "Honest. The people paying for the hood will have watched that."
             : "Questions taken, nothing broken. That is a press conference.";
         return c;
+    }
+
+    // The drivers radio row can ask the player to name: everybody else entered in the player's championship,
+    // keyed by the name they race under so the relationship lands on the same person the track knows.
+    static System.Collections.Generic.List<RadioRowContent.FieldDriver> PlayerField()
+    {
+        var field = new System.Collections.Generic.List<RadioRowContent.FieldDriver>();
+        var row = ScoutingLedger.SeriesRow(SeriesCatalog.PlayerSeries);
+        if (row == null) return field;
+
+        int me = PlayerDriver.CarNumber;
+        foreach (var d in SeriesRoster.Drivers(row))
+        {
+            if (d == null || (me > 0 && d.CarNumber == me)) continue;
+            string key = RosterLookup.LabelName(d);
+            if (string.IsNullOrEmpty(key) || DriverRelationships.IsPlayerName(key)) continue;
+            string name = $"{d.FirstName} {d.LastName}".Trim();
+            field.Add(new RadioRowContent.FieldDriver(string.IsNullOrEmpty(name) ? key : name, key));
+        }
+        return field;
     }
 
     // Everything the question bank needs about where the player is standing.

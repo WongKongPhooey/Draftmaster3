@@ -354,8 +354,8 @@ namespace Draftmaster.Weekend
                         "Display stage", 2500, "The car got unveiled by a marketing manager instead.");
                     break;
                 case 3:
-                    Media(WeekendSlot.SaturdayAM, 10 * 60 + 15, 30, ActivityKind.MediaHit, "RADIO ROW",
-                        "Six stations in a row of folding tables, the same question asked six different ways.",
+                    Media(WeekendSlot.SaturdayAM, 10 * 60 + 15, 30, ActivityKind.MediaHit, RadioRowContent.Title,
+                        "Six stations in a row of folding tables, and every one of them wants you to name a driver.",
                         "Radio row");
                     break;
                 default:

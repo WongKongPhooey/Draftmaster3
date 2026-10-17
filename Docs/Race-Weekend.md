@@ -192,7 +192,7 @@ walk away mid-sentence, which counts as not having done it.
 
 | Where | What happens there |
 |---|---|
-| **The pit box** | The pre-weekend plan meeting with the crew chief, where a broadcaster catches you for a media hit, and the race-day VIP grid walk with the car. |
+| **The pit box** | The pre-weekend plan meeting with the crew chief, where a broadcaster catches you for a media hit (on a radio-row weekend a reporter walks over and asks you to name one of four drivers from your field — a compliment or a dig, moving your relationship with whoever you name; `RadioRowContent`), and the race-day VIP grid walk with the car. |
 | **Your motorhome** | Session debriefs and the race-morning race plan, with the engineer sat in the cab's passenger seat by the satnav (`DebriefSeat` in `Resources/OnFoot/RVInterior.prefab`). |
 | **The drivers' room** | The drivers meeting and the press conference. A top table, and a chair for every driver entered in all three championships. |
 | **The fan fence** | Signing sessions. A barrier along the public edge of the paddock with the crowd behind it — you sign from the inside. |

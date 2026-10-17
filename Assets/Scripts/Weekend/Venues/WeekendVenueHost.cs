@@ -115,7 +115,9 @@ public class WeekendVenueHost : NPCInteractable
         _queue = venue == WeekendVenue.SigningFence ? SigningQueue.Current : null;
         if (_queue != null && _queue.Count == 0) _queue = null;
         if (_crowd != null) _crowd.Dismiss();
-        _crowd = pending.kind == ActivityKind.GridWalk ? GatherCrowd() : null;
+        // Radio row is the same walk-up with one person in it: the reporter comes over with the microphone,
+        // so the question is theirs and not the crew chief's.
+        _crowd = pending.kind == ActivityKind.GridWalk || RadioRowContent.Is(pending) ? GatherCrowd() : null;
         _walkNext = _queue != null || _crowd != null;
         _walking = false;
 
@@ -247,9 +249,12 @@ public class WeekendVenueHost : NPCInteractable
                                          player.position - fan.position, offset);
         }
 
+        var beat = _script.beats[Mathf.Clamp(_beat, 0, _script.beats.Count - 1)];
         voice = fan;
-        voiceName = SigningContent.SpeakerFor(_activity != null ? _activity.kind : ActivityKind.Autographs);
-        lines = BeatLines(_script.beats[Mathf.Clamp(_beat, 0, _script.beats.Count - 1)], fan != null);
+        voiceName = !string.IsNullOrEmpty(beat.speaker)
+            ? beat.speaker
+            : SigningContent.SpeakerFor(_activity != null ? _activity.kind : ActivityKind.Autographs);
+        lines = BeatLines(beat, fan != null);
         RestartLines();
     }
 
