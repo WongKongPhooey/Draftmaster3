@@ -89,6 +89,8 @@ public class GridSpawner : MonoBehaviour
     public float aiSteerGain = 1.5f;
     [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain). Low values make the AI cruise under their target speed (throttle sags near zero error).")]
     public float aiSpeedGain = 2f;
+    [Tooltip("AI tyre cornering stiffness (PlayerVehicleController.corneringStiffness). The player's 11 left AI cars at race pace running 5-6 degrees of body slip mid-corner at Watkins Glen (8 at p90) - a sprint car's lean, where a stock car on asphalt runs 2-4. 15 puts the demo tracks at 1-4. 0 = leave the component's own value.")]
+    public float aiCorneringStiffness = 15f;
     [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). Targets are computed from the driven line's real curvature and the physics' own grip, so 1.0 = theoretical limit; keep slightly below 1 for margin. >1 commands past the grip ceiling and strews understeering cars across the track.")]
     public float aiCornerSpeedScale = 0.95f;
 
@@ -596,6 +598,7 @@ public class GridSpawner : MonoBehaviour
                 pvc.grassTrails = false;     // perf: no trail renderers across a full AI field
                 pvc.enableWheelspin = false; // AI launch cleanly; no donuts off the line
                 pvc.externalInput = true;
+                if (aiCorneringStiffness > 0f) pvc.corneringStiffness = aiCorneringStiffness;
                 pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
 
                 var input = go.GetComponent<SplineInputDriver>();
@@ -773,6 +776,7 @@ public class GridSpawner : MonoBehaviour
                 pvc.grassTrails = false;
                 pvc.enableWheelspin = false;
                 pvc.externalInput = true;
+                if (aiCorneringStiffness > 0f) pvc.corneringStiffness = aiCorneringStiffness;
                 pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
             }
 

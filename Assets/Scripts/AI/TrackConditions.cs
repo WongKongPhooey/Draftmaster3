@@ -82,6 +82,9 @@ public static class TrackConditions
     [Tooltip("0-1: how hard the AI steers away from a car alongside. 1 = road-course caution, low = holds its lane three wide.")]
     public static float AiSideAwareness = 1f;
 
+    [Tooltip("Metres centre to centre the AI leave a car alongside at this track (0 = AIRacingBehaviour.alongsideWallGap).")]
+    public static float AiAlongsideGap = 0f;
+
     [Tooltip("Metres between lane centres for the AI at this track (0 = AIRacingBehaviour's own).")]
     public static float AiLaneSpacing = 0f;
 
@@ -105,6 +108,7 @@ public static class TrackConditions
         PushScale = 0f;
         AiSideAwareness = 1f;
         AiLaneSpacing = 0f;
+        AiAlongsideGap = 0f;
         AiPackLanes = 0;
         if (string.IsNullOrEmpty(trackId)) return;
         var tuning = TrackProfile.ForTrack(trackId);
@@ -118,6 +122,7 @@ public static class TrackConditions
         PushScale = Mathf.Max(0f, tuning.pushScale);
         AiSideAwareness = tuning.sideAwareness > 0f ? Mathf.Clamp01(tuning.sideAwareness) : 1f;
         AiLaneSpacing = tuning.laneSpacing;
+        AiAlongsideGap = tuning.alongsideGap;
         AiPackLanes = tuning.packLanes;
         float plate = 0f, gripScale = 1f;
         if (tuning.plateMph > 0f && RestrictorPlate.Solve(trackId, tuning.plateMph, out plate, out gripScale))
@@ -163,6 +168,7 @@ public static class TrackConditions
         PushScale = 0f;
         AiSideAwareness = 1f;
         AiLaneSpacing = 0f;
+        AiAlongsideGap = 0f;
         AiPackLanes = 0;
     }
 }

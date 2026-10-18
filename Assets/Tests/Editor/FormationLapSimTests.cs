@@ -132,10 +132,28 @@ public class FormationLapSimTests
         Debug.Log(sb.ToString());
     }
 
+    // The same on the demo's three tracks, the player free-driving on pole and mid-field.
+    [Explicit("Diagnostic: formation shape at Watkins Glen, Daytona and Martinsville - AI only, player on pole, player mid-field.")]
+    [Test, Timeout(3600000)]
+    public void FormationShapeDemoTracks()
+    {
+        var sb = new StringBuilder("[FormationSim] demo tracks shape");
+        foreach (var id in new[] { "WatkinsGlen", "Daytona", "Martinsville" })
+        foreach (int box in new[] { -1, 0, 12 })
+        {
+            Despawn();
+            var r = box < 0 ? Run(id, FieldSize) : Run(id, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
+            sb.Append($"\n  {id} {(box < 0 ? "AI only" : $"player in box {box}")}: green {r.wentGreen} after {r.seconds:0}s, field through the lap {r.fieldLengthMean:0} m " +
+                      $"(worst {r.fieldLengthWorst:0}, at pit-in {r.fieldLengthAtPitIn:0}, at green {r.fieldLengthAtGreen:0}), row gap at green {r.meanRowGapAtGreen:0.0} m, " +
+                      $"{r.outOfPlaceMean:0.0} cars out of place, {r.contacts.Count} contacts, green {r.secondsAfterPitIn:0} s after pit-in [{r.setup}]");
+        }
+        Debug.Log(sb.ToString());
+    }
+
     static bool s_snapshotAtPitIn;
 
     [Explicit("Diagnostic: where every car is when the safety car pits, with the player starting mid-field.")]
-    [TestCase("Daytona", 12)]
+    [TestCase("Daytona", 12)] [TestCase("WatkinsGlen", 12)]
     public void PlayerMidFieldSnapshot(string trackId, int box)
     {
         s_snapshotAtPitIn = true;
@@ -665,6 +683,9 @@ public class FormationLapSimTests
         void DrivePlayerFree()
         {
             float gap = Mathf.Repeat((float)distProp.GetValue(playerAhead) - (float)distProp.GetValue(playerSpline), lapLen);
+            // Past the car it follows (the box lanes can let it by), the wrapped gap read as nearly a lap and the
+            // player ran off at 120 mph round the whole lap: a gap past half a lap is the car behind.
+            if (gap > lapLen * 0.5f) gap -= lapLen;
             float aheadMph = (float)mphProp.GetValue(playerAhead);
             float cap = 120f;
             // PaceLapAssist: from the pace car's peel-off to the green, lead the field at the close-up pace.

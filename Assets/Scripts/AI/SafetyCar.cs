@@ -13,6 +13,8 @@ public class SafetyCar : MonoBehaviour
     public float cruiseMph = 60f;
     [Tooltip("Fraction of a full lap that must be covered before the car is allowed to pit. Guards against an early trigger.")]
     [Range(0.5f, 1f)] public float minLapFractionBeforePit = 0.8f;
+    [Tooltip("The shortest first pass to the pit entry (fraction of a lap) that counts as a pace lap. Shorter, and the car goes round once more before it pits.")]
+    [Range(0f, 1f)] public float minFirstPassFraction = 0.5f;
     [Tooltip("Commit to the pit lane when within this distance (m) of the authored pit-entry node — the same continuous merge an AI pit stop uses. Lane-flipping anywhere else snaps onto the nearest pit-spline point, which past the entry means driving across the pit wall.")]
     public float pitEntryWindow = 20f;
     [Tooltip("Seconds after pit-in before the safety car is hidden (lets it roll out of sight down the pit).")]
@@ -41,6 +43,8 @@ public class SafetyCar : MonoBehaviour
     public float trafficBrakeMphPerSec = 30f;
     [Tooltip("Metres ahead scanned for a car in the pace car's lane.")]
     public float trafficScanM = 80f;
+    [Tooltip("Coming round again while the tail of the field is still filing out of the pit lane (a short track's extra pace lap), the pace car stops this far (m) short of where it joined - which is just past the pit exit - until the lane is empty. A car merging out appears on the track a few metres ahead of it, too late to brake for.")]
+    public float pitExitHoldM = 40f;
 
     [Header("Waiting for the field")]
     [Tooltip("The pace car eases off when the field behind it has broken up — the widest gap between two consecutive " +
@@ -76,6 +80,7 @@ public class SafetyCar : MonoBehaviour
     // How far it is from where this car actually joined the lap round to the pit entry. The floor below is
     // held under this, so the first arrival at the entry is the one it takes.
     float _firstPassDistance = -1f;
+    float _joinedAt;   // where it came onto the track, just past the pit exit
     bool _pitting;
     float _pitEntryDistance;
     float _despawnTimer;
@@ -147,6 +152,7 @@ public class SafetyCar : MonoBehaviour
             _firstPassDistance = _pitEntryDistance - cur;
             if (_firstPassDistance < 0f) _firstPassDistance += lap;
         }
+        if (!_hasPrev) _joinedAt = cur;
 
         _prevDist = cur;
         _hasPrev = true;
@@ -195,19 +201,42 @@ public class SafetyCar : MonoBehaviour
             if (gap <= pitEntryWindow) PitIn();
         }
 
-        if (!_pitting) YieldToTraffic();
+        if (!_pitting) { YieldToTraffic(); HoldForPitExit(lap, cur); }
+    }
+
+    // Round again before the field is all out of the pit lane: stop short of the pit exit until it is.
+    void HoldForPitExit(float lap, float cur)
+    {
+        if (lap <= 0f || _travelled < lap * 0.5f) return;
+        bool anyInLane = false;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count && !anyInLane; i++)
+            anyInLane = drivers[i] != null && drivers[i] != _spline && drivers[i].isActiveAndEnabled && drivers[i].IsOnPit;
+        if (!anyInLane) return;
+        float toHold = Mathf.Repeat(_joinedAt - pitExitHoldM - cur, lap);
+        if (toHold > lap * 0.5f) return;   // already past it
+        float brake = trafficBrakeMphPerSec * PackAvoidance.MphToMps;
+        float v = Mathf.Sqrt(2f * brake * toHold) * PackAvoidance.MpsToMph;
+        if (v >= _spline.aiMaxSpeedMph) return;
+        _spline.aiMaxSpeedMph = v;
+        if (v < _spline.CurrentMph) _spline.aiMinDecelMphPerSec = trafficBrakeMphPerSec;
     }
 
     // Where the painted start/finish line is along the main spline — not necessarily its distance 0.
     float StartFinishDistance => _spline.track != null && _spline.track.track != null ? _spline.track.track.startFinishDistance : 0f;
 
     // Distance the car must have travelled before it may pit: the authored fraction OR the arc from where this car
-    // joined to the entry, whichever is shorter.
+    // joined to the entry, whichever is shorter. Unless that arc is too short to be a pace lap at all - where the
+    // pit entry is barely round the corner from where the car joins, it was in again before the field was out of
+    // the pit lane - and then it goes round once more.
     float PitFloor(float lap)
     {
         float pitFloor = lap * minLapFractionBeforePit;
         if (_firstPassDistance > 0f)
-            pitFloor = Mathf.Min(pitFloor, Mathf.Max(0f, _firstPassDistance - pitEntryWindow));
+        {
+            float firstPass = Mathf.Max(0f, _firstPassDistance - pitEntryWindow);
+            pitFloor = firstPass >= lap * minFirstPassFraction ? Mathf.Min(pitFloor, firstPass) : firstPass + lap;
+        }
         return pitFloor;
     }
 

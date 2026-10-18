@@ -131,7 +131,11 @@ public class AIRacingBehaviour : MonoBehaviour
     public bool startSideHoldThroughCorner = false;
     [Tooltip("A car alongside is a wall: whatever the brain wants (a pass, a defence, back to the line, out of a lapper's way), it never aims closer to a car beside it than alongsideWallGap - and a car already closer holds where it is. Without it a car turned across into the one beside it whenever its plan said to.")]
     public bool alongsideIsWall = true;
-    [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing.")]
+    [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing. " +
+             "Cars are 2 m wide, but a few degrees of yaw puts the corners of two 4.8 m boxes in touch at 2.3-2.4 m: at 2.6 " +
+             "Martinsville's hard contacts were all a car on the inside edge and one 2.4 m outside it braking for the turn. " +
+             "Short tracks take 3.4 from TrackConditions.AiAlongsideGap (Martinsville: 12 -> 5.7 contacts, HARD 2.3 -> 0.7, " +
+             "8% fewer passes, 3-wide 9.6 -> 6%); at Watkins Glen 3.4 was worse (contacts 6 -> 15), so this stays 2.6.")]
     public float alongsideWallGap = 2.6f;
     [Tooltip("Lateral speed (m/s) and acceleration (m/s²) of a lane change in a pack. A move takes about a second: drawn out over two and a half, the car pulling out spent all of it half across its pusher's nose, slowing as it left the draft.")]
     public float packLateralSpeed = 3.2f;
@@ -1016,7 +1020,8 @@ public class AIRacingBehaviour : MonoBehaviour
         float here = _spline.LateralOnTrack;
         float baseLat = _spline.UntacticalLateral;
         float target = baseLat + desiredTactical;
-        float gapNeeded = Pack ? Mathf.Min(alongsideWallGap, LaneSpacing * 0.9f) : alongsideWallGap;
+        float gap = TrackConditions.AiAlongsideGap > 0f ? TrackConditions.AiAlongsideGap : alongsideWallGap;
+        float gapNeeded = Pack ? Mathf.Min(gap, LaneSpacing * 0.9f) : gap;
         float myMps = _spline.CurrentMph * MphToMps;
         float hi = float.PositiveInfinity, lo = float.NegativeInfinity;
         var drivers = RaceField.Drivers;

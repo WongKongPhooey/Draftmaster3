@@ -349,6 +349,7 @@ public class AIPaceCalibratorWindow : EditorWindow
             pvc.damageImpairsHandling = false;
             pvc.surfaceSpray = false;
             pvc.impactDebris = false;
+            pvc.corneringStiffness = 15f;   // GridSpawner.aiCorneringStiffness: the AI's tyre, not the player's
 
             var input = go.AddComponent<SplineInputDriver>();
 

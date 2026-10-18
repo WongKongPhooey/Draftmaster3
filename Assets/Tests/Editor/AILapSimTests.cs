@@ -79,6 +79,8 @@ public class AILapSimTests
         // How fast the body slip angle swings: a car fishtailing or snapping its nose back in line with its
         // direction of travel shows here even where the yaw rate itself looks tame.
         public float slipRateRms, slipRateP99;
+        // Body slip through the corners (line radius under 400 m): what the eye reads as the car leaning in.
+        public readonly List<float> cornerSlips = new List<float>();
         public readonly StringBuilder trace = new StringBuilder();
     }
 
@@ -190,6 +192,29 @@ public class AILapSimTests
         var r = Drive(2, pace: TopAIPace, csvLap: 1, csv: csv);
         System.IO.File.WriteAllText("Temp/AISmoothTrace.csv", csv.ToString());
         Debug.Log(Report("[LapSim] smoothness trace written", r));
+    }
+
+    [Test]
+    [Explicit("Diagnostic: the demo tracks at race pace with the tyre's cornering stiffness swept; pace and corner slip.")]
+    public void DemoTrackCornerSlip()
+    {
+        var sb = new StringBuilder("[LapSim] demo tracks, cornering stiffness");
+        foreach (string trackId in new[] { "WatkinsGlen", "Daytona", "Martinsville" })
+        foreach (float stiffness in new[] { 11f, 15f, 19f })
+        {
+            Despawn();
+            SpawnTrack($"Assets/Resources/TrackPackages/{trackId}.prefab");
+            var r = Drive(2, pace: TopAIPace,
+                          vehicleOverrides: new Dictionary<string, object> { { "corneringStiffness", stiffness } });
+            r.cornerSlips.Sort();
+            float mean = 0f;
+            foreach (float s in r.cornerSlips) mean += s;
+            mean /= Mathf.Max(1, r.cornerSlips.Count);
+            float p90 = r.cornerSlips.Count > 0 ? r.cornerSlips[(int)(r.cornerSlips.Count * 0.9f)] : 0f;
+            sb.AppendLine().Append($"  {trackId} stiffness {stiffness:0}: corner slip mean {mean:0.0}° p90 {p90:0.0}° | ")
+              .Append(Report("", r).Replace('\n', '|'));
+        }
+        Debug.Log(sb.ToString());
     }
 
     // The fastest pace a real AI car is handed: the best driver's 1.04 x TrackConditions.AiPaceMultiplier
@@ -424,7 +449,7 @@ public class AILapSimTests
     Result Drive(int laps, Dictionary<string, object> inputOverrides = null,
                  int traceLap = -99, float traceFrom = 0f, float traceTo = 0f, bool trainedLine = true,
                  float pace = 1f, float lineFactor = 0f, Dictionary<string, object> splineOverrides = null,
-                 int csvLap = -99, StringBuilder csv = null)
+                 int csvLap = -99, StringBuilder csv = null, Dictionary<string, object> vehicleOverrides = null)
     {
         var trackType = Runtime("TrackBuilder");
         var track = _package.GetComponentInChildren(trackType, true);
@@ -464,6 +489,8 @@ public class AILapSimTests
         Set(pvc, "damageImpairsHandling", false);
         Set(pvc, "surfaceSpray", false);
         Set(pvc, "impactDebris", false);
+        Set(pvc, "corneringStiffness", 15f);   // GridSpawner.aiCorneringStiffness
+        if (vehicleOverrides != null) foreach (var kv in vehicleOverrides) Set(pvc, kv.Key, kv.Value);
 
         var input = go.AddComponent(inputType);
         if (inputOverrides != null) foreach (var kv in inputOverrides) Set(input, kv.Key, kv.Value);
@@ -532,6 +559,8 @@ public class AILapSimTests
             float v = (float)speedMps.GetValue(pvc);
             float slip = (float)slipDeg.GetValue(pvc);
             if (lap >= 0) result.maxSlip = Mathf.Max(result.maxSlip, Mathf.Abs(slip));
+            if (lap >= 0 && step % 5 == 0 && (float)radiusAhead.Invoke(spline, new object[] { 2f }) < 400f)
+                result.cornerSlips.Add(Mathf.Abs(slip));
             float steerNow = (float)steerProp.GetValue(input), yawRateNow = (float)yawRateProp.GetValue(pvc);
             if (lap >= 0 && havePrev)
             {

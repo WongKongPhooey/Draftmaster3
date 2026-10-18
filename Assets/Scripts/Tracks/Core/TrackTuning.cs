@@ -34,6 +34,7 @@ namespace Draftmaster.Tracks
         public float pushScale;          // multiplier on the bump-draft push a line of cars gives the car at its head
         public float sideAwareness;      // 0-1: how hard the AI steers away from a car alongside (1 = road-course caution)
         public float laneSpacing;        // m between lane centres when racing in lanes (0 = the AI's default)
+        public float alongsideGap;       // m centre to centre the AI leave a car alongside (0 = the AI's default)
         public int packLanes;            // pack racing: how many fixed grooves, centred on the centreline (0 = fit the road)
         public float tyreWearScale;      // multiplier on wear rate
         public float tyreGripLossScale;  // multiplier on how much grip a worn tyre loses (0 = full loss, as everywhere)
@@ -125,6 +126,7 @@ namespace Draftmaster.Tracks
                         draftFollowScale = 1f,
                         raceInLanes = true,
                         sideAwareness = 0.45f,     // leaning on each other is part of it
+                        alongsideGap = 3.4f,       // braking side by side into a tight turn: at 2.6 m the boxes touched
                         tyreWearScale = 1.5f,      // brake, turn, throttle, repeat
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.5f,         // barely room for two

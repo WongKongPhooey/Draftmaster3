@@ -397,6 +397,93 @@ public class PackRaceSimTests
         Debug.Log(sb.ToString());
     }
 
+    // Martinsville, the demo's short track: a full field racing from a double-file start, three rosters.
+    [Explicit("Diagnostic: eight laps of Martinsville racing, 24 cars, three rosters - passes, contacts, two-wide.")]
+    [Test, Timeout(3600000)]
+    public void MartinsvilleRacing()
+    {
+        var sb = new StringBuilder("[PackSim] Martinsville racing, 24 cars, 8 laps\n");
+        foreach (int seed in new[] { 1, 2, 3 })
+        {
+            var r = Run("Martinsville", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, traceHard = 6 });
+            sb.Append(Summary($"  seed {seed}", r));
+            foreach (var l in r.lines) if (l.Contains("HARD")) sb.Append("    ").Append(l).Append('\n');
+            Despawn();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    // How much room a car alongside is given (AIRacingBehaviour.alongsideWallGap) at Martinsville, where every hard
+    // contact was a car on the inside edge and one 2.4 m outside it braking for the corner.
+    [Explicit("Diagnostic: Martinsville racing with the alongside gap swept, three rosters each.")]
+    [Test, Timeout(7200000)]
+    public void MartinsvilleAlongsideGap()
+    {
+        var sb = new StringBuilder("[PackSim] Martinsville alongside gap\n");
+        foreach (float gap in new[] { 2.6f, 3.0f, 3.4f })
+        {
+            int p = 0, c = 0, h = 0; float w3 = 0f, w2 = 0f;
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                var r = Run("Martinsville", new Settings { cars = 24, laps = 6, seed = seed, columns = 2,
+                    racing = new Dictionary<string, object> { { "alongsideWallGap", gap } } });
+                p += r.passes; c += r.contacts; h += r.hardContacts; w2 += r.wide2Share; w3 += r.wide3Share;
+                Despawn();
+            }
+            sb.Append($"  gap {gap:0.0}: {p / 3f:0.0} passes, {c / 3f:0.0} contacts, HARD {h / 3f:0.0}, 2-wide {w2 / 3f:P0}, 3-wide+ {w3 / 3f:P1}\n");
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    // The Martinsville alongside gap (3.4 m) at Watkins Glen, against the old 2.6.
+    [Explicit("Diagnostic: Watkins Glen racing at alongside gap 2.6 and 3.4, two rosters each.")]
+    [Test, Timeout(3600000)]
+    public void WatkinsGlenAlongsideGap()
+    {
+        var sb = new StringBuilder("[PackSim] WG alongside gap, 16 cars, 4 laps\n");
+        foreach (float gap in new[] { 2.6f, 3.4f })
+        {
+            float w = 0f, p = 0f, c = 0f, h = 0f;
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 16, laps = 4, seed = seed, columns = 2,
+                    racing = new Dictionary<string, object> { { "alongsideWallGap", gap } } });
+                w += r.weavesPerCarLap; p += r.passes; c += r.contacts; h += r.hardContacts;
+                Despawn();
+            }
+            sb.Append($"  gap {gap:0.0}: {w / 2f:0.00} weaves/car/lap, {p / 2f:0.0} passes, {c / 2f:0.0} contacts, HARD {h / 2f:0.0}\n");
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    // Where Watkins Glen's weaving comes from: each source of a lateral move switched off in turn.
+    [Explicit("Diagnostic: Watkins Glen racing with each source of lateral moves off in turn - weaves, passes, contacts.")]
+    [Test, Timeout(7200000)]
+    public void WatkinsGlenWeaveSources()
+    {
+        var variants = new (string name, Dictionary<string, object> racing)[]
+        {
+            ("baseline", null),
+            // Defend, side push, the 5.2 m side window and the alongside wall each moved weaves by under 5%.
+            // Overtaking off took weaves 16.2 -> 2.2; commit 3 s 13.1 (contacts 6 -> 10); deadzone 0.5 15.7.
+            ("cooldown 2 s", new Dictionary<string, object> { { "manoeuvreCooldown", 2f } }),
+            ("cooldown 4 s", new Dictionary<string, object> { { "manoeuvreCooldown", 4f } }),
+        };
+        var sb = new StringBuilder("[PackSim] WG weave sources, 16 cars, 4 laps\n");
+        foreach (var v in variants)
+        {
+            float w = 0f, p = 0f, c = 0f, h = 0f;
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 16, laps = 4, seed = seed, columns = 2, racing = v.racing });
+                w += r.weavesPerCarLap; p += r.passes; c += r.contacts; h += r.hardContacts;
+                Despawn();
+            }
+            sb.Append($"  {v.name}: {w / 2f:0.00} weaves/car/lap, {p / 2f:0.0} passes, {c / 2f:0.0} contacts, HARD {h / 2f:0.0}\n");
+        }
+        Debug.Log(sb.ToString());
+    }
+
     // NR2003's lateral field (AIRacingBehaviour.useLateralField) against the pack's lane rules, on a superspeedway.
     [Explicit("Diagnostic: the lateral field on against off - a 40-car pack, three rosters.")]
     [Test, Timeout(7200000)]
@@ -955,6 +1042,7 @@ public class PackRaceSimTests
             Set(pvc, "damageImpairsHandling", false);
             Set(pvc, "surfaceSpray", false);
             Set(pvc, "impactDebris", false);
+            Set(pvc, "corneringStiffness", 15f);   // GridSpawner.aiCorneringStiffness
 
             var input = go.AddComponent(inputType);
             if (set.input != null) foreach (var kv in set.input) Set(input, kv.Key, kv.Value);
