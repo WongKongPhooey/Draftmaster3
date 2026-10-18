@@ -56,6 +56,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public int smoothingIterations = 60;
     [Tooltip("Relaxation passes applied to a TRAINED racing line — just enough to round off a kink where the line is clamped to a road narrower than the one it was trained on, without flattening its apexes.")]
     public int trainedLineSmoothingPasses = 30;
+    [Tooltip("A racing line copied from a player's lap carries the legal corridor it was driven in (road, kerb, tarmac run-off). On: the car follows that line onto the run-off. Off: the line is kept on the road. Before this switch the line used the run-off but the car was held on the road, so wherever the two parted (Watkins Glen's Turn 1 exit, 11 m) every car was pinned to the road edge at the speed of the wider line, slid and ran into the one ahead.")]
+    public bool lineUsesRunOff = false;
     [Tooltip("Per-pass relaxation factor. 0 = no movement, 1 = full averaging. ~0.3 is stable.")]
     [Range(0f, 1f)]
     public float smoothingRelaxation = 0.3f;
@@ -567,7 +569,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // lap carries the legal corridor it was driven in — road, kerb and tarmac run-off — and may use all of
         // it, as they did. The bound profiles themselves stay on the road: they are what lineFactor spread and
         // tactical moves read, and a car swerving onto the run-off to pass someone is not the idea.
-        bool corridor = trained != null && trained.HasCorridor;
+        bool corridor = trained != null && trained.HasCorridor && lineUsesRunOff;
         _lineLo = new float[n];
         _lineHi = new float[n];
 
@@ -1703,7 +1705,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(placeDistance, out float boundLo, out float boundHi);
-            baseLateral = Mathf.Clamp(baseLateral, boundLo, boundHi);
+            // Where the line itself runs onto the run-off (lineUsesRunOff), the car may go as far as it does.
+            float onLine = lateralOffset + lineLateral;
+            baseLateral = Mathf.Clamp(baseLateral, Mathf.Min(boundLo, onLine), Mathf.Max(boundHi, onLine));
         }
         // The pit-merge bias carries the car from its REAL pit-exit position onto the racing line. It must NOT be
         // bounds-clamped, or the car snaps (warps) onto the track edge the instant it leaves the pit lane — the

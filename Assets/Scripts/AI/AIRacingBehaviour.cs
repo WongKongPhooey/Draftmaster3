@@ -124,7 +124,7 @@ public class AIRacingBehaviour : MonoBehaviour
     [Range(0f, 1f)] public float restartSettleSpeedShare = 0.95f;
     public float restartSettleMaxSeconds = 8f;
     [Tooltip("Off the pack tracks, after the green (a start or a restart) each car holds its side of the road - its share of the width between the AI's bounds, not an offset from the racing line - through the first corner, with no passes and no defending, then races. Without it the outside column turned straight across onto the line at the green and into the inside column.")]
-    public bool holdStartSides = false;
+    public bool holdStartSides = true;
     [Tooltip("The side-hold ends this long (s) after the green even if no corner has been completed.")]
     public float startSideHoldMaxSeconds = 30f;
     [Tooltip("Hold sides all the way through the first corner (true) or only to its braking zone (false), where the field files in.")]
@@ -208,6 +208,10 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Smoothness")]
     [Tooltip("Max lateral speed (m/s) the AI uses when changing line. Lower = smoother, like a real steering rate limit.")]
     public float maxLateralSpeed = 1.6f;
+    [Tooltip("Under heavy braking a car moves sideways at only this share of its usual rate. Steering across the road while braking hard used up the grip the brakes needed: the grip governor let the brakes off to save the slide, and the car ran into the one ahead (Watkins Glen Turn 1, 75 mph against a 34 mph cap at zero brake).")]
+    [Range(0f, 1f)] public float brakingLateralShare = 0.3f;
+    [Tooltip("Speed (mph) over target at which braking counts as heavy.")]
+    public float heavyBrakingOverMph = 12f;
     [Tooltip("Lateral acceleration (m/s²) used to start and finish a line change. A move eases in, carries maxLateralSpeed, and eases out onto its target instead of starting and stopping dead - which is what read as twitchy, and what upset a car on the limit.")]
     public float maxLateralAccel = 4f;
     [Tooltip("Longitudinal window (m, centre to centre) inside which a car counts as ALONGSIDE: the side-by-side push and the contact response only act on a car this close. About a car length; a car further ahead or behind is a car to follow or pass, not one to steer away from.")]
@@ -893,6 +897,11 @@ public class AIRacingBehaviour : MonoBehaviour
         if (Mathf.Abs(diff) < tacticalDeadzone) diff = 0f;
         float lateralSpeed = _passAroundStopped ? Mathf.Max(maxLateralSpeed, stoppedPassLateralSpeed) : maxLateralSpeed;
         float lateralAccel = Mathf.Max(0.1f, _passAroundStopped ? maxLateralAccel * 3f : maxLateralAccel);
+        if (!_passAroundStopped && brakingLateralShare < 1f)
+        {
+            float heavy = Mathf.Clamp01((_spline.CurrentMph - _spline.TargetMph) / Mathf.Max(1f, heavyBrakingOverMph));
+            lateralSpeed *= Mathf.Lerp(1f, brakingLateralShare, heavy);
+        }
         if (Pack && (_packMoving || fieldOn))
         {
             lateralSpeed = Mathf.Max(lateralSpeed, packLateralSpeed);

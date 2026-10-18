@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 using System.Text;
 using Draftmaster.Sim;
 using NUnit.Framework;
@@ -78,6 +79,7 @@ public class PackRaceSimTests
         public float? draftScale, followScale;   // TrackConditions.DraftScale / AiFollowScale overrides
         public int columns = 1;                  // 2 = a double-file rolling start, as the race starts
         public Dictionary<string, object> racing; // AIRacingBehaviour field overrides
+        public Dictionary<string, object> spline; // SplineDriver field overrides
         public int traceCar = -1;                 // >= 0: log that car's controls every 0.2 s on its second lap
         public int traceHard;                     // > 0: log up to that many hard contacts, both cars' state
         public bool fastestAtBack;                // the quickest-rated car starts last; its charge is logged lap by lap
@@ -87,6 +89,8 @@ public class PackRaceSimTests
         public float initialWear;
         public int stepTraceCar = -1;             // >= 0: log this car every physics step from traceFrom for traceSeconds
         public float traceFrom = 60f, traceSeconds = 6f;                 // every tyre starts this worn (0..1)                    // > 0: log that many cars falling off the back of the car ahead (gap past 25 m)               // one car alone with this rating (all three stats), for clean-air pace           // AIRatings.DriverGrip spread override (0 = every driver the same grip)
+        public int traceWindowCar = -1;           // >= 0: log that car five times a second between traceWindowFrom and traceWindowTo (s)
+        public float traceWindowFrom, traceWindowTo;
         public bool traceCharger;                 // with fastestAtBack: log the charger against the car ahead once a second
         public float? sideAwareness;              // TrackConditions.AiSideAwareness override
         public float traceSlowMph;                // > 0: when a car first drops below this (after 25 s), log its last 2 s
@@ -272,14 +276,36 @@ public class PackRaceSimTests
     [Test, Timeout(3600000)]
     public void WatkinsGlenStartSideHold()
     {
-        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
-            new Dictionary<string, object> { { "holdStartSides", false }, { "alongsideIsWall", false } });
-        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
-            new Dictionary<string, object> { { "holdStartSides", false }, { "alongsideIsWall", true } });
-        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
-            new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", false } });
-        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
-            new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", true } });
+        foreach (bool runOff in new[] { true, false })
+            foreach (bool hold in new[] { false, true })
+            {
+                Debug.Log($"[PackSim] variant lineUsesRunOff={runOff} holdStartSides={hold}");
+                StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24, new Dictionary<string, object> { { "holdStartSides", hold } },
+                    new Dictionary<string, object> { { "lineUsesRunOff", runOff } });
+            }
+    }
+
+    // The player-lap line on the run-off (SplineDriver.lineUsesRunOff) against kept on the road: clean-air pace, and
+    // racing with the quickest car starting last.
+    [Explicit("Diagnostic: Watkins Glen line on the run-off vs on the road - solo pace and the charge from the back.")]
+    [Test, Timeout(7200000)]
+    public void WatkinsGlenRunOffLine()
+    {
+        var sb = new StringBuilder("[PackSim] WG run-off line\n");
+        foreach (bool runOff in new[] { true, false })
+        {
+            var spl = new Dictionary<string, object> { { "lineUsesRunOff", runOff } };
+            var solo = Run("WatkinsGlen", new Settings { cars = 1, laps = 3, seed = 1, soloStrength = 1f, spline = spl });
+            sb.Append($"  runOff {runOff} solo best lap {solo.fastestLap:0.00} s, {solo.offs} offs\n");
+            Despawn();
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 6, seed = seed, columns = 2, fastestAtBack = true, spline = spl });
+                sb.Append(Summary($"  runOff {runOff} race seed {seed}", r));
+                Despawn();
+            }
+        }
+        Debug.Log(sb.ToString());
     }
 
     // A car alongside as a wall for the lateral target (AIRacingBehaviour.alongsideIsWall), off and on, in racing at a
@@ -310,11 +336,32 @@ public class PackRaceSimTests
     public void WatkinsGlenStartTrace() =>
         Log("WG start trace seed 1", Run("WatkinsGlen", new Settings { cars = 24, seed = 1, startSeconds = 30f, traceHard = 25 }));
 
+    [Explicit("Diagnostic: Watkins Glen's racing line and AI bounds through and after Turn 1, every 10 m.")]
+    [Test, Timeout(600000)]
+    public void WatkinsGlenLineDump()
+    {
+        Run("WatkinsGlen", new Settings { cars = 1, seed = 1, startSeconds = 0.5f });
+        var st = Runtime("SplineDriver");
+        var sd = UnityEngine.Object.FindObjectsByType(st, FindObjectsSortMode.None)[0];
+        var nb = BindingFlags.Instance | BindingFlags.NonPublic;
+        var lat = st.GetMethod("LateralAt", nb);
+        var bounds = st.GetMethod("BoundsAt", nb);
+        var sb = new StringBuilder("[PackSim] WG line dump\n");
+        for (float d = 560f; d <= 860f; d += 10f)
+        {
+            var args = new object[] { d, 0f, 0f };
+            bounds.Invoke(sd, args);
+            sb.Append($"  d{d:0} line {(float)lat.Invoke(sd, new object[] { d }):0.00} bounds {(float)args[1]:0.00}..{(float)args[2]:0.00}\n");
+        }
+        Debug.Log(sb.ToString());
+        Despawn();
+    }
+
     [Explicit("Diagnostic: the same start trace with sides held to Turn 1's braking zone.")]
     [Test, Timeout(1800000)]
     public void WatkinsGlenStartTraceHold() =>
-        Log("WG start trace hold seed 1", Run("WatkinsGlen", new Settings { cars = 24, seed = 1, startSeconds = 30f, traceHard = 25,
-            racing = new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", false } } }));
+        Log("WG start trace hold seed 5", Run("WatkinsGlen", new Settings { cars = 24, seed = 5, startSeconds = 30f, traceHard = 25, traceWindowCar = 13, traceWindowFrom = 8f, traceWindowTo = 17f,
+            racing = new Dictionary<string, object> { { "holdStartSides", true } } }));
 
     // Racing laps at one track of each kind after a change to how the AI uses the road: passes, contacts and offs
     // should hold or improve, not just the start.
@@ -670,13 +717,14 @@ public class PackRaceSimTests
         Debug.Log(sb.ToString());
     }
 
-    void StartBaseline(string trackId, int[] seeds, int cars, Dictionary<string, object> racing)
+    void StartBaseline(string trackId, int[] seeds, int cars, Dictionary<string, object> racing,
+                       Dictionary<string, object> spline = null)
     {
         var sb = new StringBuilder($"[PackSim] {trackId} rolling start, {cars} cars\n");
         float contacts = 0, hard = 0, offs = 0, slow = 0, rms = 0, right = 0, mean = 0, last = 0;
         foreach (int seed in seeds)
         {
-            var r = Run(trackId, new Settings { cars = cars, seed = seed, startSeconds = 30f, racing = racing });
+            var r = Run(trackId, new Settings { cars = cars, seed = seed, startSeconds = 30f, racing = racing, spline = spline });
             sb.Append($"  seed {seed}: {r.contacts} contacts (HARD {r.hardContacts}, rear {r.rearContacts}, side {r.sideContacts}), " +
                       $"{r.offs} offs, {r.slowCars} cars under 30 mph, across the road rms {r.lateralRms:0.00} m, " +
                       $"braking right of centre {r.brakingRightShare:P0}, progress mean {r.meanProgress:0} m / last car {r.lastProgress:0} m\n");
@@ -928,6 +976,7 @@ public class PackRaceSimTests
             Set(spline, "driverGrip", AIRatings.DriverGrip(ratings.strength01, set.driverGripSpread ?? AIRatings.DriverGripSpread));
             if (set.followHeadway.HasValue) Set(racing, "followHeadwaySeconds", set.followHeadway.Value);
             if (set.racing != null) foreach (var kv in set.racing) Set(racing, kv.Key, kv.Value);
+            if (set.spline != null) foreach (var kv in set.spline) Set(spline, kv.Key, kv.Value);
             Set(racing, "respectYellows", set.respectYellows);
 
             Call(spline, "Awake");
@@ -1175,6 +1224,17 @@ public class PackRaceSimTests
             }
 
             // A close car's decision-making, twice a second: what it is chasing, what it may do, where it is.
+            if (set.traceWindowCar >= 0 && set.traceWindowCar < n && step % 10 == 0 && t >= set.traceWindowFrom && t <= set.traceWindowTo
+                && r.lines.Count < 400)
+            {
+                int c = set.traceWindowCar;
+                var sc = splines[c];
+                r.lines.Add($"  TR t{t:0.0} d{(float)distProp.GetValue(sc):0} {splineType.GetProperty("CurrentPhase").GetValue(sc)} " +
+                    $"car {Get(pvcs[c], "SpeedMps") * 2.237f:0.0} brain {Get(sc, "CurrentMph"):0.0} target {Get(sc, "TargetMph"):0.0} want {Get(sc, "DesiredMph"):0.0} " +
+                    $"cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(sc)):0} lat {Get(sc, "LateralOnTrack"):0.00} line {Get(sc, "UntacticalLateral"):0.00} " +
+                    $"tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(sc):0.00} th {Get(inputs[c], "LastThrottle"):0.00} br {Get(inputs[c], "LastBrake"):0.00} " +
+                    $"slip {Get(pvcs[c], "SlipAngleDeg"):0.0} progress {progress[c]:0}");
+            }
             if (set.traceCharger && charger >= 0 && step % 50 == 0 && r.lines.Count < 400)
             {
                 int i = charger;
