@@ -84,7 +84,9 @@ public class PackRaceSimTests
         public float? driverGripSpread;
         public float? soloStrength;
         public int traceDrops;
-        public float initialWear;                 // every tyre starts this worn (0..1)                    // > 0: log that many cars falling off the back of the car ahead (gap past 25 m)               // one car alone with this rating (all three stats), for clean-air pace           // AIRatings.DriverGrip spread override (0 = every driver the same grip)
+        public float initialWear;
+        public int stepTraceCar = -1;             // >= 0: log this car every physics step from traceFrom for traceSeconds
+        public float traceFrom = 60f, traceSeconds = 6f;                 // every tyre starts this worn (0..1)                    // > 0: log that many cars falling off the back of the car ahead (gap past 25 m)               // one car alone with this rating (all three stats), for clean-air pace           // AIRatings.DriverGrip spread override (0 = every driver the same grip)
         public bool traceCharger;                 // with fastestAtBack: log the charger against the car ahead once a second
         public float? sideAwareness;              // TrackConditions.AiSideAwareness override
         public float traceSlowMph;                // > 0: when a car first drops below this (after 25 s), log its last 2 s
@@ -124,9 +126,12 @@ public class PackRaceSimTests
         // Pack: the field's length leader to last (median, m) and the share of cars in the lead pack (consecutive
         // gaps under 25 m from the leader).
         public float wide3RunMean, wide3Sustained, laneHoldMean, laneChangesPerCarLap, laneJitterRms;
+        public int laneChanges, weaveCount;
         public float fieldLengthMedian, leadPackShare;
         // Stuck: episodes of a car running within 25 m directly behind one whose best lap is 0.3 s+ slower, for 10 s
         // or more (count), and the longest such stretch (s). Charge: the quickest car's position at each of its laps.
+        // Stability: rms body slip (deg) and steering reversals per car per second - a car that looks loose.
+        public float slipRms, steerReversalsPerSec;
         public int stuckEpisodes;
         public float stuckLongest;
         public readonly List<int> charge = new List<int>();
@@ -250,7 +255,7 @@ public class PackRaceSimTests
         $"contacts rear {r.rearContacts} / side {r.sideContacts} / HARD {r.hardContacts}\n" +
         $"    holding: 3-wide runs {r.wide3RunMean:0.0} s ({r.wide3Sustained:P0} in runs 3 s+), lane hold {r.laneHoldMean:0.0} s, " +
         $"{r.laneChangesPerCarLap:0.00} lane changes/car/lap, wander {r.laneJitterRms:0.00} m, field {r.fieldLengthMedian:0} m long, " +
-        $"{r.leadPackShare:P0} in the lead pack, stuck 10 s+ {r.stuckEpisodes} (longest {r.stuckLongest:0} s)" +
+        $"{r.leadPackShare:P0} in the lead pack, slip rms {r.slipRms:0.0} deg, {r.steerReversalsPerSec:0.00} steer reversals/s, stuck 10 s+ {r.stuckEpisodes} (longest {r.stuckLongest:0} s)" +
         (r.charge.Count > 0 ? ", charge P" + string.Join(" P", r.charge) : "") + "\n";
 
     // The rolling start at Watkins Glen: a full road-course field double file at the green, through Turn 1 and the
@@ -522,6 +527,51 @@ public class PackRaceSimTests
                 sb.Append($"  range {carGap * 2.6f:0} m seed {seed}: lead pack {r.leadPackShare:P0}, field {r.fieldLengthMedian:0} m, " +
                           $"3-wide {r.wide3Share:P0} (runs {r.wide3RunMean:0.0} s), lane changes {r.laneChangesPerCarLap:0.00}/car/lap, " +
                           $"hold {r.laneHoldMean:0.0} s, wander {r.laneJitterRms:0.00} m, {r.passes} passes, {r.contacts} contacts, HARD {r.hardContacts}\n");
+                Despawn();
+            }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: steering lookahead against how loose the cars look - Daytona pack and Watkins Glen racing.")]
+    [Test, Timeout(7200000)]
+    public void SteeringStability()
+    {
+        var sb = new StringBuilder("[PackSim] steering stability\n");
+        foreach (float la in new[] { 22f, 35f, 50f })
+        {
+            var input = new Dictionary<string, object> { { "lookaheadMax", la } };
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 4, seed = seed, columns = 2, input = input });
+                sb.Append($"  Daytona lookahead {la} seed {seed}: slip rms {r.slipRms:0.00} deg, {r.steerReversalsPerSec:0.00} steer rev/s, " +
+                          $"wander {r.laneJitterRms:0.00} m, lead pack {r.leadPackShare:P0}, 3-wide {r.wide3Share:P0}, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}\n");
+                Despawn();
+            }
+            var w = Run("WatkinsGlen", new Settings { cars = 16, laps = 4, seed = 1, columns = 2, input = input });
+            sb.Append($"  WG lookahead {la}: slip rms {w.slipRms:0.00} deg, {w.steerReversalsPerSec:0.00} steer rev/s, alone off-line {w.aloneLineRms:0.00} m, " +
+                      $"best {w.fastestLap:0.00} s, {w.contacts} contacts, HARD {w.hardContacts}, offs {w.offs}\n");
+            Despawn();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: one mid-pack car at Daytona logged every physics step for six seconds - is it loose?")]
+    [Test, Timeout(1800000)]
+    public void DaytonaStepTrace() =>
+        Log("daytona step trace", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, columns = 2, stepTraceCar = 20, traceFrom = 70f, traceSeconds = 8f }));
+
+    [Explicit("Diagnostic: a Daytona restart - lane changes and weaving in the first 20 s, settling on against off.")]
+    [Test, Timeout(3600000)]
+    public void DaytonaRestart()
+    {
+        var sb = new StringBuilder("[PackSim] daytona restart\n");
+        foreach (float settle in new[] { 0f, 8f })
+            foreach (int seed in new[] { 1, 2, 3 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, seed = seed, startSeconds = 20f, startMph = 60f,
+                    racing = new Dictionary<string, object> { { "restartSettleMaxSeconds", settle } } });
+                sb.Append($"  settle {settle} s seed {seed}: lane changes {r.laneChanges / 40f:0.00}/car, weaves {r.weaveCount / 40f:0.00}/car, " +
+                          $"wander {r.laneJitterRms:0.00} m, {r.contacts} contacts, HARD {r.hardContacts}, offs {r.offs}, last car {r.lastProgress:0} m\n");
                 Despawn();
             }
         Debug.Log(sb.ToString());
@@ -917,6 +967,7 @@ public class PackRaceSimTests
         var behind = new List<(float t, int i, int j)>();   // who ran close behind whom, sampled
         int chargerLaps = 0;
         var dropped = new bool[n];
+        double slipSq = 0; int slipSamples = 0, steerRev = 0; var steerTrend = new float[n]; var prevSteer = new float[n];
         float t = 0f;
         var thrProp = inputType.GetProperty("LastThrottle");
         var brkProp = inputType.GetProperty("LastBrake");
@@ -944,6 +995,14 @@ public class PackRaceSimTests
                 splineStep.Invoke(splines[i], null);
             }
             t += dt;
+            if (set.stepTraceCar >= 0 && set.stepTraceCar < n && t >= set.traceFrom && t < set.traceFrom + set.traceSeconds)
+            {
+                int c = set.stepTraceCar;
+                r.lines.Add($"  S t{t:0.00} d{(float)distProp.GetValue(splines[c]):0} {splineType.GetProperty("CurrentPhase").GetValue(splines[c])} " +
+                            $"mph {Get(pvcs[c], "SpeedMph"):0.0} slip {Get(pvcs[c], "SlipAngleDeg"):0.00} yaw {Get(pvcs[c], "YawRateDeg"):0.0} " +
+                            $"steer {Get(inputs[c], "LastSteer"):0.000} nose {Get(inputs[c], "LastNoseErrorDeg"):0.00} " +
+                            $"lat {Get(splines[c], "LateralOnTrack"):0.00} tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(splines[c]):0.00} th {Get(inputs[c], "LastThrottle"):0.00}");
+            }
 
             if (watch != null)
             {
@@ -1150,7 +1209,7 @@ public class PackRaceSimTests
             }
 
             // Pack shape, ten times a second once racing.
-            if (leaderLaps >= 2 && step % 5 == 0)
+            if ((leaderLaps >= 2 || set.startSeconds > 0f) && step % 5 == 0)
             {
                 var ord = new int[n];
                 for (int k = 0; k < n; k++) ord[k] = k;
@@ -1193,6 +1252,18 @@ public class PackRaceSimTests
                     shapeSamples++;
                     if (alongside == 1) wide2++;
                     else if (alongside >= 2) wide3++;
+
+                    // Stability: body slip and the steering wheel going back and forth.
+                    float slipNow = Get(inputs[i], "LastSlipDeg");
+                    slipSq += slipNow * slipNow; slipSamples++;
+                    float steerNow = Get(inputs[i], "LastSteer");
+                    float ds = steerNow - prevSteer[i];
+                    if (Mathf.Abs(ds) > 0.03f)
+                    {
+                        float sd = Mathf.Sign(ds);
+                        if (steerTrend[i] != 0f && sd != steerTrend[i]) steerRev++;
+                        steerTrend[i] = sd; prevSteer[i] = steerNow;
+                    }
 
                     // 3-wide runs.
                     if (alongside >= 2) { if (wideStart[i] < 0f) wideStart[i] = t; }
@@ -1328,6 +1399,8 @@ public class PackRaceSimTests
         int racedLaps = 0;
         for (int i = 0; i < n; i++) racedLaps += Mathf.Max(0, lapsDone[i] - 1);
         r.weavesPerCarLap = racedLaps > 0 ? weaves / (float)racedLaps : 0f;
+        r.slipRms = slipSamples > 0 ? (float)System.Math.Sqrt(slipSq / slipSamples) : 0f;
+        r.steerReversalsPerSec = slipSamples > 0 ? steerRev / (slipSamples * 0.1f) : 0f;   // samples are 10 Hz per car
         for (int i = 0; i < n; i++) if (wideStart[i] >= 0f) wideRuns.Add(t - wideStart[i]);
         float wideTotal = 0f, wideLong = 0f;
         foreach (var w in wideRuns) { wideTotal += w; if (w >= 3f) wideLong += w; }
@@ -1337,6 +1410,7 @@ public class PackRaceSimTests
         float holdSum = 0f; foreach (var hd in holds) holdSum += hd;
         r.laneHoldMean = holds.Count > 0 ? holdSum / holds.Count : 0f;
         r.laneChangesPerCarLap = racedLaps > 0 ? laneChanges / (float)racedLaps : 0f;
+        r.laneChanges = laneChanges; r.weaveCount = weaves;
         r.laneJitterRms = jitterSamples > 0 ? (float)System.Math.Sqrt(jitterSq / jitterSamples) : 0f;
         fieldLengths.Sort();
         r.fieldLengthMedian = fieldLengths.Count > 0 ? fieldLengths[fieldLengths.Count / 2] : 0f;

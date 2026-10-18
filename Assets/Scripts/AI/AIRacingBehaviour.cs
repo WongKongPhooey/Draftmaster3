@@ -120,6 +120,9 @@ public class AIRacingBehaviour : MonoBehaviour
     public float packFollowLeaderChance = 0.85f;
     [Tooltip("A lane with nobody in it this far (m) ahead is empty: a car alone in it tucks into a line beside it if one is near.")]
     public float packEmptyLaneMetres = 60f;
+    [Tooltip("After the green (a start or a restart) a pack holds the two-wide formation it lined up in - no lane picks, no lane changes, no pull-outs - until it is up to this share of race speed, or restartSettleMaxSeconds have passed. Choosing lanes while still accelerating had every car changing its mind.")]
+    [Range(0f, 1f)] public float restartSettleSpeedShare = 0.95f;
+    public float restartSettleMaxSeconds = 8f;
     [Tooltip("Lateral speed (m/s) and acceleration (m/s²) of a lane change in a pack. A move takes about a second: drawn out over two and a half, the car pulling out spent all of it half across its pusher's nose, slowing as it left the draft.")]
     public float packLateralSpeed = 3.2f;
     public float packLateralAccel = 7f;
@@ -237,6 +240,8 @@ public class AIRacingBehaviour : MonoBehaviour
     int _leaderMoveLane = -1;
     PlayerVehicleController _pvc;
     readonly LateralField _field = new LateralField();
+    bool _wasGreen;
+    float _greenSeconds;
     readonly System.Collections.Generic.List<FieldCar> _fieldCars = new System.Collections.Generic.List<FieldCar>(24);
     float _fieldTarget = float.NaN;
     readonly System.Collections.Generic.List<float> _fieldLanes = new System.Collections.Generic.List<float>(6);
@@ -313,9 +318,13 @@ public class AIRacingBehaviour : MonoBehaviour
         if (_spline == null || _spline.TrackLength <= 0f) return;
         // Racing tactics stay off until the green flag. During PreGrid/Formation, FormationController
         // owns the AI's speed cap and line so the field forms up behind the safety car.
-        if (!RaceStart.IsGreen) return;
+        if (!RaceStart.IsGreen) { _wasGreen = false; return; }
 
         float dt = Time.fixedDeltaTime;
+        // This car's own clock since the green (a start or a restart), counted in physics steps so it runs the same
+        // in the headless sims as in the game.
+        if (!_wasGreen) { _wasGreen = true; _greenSeconds = 0f; }
+        else _greenSeconds += dt;
 
         // Race phase. A field that races lap 1 exactly the way it races the last lap reads as a machine, so
         // the drivers settle in over the opening laps - wider gaps, fewer lunges - and throw everything at
@@ -644,6 +653,13 @@ public class AIRacingBehaviour : MonoBehaviour
         // once a car moves it goes all the way - nobody backs out of a lane change in a pack.
         if (fieldOn && !wantOvertake)
             desiredTactical = fieldLat - _spline.UntacticalLateral;
+        else if (Pack && !underYellow && !_spline.IsOnPit && RestartSettling(_greenSeconds))
+        {
+            // Up to speed in the formation it lined up in; lanes are picked once there.
+            desiredTactical = _smoothedTactical;
+            _packLane = -1;
+            _packMoving = false;
+        }
         else if (Pack && !wantOvertake && !underYellow && !_spline.IsOnPit && PackLanes(dt, out float packLat))
             desiredTactical = packLat - _spline.UntacticalLateral;
         else if (Pack) { _packLane = -1; _packMoving = false; }
@@ -925,6 +941,16 @@ public class AIRacingBehaviour : MonoBehaviour
         if (blockGap < hardFollowGap && !packFollow)
             cap = Mathf.Min(cap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
         return cap;
+    }
+
+    // Still getting up to speed off a start or restart: under restartSettleSpeedShare of the clean-air race speed here,
+    // and inside restartSettleMaxSeconds of the green.
+    bool RestartSettling(float sinceGreen)
+    {
+        if (sinceGreen < 0f || sinceGreen >= restartSettleMaxSeconds) return false;
+        float clean = Mathf.Max(0f, _spline.DesiredMph - _spline.aiSpeedBoostMph);
+        if (TrackConditions.PlateMph > 0f) clean = Mathf.Min(clean, TrackConditions.PlateMph);
+        return _spline.CurrentMph < clean * restartSettleSpeedShare;
     }
 
     // ---- Lateral field ----

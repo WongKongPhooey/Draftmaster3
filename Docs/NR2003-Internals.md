@@ -314,6 +314,31 @@ At load, for each 3 m point, from `race`, `maxrace` and `minrace`:
 - Yaw is a spring-damper toward a target slip angle (`ai_inverse_slipcurve_k`) for the look of the car,
   with dropoff above `yaw_accel_control_angle`.
 
+## Pace laps and the start (*observed*, `0x404e10` to `0x408b20`)
+
+Each pacing mode (pace laps, lining up, bunching for the green, restarts) is a small handler that sets the same
+four things:
+
+1. **Who to follow: the car in the grid slot ahead of mine, in my column** (`FUN_00405000`, a lineup table indexed
+   `column + row * 2`), not the nearest car on the road. With nobody in that slot, the pace car (`DAT_00760b38`).
+   If the car actually ahead isn't the one the lineup expects, the gap grows 1.5x (`FUN_00404f30`).
+2. **How far behind:** `ai_pacing_distance` car lengths (2.0, about 10 m) behind a car, twice that behind the pace
+   car (`FUN_00404e40`); `ai_bunching_distance` (1.7) while bunching for the start (`FUN_00408570`). Some modes
+   blend halfway from the current gap toward it, so the field closes up smoothly.
+3. **Anchored to the pace car as well** (`FUN_00404e60`): car `p` also follows the pace car at
+   `(p - 1) x pacing gap`, floored at the plain gap. Every car converges on *its own slot* behind the pace car, so
+   gaps can't accumulate down the field and a straggler closes on its slot, not just on the car in front.
+4. **Pace speed and catching up** (`FUN_00405140`): the planner may accelerate at 10 g until within 2 mph of
+   `pace_speed_limit_MPH`, then only 0.3 g. Stragglers close hard, then settle on the pace.
+5. **Columns** (`FUN_00407f20`): double file puts the two columns at 10% and 60% of the track width (at least 4 m
+   apart), each car's side fixed by its grid slot. Single file sits at 25%.
+6. **Bunching for the green** (`FUN_00408430`): 1.7 lengths behind the car ahead; the front row holds the pace
+   speed + 2 mph, and the outside front-row car matches the pole sitter (no accel cap).
+
+What it means for Draftmaster 3's `FormationController`: follow the *slot* ahead (the player included), anchor
+every car to its slot behind the safety car, and let a car well short of its slot close hard on the straights -
+the three things behind a field that runs too spread out, closes up too late and shuffles round the player.
+
 ## Ratings (from `papy_ai.ini [driver]`, mapping not traced in code)
 
 Strength feeds three car properties with spreads: traction circle (×1.0, spread 8), aero drag (×0.3,

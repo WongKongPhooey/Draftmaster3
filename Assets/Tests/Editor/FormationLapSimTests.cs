@@ -91,6 +91,10 @@ public class FormationLapSimTests
         public float meanRowGapAtGreen = -1f;
         public float meanPairStaggerAtGreen = -1f;
         public float secondsAfterPitIn = -1f;  // how long the field ran on after the safety car pitted
+        // Through the formation, sampled every second once the whole field is out of the pits: its length (mean and
+        // worst), its length the moment the safety car pits, and how many cars run more than a row away from their
+        // grid slot (mean) - a field strung out, closing up late, or shuffled round the player.
+        public float fieldLengthMean = -1f, fieldLengthWorst = -1f, fieldLengthAtPitIn = -1f, outOfPlaceMean = -1f;
     }
 
     [Explicit("Diagnostic: formation laps at every venue; prints contacts per track.")]
@@ -325,6 +329,7 @@ public class FormationLapSimTests
                   $"{r.carsOnTrackAtGreen} cars on track at green, " +
                   $"leader {r.leaderToLineAtGreen:0} m from the line {r.secondsAfterPitIn:0.0}s after pit-in, field {r.fieldLengthAtGreen:0} m long, " +
                   $"row gap {r.meanRowGapAtGreen:0.0} m, pair stagger {r.meanPairStaggerAtGreen:0.0} m, " +
+                  $"through the lap field {r.fieldLengthMean:0} m (worst {r.fieldLengthWorst:0}, at pit-in {r.fieldLengthAtPitIn:0}), {r.outOfPlaceMean:0.0} cars out of place, " +
                   (r.playerLeadAtGreen >= 0f ? $"player {r.playerLeadAtGreen:0} m clear at green (worst {r.playerLeadWorst:0} m), " : "") +
                   $"closest {(r.minClearance < 1f ? r.minClearance.ToString("0.00") + " m" : "over 1 m")}");
         for (int i = 0; i < Mathf.Min(max, r.contacts.Count); i++)
@@ -522,6 +527,7 @@ public class FormationLapSimTests
         for (int i = 0; i < n; i++) { prevPos[i] = (Vector2)posProp.GetValue(cars[i]); prevOnPit[i] = (bool)onPitProp.GetValue(cars[i]); }
 
         Component playerAhead = playerSpline != null && playerDrivesFree ? cars[playerBox == 0 ? 0 : playerBox] : null;
+        float lenSum = 0f, outSum = 0f; int shapeN = 0;
         float lapLen = (float)splineType.GetProperty("TrackLength").GetValue(scSpline);
         for (int step = 0; step < steps; step++)
         {
@@ -533,7 +539,16 @@ public class FormationLapSimTests
             result.seconds = (step + 1) * dt;
 
             if (playerAhead != null) MeasurePlayerLead();
-            if (pitInAt < 0f && (bool)pittingField.GetValue(sc)) pitInAt = result.seconds;
+            if (step % Mathf.Max(1, Mathf.RoundToInt(1f / dt)) == 0 && Shape(out float len1, out int out1))
+            {
+                lenSum += len1; outSum += out1; shapeN++;
+                result.fieldLengthWorst = Mathf.Max(result.fieldLengthWorst, len1);
+            }
+            if (pitInAt < 0f && (bool)pittingField.GetValue(sc))
+            {
+                pitInAt = result.seconds;
+                if (Shape(out float lenPit, out _)) result.fieldLengthAtPitIn = lenPit;
+            }
             // The race goes green when the director waves it (or, with no director step, as the safety car pits).
             if (Equals(currentProp.GetValue(null), greenPhase) || (directorStep == null && pitInAt >= 0f))
             {
@@ -544,6 +559,7 @@ public class FormationLapSimTests
                 MeasureBunching();
                 break;
             }
+            if (shapeN > 0) { result.fieldLengthMean = lenSum / shapeN; result.outOfPlaceMean = outSum / shapeN; }
 
             if (traceA != null && result.seconds >= traceFrom && result.seconds <= traceTo && (traceTo - traceFrom < 1f || step % (traceTo - traceFrom > 30f ? 100 : 5) == 0))
             {
@@ -681,6 +697,34 @@ public class FormationLapSimTests
             }
             result.meanPairStaggerAtGreen = pairs > 0 ? stagger / pairs : -1f;
             result.meanRowGapAtGreen = gaps > 0 ? rowGap / gaps : -1f;
+        }
+
+        // The field's length behind its leader and how many cars sit more than a row from their grid slot, with every
+        // car on the track (false while any is still in the pits).
+        bool Shape(out float length, out int outOfPlace)
+        {
+            length = 0f; outOfPlace = 0;
+            var onTrack = new List<float>();
+            for (int i = 1; i < n; i++)
+            {
+                if ((bool)onPitProp.GetValue(cars[i])) return false;
+                onTrack.Add((float)distProp.GetValue(cars[i]));
+            }
+            float leaderD = (float)directorType.GetMethod("LeaderDistance").Invoke(null, new object[] { onTrack, lapLen });
+            if (leaderD < 0f) return false;
+            var order = new List<(float back, int slot)>();
+            for (int i = 1; i < n; i++)
+            {
+                float b = Mathf.Repeat(leaderD - (float)distProp.GetValue(cars[i]), lapLen);
+                if (b > lapLen * 0.5f) b -= lapLen;
+                length = Mathf.Max(length, b);
+                int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+                if (cars[i] == playerSpline) slot = playerBox;
+                order.Add((b, slot));
+            }
+            order.Sort((a, c) => a.back.CompareTo(c.back));
+            for (int k = 0; k < order.Count; k++) if (Mathf.Abs(k / 2 - order[k].slot / 2) > 1) outOfPlace++;
+            return true;
         }
 
         void MeasurePlayerLead()
