@@ -85,6 +85,14 @@ public class FormationController : MonoBehaviour
              "grid row, in the other column) — or taken off per metre it is ahead — so the pair draws level side by " +
              "side. Station keeping still has the final say.")]
     public float pairAlignMphPerMetre = 0.5f;
+    [Tooltip("NR2003's pace laps: every car is anchored to its own slot behind the safety car (paceCarGap + its row x " +
+             "targetGap), not just to the car ahead of it, so gaps can't pile up down a long field and a car well short " +
+             "of its slot closes on it hard. Extra mph per metre short of the slot (capped at farCatchUpBonusMph), and " +
+             "off per metre past it (capped at slotAnchorMaxEaseMph). 0 = off.")]
+    public float slotAnchorMphPerMetre = 0.4f;
+    public float slotAnchorMaxEaseMph = 4f;
+    [Tooltip("Most the slot anchor may add (mph). Half of it through a banked oval turn and none into a tight corner - closing on a slot into one ran cars into each other at Watkins Glen.")]
+    public float slotAnchorMaxMph = 15f;
     [Tooltip("Most the row-pair alignment adds or takes off (mph).")]
     public float pairAlignMaxMph = 5f;
     [Tooltip("Row partners further apart than this (m) are not lined up yet — one is still filing out — and are left alone.")]
@@ -370,6 +378,7 @@ public class FormationController : MonoBehaviour
         // partner (PairAlign).
         float far = FarCatchUp(out bool leading);
         float farBonus = farCatchUpBonusMph * far;
+        float anchor = SlotAnchorMph();
         float baseCap;
         if (settling) baseCap = pitOutMph;
         else if (closingUp)
@@ -379,8 +388,21 @@ public class FormationController : MonoBehaviour
             float bonus = leading ? 0f : closeUpBonusMph * (corner ? cornerCatchUpScale : 1f);
             baseCap = frontRow + bonus + (corner ? Mathf.Min(0f, align) : align);
         }
-        else baseCap = corner ? cruise + farBonus * cornerCatchUpScale
-                              : cruise + Mathf.Lerp(catchUpBonusMph, Mathf.Max(catchUpBonusMph, farCatchUpBonusMph), far);
+        else
+        {
+            baseCap = corner ? cruise + farBonus * cornerCatchUpScale
+                             : cruise + Mathf.Lerp(catchUpBonusMph, Mathf.Max(catchUpBonusMph, farCatchUpBonusMph), far);
+            // Short of my slot behind the safety car: close on it (harder on a straight). Past it: ease off a touch.
+            if (anchor > 0f)
+            {
+                // By the road's own curvature, not the corner phase (judged at race speed it calls almost the whole
+                // of a formation lap a corner): full on the straights, half through the turns.
+                float r = _spline.CurvatureRadiusAhead(50f);
+                float share = r > 400f ? 1f : r > 150f ? 0.5f : 0f;
+                baseCap = Mathf.Max(baseCap, cruise + anchor * share);
+            }
+            else if (anchor < 0f) baseCap = Mathf.Min(baseCap, cruise + anchor);
+        }
 
         // Lateral intent: the two-wide column the WHOLE lap (double file), with a gentle tyre-warming weave on early
         // straights that fades out near the line so the rows sit steady for the start. Through turns the column
@@ -414,7 +436,7 @@ public class FormationController : MonoBehaviour
         var intent = new PackIntent
         {
             BaseCapMph = baseCap,
-            MaxCapMph = Mathf.Max(baseCap, cruise + Mathf.Max(catchUpBonusMph, farBonus)),
+            MaxCapMph = Mathf.Max(baseCap, cruise + Mathf.Max(catchUpBonusMph, Mathf.Max(farBonus, anchor))),
             FloorMph = minCapMph,
             WantGap = closingUp ? rowGap : targetGap,
             PaceCarGap = paceCarGap,
@@ -484,6 +506,42 @@ public class FormationController : MonoBehaviour
     }
 
     int MySlot() => columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
+
+    // This car's own track is an oval (its tuning races in lanes) - read from the track itself, once.
+    bool OnOval()
+    {
+        if (_ovalKnown) return _oval;
+        var info = _spline.track != null ? _spline.track.track : null;
+        if (info == null) return false;
+        _oval = TrackProfile.ForTrack(info.name).raceInLanes;
+        _ovalKnown = true;
+        return _oval;
+    }
+    bool _oval, _ovalKnown;
+
+    // mph to add (+, short of my slot) or take off (-, past it): my slot is paceCarGap + my row x targetGap behind the
+    // safety car. Zero with no safety car on the track, or for a slot the anchor doesn't know.
+    float SlotAnchorMph()
+    {
+        int slot = MySlot();
+        // Ovals only for now: at Watkins Glen even the straights-only anchor ran three pairs together on the formation.
+        if (slotAnchorMphPerMetre <= 0f || slot < 0 || !OnOval()) return 0f;
+        float len = _spline.TrackLength;
+        float myC = _spline.CentreDistanceOnTrack;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d.qualifyingPosition != FormationOrder.SafetyCarGrid || d.IsOnPit || !d.isActiveAndEnabled) continue;
+            if (Mathf.Abs(d.TrackLength - len) > 0.5f) return 0f;
+            float behind = Mathf.Repeat(d.CentreDistanceOnTrack - myC, len);
+            if (behind > len * 0.5f) return 0f;   // the safety car is behind me: not lined up behind it yet
+            float error = behind - (paceCarGap + (slot / 2) * targetGap);
+            return error > 0f ? Mathf.Min(error * slotAnchorMphPerMetre, slotAnchorMaxMph)
+                              : Mathf.Max(error * slotAnchorMphPerMetre, -slotAnchorMaxEaseMph);
+        }
+        return 0f;
+    }
 
     static int SlotOf(SplineDriver d) =>
         s_bySpline.TryGetValue(d, out var fc) && fc != null && fc.columnSlot >= 0 ? fc.columnSlot : d.qualifyingPosition;

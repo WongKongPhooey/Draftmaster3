@@ -114,6 +114,39 @@ public class FormationLapSimTests
         Debug.Log(sb.ToString());
     }
 
+    // The formation lap's shape all the way round - how long the field is, how soon it closes up, and how many cars are
+    // out of their grid slot - with no player, a player on pole and a player mid-field, all driving free.
+    [Explicit("Diagnostic: the formation lap's shape through the lap - Daytona, Watkins Glen, Darlington; player on pole and mid-field.")]
+    [Test, Timeout(3600000)]
+    public void FormationShapeBaseline()
+    {
+        var sb = new StringBuilder("[FormationSim] shape baseline");
+        foreach (var (id, box) in new[] { ("Daytona", -1), ("WatkinsGlen", -1), ("Darlington", -1), ("Daytona", 0), ("Daytona", 12), ("WatkinsGlen", 12) })
+        {
+            Despawn();
+            var r = box < 0 ? Run(id, FieldSize) : Run(id, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
+            sb.Append($"\n  {id} {(box < 0 ? "AI only" : $"player in box {box}")}: green {r.wentGreen} after {r.seconds:0}s, field through the lap {r.fieldLengthMean:0} m " +
+                      $"(worst {r.fieldLengthWorst:0}, at pit-in {r.fieldLengthAtPitIn:0}, at green {r.fieldLengthAtGreen:0}), row gap at green {r.meanRowGapAtGreen:0.0} m, " +
+                      $"{r.outOfPlaceMean:0.0} cars out of place, {r.contacts.Count} contacts");
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    static bool s_snapshotAtPitIn;
+
+    [Explicit("Diagnostic: where every car is when the safety car pits, with the player starting mid-field.")]
+    [TestCase("Daytona", 12)]
+    public void PlayerMidFieldSnapshot(string trackId, int box)
+    {
+        s_snapshotAtPitIn = true;
+        try
+        {
+            var r = Run(trackId, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
+            Debug.Log($"[FormationSim] player mid-field snapshot {trackId} box {box}\n" + r.trace);
+        }
+        finally { s_snapshotAtPitIn = false; }
+    }
+
     [Explicit("Diagnostic: two cars' lateral state step by step through a window of the lap.")]
     [TestCase("Chicago", "AI_20", "AI_21", 70f, 76f)]
     [TestCase("SanDiego", "AI_12", "AI_13", 42f, 46.5f)]
@@ -548,6 +581,7 @@ public class FormationLapSimTests
             {
                 pitInAt = result.seconds;
                 if (Shape(out float lenPit, out _)) result.fieldLengthAtPitIn = lenPit;
+                if (s_snapshotAtPitIn) Snapshot();
             }
             // The race goes green when the director waves it (or, with no director step, as the safety car pits).
             if (Equals(currentProp.GetValue(null), greenPhase) || (directorStep == null && pitInAt >= 0f))
@@ -701,6 +735,21 @@ public class FormationLapSimTests
 
         // The field's length behind its leader and how many cars sit more than a row from their grid slot, with every
         // car on the track (false while any is still in the pits).
+        // Every car in running order at this moment: grid slot, metres behind the leader, lateral, formation mode.
+        void Snapshot()
+        {
+            var rows = new List<(float d, string txt)>();
+            for (int i = 1; i < n; i++)
+            {
+                int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+                if (cars[i] == playerSpline) slot = playerBox;
+                rows.Add(((float)distProp.GetValue(cars[i]), $"slot {slot}{(cars[i] == playerSpline ? " PLAYER" : "")} {Describe(cars[i])}"));
+            }
+            rows.Sort((a, c) => c.d.CompareTo(a.d));
+            result.trace.Append("pit-in snapshot (running order, distance along the lap):\n");
+            foreach (var row in rows) result.trace.Append($"  d{row.d:0} {row.txt}\n");
+        }
+
         bool Shape(out float length, out int outOfPlace)
         {
             length = 0f; outOfPlace = 0;
