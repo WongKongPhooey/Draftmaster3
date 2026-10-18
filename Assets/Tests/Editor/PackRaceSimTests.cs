@@ -466,8 +466,9 @@ public class PackRaceSimTests
             ("baseline", null),
             // Defend, side push, the 5.2 m side window and the alongside wall each moved weaves by under 5%.
             // Overtaking off took weaves 16.2 -> 2.2; commit 3 s 13.1 (contacts 6 -> 10); deadzone 0.5 15.7.
-            ("cooldown 2 s", new Dictionary<string, object> { { "manoeuvreCooldown", 2f } }),
-            ("cooldown 4 s", new Dictionary<string, object> { { "manoeuvreCooldown", 4f } }),
+            // Cooldown 2-4 s: 15.3-16.3 (4 s halved passing). Holding the pass side per car ahead (6 or 12 s, since
+            // removed): 16.3-16.6 with more contacts - the reversals are inside each attempt, not between them.
+            ("no overtaking", new Dictionary<string, object> { { "overtakeLineOffset", 0f } }),
         };
         var sb = new StringBuilder("[PackSim] WG weave sources, 16 cars, 4 laps\n");
         foreach (var v in variants)

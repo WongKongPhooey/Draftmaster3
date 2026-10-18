@@ -57,7 +57,9 @@ public class FormationDirector : MonoBehaviour
              "to the line to close up into tight two-wide rows.")]
     public float greenBeforeLineM = 40f;
     [Tooltip("If the leader is further than this (m) from the line when the safety car pits — or has already crossed " +
-             "it — the green waves at once rather than parading another long stretch. Also capped at half a lap.")]
+             "it — the green waves at once rather than parading another long stretch. Also capped at 80% of a lap, " +
+             "which is what a leader who has just crossed the line reads as. It was half a lap: at Martinsville the " +
+             "safety car pits with the leader 62% of a lap from the line, and the green waved on the back straight.")]
     public float maxHoldAfterPitInM = 1000f;
     [Tooltip("Backstop (s): wave the green this long after the safety car pits whatever the leader is doing (a " +
              "human leader who has stopped on the track).")]
@@ -318,7 +320,7 @@ public class FormationDirector : MonoBehaviour
         var sc = _safetyCar.GetComponent<SplineDriver>();
         float lap = sc != null ? sc.TrackLength : 0f;
         float toLine = lap > 0f ? LeaderToLine(sc.track, lap) : -1f;
-        float maxHold = Mathf.Min(maxHoldAfterPitInM, lap * 0.5f);
+        float maxHold = Mathf.Min(maxHoldAfterPitInM, lap * 0.8f);
         bool green = toLine < 0f                                   // nobody out on the track to lead
                      || toLine <= greenBeforeLineM
                      || (first && toLine > maxHold)                // a long way off, or already over the line

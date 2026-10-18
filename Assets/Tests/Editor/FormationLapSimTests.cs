@@ -150,7 +150,20 @@ public class FormationLapSimTests
         Debug.Log(sb.ToString());
     }
 
-    static bool s_snapshotAtPitIn;
+    static bool s_snapshotAtPitIn, s_timeline;
+
+    [Explicit("Diagnostic: slots 5-15 and the player once a second from the pit boxes, the player starting mid-field.")]
+    [TestCase("WatkinsGlen", 12)]
+    public void PlayerMidFieldTimeline(string trackId, int box)
+    {
+        s_timeline = true;
+        try
+        {
+            var r = Run(trackId, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
+            Debug.Log($"[FormationSim] player mid-field timeline {trackId} box {box}\n" + r.trace);
+        }
+        finally { s_timeline = false; }
+    }
 
     [Explicit("Diagnostic: where every car is when the safety car pits, with the player starting mid-field.")]
     [TestCase("Daytona", 12)] [TestCase("WatkinsGlen", 12)]
@@ -590,6 +603,7 @@ public class FormationLapSimTests
             result.seconds = (step + 1) * dt;
 
             if (playerAhead != null) MeasurePlayerLead();
+            if (s_timeline && result.seconds < 75f && step % Mathf.Max(1, Mathf.RoundToInt(1f / dt)) == 0) Timeline();
             if (step % Mathf.Max(1, Mathf.RoundToInt(1f / dt)) == 0 && Shape(out float len1, out int out1))
             {
                 lenSum += len1; outSum += out1; shapeN++;
@@ -683,15 +697,27 @@ public class FormationLapSimTests
         void DrivePlayerFree()
         {
             float gap = Mathf.Repeat((float)distProp.GetValue(playerAhead) - (float)distProp.GetValue(playerSpline), lapLen);
-            // Past the car it follows (the box lanes can let it by), the wrapped gap read as nearly a lap and the
-            // player ran off at 120 mph round the whole lap: a gap past half a lap is the car behind.
-            if (gap > lapLen * 0.5f) gap -= lapLen;
             float aheadMph = (float)mphProp.GetValue(playerAhead);
+            // Mid-field, a human follows whatever is in front of them on the road, not one particular car. Tied to
+            // the car in the box ahead, the player ran off at 120 mph once past it (the gap wrapped to nearly a lap),
+            // and held back for it instead it stopped on the track with that car stuck behind it.
+            if (playerAhead != scSpline && !(bool)onPitProp.GetValue(playerSpline))
+            {
+                gap = float.MaxValue; aheadMph = 0f;
+                float me = (float)distProp.GetValue(playerSpline);
+                for (int i = 0; i < n; i++)
+                {
+                    if (cars[i] == playerSpline || (bool)onPitProp.GetValue(cars[i])) continue;
+                    float g = Mathf.Repeat((float)distProp.GetValue(cars[i]) - me, lapLen);
+                    if (g > 0.5f && g < lapLen * 0.5f && g < gap) { gap = g; aheadMph = (float)mphProp.GetValue(cars[i]); }
+                }
+                if (gap == float.MaxValue) { gap = 200f; aheadMph = 60f; }
+            }
             float cap = 120f;
             // PaceLapAssist: from the pace car's peel-off to the green, lead the field at the close-up pace.
             bool scGone = playerAhead == scSpline && ((bool)pittingField.GetValue(sc) || (bool)scType.GetProperty("ClosingUp").GetValue(sc));
             if (scGone) cap = 50f;
-            else if (!(bool)onPitProp.GetValue(playerSpline) && !(bool)onPitProp.GetValue(playerAhead))
+            else if (!(bool)onPitProp.GetValue(playerSpline) && (playerAhead != scSpline || !(bool)onPitProp.GetValue(playerAhead)))
             {
                 if (gap <= 6f) cap = aheadMph * 0.8f;
                 else cap = Mathf.Min(cap, aheadMph + 2.5f * (gap - 13f));
@@ -757,6 +783,22 @@ public class FormationLapSimTests
         // The field's length behind its leader and how many cars sit more than a row from their grid slot, with every
         // car on the track (false while any is still in the pits).
         // Every car in running order at this moment: grid slot, metres behind the leader, lateral, formation mode.
+        // Slots 5-15 and the player, once a second: where each is, on pit road or not, speed and planner mode.
+        void Timeline()
+        {
+            result.trace.Append($"t{result.seconds:0}");
+            for (int i = 1; i < n; i++)
+            {
+                int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+                if (cars[i] == playerSpline) slot = playerBox;
+                if (slot < 5 || slot > 15) continue;
+                var fc = cars[i].GetComponent(fcType);
+                result.trace.Append($" | {(cars[i] == playerSpline ? "P" : "s")}{slot} {((bool)onPitProp.GetValue(cars[i]) ? "pit" : "")}d{(float)distProp.GetValue(cars[i]):0} " +
+                                    $"{(float)mphProp.GetValue(cars[i]):0}{(fc != null ? " " + modeProp.GetValue(fc) : "")}");
+            }
+            result.trace.Append('\n');
+        }
+
         void Snapshot()
         {
             var rows = new List<(float d, string txt)>();
@@ -786,7 +828,7 @@ public class FormationLapSimTests
             for (int i = 1; i < n; i++)
             {
                 float b = Mathf.Repeat(leaderD - (float)distProp.GetValue(cars[i]), lapLen);
-                if (b > lapLen * 0.5f) b -= lapLen;
+                if (b > lapLen * 0.9f) b -= lapLen;   // at Martinsville the field is half the lap: only a car just ahead of the leader folds
                 length = Mathf.Max(length, b);
                 int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
                 if (cars[i] == playerSpline) slot = playerBox;
