@@ -266,10 +266,55 @@ public class PackRaceSimTests
     [Test, Timeout(1800000)]
     public void WatkinsGlenStart() => StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24, null);
 
+    // Each car holding its side of the road through Turn 1 (AIRacingBehaviour.holdStartSides) against merging onto the
+    // line at the green, which turned the outside column across the inside one.
+    [Explicit("Diagnostic: the Watkins Glen rolling start with and without holding sides through Turn 1, five rosters each.")]
+    [Test, Timeout(3600000)]
+    public void WatkinsGlenStartSideHold()
+    {
+        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
+            new Dictionary<string, object> { { "holdStartSides", false }, { "alongsideIsWall", false } });
+        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
+            new Dictionary<string, object> { { "holdStartSides", false }, { "alongsideIsWall", true } });
+        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
+            new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", false } });
+        StartBaseline("WatkinsGlen", new[] { 1, 2, 3, 4, 5 }, 24,
+            new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", true } });
+    }
+
+    // A car alongside as a wall for the lateral target (AIRacingBehaviour.alongsideIsWall), off and on, in racing at a
+    // road course, a short track and the plate pack.
+    [Explicit("Diagnostic: alongsideIsWall off and on - racing at Watkins Glen, Martinsville and Daytona, two rosters.")]
+    [Test, Timeout(7200000)]
+    public void AlongsideWallRacing()
+    {
+        var sb = new StringBuilder("[PackSim] alongside wall racing\n");
+        foreach (bool wall in new[] { false, true })
+        {
+            var racing = new Dictionary<string, object> { { "alongsideIsWall", wall } };
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("WatkinsGlen", new Settings { cars = 24, laps = 6, seed = seed, columns = 2, fastestAtBack = true, racing = racing });
+                sb.Append(Summary($"  wall {wall} WatkinsGlen seed {seed}", r)); Despawn();
+                r = Run("Martinsville", new Settings { cars = 24, laps = 6, seed = seed, columns = 2, racing = racing });
+                sb.Append(Summary($"  wall {wall} Martinsville seed {seed}", r)); Despawn();
+                r = Run("Daytona", new Settings { cars = 40, laps = 4, seed = seed, columns = 2, racing = racing });
+                sb.Append(Summary($"  wall {wall} Daytona seed {seed}", r)); Despawn();
+            }
+        }
+        Debug.Log(sb.ToString());
+    }
+
     [Explicit("Diagnostic: one Watkins Glen rolling start with the field across the road logged every second.")]
     [Test, Timeout(1800000)]
     public void WatkinsGlenStartTrace() =>
         Log("WG start trace seed 1", Run("WatkinsGlen", new Settings { cars = 24, seed = 1, startSeconds = 30f, traceHard = 25 }));
+
+    [Explicit("Diagnostic: the same start trace with sides held to Turn 1's braking zone.")]
+    [Test, Timeout(1800000)]
+    public void WatkinsGlenStartTraceHold() =>
+        Log("WG start trace hold seed 1", Run("WatkinsGlen", new Settings { cars = 24, seed = 1, startSeconds = 30f, traceHard = 25,
+            racing = new Dictionary<string, object> { { "holdStartSides", true }, { "alongsideIsWall", false } } }));
 
     // Racing laps at one track of each kind after a change to how the AI uses the road: passes, contacts and offs
     // should hold or improve, not just the start.

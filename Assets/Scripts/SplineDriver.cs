@@ -335,6 +335,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // MaxValue. See BuildSpeedProfile.
     float[] _gripLimitProfile;
     float[] _curvatureProfile;  // |curvature| (1/m) of the DRIVEN line (centerline + smoothed lateral), per main sample
+    float[] _insideSideProfile; // which way the inside of the bend is, per main sample: +1 right, -1 left
     float _bakedALatMaxMps2;    // lateral-accel ceiling (m/s²) the profile was baked against
     float[] _lateralProfile;
     float[] _lineLo, _lineHi;   // where the smoothed line may go: the road, or a player line's legal corridor
@@ -767,15 +768,21 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         _curvatureProfile = new float[n];
+        _insideSideProfile = new float[n];
         for (int i = 0; i < n; i++)
         {
             // Segment joins can emit near-coincident samples; step outward until the neighbours are far enough
             // apart for the three-point (Menger) estimate to be stable.
             int prev = StepDistinct(pts, i, -1, 0.5f);
             int next = StepDistinct(pts, i, +1, 0.5f);
-            _curvatureProfile[i] = (prev == i || next == i || prev == next)
-                ? 0f
-                : MengerCurvature(pts[prev], pts[i], pts[next]);
+            bool degenerate = prev == i || next == i || prev == next;
+            _curvatureProfile[i] = degenerate ? 0f : MengerCurvature(pts[prev], pts[i], pts[next]);
+            if (!degenerate)
+            {
+                Vector2 a = pts[i] - pts[prev], b = pts[next] - pts[i];
+                float cross = a.x * b.y - a.y * b.x;   // > 0 bends left: the inside is to the left (-lateral)
+                _insideSideProfile[i] = cross > 0f ? -1f : cross < 0f ? 1f : 0f;
+            }
         }
 
         // Light box smoothing: keeps apex curvature honest while killing sample-to-sample jitter.
@@ -1001,6 +1008,45 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     float ProfileAt(float distance) => SampleAlongLine(_speedProfile, distance, 0f);
 
+    [Tooltip("A car off its racing line toward the inside of a bend coming up (two wide, or on the inside of a pass) takes the tighter radius at the speed it allows, and brakes for it in time. The profile is the line's - without this the inside car arrived at line speed on a smaller radius, ran wide and into the car beside it.")]
+    public bool offLineCornerSpeed = true;
+    [Tooltip("How far ahead (m) the off-line corner speed looks for a bend.")]
+    public float offLineScanMetres = 220f;
+
+    // The speed (mph) allowed here by the bends ahead at this car's distance off its line: each bend's line speed scaled
+    // to the tighter radius of a car that far toward its inside (v ~ sqrt(r)), plus the braking from here to it.
+    // MaxValue when the car is on its line or outside it.
+    float OffLineCornerCapMph(float paceRatio)
+    {
+        if (_curvatureProfile == null || _insideSideProfile == null || _speedProfile == null || _mainSamples == null) return float.MaxValue;
+        int n = _speedProfile.Length;
+        if (n != _curvatureProfile.Length || n != _mainSamples.Count) return float.MaxValue;
+        float off = LateralOnTrack - UntacticalLateral;   // + = right of the line
+        if (Mathf.Abs(off) < 0.4f) return float.MaxValue;
+        float decel = SampleDecel(_currentMph / ProfileStretch) * ProfileStretch * 0.85f;
+        if (decel <= 0.1f) return float.MaxValue;
+        int i = SampleIndexAtOrBefore(_distance, n);
+        float here = _mainSamples[i].distance;
+        float best = float.MaxValue;
+        for (int k = 0; k < n; k++)
+        {
+            int j = (i + k) % n;
+            float d = _mainSamples[j].distance - here;
+            if (d < 0f) d += _mainLength;
+            if (d > offLineScanMetres) break;
+            float kappa = _curvatureProfile[j];
+            if (kappa < 0.002f) continue;   // r > 500 m: no bend to speak of
+            float inward = off * _insideSideProfile[j];
+            if (inward <= 0.2f) continue;
+            float r = 1f / kappa;
+            float rIn = Mathf.Max(r - inward, r * 0.5f);
+            float vMps = _speedProfile[j] * paceRatio * Mathf.Sqrt(rIn / r) * MphToMps;
+            float allowed = Mathf.Sqrt(vMps * vMps + 2f * decel * d) * MpsToMph;
+            if (allowed < best) best = allowed;
+        }
+        return best;
+    }
+
     // The speed (mph) the car races at here on a clear road, with the profile's pace scaled by paceScale and
     // capped at the grip limit — what a car placed mid-lap should already be doing.
     public float RacePaceMphAt(float distance, float paceScale = 1f)
@@ -1211,6 +1257,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 // capped at the grip ceiling here too, or a pace change between rebuilds (or a tow into a
                 // corner) would put the car back over it.
                 targetMph = Mathf.Min(ProfileAt(_distance) * ratio + aiSpeedBoostMph, GripLimitAt(_distance));
+                if (offLineCornerSpeed) targetMph = Mathf.Min(targetMph, OffLineCornerCapMph(ratio));
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
                 if (_pitApproachCapMph < targetMph) targetMph = _pitApproachCapMph;

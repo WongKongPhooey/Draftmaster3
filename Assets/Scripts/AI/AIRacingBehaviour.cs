@@ -123,6 +123,16 @@ public class AIRacingBehaviour : MonoBehaviour
     [Tooltip("After the green (a start or a restart) a pack holds the two-wide formation it lined up in - no lane picks, no lane changes, no pull-outs - until it is up to this share of race speed, or restartSettleMaxSeconds have passed. Choosing lanes while still accelerating had every car changing its mind.")]
     [Range(0f, 1f)] public float restartSettleSpeedShare = 0.95f;
     public float restartSettleMaxSeconds = 8f;
+    [Tooltip("Off the pack tracks, after the green (a start or a restart) each car holds its side of the road - its share of the width between the AI's bounds, not an offset from the racing line - through the first corner, with no passes and no defending, then races. Without it the outside column turned straight across onto the line at the green and into the inside column.")]
+    public bool holdStartSides = false;
+    [Tooltip("The side-hold ends this long (s) after the green even if no corner has been completed.")]
+    public float startSideHoldMaxSeconds = 30f;
+    [Tooltip("Hold sides all the way through the first corner (true) or only to its braking zone (false), where the field files in.")]
+    public bool startSideHoldThroughCorner = false;
+    [Tooltip("A car alongside is a wall: whatever the brain wants (a pass, a defence, back to the line, out of a lapper's way), it never aims closer to a car beside it than alongsideWallGap - and a car already closer holds where it is. Without it a car turned across into the one beside it whenever its plan said to.")]
+    public bool alongsideIsWall = true;
+    [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing.")]
+    public float alongsideWallGap = 2.6f;
     [Tooltip("Lateral speed (m/s) and acceleration (m/s²) of a lane change in a pack. A move takes about a second: drawn out over two and a half, the car pulling out spent all of it half across its pusher's nose, slowing as it left the draft.")]
     public float packLateralSpeed = 3.2f;
     public float packLateralAccel = 7f;
@@ -242,6 +252,9 @@ public class AIRacingBehaviour : MonoBehaviour
     readonly LateralField _field = new LateralField();
     bool _wasGreen;
     float _greenSeconds;
+    float _startSideShare = float.NaN;   // 0 = AI left bound, 1 = right; NaN = not holding a side
+    SplineDriver.CornerPhase _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
+    int _startSideStage;   // 0 = not yet on a straight since the green, 1 = on one, 2 = into the first corner
     readonly System.Collections.Generic.List<FieldCar> _fieldCars = new System.Collections.Generic.List<FieldCar>(24);
     float _fieldTarget = float.NaN;
     readonly System.Collections.Generic.List<float> _fieldLanes = new System.Collections.Generic.List<float>(6);
@@ -323,7 +336,17 @@ public class AIRacingBehaviour : MonoBehaviour
         float dt = Time.fixedDeltaTime;
         // This car's own clock since the green (a start or a restart), counted in physics steps so it runs the same
         // in the headless sims as in the game.
-        if (!_wasGreen) { _wasGreen = true; _greenSeconds = 0f; }
+        if (!_wasGreen)
+        {
+            _wasGreen = true;
+            _greenSeconds = 0f;
+            _startSideShare = float.NaN;
+            _startSideStage = 0;
+            _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
+            if (holdStartSides && !Pack && !_spline.IsOnPit && _spline.GetLateralBounds(out float sLo, out float sHi) && sHi - sLo > 1f)
+                // Where the formation put us (its column, handed over by TakeLateral), not where the car has got to yet.
+                _startSideShare = Mathf.Clamp01((_spline.UntacticalLateral + _smoothedTactical - sLo) / (sHi - sLo));
+        }
         else _greenSeconds += dt;
 
         // Race phase. A field that races lap 1 exactly the way it races the last lap reads as a machine, so
@@ -681,8 +704,38 @@ public class AIRacingBehaviour : MonoBehaviour
             && MergeBlockedAlongside())
             desiredTactical = _smoothedTactical;
 
+        // Off the green two-wide: each car keeps its side of the road up to the first corner's braking zone (or through
+        // the corner, startSideHoldThroughCorner). Held as a share of the road's width, so the inside car stays on the
+        // inside as the racing line swings across - an offset from the line would carry it off the road and back into
+        // its neighbour.
+        bool holdingStartSide = false;
+        if (!float.IsNaN(_startSideShare))
+        {
+            var ph = _spline.CurrentPhase;
+            bool inCorner = ph == SplineDriver.CornerPhase.Entry || ph == SplineDriver.CornerPhase.Apex;
+            // The back of the grid can take the green still in the last corner; that one doesn't count.
+            if (_startSideStage == 0 && !inCorner && ph != SplineDriver.CornerPhase.Exit) _startSideStage = 1;
+            else if (_startSideStage == 1 && inCorner) _startSideStage = 2;
+            // Into the braking zone: from a straight, not already in it at the green.
+            if (!startSideHoldThroughCorner && _startSideStage == 1 && ph == SplineDriver.CornerPhase.Approach
+                && _startSidePrevPhase != SplineDriver.CornerPhase.Approach) _startSideStage = 2;
+            _startSidePrevPhase = ph;
+            bool through = _startSideStage == 2 && (!startSideHoldThroughCorner
+                           || (!inCorner && ph != SplineDriver.CornerPhase.Exit));
+            if (through || underYellow || _spline.IsOnPit || _greenSeconds >= startSideHoldMaxSeconds
+                || !_spline.GetLateralBounds(out float hLo, out float hHi))
+                _startSideShare = float.NaN;
+            else
+            {
+                desiredTactical = Mathf.Lerp(hLo, hHi, _startSideShare) - _spline.UntacticalLateral;
+                holdingStartSide = true;
+                _commitTimer = 0f;
+                _passCar = null; _passLane = -1;
+            }
+        }
+
         // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
-        if (!fieldOn && !Pack && (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry))
+        if (!fieldOn && !Pack && !holdingStartSide && (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry))
         {
             if (RaceField.TryGetBehind(_spline, defendDetectRange, out var pursuer, out float behindGap))
             {
@@ -718,6 +771,9 @@ public class AIRacingBehaviour : MonoBehaviour
             blueFlagLiftFactor = RaceCraft.YieldSpeedFactor(yieldStrength, blueFlagLift);
             _commitTimer = 0f;   // don't let an overtake commitment resume the moment we're past
         }
+
+        if (alongsideIsWall && !PaybackActive && !_spline.IsOnPit)
+            desiredTactical = AlongsideWallClamp(desiredTactical);
 
         // Side-by-side repulsion + contact response.
         float repulse = 0f;
@@ -941,6 +997,48 @@ public class AIRacingBehaviour : MonoBehaviour
         if (blockGap < hardFollowGap && !packFollow)
             cap = Mathf.Min(cap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
         return cap;
+    }
+
+    // Keep a lateral target off any car alongside: never closer to it than alongsideWallGap, and never further
+    // toward it than we already are. Cars alongside, or a little ahead or behind (more behind when it is closing
+    // on us), count - the human car too.
+    float AlongsideWallClamp(float desiredTactical)
+    {
+        float here = _spline.LateralOnTrack;
+        float baseLat = _spline.UntacticalLateral;
+        float target = baseLat + desiredTactical;
+        float gapNeeded = Pack ? Mathf.Min(alongsideWallGap, LaneSpacing * 0.9f) : alongsideWallGap;
+        float myMps = _spline.CurrentMph * MphToMps;
+        float hi = float.PositiveInfinity, lo = float.NegativeInfinity;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            WallFrom(LongitudinalGap(_spline, other), other.LateralOnTrack, other.CurrentMph * MphToMps - myMps,
+                     here, gapNeeded, ref lo, ref hi);
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            WallFrom(SignedGapTo(p.TrackDistance), p.TrackLateral, p.SpeedMph * MphToMps - myMps, here, gapNeeded, ref lo, ref hi);
+        }
+        if (lo > hi) return here - baseLat;   // squeezed both sides: hold where we are
+        return Mathf.Clamp(target, lo, hi) - baseLat;
+    }
+
+    void WallFrom(float gap, float otherLat, float closingFromBehindMps, float here, float gapNeeded, ref float lo, ref float hi)
+    {
+        float behind = alongsideLength + 1.5f + Mathf.Max(0f, closingFromBehindMps) * 0.5f;
+        if (gap > alongsideLength + 1.5f || gap < -behind) return;
+        float side = otherLat - here;
+        if (Mathf.Abs(side) > gapNeeded * 2.5f) return;   // well clear: a lane or more between us
+        if (Mathf.Abs(side) < 0.3f) return;   // on top of each other: no side to keep to - the contact response sorts it
+        if (side >= 0f) hi = Mathf.Min(hi, Mathf.Max(otherLat - gapNeeded, here));
+        else lo = Mathf.Max(lo, Mathf.Min(otherLat + gapNeeded, here));
     }
 
     // Still getting up to speed off a start or restart: under restartSettleSpeedShare of the clean-air race speed here,
