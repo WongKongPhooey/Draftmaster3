@@ -31,6 +31,10 @@ public class WeekendResultCard : MonoBehaviour
     // the meters it moved, with no jump back to the sheet afterwards —
     // the skip has just taken the player back to their motorhome, and that is where the card leaves them.
     bool _summary;
+
+    // A practice or qualifying session the player drove. Its card closes back onto the circuit rather than
+    // onto the sheet: what comes next, and skipping ahead to it, is the phone's SCHEDULE app now.
+    bool _drove;
     List<(string label, string value, Color colour)> _skippedRows;
 
     // Past this many, the skipped list folds its tail into one "+N MORE" row so the card stays on screen.
@@ -101,6 +105,7 @@ public class WeekendResultCard : MonoBehaviour
         card._activity = a;
         card._outcome = o;
         card._inWorld = inWorld;
+        card._drove = a != null && a.IsOnTrack;
     }
 
     // What a skip ahead off the sheet cost. Modal, like a result read at the sheet, but dismissed into the
@@ -165,7 +170,13 @@ public class WeekendResultCard : MonoBehaviour
         // the sheet silently never came back.
         if (Instance == this) Instance = null;
         Destroy(gameObject);
-        if (!wasInWorld && !_summary) WeekendScheduleUI.Open();
+        // The phone is on-foot only, so the hint names it for when they are out of the car; pressing it from
+        // the car does nothing, which is no worse than not pressing it.
+        if (_drove)
+            ControlHints.Show("weekend.phoneSchedule", WeekendScripts.PhoneKeyName(), InputGlyphs.PhonePad,
+                              "What's next, or skip ahead: SCHEDULE on your phone", seconds: 8f, once: false,
+                              onPress: () => PhoneUI.Open("schedule"), icon: PixelGUI.ActionIcon.Phone);
+        else if (!wasInWorld && !_summary) WeekendScheduleUI.Open();
     }
 
     void OnGUI()
@@ -256,7 +267,7 @@ public class WeekendResultCard : MonoBehaviour
         }
 
         if (PixelGUI.Button(new Rect(c.x, c.yMax - buttonH, c.width, buttonH),
-                            _inWorld || _summary ? "GOT IT" : "BACK TO THE SCHEDULE") ||
+                            _inWorld || _summary || _drove ? "GOT IT" : "BACK TO THE SCHEDULE") ||
             (Time.unscaledTime - _openedAt > 0.4f && ConfirmPressed()))
             Dismiss();
     }

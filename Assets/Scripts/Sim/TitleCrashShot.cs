@@ -20,7 +20,7 @@ namespace Draftmaster.Sim
     // What varies: how many cars go past before any of it happens and in which lanes, how many cars are in
     // the accident (two, three or four), which of them it is, where on the screen it happens, how fast the
     // cars arrive, how hard they hit — and therefore how far they bury into each other and how deep the
-    // bodywork folds — which way the wrecked car is spinning and how far past square it lies when everything
+    // bodywork folds — which way the wrecked car is spinning and how far either side of square it lies when everything
     // stops, what angle the strikers come in at, and where along the struck car's flank each one lands: the
     // door, a quarter panel, or right up by the wheel. Liveries are drawn separately, by TitleCrashScene.
     //
@@ -221,33 +221,53 @@ namespace Draftmaster.Sim
             }
 
             // --- the one or two that lost it. Slow, turned well away from their line of travel, and in shot
-            // long before anything hits them. A pair lie end to end along the same line, which is what a spun
-            // car and the one it collected look like.
+            // long before anything hits them. A pair lie end to end along the same line, spun opposite ways,
+            // which is what a spun car and the one it collected look like.
             float drift = Range(rng, -0.22f, 0.22f);                 // sideways per unit of downward travel
             Vector2 travel = new Vector2(drift, -1f).normalized;
             float travelAngle = Mathf.Atan2(travel.y, travel.x) * Mathf.Rad2Deg;
 
             // How far round from pointing down its own line the wrecked car has got by the time everything
-            // stops, and which way it was spinning. Anywhere from short of a right angle to beyond facing
-            // backwards: it used to be held within thirty degrees of broadside, which put every wrecked car at
-            // nearly the same angle, square across the screen. Past 90 the strikers stop finding a door and
-            // start finding a rear quarter or the tail, which is a different wreck rather than a wrong one.
+            // stops, and which way it was spinning. Anywhere from short of a right angle to well past it: it
+            // used to be held within thirty degrees of broadside, which put every wrecked car at nearly the
+            // same angle, square across the screen. Past 90 the strikers stop finding a door and start finding
+            // a rear quarter, which is a different wreck rather than a wrong one.
             //
             // A slider with two cars into it needs its side toward them long enough for both, and a pair of
             // sliders has to lie across the slot to fit side by side, so those draw from narrower bands.
+            //
+            // Both ends are held to how far the slider's nose lies off the striker's — MinSplay to MaxSplay —
+            // not just off its own line. At the short end the slider was barely 50 degrees off the striker,
+            // both noses down the screen; at the long end it was allowed round to facing backwards, which put
+            // both bodies upright and nose to nose, and nearly half of every two-car crash came out that way.
+            // Either one reads as two cars lined up the same way rather than one T-boned. The turn is measured
+            // off the slider's own line, which drifts off straight down, and the strikers lean off straight
+            // down too, so each bound gives up however much of the drift and lean could be working against it.
+            //
+            // A pair of sliders spin opposite ways, each through its own turn. They used to share one rest
+            // angle, so the two wrecked cars lay end to end pointing exactly the same way — two cars parked in
+            // a queue rather than two that had collected each other. Spun apart they come to rest roughly
+            // nose to nose or tail to tail, and never at quite the same tilt.
             int perSlider = strikers / sliders;
             float spin = rng.Next(2) == 0 ? 1f : -1f;
-            float turn = sliders > 1 ? Range(rng, MinTurn, 112f)
-                       : perSlider > 1 ? Range(rng, MinTurn, 138f)
-                       : Range(rng, MinTurn, MaxTurn);
-            // The turn it makes on the way in: enough that it is visibly still coming round, never so much
-            // that it arrived pointing where it was going.
-            float sweep = Mathf.Min(Range(rng, 36f, 72f), turn - 14f);
+            float drifted = travelAngle + 90f;                       // the slider's line, off straight down
+            var restRotations = new float[sliders];
+            var startRotations = new float[sliders];
+            for (int k = 0; k < sliders; k++)
+            {
+                float turning = k == 0 ? spin : -spin;
+                float minTurn = Mathf.Max(MinTurn, MinSplay + MaxLean - turning * drifted);
+                float maxTurn = MaxSplay - MaxLean - turning * drifted;
+                float turn = Range(rng, minTurn, Mathf.Min(maxTurn, sliders > 1 ? 112f : perSlider > 1 ? 138f : maxTurn));
+                // The turn it makes on the way in: enough that it is visibly still coming round, never so
+                // much that it arrived pointing where it was going.
+                float sweep = Mathf.Min(Range(rng, 36f, 72f), turn - 14f);
 
-            float restRotation = SpriteAngleOf(travelAngle + spin * turn);
-            float startRotation = restRotation - spin * sweep;
+                restRotations[k] = SpriteAngleOf(travelAngle + turning * turn);
+                startRotations[k] = restRotations[k] - turning * sweep;
+            }
 
-            float rad = restRotation * Mathf.Deg2Rad;
+            float rad = restRotations[0] * Mathf.Deg2Rad;
             Vector2 along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
             if (along.x < 0f) along = -along;                        // reads left to right across the slot
             float apart = Range(rng, 158f, 176f);                    // end to end, and clear of each other
@@ -275,7 +295,7 @@ namespace Draftmaster.Sim
 
                 Vector2 heading = Rotate(Vector2.down, Range(rng, -MaxLean, MaxLean));
                 Vector2 side = new Vector2(-heading.y, heading.x);
-                float span = SpanAcross(restRotation, side);
+                float span = SpanAcross(restRotations[target], side);
 
                 // Where across the slider this one lands. On its own, anywhere its nose still mostly finds
                 // metal; two abreast fan out either side of the middle, far enough apart not to arrive on top
@@ -284,7 +304,7 @@ namespace Draftmaster.Sim
                 float reach = Mathf.Max(0f, span - CornerMarginPx);
                 float at = perSlider > 1 ? centred * spread + Range(rng, -8f, 8f) : Range(rng, -reach, reach);
 
-                Vector2 point = FirstHit(sliderEnds[target], restRotation,
+                Vector2 point = FirstHit(sliderEnds[target], restRotations[target],
                                          sliderEnds[target] + side * at - heading * 1000f, heading);
 
                 // Authored to finish past the bite allowance, so Settle still has something to push with and
@@ -299,11 +319,11 @@ namespace Draftmaster.Sim
             // --- where on the screen the wreck goes: across the slot as before, and at whatever height puts
             // all of it in frame.
             float low = float.MaxValue, high = float.MinValue;
-            float sliderHalf = TitleCrash.HalfSpan(restRotation, horizontal: false);
-            foreach (var end in sliderEnds)
+            for (int k = 0; k < sliders; k++)
             {
-                low = Mathf.Min(low, end.y - sliderHalf);
-                high = Mathf.Max(high, end.y + sliderHalf);
+                float half = TitleCrash.HalfSpan(restRotations[k], horizontal: false);
+                low = Mathf.Min(low, sliderEnds[k].y - half);
+                high = Mathf.Max(high, sliderEnds[k].y + half);
             }
             for (int k = 0; k < strikers; k++)
             {
@@ -327,8 +347,8 @@ namespace Draftmaster.Sim
                 {
                     startPos = end - travel * Range(rng, 300f, 380f),   // short run = slow = there to be caught
                     endPos = end,
-                    startRotation = startRotation,
-                    endRotation = restRotation,
+                    startRotation = startRotations[k],
+                    endRotation = restRotations[k],
                     arcPx = Range(rng, -16f, 16f),
                     delay = 0f, travel = 1f, depth = index,
                 };
@@ -572,6 +592,14 @@ namespace Draftmaster.Sim
                     return No(out why, $"car {i} comes in at too much of an angle");
             }
 
+            // Two wrecked cars never lie pointing the same way: they spun into each other, not parked in a queue.
+            for (int a = 0; a < shot.cars.Length; a++)
+                for (int b = a + 1; b < shot.cars.Length; b++)
+                    if (shot.IsSlider(a) && shot.IsSlider(b)
+                        && Vector2.Angle(TitleCrash.Heading(shot.cars[a].endRotation),
+                                         TitleCrash.Heading(shot.cars[b].endRotation)) < MinSplay)
+                        return No(out why, $"sliders {a},{b} rest pointing the same way");
+
             // Every impact lands inside the slow-motion beat, square into the flank, on the door rather than
             // a corner — and with the two bodies actually together when it fires.
             float share = TitleCrash.Tempo.Default.Share;
@@ -596,6 +624,13 @@ namespace Draftmaster.Sim
                 if (Vector2.Dot(hit.normal.normalized,
                                 (poses[hit.struck].position - poses[hit.striker].position).normalized) <= 0f)
                     return No(out why, $"impact {i} sprays backwards");
+
+                // Not two cars lined up the same way: the striker's nose and the slider's, as they rest, are
+                // neither pointing together nor upright and nose to nose.
+                float splay = Vector2.Angle(TitleCrash.Heading(shot.cars[hit.striker].endRotation),
+                                            TitleCrash.Heading(shot.cars[hit.struck].endRotation));
+                if (splay < MinSplay - 0.1f || splay > MaxSplay + 0.1f)
+                    return No(out why, $"impact {i} rests {splay:0} degrees off the car it hit");
             }
 
             // And the whole thing walked: nothing over the copy column, nobody inside anybody they are not in
@@ -801,7 +836,9 @@ namespace Draftmaster.Sim
 
         // How far round from its own line of travel the wrecked car may lie, degrees.
         const float MinTurn = 70f;
-        const float MaxTurn = 210f;
+        // How far apart a striker's nose and the slider's it hits must point when everything stops, degrees.
+        const float MinSplay = 75f;
+        const float MaxSplay = 135f;
         // How far off straight down the screen a car piling in may be pointing, and how far its path bows.
         const float MaxLean = 6f;
         const float MaxArcPx = 10f;

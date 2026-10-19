@@ -196,6 +196,50 @@ public class TitleCrashTests
     }
 
     [Test]
+    public void NoStrikerEndsUpLinedUpWithTheCarItHit()
+    {
+        // A slider that had only come seventy degrees round off a line drifting the other way to the
+        // striker's lean finished with its nose barely fifty degrees off the striker's — two cars pointing
+        // down the screen together, which reads as a shunt rather than a T-bone. And one allowed round to
+        // facing backwards finished upright and nose to nose with it, which from above reads the same way.
+        var shots = Shots();
+        for (int seed = 1; seed <= Seeds; seed++)
+        {
+            var shot = shots[seed - 1];
+            foreach (var hit in shot.impacts)
+            {
+                float apart = Vector2.Angle(TitleCrash.Heading(shot.cars[hit.striker].endRotation),
+                                            TitleCrash.Heading(shot.cars[hit.struck].endRotation));
+                Assert.That(apart, Is.InRange(74.9f, 135.1f),
+                            $"Seed {seed}: car {hit.striker} rests {apart:0}° off the car it hit.");
+            }
+        }
+    }
+
+    [Test]
+    public void TwoWreckedCarsNeverLiePointingTheSameWay()
+    {
+        // A four-car accident is two cars that have both lost it, lying end to end. They used to share one
+        // rest angle, so the pair always pointed exactly the same way — a queue, not a wreck.
+        var shots = Shots();
+        int pairs = 0;
+        for (int seed = 1; seed <= Seeds; seed++)
+        {
+            var shot = shots[seed - 1];
+            for (int a = 0; a < shot.CarCount; a++)
+                for (int b = a + 1; b < shot.CarCount; b++)
+                {
+                    if (!shot.IsSlider(a) || !shot.IsSlider(b)) continue;
+                    pairs++;
+                    float apart = Vector2.Angle(TitleCrash.Heading(shot.cars[a].endRotation),
+                                                TitleCrash.Heading(shot.cars[b].endRotation));
+                    Assert.GreaterOrEqual(apart, 74.9f, $"Seed {seed}: wrecked cars {a},{b} rest {apart:0}° apart.");
+                }
+        }
+        Assert.Greater(pairs, 0, "No shot had two wrecked cars in it, so nothing here was tested.");
+    }
+
+    [Test]
     public void TheRandomiserActuallyRandomisesRatherThanFallingBackEveryTime()
     {
         // A composer that rejects nearly everything would still pass every constraint above — by handing back
@@ -234,7 +278,8 @@ public class TitleCrashTests
         // read as the same crash in different paint.
         //
         // And then it was only ever allowed within thirty degrees of square, so every wrecked car still lay
-        // nearly straight across the screen. It rests anywhere from 70 to 210 degrees round from its line now.
+        // nearly straight across the screen. It rests anywhere from 70 to about 140 degrees round from its
+        // line now — not on round to facing backwards, which lined it up nose to nose with its striker.
         var tilts = new HashSet<int>();
         int oneWay = 0, pastSquare = 0, wellPast = 0;
 
@@ -252,14 +297,14 @@ public class TitleCrashTests
             tilts.Add(Mathf.RoundToInt(turn / 6f));
             if (turn > 0f) oneWay++;
             if (unsigned > 100f) pastSquare++;
-            if (unsigned > 140f) wellPast++;
+            if (unsigned > 110f) wellPast++;
         }
 
         Assert.Greater(tilts.Count, 12,
                        $"The wrecked car only ever lies at {tilts.Count} distinct angles across {Seeds} shots — " +
                        "it reads as the same crash every time the game opens.");
         Assert.Greater(pastSquare, Seeds / 5, "The wrecked car almost never comes round past square.");
-        Assert.Greater(wellPast, Seeds / 12, "The wrecked car never ends up anywhere near facing backwards.");
+        Assert.Greater(wellPast, Seeds / 12, "The wrecked car never comes well past square.");
         Assert.Greater(oneWay, Seeds / 5, "The wrecked car always spins the same way.");
         Assert.Less(oneWay, Seeds * 4 / 5, "The wrecked car almost always spins the same way.");
     }

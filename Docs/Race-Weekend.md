@@ -432,7 +432,7 @@ schedule → Begin(activity) → RaceWeekend.Current = Practice/Qualifying/Race
                              WeekendDirector.PendingRouteId = activity.id
                              load RaceScene
         ← PracticeDirector "END SESSION"  (or RaceDirector classifying the race)
-          → WeekendDirector.FinishRoutedSession(outcome) → result card → schedule
+          → WeekendDirector.FinishRoutedSession(outcome) → result card (GOT IT; a hint points at the phone's SCHEDULE app — the F10 sheet no longer reopens)
 ```
 
 `PendingRouteId` is in PlayerPrefs, not a static, because the weekend reloads the scene between practice,
