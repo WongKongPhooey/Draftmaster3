@@ -123,12 +123,15 @@ public class GridSpawner : MonoBehaviour
     // The player's own field, while it is out (null for a co-op field, whose cars live at the scene root).
     // A weekend session ends in the same scene it was driven in, so this outlives the session: see Update.
     Transform _playerFieldRoot;
+    // Listening for the player sitting down in a grandstand while their own finished field is still out.
+    bool _watchingForStand;
 
     // Subscribed from Start rather than OnEnable, and only on the walk-around side: reading the weekend's
     // sheet can itself settle the ledger on the first read of a fresh weekend, and a Changed callback
     // arriving before Start has decided what to put out would race it into spawning the field twice.
     void OnDestroy()
     {
+        if (_watchingForStand) WeekendTrackState.HoldChanged -= OnStandTakenOverFinishedField;
         if (!_followingTheClock) return;
         WeekendLedger.Changed -= OnWeekendClockMoved;
         WeekendTrackState.HoldChanged -= OnWeekendClockMoved;
@@ -166,6 +169,18 @@ public class GridSpawner : MonoBehaviour
         if (RaceWeekend.SessionLive) return;
         foreach (var gs in FindObjectsByType<GridSpawner>(FindObjectsSortMode.None))
             if (gs._playerFieldRoot != null) gs.StandDownPlayerField();
+    }
+
+    // The player has gone straight from their own session to a grandstand seat without stopping at the
+    // motorhome, so their field is still parked in the boxes (or still out on its runs) — and the spawner,
+    // not yet following the clock, would leave it there while the championship they sat down to watch never
+    // appears. The stand outranks the clock, so it outranks the finished field too: hand the circuit over
+    // to whoever the seat is holding it for, behind the same blackout as any other changeover.
+    void OnStandTakenOverFinishedField()
+    {
+        if (_playerFieldRoot == null || RaceWeekend.SessionLive || !WeekendTrackState.Holding) return;
+        if (track == null || carPrefab == null || !isActiveAndEnabled) return;
+        StartCoroutine(SyncAmbientField());
     }
 
     void StandDownPlayerField()
@@ -242,6 +257,14 @@ public class GridSpawner : MonoBehaviour
         }
 
         _playerField = true;
+
+        // A weekend session ends in this scene, and the next thing the player does may be sit in a stand
+        // to watch another championship before ever reaching the motorhome. See OnStandTakenOverFinishedField.
+        if (!Coop.Active)
+        {
+            _watchingForStand = true;
+            WeekendTrackState.HoldChanged += OnStandTakenOverFinishedField;
+        }
 
         if (DatabaseManager.Instance == null)
         {
@@ -839,6 +862,10 @@ public class GridSpawner : MonoBehaviour
         WeekendTrackChangeover.Begin();
         while (WeekendTrackChangeover.HoldingOff) yield return null;
         if (token != _syncToken) yield break;
+
+        // The player's own finished field, if it is still out (the stand took the circuit before the
+        // motorhome could): it goes with the screen down, and from here this spawner follows the clock.
+        if (_playerFieldRoot != null && !RaceWeekend.SessionLive) StandDownPlayerField();
 
         ClearAmbientField();
         _ambientFor = want;
