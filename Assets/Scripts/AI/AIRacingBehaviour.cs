@@ -168,6 +168,13 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Manoeuvre Strength")]
     [Tooltip("Lateral offset (m) committed during an overtake.")]
     public float overtakeLineOffset = 3f;
+    [Tooltip("Off the lanes (road courses), a car much quicker than the one it is passing goes wider, up to this (m), " +
+             "reached at passOffsetFullDeltaMph more target pace. At 3 m a pass sat inside the road-course clear width " +
+             "(3.4 m), so the passer stayed partly capped to the car it was passing and the quickest car at Watkins Glen " +
+             "finished where it started. 0 = off.")]
+    public float fastPassOffset = 0f;
+    public float passOffsetFullDeltaMph = 8f;
+    float _passPaceDelta;
     [Tooltip("Max lateral target offset (m) from side-by-side repulsion.")]
     public float sidewaysMaxPush = 2.5f;
     [Tooltip("Lateral offset (m) when defending an inside line from a faster pursuer.")]
@@ -475,6 +482,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 }
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
                 if (wantOvertake) SetPassTarget(stoppedCar, aheadLat);
+                if (wantOvertake) _passPaceDelta = _spline.DesiredMph - ahead.DesiredMph;
             }
         }
 
@@ -669,7 +677,10 @@ public class AIRacingBehaviour : MonoBehaviour
         }
         else if (wantOvertake)
         {
-            desiredTactical = overtakeDir * overtakeLineOffset;
+            float offset = overtakeLineOffset;
+            if (fastPassOffset > overtakeLineOffset && !Lanes)
+                offset = Mathf.Lerp(overtakeLineOffset, fastPassOffset, Mathf.Clamp01(_passPaceDelta / Mathf.Max(passOffsetFullDeltaMph, 0.1f)));
+            desiredTactical = overtakeDir * offset;
             // Round a stopped car, a fixed step off our own line isn't enough: our line often runs along the same
             // edge it has stopped on, and 3 m off it left barely a car's width between the two — the pack sim had
             // the field scraping past it. Aim for a lateral clear of the car itself.

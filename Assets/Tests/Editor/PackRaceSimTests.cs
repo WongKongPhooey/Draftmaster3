@@ -628,8 +628,11 @@ public class PackRaceSimTests
         var variants = new (string name, Dictionary<string, object> racing)[]
         {
             ("current", null),
-            ("field offline 1", new Dictionary<string, object> { { "useLateralField", true }, { "fieldEverywhere", true } }),
-            ("field offline 0.5", new Dictionary<string, object> { { "useLateralField", true }, { "fieldEverywhere", true }, { "fieldOffLineCost", 0.5f } }),
+            // The pass offset (3 m) sat inside the road-course clear width (3.4 m): a car out to pass was still ~30%
+            // capped to the speed of the car it was passing. The lateral field variants (offline 1 / 0.5) were dropped.
+            // Flat 3.6 m: charger P14-18 (was P22-24), contacts 36 -> 52, HARD 8.5 -> 16.5; flat 4.2: P16-17, HARD 21.5.
+            ("fast pass 4.2 by 8 mph", new Dictionary<string, object> { { "fastPassOffset", 4.2f } }),
+            ("fast pass 4.2 by 4 mph", new Dictionary<string, object> { { "fastPassOffset", 4.2f }, { "passOffsetFullDeltaMph", 4f } }),
         };
         foreach (var (name, racing) in variants)
             foreach (int seed in new[] { 1, 2 })
