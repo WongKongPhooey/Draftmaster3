@@ -30,10 +30,14 @@ public class StrandedTow : MonoBehaviour
     [Tooltip("Seconds the car has to have been stopped before the offer appears. Long enough that a spin " +
              "the driver can drive out of does not get one.")]
     public float stoppedForSeconds = 3f;
-    [Tooltip("Only offer the tow to a car that is actually damaged. Off = any stopped car can call one.")]
+    [Tooltip("In a race, only offer the tow to a car that is actually damaged. Off = any stopped car can call one. " +
+             "Practice and qualifying offer it to any stopped car (StrandedTowRule).")]
     public bool requireDamage = true;
     [Tooltip("Damage level at or above which a stopped car counts as wrecked rather than parked.")]
     public float damageAtLeast = 0.12f;
+    [Tooltip("Practice/qualifying: seconds an UNDAMAGED car has to have been stopped before the offer appears — " +
+             "longer than stoppedForSeconds, so a spin the driver is about to drive out of does not get one.")]
+    public float undamagedStoppedForSeconds = 6f;
 
     PitLaneStart _pits;
     PlayerVehicleController _car;
@@ -94,18 +98,20 @@ public class StrandedTow : MonoBehaviour
 
     // Stopped, on the circuit, with the player actually driving it. The pit lane is excluded outright: a
     // car sat in its own box is not stranded, it is parked, and offering a tow there would be nonsense.
+    // Whether the car also has to be damaged depends on the session — see StrandedTowRule.
     bool Stranded()
     {
         if (!_pits.IsDriving || RacePauseMenu.IsPaused) return false;
 
         if (_pits.track != null && _pits.track.IsOnPitSurface(_car.transform.position)) { _stoppedSince = -1f; return false; }
 
-        if (requireDamage && (_bodywork == null || _bodywork.DamageLevel < damageAtLeast)) { _stoppedSince = -1f; return false; }
-
         if (_car.SpeedMph > stoppedBelowMph) { _stoppedSince = -1f; return false; }
 
         if (_stoppedSince < 0f) _stoppedSince = Time.time;
-        return Time.time - _stoppedSince >= stoppedForSeconds;
+        float damage = _bodywork != null ? _bodywork.DamageLevel : 0f;
+        return Draftmaster.Sim.StrandedTowRule.Offer(Time.time - _stoppedSince, damage, RaceWeekend.IsPracticeLike,
+                                                     requireDamage, damageAtLeast, stoppedForSeconds,
+                                                     undamagedStoppedForSeconds);
     }
 
     void Offer(bool show)
@@ -113,9 +119,12 @@ public class StrandedTow : MonoBehaviour
         if (show == _offering) return;
         _offering = show;
 
+        // Urgent: a sticky hint queues behind whatever is already up, and the driver cannot get past this one
+        // without it — left in the queue it never showed while another hint held the slot.
         if (show)
             ControlHints.ShowSticky("tow", towKey.ToString().ToUpperInvariant(), InputGlyphs.Pad(PadBindings.Tow),
-                                    "Call a tow back to the pits", onPress: Tow, icon: PixelGUI.ActionIcon.Tow);
+                                    "Call a tow back to the pits", urgent: true, onPress: Tow,
+                                    icon: PixelGUI.ActionIcon.Tow);
         else
             ControlHints.Hide("tow");
     }
