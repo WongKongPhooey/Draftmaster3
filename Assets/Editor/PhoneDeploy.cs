@@ -119,6 +119,16 @@ public static class PhoneDeploy
                 return;
             }
 
+            // Unity forgets keystore passwords on every editor restart, and a build signed without them stops on a
+            // password prompt that nobody answers overnight (2026-10-20: 7 hours, MCP dead the whole time).
+            string unsigned = MissingKeystorePassword();
+            if (unsigned != null)
+            {
+                Finish(s, "skipped", "", $"Version bumped. Keystore password not set ({unsigned}); re-enter it in " +
+                                         "Player Settings > Publishing Settings. Unity forgets it on restart.");
+                return;
+            }
+
             bool patch = s.request == "patch";
             string whyFull = null;
             if (patch && EditorUserBuildSettings.buildAppBundle) whyFull = "the build is set to App Bundle (patches are APK only)";
@@ -195,6 +205,15 @@ public static class PhoneDeploy
         };
         Directory.CreateDirectory(Path.GetDirectoryName(bpo.locationPathName));
         return BuildPipeline.BuildPlayer(bpo);
+    }
+
+    // Which password a custom-keystore build would have to ask for, or null when signing can go ahead unattended.
+    static string MissingKeystorePassword()
+    {
+        if (!PlayerSettings.Android.useCustomKeystore) return null;
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass)) return "keystore";
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass)) return "key alias";
+        return null;
     }
 
     // Next to the last build, named for the version: Builds/Android/Draftmaster3-Demo.0.3.9.apk (or .aab).
