@@ -77,6 +77,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
     Transform _roadTarget;
     bool _roadInside;
 
+    // Friday and Saturday nights: the evening's last obligation is done and nothing is booked until the
+    // morning (WeekendBedtime), so the strip would otherwise go blank while PitLaneStart's marker points at
+    // the motorhome. Bed gets an objective of its own, and FAST TRAVEL on it goes straight to sleep — the
+    // same lights-out, night and alarm as walking up to the bed, which is what moves the clock on.
+    static readonly WeekendActivity Bedtime = new WeekendActivity { id = "weekend.bedtime", title = "GO TO BED" };
+
     // The player's own race is over and they ended it from the results screen (RaceDirector.EndRace): the way
     // on is the road, whatever else is left on the sheet, so HIT THE ROAD is the objective from then on. Kept
     // in prefs against the weekend id, so it survives a scene load and lapses by itself when travelling starts
@@ -210,7 +216,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     void Refresh()
     {
         var activity = Booked;
-        if (activity == null && RefreshHitTheRoad()) return;
+        if (activity == null && (RefreshHitTheRoad() || RefreshBedtime())) return;
         _roadTarget = null;
         if (activity == null)
         {
@@ -323,6 +329,44 @@ public class WeekendObjectiveHUD : MonoBehaviour
         return true;
     }
 
+    // The bedtime objective. False (and nothing changed) unless PitLaneStart says the bed is live. The marker
+    // is PitLaneStart's own, so SyncMarker leaves this one alone; the strip only adds the words and the button.
+    bool RefreshBedtime()
+    {
+        var flow = PitLaneStart.Bedtime;
+        var target = flow != null ? flow.BedtimeTarget : null;
+        if (target == null) return false;
+
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        _onFoot = player != null;
+        bool inside = flow.BedtimeInside;
+        float distance = player != null ? Vector2.Distance(player.position, target.position) : -1f;
+        // "Here" is beside the bed. Stood at the motorhome door the bed is still a walk away, so the button stays.
+        bool here = inside && distance >= 0f && distance <= HereMetres;
+        int metres = Mathf.RoundToInt(Mathf.Max(0f, distance));
+
+        bool changed = _shown != Bedtime || inside != _roadInside;
+        _shown = Bedtime;
+        _roadInside = inside;
+        if (!changed && here == _here && metres == _metresLeft && _detailText.Length > 0 &&
+            _glyphVersion == InputGlyphs.Version)
+            return true;
+
+        _here = here;
+        _metresLeft = metres;
+        _glyphVersion = InputGlyphs.Version;
+
+        _detailText = !inside
+            ? $"{Capitalise(WeekendVenues.Directions(WeekendVenue.Motorhome))}  ·  {metres} m"
+            : !here
+                ? $"The bed is at the back of the motorhome  ·  {metres} m"
+                : InputGlyphs.UsingTouch
+                    ? "You're here — tap the bed to sleep"
+                    : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to sleep";
+        _footerText = "Nothing more on tonight";
+        return true;
+    }
+
     // Hang the objective on the game's own marker system rather than drawing a second set of arrows: the
     // spawn card already puts an edge-clamped icon, a distance and a fly-in on whatever the player is meant
     // to walk to, and the weekend's bookings are exactly that.
@@ -429,6 +473,18 @@ public class WeekendObjectiveHUD : MonoBehaviour
             if (Instance._roadInside) return false;
             var home = WeekendVenueAnchor.Find(WeekendVenue.Motorhome);
             return home != null && TravelTo(home.StandPosition);
+        }
+
+        // Bedtime: the trip is to bed, so it is the night itself — PitLaneStart puts the driver beside the bed
+        // under the black and wakes them the next morning.
+        if (Booked == null && Instance != null && Instance._shown == Bedtime)
+        {
+            var flow = PitLaneStart.Bedtime;
+            if (flow == null || WeekendVenueAnchor.OnFootPlayer() == null) return false;
+            PhoneUI.Close();
+            if (!flow.GoToSleep()) return false;
+            FastTravelTutorial.Travelled();
+            return true;
         }
 
         var anchor = WeekendAppointment.Where();

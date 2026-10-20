@@ -589,6 +589,14 @@ public class PitLaneStart : MonoBehaviour
     // True from the moment the driver lies down until they are back on their feet the next morning.
     public bool Sleeping => _sleeping;
 
+    // The scene's walk-up while it is bedtime and the bed is live, else null — so the objective strip can
+    // offer FAST TRAVEL to bed without walking the sheet itself. BedtimeTarget is whatever the bedtime marker
+    // is hung on: the bed from inside the motorhome, the motorhome itself from outside.
+    public static PitLaneStart Bedtime =>
+        _current != null && _current._bedtimeDue && !_current._sleeping && _current._bedMarked != null ? _current : null;
+    public Transform BedtimeTarget => _bedMarked;
+    public bool BedtimeInside => _rvRoom != null && _rvRoom.IsInside;
+
     // Put the driver to bed and wake them the next morning. False (and nothing happens) unless it is
     // actually bedtime and there is a driver on foot to do it with.
     public bool GoToSleep()
