@@ -101,6 +101,10 @@ public class GrandstandVisit : MonoBehaviour
             visit._held = true;
         }
 
+        // The gate has just put the player down on a seat inside the stand's footprint. Open the stands to them
+        // before the next physics step, or the solid block (Grandstand.BuildStructure) shoves them back out.
+        Grandstand.SetOpenToPlayer(true);
+
         // NOT completed here. The booking stays the appointment while the player is sat in the stand
         // (WeekendObjectiveHUD keeps its marker down meanwhile) and is settled by Leave — see GoBack.
 
@@ -131,6 +135,9 @@ public class GrandstandVisit : MonoBehaviour
 
         ReleaseSession();
         GrandstandRaceDirector.EndCurrent();
+
+        // Solid again. By now the player has been walked back to the gate (GoBack) or put somewhere else.
+        Grandstand.SetOpenToPlayer(false);
 
         if (_shot != null) { _shot.End(); _shot = null; }
 

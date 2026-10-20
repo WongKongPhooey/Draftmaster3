@@ -30,9 +30,43 @@ public class Grandstand : MonoBehaviour
              "paddock walker strolling across it reads as somebody stood on top of the painted crowd. Turn " +
              "off only for a stand people are meant to walk on — a ground-level viewing bank.")]
     public bool keepCrowdOff = true;
+    [Tooltip("Make the stand a solid block the on-foot player walks round rather than across. It is opened " +
+             "for as long as the player is sat in a stand watching a session (GrandstandVisit), since the gate " +
+             "puts them down inside it. Turn off for a ground-level viewing bank people are meant to walk on.")]
+    public bool solid = true;
 
     // What the keep-out volume is called, so a rebuild finds the one it made last time.
     public const string KeepOutName = "CrowdKeepOut";
+
+    // What the solid block is called, likewise.
+    public const string StructureName = "Structure";
+
+    // Every stand's solid block, so a visit can open them all at once and a stand built mid-visit comes up
+    // open too. Stands are few (a handful per circuit), so a plain list is all this needs.
+    static readonly System.Collections.Generic.List<BoxCollider2D> _structures = new();
+    static bool _openToPlayer;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _structures.Clear();
+        _openToPlayer = false;
+    }
+
+    // Let the player into (or shut them out of) every stand. GrandstandVisit opens them while the player is
+    // sat in one: the gate drops them on a seat inside the footprint, and a solid block round them would
+    // shove them back out of it on the next physics step. The crowd's keep-out is separate and stays down.
+    public static void SetOpenToPlayer(bool open)
+    {
+        _openToPlayer = open;
+        for (int i = _structures.Count - 1; i >= 0; i--)
+        {
+            if (_structures[i] == null) { _structures.RemoveAt(i); continue; }
+            _structures[i].enabled = !open;
+        }
+    }
+
+    public static bool OpenToPlayer => _openToPlayer;
 
     Mesh _mesh;
     Material _mat;
@@ -102,7 +136,45 @@ public class Grandstand : MonoBehaviour
         // Runtime only. The crowd's router is the only thing that reads the keep-out and it only runs in
         // play, whereas laying one at edit time would write a collider into all 38 track packages the next
         // time each was opened and saved. Tests call BuildKeepOut directly.
-        if (Application.isPlaying) BuildKeepOut();
+        if (Application.isPlaying)
+        {
+            BuildKeepOut();
+            BuildStructure();
+        }
+    }
+
+    // Lay (or take away) the solid block over the stand's footprint, so the player walks round the seating
+    // instead of straight across the painted crowd. Runtime only, for the same reason as the keep-out.
+    //
+    // A plain static BoxCollider2D, like a parked motorhome's: it stops the player's dynamic Rigidbody2D, and
+    // PaddockObstacles reads it as scenery for the crowd as well. Cars never reach it — a stand is set back
+    // behind the walls — and the keep-out beside it is unchanged, so the crowd still routes round a stand
+    // whose block is open while the player is watching from it.
+    public BoxCollider2D BuildStructure()
+    {
+        Transform existing = transform.Find(StructureName);
+
+        if (!solid)
+        {
+            if (existing != null) DestroyVolume(existing.gameObject);
+            return null;
+        }
+
+        var size = new Vector2(Mathf.Max(0.01f, length), Mathf.Max(0.01f, depth));
+        BoxCollider2D box = existing != null ? existing.GetComponent<BoxCollider2D>() : null;
+        if (existing == null)
+        {
+            var go = new GameObject(StructureName);
+            go.transform.SetParent(transform, false);
+            existing = go.transform;
+        }
+        if (box == null) box = existing.gameObject.AddComponent<BoxCollider2D>();
+        box.isTrigger = false;
+        if (box.size != size) box.size = size;
+        box.enabled = !_openToPlayer;
+
+        if (!_structures.Contains(box)) _structures.Add(box);
+        return box;
     }
 
     // Lay (or take away) the volume that keeps wandering NPCs off the seating.

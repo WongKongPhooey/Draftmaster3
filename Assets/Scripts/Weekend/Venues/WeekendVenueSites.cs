@@ -504,7 +504,16 @@ public class WeekendVenueSites : MonoBehaviour
             // are the same spot, and where the stand is a metre the wrong side of the fence this keeps the
             // marker on the player's side of it. (WeekendVenueAnchor enforces that anyway — this just means
             // the seat is authored where it will end up.)
-            var anchor = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, reachable, reachable,
+            // Where to stand, though, is a step in front of the stand rather than on its front row: the stand is
+            // solid (Grandstand.BuildStructure), and TRAVEL THERE dropping the player on the front row would
+            // have the physics shove them back out of it. Only where that step is walkable — otherwise the
+            // front row, as before.
+            Vector3 step = stand.transform.TransformPoint(new Vector3(0f, -stand.depth * 0.5f - 1f, 0f));
+            step.z = 0f;
+            Vector3 standAt = Walkable(step);
+            if (Vector2.Distance(standAt, step) > 0.5f) standAt = reachable;
+
+            var anchor = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, reachable, standAt,
                                              arriveRange: 4f,
                                              label: "the " + stand.name.Replace('_', ' ').ToLowerInvariant());
 

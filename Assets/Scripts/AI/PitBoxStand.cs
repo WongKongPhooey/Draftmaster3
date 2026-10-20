@@ -47,9 +47,11 @@ public class PitBoxStand : MonoBehaviour
 
     void BuildParts()
     {
-        // Cart body: dark, and slightly bigger than the canopy so it reads as a chassis under it.
+        // Cart body: dark, and slightly bigger than the canopy so it reads as a chassis under it. Solid, like
+        // every other piece of paddock furniture: the on-foot player walks round the cart, not through it.
+        // It stands standBeyondCar off the parked car, so a car in its box never reaches it.
         var body = PaddockProps.Unlit(new Color(0.13f, 0.14f, 0.17f));
-        PaddockProps.Quad(transform, "Cart", Vector2.zero, new Vector2(WidthM, LengthM), 0f, body);
+        PaddockProps.Quad(transform, "Cart", Vector2.zero, new Vector2(WidthM, LengthM), 0f, body, solid: true);
 
         // Canopy: the car's primary. This is the bit you see from the grandstand.
         _canopyMat = PaddockProps.Unlit(Color.white);
@@ -66,7 +68,7 @@ public class PitBoxStand : MonoBehaviour
         // Tyre stack behind the cart: two dark discs' worth of rectangle, enough to read as rubber.
         var rubber = PaddockProps.Unlit(new Color(0.09f, 0.09f, 0.1f));
         PaddockProps.Quad(transform, "Tyres", new Vector2(0f, -LengthM * 0.5f - 0.45f),
-                          new Vector2(WidthM - 0.5f, 0.7f), -0.01f, rubber);
+                          new Vector2(WidthM - 0.5f, 0.7f), -0.01f, rubber, solid: true);
 
         _giveUpAt = Time.time + resolveWindow;
         Repaint(Color.white, new Color(0.55f, 0.55f, 0.6f), -1);
