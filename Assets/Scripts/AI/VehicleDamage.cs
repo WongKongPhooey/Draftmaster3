@@ -93,6 +93,10 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // DentAmount grew. DamageDebris knocks bits off the car from there.
     public event System.Action<Vector2, float> Dented;
 
+    [Header("Repair")]
+    [Tooltip("Stick grey duct-tape strips over the bodywork wherever a repair (pit stop or crew) straightens it.")]
+    public bool ductTapeOnRepair = true;
+
     [Header("Damage Severity → Handling")]
     [Tooltip("Accumulated damage per unit impact severity. Higher = a few hits cripple the car.")]
     public float damageAccrual = 0.18f;
@@ -110,9 +114,15 @@ public class VehicleDamage : MonoBehaviour, IDamageable
             ? (Vector2)transform.TransformPoint(_current[_deepest])
             : (Vector2)transform.position;
 
+    // The bodywork mesh as built and as it is now, in local space. DuctTapePatches rides its tape on these.
+    public Vector3[] BaseVertices => _base;
+    public Vector3[] CurrentVertices => _current;
+
     Mesh _mesh;
     Vector3[] _base;
     Vector3[] _current;
+    Vector3[] _beforeRepair;
+    DuctTapePatches _tape;
     float[] _deformWeight;
     // The mask actually in force: the authored one, else the series' painted cell. Resolved in Build so the
     // inspector field keeps saying what a person put there rather than what the game loaded.
@@ -208,6 +218,22 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _mesh.RecalculateBounds();
         mf.sharedMesh = _mesh;
         RefreshDent();
+
+        if (ductTapeOnRepair && Application.isPlaying)
+        {
+            if (_tape == null) _tape = GetComponent<DuctTapePatches>();
+            if (_tape == null) _tape = gameObject.AddComponent<DuctTapePatches>();
+        }
+        if (_tape != null) _tape.Bind(this, sourceSprite, _base.Length);
+    }
+
+    // Hand the tape what this repair straightened: `before` is the mesh as it was, _current as it is now.
+    void TapeRepair(Vector3[] before)
+    {
+        if (_tape == null || !ductTapeOnRepair || before == null || sourceSprite == null) return;
+        Vector2 half = (Vector2)sourceSprite.bounds.size * 0.5f;
+        float pixel = sourceSprite.pixelsPerUnit > 0f ? 1f / sourceSprite.pixelsPerUnit : 0.078125f;
+        _tape.OnRepaired(_base, before, _current, half, pixel);
     }
 
     // Per-vertex deform weight, 0 = rigid, 1 = fully deformable. fx/fy are sprite-normalized [0,1].
@@ -428,8 +454,14 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         if (t <= 0f) return;
         if (t >= 1f || DamageLevel <= 0.001f) { RepairFull(); return; }
 
+        if (_tape != null)
+        {
+            if (_beforeRepair == null || _beforeRepair.Length != _current.Length) _beforeRepair = new Vector3[_current.Length];
+            System.Array.Copy(_current, _beforeRepair, _current.Length);
+        }
         for (int i = 0; i < _current.Length; i++)
             _current[i] = Vector3.Lerp(_current[i], _base[i], t);
+        TapeRepair(_beforeRepair);
 
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
@@ -512,7 +544,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     public void RepairFull()
     {
         if (_base == null || _mesh == null) return;
+        Vector3[] before = _current;
         _current = (Vector3[])_base.Clone();
+        TapeRepair(before);
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
         RefreshDent();
