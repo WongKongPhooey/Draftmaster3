@@ -52,6 +52,7 @@ public static class PaintShopInstaller
             };
             npc.interactRange = 2.4f;
             LocationTitle.Attach(go, "PAINT SCHEME DESIGNER", 4.5f, "Paint and sponsors");
+            GarageCrewDresser.Dress(go);
             changes++;
         }
 

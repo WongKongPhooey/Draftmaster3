@@ -92,7 +92,7 @@ public static class TeamGarageBuilder
         {
             Undo.RecordObject(cam, "Build Team Garage");
             cam.orthographic = true;
-            cam.orthographicSize = 7f;
+            cam.orthographicSize = 3.5f; // RaceScene's on-foot zoom (PitLaneStart.onFootOrthoSize); speech bubbles are world-sized
             cam.backgroundColor = new Color(0.08f, 0.08f, 0.09f);
             cam.transform.position = new Vector3(0f, 0f, -10f);
             var follow = cam.GetComponent<OnFootCameraFollow>();
@@ -165,6 +165,7 @@ public static class TeamGarageBuilder
         station.speakerName = RoleStation.SpeakerFor(role);
         station.interactRange = 2.4f;
         LocationTitle.Attach(go, RoleStation.SpeakerFor(role).ToUpperInvariant(), 4.5f);
+        GarageCrewDresser.Dress(go); // paddock-style paper doll in place of the disc
     }
 
     // The engineers' desk with the team laptop on it. Interacting opens the garage screen; BACK there
