@@ -130,12 +130,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         float gap = track.track.PitEntryDistanceOnLap - DistanceOnTrack;
         if (gap < 0f) gap += _mainLength;
+        // Down on the apron and past the node, still running to where pit road comes down to meet it.
+        if (gap > _mainLength * 0.5f && _apronEntryActive && ApronGapToPitJoin() > -5f) gap = 0f;
         if (gap > _mainLength * 0.5f) { ClearPitApproach(); return; }
 
         // v² = v_pit² + 2·a·d: the fastest the car can be going here and still be at the limit at the node.
         float pitMps = (track.track.pitSpeedLimit > 0f ? track.track.pitSpeedLimit : 50f) * MphToMps;
         float capMps = Mathf.Sqrt(pitMps * pitMps + 2f * Mathf.Max(0.5f, decelMps2) * gap);
         _pitApproachCapMph = capMps / MphToMps;
+
+        // An oval of a mile or more: get down onto the apron first, then slow there (OvalPitApron).
+        if (ApronPitRoad) { ApproachOnApron(gap, pitMps, decelMps2); return; }
 
         if (gap > lateralLeadM) { _pitApproachBlend = 0f; return; }
         if (_pitSide == 0f) _pitSide = MeasurePitSide();
@@ -151,6 +156,261 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         _pitApproachCapMph = float.MaxValue;
         _pitApproachBlend = 0f;
+        _apronEntryActive = false;
+    }
+
+    // ---------------------------------------------------------------- oval pit apron
+    //
+    // On an oval of a mile or more (OvalPitApron.Applies) pit road is reached along the apron. Coming in, the car
+    // drops below the racing surface BEFORE it starts braking, so it never slows in the groove with the field
+    // behind it at full speed. Going out, it leaves pit road where the lane comes up level with the apron and
+    // runs the apron through the next turns, coming back up onto the racing surface only on the back straight,
+    // and only when nothing is coming. Pit road at Daytona rejoined the main spline on its centreline 220 m
+    // short of turn 1 - every car leaving the pits popped out in the middle of the pack.
+
+    [Header("Oval Pit Apron")]
+    [Tooltip("On an oval with a paved apron, how far (m) below the inside edge of the racing surface a car pitting runs - its centre, so 1.8 puts a 2 m car fully on a 3.5 m apron.")]
+    public float apronCarOffset = 1.8f;
+    [Tooltip("On an oval WITHOUT a paved apron, how far (m) in from the inside edge of the road the pitting car's centre runs - as low as it can go without wheels on the grass.")]
+    public float apronEdgeInset = 1.2f;
+    [Tooltip("Lateral speed (m/s) a car coming in to pit moves down across the track to the apron.")]
+    public float apronDropRate = 3f;
+    [Tooltip("Extra run (m) on the apron before braking for pit road starts, so the car is settled down there first.")]
+    public float apronSettleM = 40f;
+    [Tooltip("Share of the move per second (0-1 of the blend) a car leaving the pits comes back up onto the racing line once it is on the back straight and clear.")]
+    public float apronMergeBlendPerSec = 0.3f;
+    [Tooltip("Longest (m) a car leaving the pits waits on the apron past the start of the back straight for a gap before it merges anyway.")]
+    public float apronMergeMaxWaitM = 500f;
+    [Tooltip("Seconds of closing speed a car coming from behind is given before the merge back up onto the racing surface is called clear.")]
+    public float apronMergeLookSec = 3f;
+
+    int _apronApplies = -1;          // -1 not resolved yet; 0 no; 1 this track uses the apron for pit road
+    bool _apronGeometryReady;
+    float _apronInsideSide;          // +1 / -1: which side of the track the infield (and the apron) is on
+    bool _apronPaved;                // a paved apron below the racing surface (else the lane hugs the road edge)
+    float _apronPitCutover = -1f;    // pit-lane distance a car leaving runs off onto the apron (-1 = no apron exit)
+    float _apronBackStraight = -1f;  // main distance the back straight starts at, after the pit exit
+    float _apronCutInPastNode = -1f; // main metres past the entry node where pit road meets the apron (-1 = at the node)
+    bool _apronEntryActive;
+    float _apronEntryLat;            // the commanded lateral on the drop to the apron, moved at apronDropRate
+    float _apronExitBlend;           // 1 = on the apron after pit exit, eased to 0 to merge back up
+    bool _apronExitMerging;
+    float _apronExitToGo;            // metres still to run to the back straight
+    float _apronExitWaited;          // metres run past the start of the back straight waiting for a gap
+
+    // True when this track sends pitting cars along the apron (an oval of a mile or more).
+    public bool ApronPitRoad
+    {
+        get
+        {
+            if (_apronApplies < 0)
+            {
+                string id = track != null && track.track != null ? track.track.name.Replace("(Clone)", "").Trim() : null;
+                _apronApplies = Draftmaster.Tracks.OvalPitApron.AppliesTo(id) ? 1 : 0;
+            }
+            return _apronApplies == 1;
+        }
+    }
+
+    // The lateral a pitting car runs at on the apron, at a main-spline distance.
+    float ApronLaneAt(float distance)
+    {
+        EnsureApronGeometry();
+        var s = track.SampleAt(distance, _mainSamples);
+        return Draftmaster.Tracks.OvalPitApron.LaneLateral(_apronInsideSide, s.width, _apronPaved, apronCarOffset, apronEdgeInset);
+    }
+
+    // Resolved on first use rather than in Rebuild: whether the apron is paved is read off the surface field,
+    // which the track's environment builder may not have filled yet when the car is built.
+    void EnsureApronGeometry()
+    {
+        if (_apronGeometryReady || track == null || _mainSamples == null || _mainSamples.Count < 2) return;
+        _apronGeometryReady = true;
+
+        // The infield side: whichever way the lap turns, weighted by how hard. An oval turns 360 degrees one way.
+        float sum = 0f;
+        if (_curvatureProfile != null && _insideSideProfile != null)
+            for (int i = 0; i < _curvatureProfile.Length && i < _insideSideProfile.Length; i++)
+                sum += _curvatureProfile[i] * _insideSideProfile[i];
+        _apronInsideSide = sum > 0f ? 1f : -1f;
+
+        // Paved apron: probe below the inside edge at a few points round the lap.
+        int paved = 0, probes = 0;
+        for (int k = 0; k < 8; k++)
+        {
+            var s = track.SampleAt(_mainLength * k / 8f, _mainSamples);
+            Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+            Vector2 local = s.position + right * (_apronInsideSide * (s.width * 0.5f + apronCarOffset));
+            Vector3 world = track.transform.TransformPoint(new Vector3(local.x, local.y, 0f));
+            probes++;
+            if (SurfaceField.TryGetSurface(world, out var surf) && surf == TrackEnvironment.SurfaceType.TarmacRunoff) paved++;
+        }
+        _apronPaved = probes > 0 && paved * 2 > probes;
+
+        _apronPitCutover = -1f;
+        _apronBackStraight = -1f;
+        _apronCutInPastNode = -1f;
+        if (_pitSamples == null || _pitSamples.Count < 2 || _pitLength <= 0f || track.track == null) return;
+
+        // Pit entry off the apron: the first point where pit road has gone down level with the apron lane. A car
+        // on the apron joins pit road there, where it already is, instead of at the entry node out on the
+        // centreline. A lane that never gets down there (it runs along the racing surface) is joined at the node.
+        float entry = track.track.PitEntryDistanceOnLap;
+        for (float pd = 0f; pd <= _pitLength * 0.5f; pd += 2f)
+        {
+            if (!PitLaneAgainstMain(pd, out float md, out float lat, out float lane)) break;
+            if (lat * _apronInsideSide >= Mathf.Abs(lane) - 0.5f)
+            {
+                float past = Draftmaster.Tracks.OvalPitApron.Ahead(entry, md, _mainLength);
+                if (past < _mainLength * 0.25f) _apronCutInPastNode = past;
+                break;
+            }
+        }
+
+        // Pit exit onto the apron: the first point past the pit exit line where pit road has come up level with
+        // the apron lane, on the infield side. A lane that never does (it rejoins on the far side of the track,
+        // or out in the run-off) keeps the plain exit at the end of the lane.
+        float from = Mathf.Max(track.track.PitExitLineDistance, _pitLength * 0.5f);
+        float to = _pitLength * pitExitThreshold;
+        for (float pd = from; pd <= to; pd += 2f)
+        {
+            if (!PitLaneAgainstMain(pd, out float md, out float lat, out float lane)) break;
+            if (lat * _apronInsideSide >= 0f && Mathf.Abs(lat) <= Mathf.Abs(lane) + 0.5f)
+            {
+                _apronPitCutover = pd;
+                int n = _mainSamples.Count;
+                var dist = new float[n];
+                var heading = new float[n];
+                for (int i = 0; i < n; i++)
+                {
+                    dist[i] = _mainSamples[i].distance;
+                    heading[i] = Mathf.Atan2(_mainSamples[i].tangent.y, _mainSamples[i].tangent.x) * Mathf.Rad2Deg;
+                }
+                _apronBackStraight = Draftmaster.Tracks.OvalPitApron.BackStraightStart(dist, heading, _mainLength, md);
+                if (_apronBackStraight < 0f) _apronPitCutover = -1f;
+                return;
+            }
+        }
+    }
+
+    // A point `pitDistance` down pit road against the main track: the main distance beside it, its lateral off
+    // the main centreline (+ right), and the apron lane's lateral there.
+    bool PitLaneAgainstMain(float pitDistance, out float mainDistance, out float lateral, out float lane)
+    {
+        mainDistance = lateral = lane = 0f;
+        if (_pitSamples == null || _pitSamples.Count < 2) return false;
+        var ps = track.SamplePitAt(pitDistance, _pitSamples);
+        Vector3 world = track.transform.TransformPoint(new Vector3(ps.position.x, ps.position.y, 0f));
+        mainDistance = track.NearestCenterlineDistance(world);
+        var ms = track.SampleAt(mainDistance, _mainSamples);
+        lateral = Vector2.Dot(ps.position - ms.position, new Vector2(ms.tangent.y, -ms.tangent.x));
+        lane = Draftmaster.Tracks.OvalPitApron.LaneLateral(_apronInsideSide, ms.width, _apronPaved, apronCarOffset, apronEdgeInset);
+        return true;
+    }
+
+    // How far (m) a car on the apron still has to run before it joins pit road: to the cut-in where pit road
+    // meets the apron, or to the entry node. Negative once past it. Only meaningful on an apron oval.
+    float ApronGapToPitJoin()
+    {
+        EnsureApronGeometry();
+        float join = track.track.PitEntryDistanceOnLap + Mathf.Max(0f, _apronCutInPastNode);
+        float gap = Draftmaster.Tracks.OvalPitApron.Ahead(DistanceOnTrack, join, _mainLength);
+        return gap > _mainLength * 0.5f ? gap - _mainLength : gap;
+    }
+
+    // The run-in on an apron oval. Hold race speed and move down to the apron lane at apronDropRate, starting
+    // far enough out that the move is done (plus apronSettleM) before the braking for pit road begins; the speed
+    // cap set by ApproachPitEntry only bites inside that braking distance. Pauses the move while a car is in
+    // the way below.
+    void ApproachOnApron(float gap, float pitMps, float decelMps2)
+    {
+        _pitApproachBlend = 0f;
+        float lane = ApronLaneAt(DistanceOnTrack);
+        float v = Mathf.Max(externalMotionController ? externalActualSpeedMps : speed, pitMps);
+        float brakeM = Mathf.Max(0f, (v * v - pitMps * pitMps) / (2f * Mathf.Max(0.5f, decelMps2)));
+
+        if (!_apronEntryActive)
+        {
+            float here = _hasPrevLateral ? _prevLateral - _mergeLatBias : lateralOffset;
+            float moveM = v * Mathf.Abs(lane - here) / Mathf.Max(0.5f, apronDropRate);
+            if (gap > brakeM + moveM + apronSettleM) return;
+            _apronEntryActive = true;
+            _apronEntryLat = here;
+        }
+
+        bool dropping = Mathf.Abs(lane - _apronEntryLat) > 0.01f;
+        if (!dropping)
+            _apronEntryLat = lane;   // down there: follow the lane as the road width changes
+        else if (!ApronTraffic(_apronEntryLat, lane, 2f))
+            _apronEntryLat = Mathf.MoveTowards(_apronEntryLat, lane, apronDropRate * Time.fixedDeltaTime);
+    }
+
+    // Off the pit lane onto the apron: hold the apron lane to the back straight, then merge back up.
+    void BeginApronExit()
+    {
+        _apronExitBlend = 1f;
+        _apronExitMerging = false;
+        _apronExitWaited = 0f;
+        _apronExitToGo = Draftmaster.Tracks.OvalPitApron.Ahead(DistanceOnTrack, _apronBackStraight, _mainLength);
+    }
+
+    void StepApronExit(float advanced)
+    {
+        if (_apronExitBlend <= 0f) return;
+        if (!_apronExitMerging)
+        {
+            if (_apronExitToGo > 0f) { _apronExitToGo -= advanced; return; }
+            _apronExitWaited += advanced;
+            // Up onto the racing line only when nothing is coming through the lanes between here and there - or
+            // when the wait has run on long enough that the straight is nearly gone.
+            float target = LateralAt(_distance) + lateralOffset + tacticalLateralOffset;
+            if (_apronExitWaited >= apronMergeMaxWaitM || !ApronTraffic(ApronLaneAt(_distance), target, apronMergeLookSec))
+                _apronExitMerging = true;
+            else return;
+        }
+        _apronExitBlend = Mathf.MoveTowards(_apronExitBlend, 0f, apronMergeBlendPerSec * Time.fixedDeltaTime);
+    }
+
+    // Moving across from lateral a (where I am) to b: is another car in that band (plus a car's width) alongside
+    // me, or coming from behind fast enough to be there within lookSec? Cars in my own lane - nose to tail ahead
+    // or behind - are not in the way of a sideways move.
+    bool ApronTraffic(float a, float b, float lookSec)
+    {
+        const float halfCar = 1.2f;
+        float lo = Mathf.Min(a, b) - halfCar, hi = Mathf.Max(a, b) + halfCar;
+        float myD = CentreDistanceOnTrack;
+        float myMps = externalMotionController ? externalActualSpeedMps : speed;
+        float half = _mainLength * 0.5f;
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var o = drivers[i];
+            if (o == null || o == this || o.IsOnPit || !o.isActiveAndEnabled) continue;
+            if (ApronCarInWay(o.CentreDistanceOnTrack - myD, o.LateralOnTrack, o.CurrentMph * MphToMps, myMps, half, a, lo, hi, lookSec))
+                return true;
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.gameObject == gameObject || !p.isActiveAndEnabled) continue;
+            if (ApronCarInWay(p.TrackDistance - myD, p.TrackLateral, p.SpeedMps, myMps, half, a, lo, hi, lookSec))
+                return true;
+        }
+        return false;
+    }
+
+    static bool ApronCarInWay(float rel, float lat, float theirMps, float myMps, float half, float myLat,
+                              float lo, float hi, float lookSec)
+    {
+        if (lat < lo || lat > hi || Mathf.Abs(lat - myLat) < 1f) return false;
+        if (half > 0f) { if (rel > half) rel -= 2f * half; else if (rel < -half) rel += 2f * half; }
+        const float alongside = 5.5f;   // a car length and a bit, either way
+        if (Mathf.Abs(rel) < alongside) return true;
+        if (rel > 0f) return false;   // ahead and clear
+        float closing = Mathf.Max(0f, theirMps - myMps);
+        return -rel < alongside + closing * lookSec;
     }
 
     // Which side of the main centreline the pit lane is on, 30 m down it. Same right-hand convention as Place.
@@ -400,6 +660,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
         usePitLane = onPit;
         _onPit = onPit;
+        _apronEntryActive = false;
+        _apronExitBlend = 0f;
         RejoinSplineContinuous(transform.position);
         float cap = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
         _currentMph = Mathf.Clamp(startMph, 0f, cap);
@@ -469,6 +731,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _collisionLateral = _collisionLongitudinal = 0f;
         _mergeLatBias = _mergeHeadingBias = 0f;
         _pitApproachBlend = 0f;
+        _apronEntryActive = false;
+        _apronExitBlend = 0f;
         _hasPrevLateral = false;
         speed = 0f;
         _currentMph = 0f;
@@ -527,6 +791,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (track == null) return;
         _pitExitMainPath = -1f;
         _pitSide = 0f;
+        _apronApplies = -1;
+        _apronGeometryReady = false;
         _mainSamples = track.SampleCenterline();
         _mainLength = _mainSamples.Count > 0 ? _mainSamples[_mainSamples.Count - 1].distance : 0f;
         _pitSamples = track.SamplePitCenterline();
@@ -1214,7 +1480,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _wasHeld = false;
         _droveSinceHold = true;
 
-        if (usePitLane != _onPit)
+        // Called in on an apron oval: stay on the main spline, down on the apron, until pit road comes down to
+        // meet it - committing at the node out on the centreline snapped the car's lane distance tens of metres
+        // ahead of the car.
+        bool holdForPitJoin = usePitLane && !_onPit && _apronEntryActive && ApronGapToPitJoin() > 0f;
+        if (usePitLane != _onPit && !holdForPitJoin)
         {
             // Lane switch — if entering pit, reset tires (service stop). Out-of-pit doesn't touch wear.
             if (usePitLane)
@@ -1224,6 +1494,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             _onPit = usePitLane;
             ClearPitApproach();
+            _apronExitBlend = 0f;
             // Land on the new lane at the point nearest the car's current position (no teleport to lane start),
             // carrying its current lateral as a bias that eases out — same continuous merge as the pit exit.
             RejoinSplineContinuous(transform.position);
@@ -1301,7 +1572,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             return;
         }
 
-        if (autoPitExit && _onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
+        // On an apron oval in a race, leave pit road where it comes up level with the apron and run the apron
+        // from there (not the formation lap: the field files out of the pits onto the pace car's train).
+        bool apronExit = autoPitExit && _onPit && RaceStart.IsGreen && ApronPitRoad;
+        if (apronExit) EnsureApronGeometry();
+        apronExit = apronExit && _apronPitCutover >= 0f && _distance >= _apronPitCutover;
+
+        if (autoPitExit && _onPit && _pitLength > 0f && (apronExit || _distance >= _pitLength * pitExitThreshold))
         {
             // Rejoin the main spline WITHOUT a positional jump. The authored pitExitDistance node need not line
             // up with the physical end of the pit lane, so teleporting there warps the car forward (and the
@@ -1313,8 +1590,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // track. Zeroed BEFORE the rejoin so the merge bias absorbs it and eases it out continuously.
             lateralOffset = 0f;
             length = _mainLength;
+            // Set before the rejoin so the merge bias is measured against the apron lane, not the racing line.
+            _apronExitBlend = apronExit ? 1f : 0f;
             RejoinSplineContinuous(transform.position);
+            if (apronExit) BeginApronExit();
         }
+        else if (!_onPit && _apronExitBlend > 0f)
+            StepApronExit(advanceSpeed * Time.fixedDeltaTime);
 
         if (loop && !_onPit)
         {
@@ -1496,6 +1778,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 BoundsAt(_distance, out float boundLo, out float boundHi);
                 baseLat = Mathf.Clamp(baseLat, boundLo, boundHi);
             }
+            // Leaving pit road onto the apron: Place holds the apron lane, so that is what the bias carries to.
+            if (_apronExitBlend > 0f) baseLat = Mathf.Lerp(baseLat, ApronLaneAt(_distance), _apronExitBlend);
         }
         _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -20f, 20f);
 
@@ -1617,6 +1901,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             BoundsAt(d, out float lo, out float hi);
             lat = Mathf.Clamp(lat, lo, hi);
         }
+        // Pit road on an apron oval, as Place lays it: the dynamic AI steers at this point, not at Place's pose.
+        if (_apronEntryActive)
+        {
+            float mps = Mathf.Max(1f, externalMotionController ? externalActualSpeedMps : speed);
+            lat = Mathf.MoveTowards(_apronEntryLat, ApronLaneAt(d), apronDropRate * aheadMeters / mps);
+        }
+        else if (_apronExitBlend > 0f)
+        {
+            float b = _apronExitBlend * _apronExitBlend * (3f - 2f * _apronExitBlend);
+            lat = Mathf.Lerp(lat, ApronLaneAt(d), b);
+        }
         return s.position + right * lat;
     }
 
@@ -1708,6 +2003,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // Where the line itself runs onto the run-off (lineUsesRunOff), the car may go as far as it does.
             float onLine = lateralOffset + lineLateral;
             baseLateral = Mathf.Clamp(baseLateral, Mathf.Min(boundLo, onLine), Mathf.Max(boundHi, onLine));
+        }
+        // Pit road on an apron oval: down on the apron for the run-in, and after the pit exit until the back
+        // straight. Laid over the bounds clamp - the apron is below the road the bounds describe.
+        if (!_onPit && _apronEntryActive)
+            baseLateral = _apronEntryLat;
+        else if (!_onPit && _apronExitBlend > 0f)
+        {
+            float b = _apronExitBlend * _apronExitBlend * (3f - 2f * _apronExitBlend);
+            baseLateral = Mathf.Lerp(baseLateral, ApronLaneAt(placeDistance), b);
         }
         // The pit-merge bias carries the car from its REAL pit-exit position onto the racing line. It must NOT be
         // bounds-clamped, or the car snaps (warps) onto the track edge the instant it leaves the pit lane — the

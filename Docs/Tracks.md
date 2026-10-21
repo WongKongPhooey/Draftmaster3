@@ -359,6 +359,18 @@ lanes at the other ovals miss by tens of metres. Pit road to racing surface runs
 racing line still fits. `OvalGeometryTests` covers the exact rejoin, the clearance along the chord and the
 non-parallel spread; `FormationLapSimTests` runs a full field through it with no contacts or seams.
 
+**Pitting AI use the apron.** On every oval of a mile or more (`Draftmaster.Tracks.OvalPitApron.Applies` — short
+tracks under a mile and road courses are exempt) `SplineDriver` runs pit road off the apron. Called in, a car moves
+down to the apron lane (`apronCarOffset` below the yellow line where a paved apron is found in `SurfaceField`, else
+`apronEdgeInset` inside the road's inside edge) at race speed, timed so it is down there before the pit-road braking
+begins, and joins pit road where the lane comes down level with the apron rather than at the entry node on the
+centreline. Going out, it leaves pit road where the lane comes back up level with the apron, holds the apron through
+Turns 1-2 to the start of the back straight (`OvalPitApron.BackStraightStart`), and only then merges up, once no car
+is alongside or closing in the lanes it crosses (`apronMergeMaxWaitM` caps the wait). Both overrides also reach
+`PathPointAhead`, which is what the dynamic AI actually steers at. The exit half only engages where pit road comes
+back on the infield side — at the generated ovals whose lanes still end out in the run-off the plain exit stands.
+`OvalPitApronTests.Daytona_PitsFromTheApron_AndRejoinsOnTheBackStraight` drives one car through it.
+
 **The catch fence goes all the way round.** Every wall is drawn as the SAFER barrier with its catch fence.
 Pit road used to leave across the outside wall, which cut the fence at both ends. Now that pit road is in
 the infield, the outside wall has no gaps; only the infield wall opens, where pit road crosses it.
