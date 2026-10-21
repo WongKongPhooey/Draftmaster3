@@ -182,6 +182,31 @@ public class PitCrewRepairCrewTests
         StringAssert.Contains("EndRepair(", src);
     }
 
+    [Test]
+    public void The_repair_takes_five_to_thirty_seconds_by_how_bad_the_damage_is()
+    {
+        float Seconds(float damage) =>
+            (float)Runtime("PitCrewRepair").GetMethod("RepairSeconds", BindingFlags.Public | BindingFlags.Static)
+                                           .Invoke(null, new object[] { damage, 5f, 30f });
+
+        Assert.AreEqual(5f, Seconds(0f), 0.001f, "The lightest knock still gets the crew out for five seconds.");
+        Assert.AreEqual(30f, Seconds(1f), 0.001f, "A destroyed car takes half a minute.");
+        Assert.AreEqual(17.5f, Seconds(0.5f), 0.001f, "In between, the wait scales with the damage.");
+        Assert.AreEqual(30f, Seconds(3f), 0.001f, "Damage past 1 is still a destroyed car.");
+        Assert.Less(Seconds(0.2f), Seconds(0.6f), "Harder hits take longer.");
+    }
+
+    [Test]
+    public void A_driver_who_never_got_out_is_handed_the_car_back_after_the_repair()
+    {
+        // The single-race tow used to switch the controls straight back on — which reads as "being driven",
+        // so the crew never came out and the car never straightened.
+        string tow = Source("Scripts/OnFoot/PitLaneStart.cs");
+        StringAssert.Contains("PitCrewRepair.Begin(car, handBackWhenDone: true)", tow);
+        string repair = Source("Scripts/OnFoot/PitCrewRepair.cs");
+        StringAssert.Contains("_car.enabled && !_handBackWhenDone", repair);
+    }
+
     static void Near(Vector3 expected, Vector3 actual, string message) =>
         Assert.Less(Vector3.Distance(expected, actual), Tolerance, $"{message} Expected {expected}, got {actual}.");
 

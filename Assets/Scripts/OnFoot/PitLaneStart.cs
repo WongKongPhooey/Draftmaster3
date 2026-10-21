@@ -1163,12 +1163,11 @@ public class PitLaneStart : MonoBehaviour
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
 
         // No on-foot body in this mode: the car is back in its box, the crew go to work on it, and the
-        // driver never gets out. Controls come back on the far side of the repair, the same as the car
-        // they would have climbed back into.
+        // driver never gets out. Controls stay off while the crew work and come back on the far side of
+        // the repair (PitCrewRepair hands the car back), the same as the car they would have climbed into.
         if (_player == null)
         {
-            car.enabled = true;
-            PitCrewRepair.Begin(car);
+            PitCrewRepair.Begin(car, handBackWhenDone: true);
             return true;
         }
 
