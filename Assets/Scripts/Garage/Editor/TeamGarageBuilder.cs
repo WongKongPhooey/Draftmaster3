@@ -40,7 +40,8 @@ public static class TeamGarageBuilder
         Undo.RegisterCreatedObjectUndo(root, "Build Team Garage");
 
         // --- floor + car pad ---
-        MakeQuad(root.transform, "Floor", new Vector3(0f, 0f, 0.2f), new Vector3(26f, 18f, 1f),
+        // 20 x 20 m = 256 x 256 px at the 12.8 px/m standard, sized to the Resources/Garage prop art
+        MakeQuad(root.transform, "Floor", new Vector3(0f, 0f, 0.2f), new Vector3(20f, 20f, 1f),
                  square, mat, new Color(0.16f, 0.16f, 0.18f), 0);
         MakeQuad(root.transform, "CarPad", new Vector3(0f, 0f, 0.15f), new Vector3(9f, 5f, 1f),
                  square, mat, new Color(0.22f, 0.22f, 0.25f), 1);
