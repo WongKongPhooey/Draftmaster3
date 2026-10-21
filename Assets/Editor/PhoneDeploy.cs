@@ -57,6 +57,87 @@ public static class PhoneDeploy
     [MenuItem("Draftmaster/Build/Patch And Run On Phone (No Version Bump)", priority = 202)]
     static void PatchNoBump() => Schedule("patch", bump: false);
 
+    // A Google Play upload: release (not Development) App Bundle at the current version, then the build settings go
+    // straight back to a development APK so the next After Task patch still works. Same status file, request
+    // "release"; no version bump (After Task bumps keep the version code ahead of the last upload) and no Run.
+    [MenuItem("Draftmaster/Build/Build Play Store Bundle (Release .aab)", priority = 220)]
+    static void ReleaseBundle()
+    {
+        var s = new Status { request = "release", bump = false, state = "working", startedAt = Now(), message = "queued" };
+        Write(s);
+        EditorApplication.delayCall += () => RunRelease(s);
+    }
+
+    static void RunRelease(Status s)
+    {
+        bool wasBundle = EditorUserBuildSettings.buildAppBundle;
+        bool wasDev = EditorUserBuildSettings.development;
+        try
+        {
+            s.version = PlayerSettings.bundleVersion;
+            s.versionCode = PlayerSettings.Android.bundleVersionCode;
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                Finish(s, "skipped", "", "Editor is in Play Mode; no release build.");
+                return;
+            }
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
+            {
+                Finish(s, "skipped", "", $"Active platform is {EditorUserBuildSettings.activeBuildTarget}, not Android.");
+                return;
+            }
+            // Play rejects a debug-signed bundle, so the upload keystore is a hard requirement here.
+            if (!PlayerSettings.Android.useCustomKeystore)
+            {
+                Finish(s, "skipped", "", "No custom keystore set; Google Play will not take a debug-signed bundle.");
+                return;
+            }
+            string unsigned = MissingKeystorePassword();
+            if (unsigned != null)
+            {
+                Finish(s, "skipped", "", $"Keystore password not set ({unsigned}); re-enter it in " +
+                                         "Player Settings > Publishing Settings. Unity forgets it on restart.");
+                return;
+            }
+
+            EditorUserBuildSettings.buildAppBundle = true;
+            EditorUserBuildSettings.development = false;
+            s.mode = "release";
+            s.message = $"building release bundle {s.version} (code {s.versionCode})";
+            Write(s);
+            var bpo = new BuildPlayerOptions
+            {
+                scenes = EditorBuildSettings.scenes.Where(x => x.enabled).Select(x => x.path).ToArray(),
+                target = BuildTarget.Android,
+                targetGroup = BuildTargetGroup.Android,
+                locationPathName = OutputPath(s.version, patch: false),
+                options = BuildOptions.None,
+            };
+            Directory.CreateDirectory(Path.GetDirectoryName(bpo.locationPathName));
+            var report = BuildPipeline.BuildPlayer(bpo);
+            if (report.summary.result == BuildResult.Succeeded)
+                Finish(s, "deployed", "release",
+                       $"Release bundle {bpo.locationPathName} ({report.summary.totalSize / (1024 * 1024)} MB) built in " +
+                       $"{report.summary.totalTime.TotalMinutes:0.0} min. Build settings back to development APK.");
+            else
+                Finish(s, "failed", "release",
+                       $"Release build {report.summary.result} with {report.summary.totalErrors} error(s). See Editor.log.");
+        }
+        catch (Exception e)
+        {
+            Finish(s, "failed", "release", "Exception: " + e.Message);
+            Debug.LogException(e);
+        }
+        finally
+        {
+            // Back to the everyday setup whatever happened: development APK, which After Task patches need.
+            EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.development = true;
+            if (wasBundle || !wasDev)
+                Debug.Log($"PhoneDeploy: build settings were bundle={wasBundle} development={wasDev}; now development APK.");
+        }
+    }
+
     static void Schedule(string request, bool bump = true)
     {
         var s = new Status { request = request, bump = bump, state = "working", startedAt = Now(), message = "queued" };
