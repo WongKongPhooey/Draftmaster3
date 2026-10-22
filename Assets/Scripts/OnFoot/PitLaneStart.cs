@@ -193,7 +193,8 @@ public class PitLaneStart : MonoBehaviour
     }
 
     // The chief has already had his say and the setup is already made. Getting back into the same car
-    // after a tow is not a fresh session, so it skips both and hands the controls straight over.
+    // after a tow is not a fresh session, so the briefing is skipped; in practice and qualifying the setup
+    // sheet comes up again for adjustments (OpenSetupOrDrive), on race day the controls go straight over.
     bool _briefed;
     bool _headedOut;   // SessionHud has had its reset — once a session, not again after a tow
 
@@ -763,6 +764,7 @@ public class PitLaneStart : MonoBehaviour
 
         // Nothing gets taught while a cutscene owns the screen; the beat's own Finished callback releases it.
         PlacedNPC.CutsceneFinished += OnPlacedCutsceneFinished;
+        PlayerPitService.Serviced += OnPitServiced;
         PlacedNPC.BuildAll(ctx);
         _hintsHeldForCutscene = PlacedNPC.AnyCutsceneArmed;
 
@@ -781,6 +783,7 @@ public class PitLaneStart : MonoBehaviour
     void OnDestroy()
     {
         PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
+        PlayerPitService.Serviced -= OnPitServiced;
         RunLocked = false;
         if (_gettingIn == this) _gettingIn = null;
         if (_current == this) _current = null;
@@ -1054,12 +1057,30 @@ public class PitLaneStart : MonoBehaviour
     {
         ControlHints.Hide("advance");
         _orthoTarget = drivingOrthoSize; // the talking is over — now pull back to driving distance
-        if (!showSetupPanel || _briefed) { StartDriving(null); return; }
+        if (!showSetupPanel) { StartDriving(null); return; }
 
         // Race day: the setup was settled at the race plan on race morning, in the motorhome. The pit box
         // only offers the panel in practice and qualifying — here the car runs the plan as agreed (or, when
         // the player never sat down for it, whatever the crew last had on it).
-        if (GameSession.CareerActive && RaceWeekend.Current == RaceWeekend.Session.Race)
+        bool raceDay = GameSession.CareerActive && RaceWeekend.Current == RaceWeekend.Session.Race;
+
+        // Back in the same car after a tow or a climb-out: the chief has had his say, but practice and
+        // qualifying are where the setup gets worked on, so the sheet comes up again. Only what is changed
+        // goes on — the car keeps the tyres and fuel it came in with otherwise (CarSetup.ApplyChangesTo).
+        if (_briefed)
+        {
+            if (raceDay) { StartDriving(null); return; }
+            var before = CarSetup.Load();
+            SetPhase(EntryPhase.Setup);
+            CarSetupPanelUI.Open(before, setup =>
+            {
+                setup?.ApplyChangesTo(car.gameObject, before);
+                StartDriving(null);
+            }, "ADJUST SETUP");
+            return;
+        }
+
+        if (raceDay)
         {
             StartDriving(CarSetup.ForRace(RaceWeekend.WeekendId));
             return;
@@ -1067,6 +1088,31 @@ public class PitLaneStart : MonoBehaviour
 
         SetPhase(EntryPhase.Setup);
         CarSetupPanelUI.Open(CarSetup.Load(), StartDriving);
+    }
+
+    // A completed stop in practice or qualifying: the car is held in the box with the controls off while the
+    // driver works on the setup, and handed back on CONFIRM. The crew have just fitted tyres and fuel, so the
+    // whole setup goes on — compound, and the tank filled to the chosen load rather than brimmed.
+    void OnPitServiced(PlayerVehicleController serviced)
+    {
+        if (serviced == null || serviced != car || !showSetupPanel || _challengeDrive || _player == null) return;
+        if (_phase != EntryPhase.Driving || CarSetupPanelUI.IsOpen || !RaceWeekend.SessionLive) return;
+        if (RaceWeekend.Current == RaceWeekend.Session.Race) return;
+
+        car.enabled = false;
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null) { body.linearVelocity = Vector2.zero; body.angularVelocity = 0f; }
+        ParkedCarPin.Hold(car);
+        SetPhase(EntryPhase.Setup);
+
+        CarSetupPanelUI.Open(CarSetup.Load(), setup =>
+        {
+            if (car == null) return;
+            setup?.ApplyTo(car.gameObject);
+            SetPhase(EntryPhase.Driving);
+            ParkedCarPin.Release(car);
+            car.enabled = true;
+        }, "PIT STOP SETUP");
     }
 
     // Everything is settled — apply the setup, hand the car over, and tell the rest of the scene we're driving.

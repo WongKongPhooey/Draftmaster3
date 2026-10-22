@@ -22,6 +22,10 @@ public class PlayerPitService : MonoBehaviour
     public bool repairDamage = true;
     public bool refuel = true;
 
+    // A stop has just been completed on this car: tyres, bodywork and fuel done, car still sat in the box.
+    // PitLaneStart offers the setup sheet here in practice and qualifying.
+    public static event System.Action<PlayerVehicleController> Serviced;
+
     TireModel _tires;
     VehicleDamage _bodywork;
     FuelTank _fuel;
@@ -104,6 +108,7 @@ public class PlayerPitService : MonoBehaviour
                 _serviced = true;
                 _msgTimer = 3f;
                 EndCrew(playerCar.transform.position);
+                Serviced?.Invoke(playerCar);
             }
         }
         else

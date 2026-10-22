@@ -56,4 +56,22 @@ public class SteeringRatioTests
         Assert.IsNotNull(prefab.transform.Find("Panel/Steering/Value")?.GetComponent<Text>(),
                          "CarSetupPanel has no Panel/Steering/Value label.");
     }
+
+    // The steering row shipped in 0.7.6 with a localScale of 0 — present, wired, and invisible on every
+    // screen. Nothing in the panel has any business being scaled away.
+    [Test]
+    public void NothingInTheSetupPanelIsScaledToNothing()
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PanelPrefab);
+        Assert.IsNotNull(prefab, $"{PanelPrefab} is missing.");
+
+        foreach (var t in prefab.GetComponentsInChildren<Transform>(true))
+        {
+            // The root is an overlay Canvas: its scale is driven at runtime and saved as zero.
+            if (t == prefab.transform) continue;
+            var s = t.localScale;
+            Assert.IsFalse(Mathf.Approximately(s.x, 0f) || Mathf.Approximately(s.y, 0f),
+                           $"{AnimationUtility.CalculateTransformPath(t, prefab.transform)} has localScale {s}.");
+        }
+    }
 }

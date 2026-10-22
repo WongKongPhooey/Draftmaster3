@@ -74,6 +74,36 @@ public class CarSetup
         }
     }
 
+    // Push only what the driver changed against `before` (what the panel opened on) onto a car that has been
+    // run on. The car sat in its box after a tow is as worn and as light as it came in, and re-applying the
+    // whole setup would hand it a fresh set and a full load for crashing. Rules in SetupAdjustment.
+    public void ApplyChangesTo(GameObject car, CarSetup before)
+    {
+        if (car == null) return;
+        if (before == null) { ApplyTo(car); return; }
+
+        if (SetupAdjustment.FitsNewTyres((int)before.compound, (int)compound))
+        {
+            var tires = car.GetComponent<TireModel>();
+            if (tires == null) tires = car.AddComponent<TireModel>();
+            tires.SetCompound(compound);
+        }
+
+        if (SetupAdjustment.ChangesFuel(before.fuelLitres, fuelLitres))
+        {
+            var tank = car.GetComponent<FuelTank>();
+            if (tank == null) tank = car.AddComponent<FuelTank>();
+            tank.fuelLitres = Mathf.Clamp(fuelLitres, 0f, tank.capacityLitres);
+        }
+
+        var pvc = car.GetComponent<PlayerVehicleController>();
+        if (pvc != null)
+        {
+            pvc.understeerBias = UndersteerBias;
+            pvc.steeringRatio = SteeringRatio.Clamp(steeringRatio);
+        }
+    }
+
     const string KeyCompound = "setup.compound";
     const string KeyFuel = "setup.fuel";
     const string KeyBalance = "setup.balance";
