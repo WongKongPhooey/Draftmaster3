@@ -40,6 +40,7 @@ public class TrackMiniMap : MonoBehaviour
     public Color trackLineColor = new Color(0f, 0f, 0f, 0f);
 
     TrackBuilder _builder;
+    TrackInfoV2 _bakedTrack;  // the geometry _mapTex was drawn from
     Texture2D _mapTex;
     Rect _worldRect;      // world-space bounds baked into the map texture
     float _pollTimer;
@@ -77,13 +78,18 @@ public class TrackMiniMap : MonoBehaviour
         if (_pollTimer > 0f) return;
         _pollTimer = 1f;
 
-        // Scene change: the TrackBuilder died, so the baked map is stale.
-        if (_builder == null)
+        // Follow the road the race is actually on, and redraw whenever it changes. This used to grab whatever
+        // TrackBuilder a scene search turned up first and bake it once, and only look again once that builder
+        // had been destroyed — so a map baked off the wrong road (a displaced package, or Watkins Glen, the
+        // default track, picked up before the selected one) stayed on screen at every track after it.
+        var current = ResolveBuilder();
+        if (Draftmaster.Tracks.MiniMapBinding.NeedsRebake(_builder, _bakedTrack, current,
+                                                          current != null ? current.track : null, _mapTex != null))
         {
-            _mapTex = null;
-            _builder = FindAnyObjectByType<TrackBuilder>();
-            if (_builder == null) return;
+            _builder = current;
+            DropMap();
         }
+        if (_builder == null) return;
         if (_mapTex == null) BakeMap();
 
         // Point at the field register and the car register; both stay current on their own, and positions
@@ -92,8 +98,25 @@ public class TrackMiniMap : MonoBehaviour
         if (_playerCar == null || !_playerCar.isActiveAndEnabled) _playerCar = PlayerVehicleController.Human;
     }
 
+    // The race scene's road is the active package's; the scene search is only for a hand-built test scene
+    // with no package around its TrackBuilder.
+    static TrackBuilder ResolveBuilder()
+    {
+        var active = TrackPackage.ActiveTrack;
+        if (active != null && active.isActiveAndEnabled) return active;
+        return FindAnyObjectByType<TrackBuilder>();
+    }
+
+    void DropMap()
+    {
+        if (_mapTex != null) Destroy(_mapTex);
+        _mapTex = null;
+        _bakedTrack = null;
+    }
+
     void BakeMap()
     {
+        if (_builder.track == null) return;
         var main = _builder.SampleCenterline();
         if (main == null || main.Count < 2) return;
         var pit = _builder.SamplePitCenterline();
@@ -151,6 +174,7 @@ public class TrackMiniMap : MonoBehaviour
 
         _mapTex.SetPixels32(pxs);
         _mapTex.Apply();
+        _bakedTrack = _builder.track;
     }
 
     Vector2 WorldToMap01(Vector2 world)
@@ -176,7 +200,9 @@ public class TrackMiniMap : MonoBehaviour
 
     void OnGUI()
     {
-        if (!Visible || _mapTex == null || RacePauseMenu.IsPaused || !DuringPlayersSession) return;
+        // `_builder == null` too: the road it was drawn from has gone (scene change) and the next poll has not
+        // rebaked yet — no flash of the last track's map over the new one.
+        if (!Visible || _mapTex == null || _builder == null || RacePauseMenu.IsPaused || !DuringPlayersSession) return;
 
         // Sat above the speedometer rather than on top of it. This is IMGUI in raw screen pixels while the
         // dial is on a scaled canvas, so the clearance is converted with the same factor CanvasScaler uses
