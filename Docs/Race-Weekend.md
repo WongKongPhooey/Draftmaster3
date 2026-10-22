@@ -164,6 +164,14 @@ moment the session it belongs to is over. Somebody else's field is deliberately 
 player's — `ambientCount` cars (16 by default, against a 43-car race) on the kinematic `SplineDriver`
 brain rather than the full dynamic model, in that series' own carset (`cts25` / `xfi25` / `cup26`).
 
+**A race watched from the grandstand is the exception: it runs the full dynamic model**, the same
+`PlayerVehicleController` + `SplineInputDriver` pipeline as the player's own field
+(`GridSpawner.DriveWithDynamicModel`). The player is not driving, so it costs no more than their own race,
+and pack racing needs it — the restrictor plate, flat-out turns, the tow the pack brain reads and the push
+all live in the dynamic car; on the kinematic brain a Daytona truck field strung out single file from the
+green. The whole grid rolls off the last corner at one speed (the slowest slot's race pace), not each car
+at its own pace, which had the front row pulling away from rows still in the corner.
+
 **The handover happens behind a blackout.** Giving pit road from one championship to the next is a lot of
 things moving at once — a field cleared off the lap, another one stood up around it, the box ladder
 refitted, and a crew and a pit stand rebuilt in the new colours on every box — and watched from the paddock

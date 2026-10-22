@@ -78,7 +78,7 @@ fans through the fence, rep under the hospitality awning.
 **The circuit belongs to whoever is running**: `WeekendTrackSessions` / `WeekendTrackState` read the
 sheet's clock, so `GridSpawner` puts a field out only for a designated practice, qualifying or race —
 the player's own (the full race scene) or another championship's (a cheap kinematic field they cannot
-join) — and nothing at all during meetings, media, signings and sponsor duties. The two championships
+join — except a race watched from the grandstand, which runs the full dynamic model) — and nothing at all during meetings, media, signings and sponsor duties. The two championships
 the player is not in run every round whether anybody watches; `SeasonChampionships` folds those
 results into three points tables, gated so Sunday's result is not readable on Friday.
 

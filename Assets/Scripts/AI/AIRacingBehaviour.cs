@@ -279,6 +279,16 @@ public class AIRacingBehaviour : MonoBehaviour
     SplineDriver _leaderMoveSeen;   // the leader whose current lane change we have already decided about
     int _leaderMoveLane = -1;
     PlayerVehicleController _pvc;
+    // The slipstream this car's dynamic model is catching. Looked up late: GridSpawner adds the brain (via
+    // AIDriverBinding.Apply) before the dynamic model, so at Awake there is no car to ask yet and the tow read 0.
+    float Tow
+    {
+        get
+        {
+            if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
+            return _pvc != null && _pvc.enabled ? _pvc.TowFactor : 0f;
+        }
+    }
     readonly LateralField _field = new LateralField();
     bool _wasGreen;
     float _greenSeconds;
@@ -1279,7 +1289,7 @@ public class AIRacingBehaviour : MonoBehaviour
         // 2. A quicker lane beside, 3. a new lane with a run, or 4. tuck into a line.
         int best = -1;
         float bestScore = 0f;
-        float tow = _pvc != null ? _pvc.TowFactor : 0f;
+        float tow = Tow;
         bool haveRun = lead != null && leadGap < 30f && myMph - leadMph > packRunMph;
         bool nerve = lead != null && leadGap < packFollowGap * 1.6f && tow > 0.5f
                      && Random.value < packPullOutChance * _phaseAggression;
@@ -1352,7 +1362,7 @@ public class AIRacingBehaviour : MonoBehaviour
         float half = LaneSpacing * 0.8f;
         // Pulling out of a tow costs the tow: judge the gap behind on the speed we'll have once out in the air, or
         // we drop in front of a car that's still in a tow and quicker than we're about to be.
-        float tow = _pvc != null ? _pvc.TowFactor : 0f;
+        float tow = Tow;
         var vi = _spline.vehicleInfo;
         float towLoss = vi != null ? vi.draftingTopSpeedGain * TrackConditions.DraftScale * tow : 0f;
         float myMps = _spline.CurrentMph * MphToMps;

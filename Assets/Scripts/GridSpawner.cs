@@ -607,53 +607,7 @@ public class GridSpawner : MonoBehaviour
                 label.teamName = $"Team {label.teamId}";
             }
 
-            if (dynamicAI)
-            {
-                // Hand motion to the player's dynamic model; SplineDriver stays the path/speed brain.
-                splineDriver.externalMotionController = true;
-
-                var pvc = go.GetComponent<PlayerVehicleController>();
-                if (pvc == null) pvc = go.AddComponent<PlayerVehicleController>();
-                pvc.vehicleInfo = vehicleInfo;
-                pvc.track = track;
-                pvc.spriteFacesUp = false;   // match the AI sprite convention used by SplineDriver
-                pvc.angleOffsetDeg = 180f;
-                pvc.grassTrails = false;     // perf: no trail renderers across a full AI field
-                pvc.enableWheelspin = false; // AI launch cleanly; no donuts off the line
-                pvc.externalInput = true;
-                if (aiCorneringStiffness > 0f) pvc.corneringStiffness = aiCorneringStiffness;
-                pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
-
-                var input = go.GetComponent<SplineInputDriver>();
-                if (input == null) input = go.AddComponent<SplineInputDriver>();
-                input.steerGain = aiSteerGain;
-                input.speedGain = aiSpeedGain;
-
-                // Breaks down when too damaged and retires off the circuit when stuck (race only).
-                if (go.GetComponent<AIRetirement>() == null) go.AddComponent<AIRetirement>();
-
-                // Deformable bodywork so AI dent like the player. A SpriteRenderer and the MeshRenderer that
-                // VehicleDamage requires can't share a GameObject, so replace the sprite with the deformable mesh —
-                // mirroring the player car (VehicleDamage + MeshRenderer, no SpriteRenderer). Added before
-                // VehicleCollision, which caches the IDamageable in Awake.
-                if (sr != null && sr.sprite != null && sr.GetComponent<VehicleDamage>() == null)
-                {
-                    var srGo = sr.gameObject;
-                    var spr = sr.sprite;
-                    DestroyImmediate(sr);
-                    var dmg = srGo.AddComponent<VehicleDamage>();
-                    dmg.sourceSprite = spr;
-                    dmg.material = null;          // auto-build an unlit per-car material from the sprite
-                    dmg.sortingLayer = "Default";
-                    dmg.sortingOrder = carSortingOrder;
-                    // Built around the safety cell of the championship these cars are racing in, pinned at
-                    // spawn rather than read live. A truck with a stock car's tub in it folds in the wrong
-                    // places, and the player's entry can change between one session and the next.
-                    dmg.overrideSeries = true;
-                    dmg.series = SeriesCatalog.PlayerSeries;
-                    dmg.Build();
-                }
-            }
+            if (dynamicAI) DriveWithDynamicModel(go, splineDriver, sr, SeriesCatalog.PlayerSeries);
 
             if (aiEngineSound != null)
             {
@@ -1017,17 +971,24 @@ public class GridSpawner : MonoBehaviour
                 if (livery != null) sr.sprite = livery;
             }
 
-            // Kinematic: SplineDriver writes the transform itself. The full dynamic model is what the
-            // player's own field costs, and a session they are only listening to must not cost that.
-            DisableIfPresent<PlayerVehicleController>(go);
-            DisableIfPresent<SplineInputDriver>(go);
+            // Traffic is kinematic: SplineDriver writes the transform itself. The full dynamic model is what the
+            // player's own field costs, and a session they are only listening to must not cost that. A watched
+            // race is the exception — the player is not driving, so it costs no more than their own race does,
+            // and without the dynamic car there is no plate, no tow worth the name and no push: a Daytona field
+            // strung out single file from the green.
+            bool dynamicRace = watchedRace && dynamicAI;
+            if (!dynamicRace)
+            {
+                DisableIfPresent<PlayerVehicleController>(go);
+                DisableIfPresent<SplineInputDriver>(go);
+            }
 
             var splineDriver = go.GetComponent<SplineDriver>();
             if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
             splineDriver.track = track;
             splineDriver.vehicleInfo = vehicleInfo;
             splineDriver.cornerSpeedScale = aiCornerSpeedScale;
-            splineDriver.externalMotionController = false;
+            splineDriver.externalMotionController = dynamicRace;
             splineDriver.loop = true;
             splineDriver.spawnInPit = false;
             splineDriver.startDistance = Wrap(sfAnchor + i * gap, lapLength);
@@ -1070,14 +1031,9 @@ public class GridSpawner : MonoBehaviour
             binding.Apply();   // adds AIRacingBehaviour/TireState, rebuilds the spline
 
             var racing = watchedRace ? go.GetComponent<AIRacingBehaviour>() : null;
-            if (racing != null)
-            {
-                racing.RaceAsWatchedField();
-                // Already at racing speed for wherever on the lap the car appears (the profile exists now Apply
-                // has rebuilt the spline), not rolling off a grid.
-                float paceMph = splineDriver.RacePaceMphAt(splineDriver.startDistance, TrackConditions.AiPaceMultiplier);
-                if (paceMph > 1f) splineDriver.speed = paceMph / 2.237f;
-            }
+            if (racing != null) racing.RaceAsWatchedField();
+
+            if (dynamicRace) DriveWithDynamicModel(go, splineDriver, sr, live.series);
 
             if (aiEngineSound != null)
             {
@@ -1122,8 +1078,27 @@ public class GridSpawner : MonoBehaviour
             }
         }
 
-        if (watchedRace && lapLength > 0f)
-            GrandstandRaceDirector.Begin(raceCars, raceNames, raceStarts, lapLength);
+        if (watchedRace)
+        {
+            // A rolling start, the whole grid at one speed: the pace the slowest slot can carry (the profile
+            // exists now Apply has rebuilt each spline). Each car at its own pace for where it sat put the front
+            // row on the straight pulling away from rows still in the corner, and the field was strung out
+            // before anybody raced.
+            float startMph = float.MaxValue;
+            foreach (var car in raceCars)
+            {
+                float paceMph = car.RacePaceMphAt(car.startDistance, TrackConditions.AiPaceMultiplier);
+                if (paceMph > 1f) startMph = Mathf.Min(startMph, paceMph);
+            }
+            if (startMph < float.MaxValue)
+                foreach (var car in raceCars)
+                {
+                    car.speed = startMph / 2.237f;
+                    car.PlaceAtStartDistance();   // re-seed the commanded speed the dynamic model launches from
+                }
+
+            if (lapLength > 0f) GrandstandRaceDirector.Begin(raceCars, raceNames, raceStarts, lapLength);
+        }
     }
 
     // How far (m along the centerline) the exit of the last corner is short of the start/finish line, or -1 if
@@ -1186,6 +1161,59 @@ public class GridSpawner : MonoBehaviour
     // from the start-finish anchor has to come back round rather than run off the end of the spline.
     static float Wrap(float distance, float lapLength) =>
         lapLength > 0f ? ((distance % lapLength) + lapLength) % lapLength : Mathf.Max(0f, distance);
+
+    // Hand a car's motion to the player's dynamic model; SplineDriver stays the path/speed brain. Every field
+    // that races goes through here: the player's own, and another championship's race watched from the stand —
+    // pack racing at a plated track is the plate, the tow and the push, and all three live in the dynamic car.
+    // `cell` is the championship whose safety cell the bodywork is built around.
+    void DriveWithDynamicModel(GameObject go, SplineDriver splineDriver, SpriteRenderer sr, RacingSeries cell)
+    {
+        splineDriver.externalMotionController = true;
+
+        var pvc = go.GetComponent<PlayerVehicleController>();
+        if (pvc == null) pvc = go.AddComponent<PlayerVehicleController>();
+        pvc.enabled = true;
+        pvc.vehicleInfo = vehicleInfo;
+        pvc.track = track;
+        pvc.spriteFacesUp = false;   // match the AI sprite convention used by SplineDriver
+        pvc.angleOffsetDeg = 180f;
+        pvc.grassTrails = false;     // perf: no trail renderers across a full AI field
+        pvc.enableWheelspin = false; // AI launch cleanly; no donuts off the line
+        pvc.externalInput = true;
+        if (aiCorneringStiffness > 0f) pvc.corneringStiffness = aiCorneringStiffness;
+        pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
+
+        var input = go.GetComponent<SplineInputDriver>();
+        if (input == null) input = go.AddComponent<SplineInputDriver>();
+        input.enabled = true;
+        input.steerGain = aiSteerGain;
+        input.speedGain = aiSpeedGain;
+
+        // Breaks down when too damaged and retires off the circuit when stuck (race only).
+        if (go.GetComponent<AIRetirement>() == null) go.AddComponent<AIRetirement>();
+
+        // Deformable bodywork so AI dent like the player. A SpriteRenderer and the MeshRenderer that
+        // VehicleDamage requires can't share a GameObject, so replace the sprite with the deformable mesh —
+        // mirroring the player car (VehicleDamage + MeshRenderer, no SpriteRenderer). Added before
+        // VehicleCollision, which caches the IDamageable in Awake.
+        if (sr != null && sr.sprite != null && sr.GetComponent<VehicleDamage>() == null)
+        {
+            var srGo = sr.gameObject;
+            var spr = sr.sprite;
+            DestroyImmediate(sr);
+            var dmg = srGo.AddComponent<VehicleDamage>();
+            dmg.sourceSprite = spr;
+            dmg.material = null;          // auto-build an unlit per-car material from the sprite
+            dmg.sortingLayer = "Default";
+            dmg.sortingOrder = carSortingOrder;
+            // Built around the safety cell of the championship these cars are racing in, pinned at
+            // spawn rather than read live. A truck with a stock car's tub in it folds in the wrong
+            // places, and the player's entry can change between one session and the next.
+            dmg.overrideSeries = true;
+            dmg.series = cell;
+            dmg.Build();
+        }
+    }
 
     static void DisableIfPresent<T>(GameObject go) where T : MonoBehaviour
     {
