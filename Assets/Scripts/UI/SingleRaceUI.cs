@@ -497,7 +497,7 @@ public class SingleRaceUI : MonoBehaviour
     }
 
     const float RowPitch = 22f;
-    static readonly Vector2 ButtonSize = new(56f, 24f);
+    static readonly Vector2 ButtonSize = new(56f, Draftmaster.Controls.UIButton.KitPx);
 
     void AddButton(RectTransform root, string name, string caption, float right, UnityEngine.Events.UnityAction onPress)
     {

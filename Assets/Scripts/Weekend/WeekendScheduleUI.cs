@@ -142,7 +142,7 @@ public class WeekendScheduleUI : MonoBehaviour
 
         float cy = DrawHeader(c, timetable);
         // Day tabs and footer buttons grow on a phone, where their labels are set in the dialogue face.
-        float buttonH = PixelGUI.ButtonH(PixelGUI.Px(18f));
+        float buttonH = PixelGUI.MenuButtonH;
         cy += DrawDayStrip(new Rect(c.x, cy, c.width, buttonH)) + PixelGUI.Px(6f);
 
         float railW = PixelGUI.Px(196f);
@@ -359,7 +359,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 warn.normal.textColor = wc;
             }
 
-            float bh = PixelGUI.ButtonH(PixelGUI.Px(18f));
+            float bh = PixelGUI.MenuButtonH;
             float by = Mathf.Min(iy + PixelGUI.Px(2f), r.yMax - PixelGUI.Px(72f) - bh);
             bool can = WeekendLedger.CanDo(a, out string why);
             if (can)

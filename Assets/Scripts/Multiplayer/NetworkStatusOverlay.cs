@@ -16,6 +16,7 @@ public class NetworkStatusOverlay : MonoBehaviour
     void Awake()
     {
         ResolveRefs();
+        IronOvalUI.StandardiseButton(copyButton);   // every screen's button height and caption (UIButton)
         if (copyButton != null) copyButton.onClick.AddListener(CopyCode);
     }
 

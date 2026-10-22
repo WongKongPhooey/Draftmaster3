@@ -325,6 +325,9 @@ public class TeamSwitchController : MonoBehaviour
         // On the window, not in the layout column, so it sits in the corner opposite the title.
         _close = IronOvalUI.Button(window, "Close", "X", new Vector2(14f, 12f));
         var xrt = (RectTransform)_close.transform;
+        // A window's corner close glyph, not a button in the menu sense: it keeps the title row's height
+        // rather than the standard button's, or it would hang down over the first car.
+        xrt.sizeDelta = new Vector2(14f, 12f);
         xrt.anchorMin = xrt.anchorMax = xrt.pivot = new Vector2(1f, 1f);
         xrt.anchoredPosition = new Vector2(-4f, -4f);
         _close.onClick.AddListener(() => _hidden = true);
@@ -348,7 +351,7 @@ public class TeamSwitchController : MonoBehaviour
             plate.color = PixelGUI.PlateDeep;
             var le = btnGO.GetComponent<LayoutElement>();
             le.preferredWidth = 108f;
-            le.preferredHeight = 16f;
+            le.preferredHeight = Draftmaster.Controls.UIButton.KitPx;   // one button height, as every screen's
 
             var btn = btnGO.GetComponent<Button>();
             btn.transition = Selectable.Transition.ColorTint;

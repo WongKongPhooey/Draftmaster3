@@ -61,12 +61,12 @@ public static class DemoUIPrefabMenu
         TopLeft(tyreLabel.rectTransform, 46f, -8f, 240f, 36f);
 
         var soft = NewButton("SoftButton", tyres, "SOFT", Accent, Ink);
-        TopLeft(soft.GetComponent<RectTransform>(), 260f, -4f, 200f, 52f);
+        TopLeft(soft.GetComponent<RectTransform>(), 260f, -4f, 200f, 60f);
         var hard = NewButton("HardButton", tyres, "HARD", Idle, Muted);
-        TopLeft(hard.GetComponent<RectTransform>(), 480f, -4f, 200f, 52f);
+        TopLeft(hard.GetComponent<RectTransform>(), 480f, -4f, 200f, 60f);
 
         var note = NewText("Note", tyres, "Softs: more grip, gone sooner.", 17, BodyFont, Muted, TextAnchor.MiddleLeft);
-        TopLeft(note.rectTransform, 262f, -62f, 460f, 32f);
+        TopLeft(note.rectTransform, 262f, -68f, 460f, 32f);
 
         // --- Fuel
         var fuel = NewGroup("Fuel", panel.transform);

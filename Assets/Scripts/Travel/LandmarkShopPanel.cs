@@ -123,7 +123,9 @@ public class LandmarkShopPanel : MonoBehaviour
         var rrt = (RectTransform)row.transform;
         rrt.anchorMin = new Vector2(0, 1); rrt.anchorMax = new Vector2(1, 1); rrt.pivot = new Vector2(0.5f, 1);
         rrt.anchoredPosition = new Vector2(0, -y);
-        rrt.sizeDelta = new Vector2(0, 92);
+        float buyH = IronOvalUI.ButtonHeight();
+        float rowH = Mathf.Max(92f, 34f + buyH + 4f);
+        rrt.sizeDelta = new Vector2(0, rowH);
 
         bool installed = PlayerCarBuild.InstalledId(part.slot) == part.id;
 
@@ -148,10 +150,11 @@ public class LandmarkShopPanel : MonoBehaviour
             var brt = (RectTransform)btnGo.transform;
             brt.anchorMin = new Vector2(1, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(1, 1);
             brt.anchoredPosition = new Vector2(0, -34);
-            brt.sizeDelta = new Vector2(170, 50);
+            brt.sizeDelta = new Vector2(170, buyH);
             btnGo.GetComponent<Image>().color = new Color(0.18f, 0.42f, 0.80f);
 
-            var label = MakeText("Label", btnGo.transform, 22, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
+            var label = MakeText("Label", btnGo.transform, 24, FontStyle.Normal, TextAnchor.MiddleCenter, Color.white);
+            IronOvalUI.ButtonCaption(label, Color.white);
             label.text = free ? "COLLECT" : PlayerWallet.Format(price);
             var lrt = label.rectTransform;
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
@@ -173,7 +176,7 @@ public class LandmarkShopPanel : MonoBehaviour
             });
         }
 
-        return y + 96;
+        return y + rowH + 4f;
     }
 
     // ---------------- construction ----------------

@@ -496,7 +496,7 @@ public class RaceDirector : MonoBehaviour
             if (_panelHidden)
             {
                 if (PixelGUI.Button(new Rect(Screen.width - PixelGUI.Px(96f), PixelGUI.Px(38f),
-                                             PixelGUI.Px(88f), PixelGUI.ButtonH(PixelGUI.Px(20f))), "RESULTS"))
+                                             PixelGUI.Px(88f), PixelGUI.MenuButtonH), "RESULTS"))
                     _panelHidden = false;
             }
             else
@@ -568,7 +568,7 @@ public class RaceDirector : MonoBehaviour
         float bandH = PixelGUI.Px(18f);
         // Buttons on a phone carry the dialogue-sized face and grow to fit it; the rail they stack in can then
         // outgrow the classification, so the panel is made tall enough for whichever is longer.
-        float bh = PixelGUI.ButtonH(PixelGUI.Px(18f));
+        float bh = PixelGUI.MenuButtonH;
         float railH = PixelGUI.Px(20f) + (GameSession.CareerActive
             ? PixelGUI.Px(94f) + (bh + PixelGUI.Px(4f))
             : 3f * (bh + PixelGUI.Px(4f)));

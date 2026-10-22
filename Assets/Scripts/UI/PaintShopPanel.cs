@@ -302,7 +302,7 @@ public class PaintShopPanel : MonoBehaviour
         y = Heading(crt, "LIVERY", y + 8f);
         _pattern = Stepper(crt, y, step => CyclePattern(step), out var patternLeft);
         _firstButton = patternLeft;
-        y += 60f;
+        y += RowPitch;
 
         _accentRow = new GameObject("AccentRow", typeof(RectTransform));
         _accentRow.transform.SetParent(crt, false);
@@ -321,7 +321,7 @@ public class PaintShopPanel : MonoBehaviour
             At(label.rectTransform, ColX, y, 300, 52);
             var captured = slot;
             _slotText[slot] = Stepper(crt, y, step => CycleSponsor(captured, step), out _, x: ColX + 300f, width: 400f);
-            y += 60f;
+            y += RowPitch;
         }
 
         // --- footer ---
@@ -383,24 +383,28 @@ public class PaintShopPanel : MonoBehaviour
         return y + rows * (size + gap) + 4f;
     }
 
+    // A stepper row: one button tall with 4px clear under it.
+    static float RowPitch => IronOvalUI.ButtonHeight() + 4f;
+
     // [<]  value  [>]
     Text Stepper(RectTransform parent, float y, Action<int> step, out Button left, float x = ColX, float width = 700f)
     {
         left = MakeButton("<", parent, x, y, 60, () => step(-1));
         MakeButton(">", parent, x + width - 60, y, 60, () => step(+1));
         var value = Label("Value", parent, _font, 26, PixelGUI.Text, TextAnchor.MiddleCenter);
-        At(value.rectTransform, x + 64, y, width - 128, 52);
+        At(value.rectTransform, x + 64, y, width - 128, IronOvalUI.ButtonHeight());
         return value;
     }
 
     Button MakeButton(string text, RectTransform parent, float x, float y, float w, UnityEngine.Events.UnityAction onClick)
     {
         var img = Box("Button", parent, PixelGUI.PlateLight);
-        At(img.rectTransform, x, y, w, 52);
+        At(img.rectTransform, x, y, w, IronOvalUI.ButtonHeight());   // every screen's button height (UIButton)
         var b = img.gameObject.AddComponent<Button>();
         b.targetGraphic = img;
         b.onClick.AddListener(onClick);
-        var t = Label("Text", img.rectTransform, BrandFonts.Display, 16, PixelGUI.Gold, TextAnchor.MiddleCenter);
+        var t = Label("Text", img.rectTransform, BrandFonts.Display, 24, PixelGUI.Gold, TextAnchor.MiddleCenter);
+        IronOvalUI.ButtonCaption(t, PixelGUI.Gold);
         t.text = text;
         Stretch(t.rectTransform);
         return b;

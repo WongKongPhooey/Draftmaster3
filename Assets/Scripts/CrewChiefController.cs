@@ -420,7 +420,7 @@ public class CrewChiefController : MonoBehaviour
 
         // "Timing" sits above the headset — only while acting as crew chief. Opens the full-field timing
         // screen (lap times from LapTimingManager).
-        var timing = IronOvalUI.TabButton(canvas.transform, "TimingButton", "TIMING", new Vector2(56f, 16f));
+        var timing = IronOvalUI.TabButton(canvas.transform, "TimingButton", "TIMING", new Vector2(56f, Draftmaster.Controls.UIButton.KitPx));
         var timingRoot = (RectTransform)timing.transform.parent;
         Corner(timingRoot, new Vector2(buttonCorner.x, buttonCorner.y + buttonSize + 6f));
         timing.onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
@@ -437,7 +437,7 @@ public class CrewChiefController : MonoBehaviour
 
     GameObject WatchButton(Canvas canvas, string name, string caption, int dir)
     {
-        var b = IronOvalUI.TabButton(canvas.transform, name, caption, new Vector2(56f, 16f));
+        var b = IronOvalUI.TabButton(canvas.transform, name, caption, new Vector2(56f, Draftmaster.Controls.UIButton.KitPx));
         b.onClick.AddListener(() => { if (_active) StepWatch(dir); });
         var root = b.transform.parent.gameObject;
         root.SetActive(false);

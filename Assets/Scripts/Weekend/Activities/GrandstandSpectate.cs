@@ -205,7 +205,7 @@ public class GrandstandSpectate : MonoBehaviour
         y += PixelGUI.Px(9f);
 
         // Two rows of buttons under the feed; taller on a phone, where the buttons carry the dialogue face.
-        float bh = PixelGUI.ButtonH(PixelGUI.Px(16f));
+        float bh = PixelGUI.MenuButtonH;
         float controlsH = bh * 2f + PixelGUI.Px(8f);
         float towerH = (content.yMax - y - controlsH) * 0.62f;
         var tower = new Rect(content.x, y, content.width, towerH);

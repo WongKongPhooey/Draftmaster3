@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using Draftmaster.Controls;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -108,9 +109,9 @@ public static class IronOvalGarageBuilder
         ui.driverDropdown = driverPicker;
 
         float top = -22f;
-        // Band above, weekend strip below. The strip is one text row tall, so the columns get back the
-        // height a taller label face would otherwise eat twice over.
-        float stripH = LabelH + 8f;
+        // Band above, weekend strip below. The strip is one button tall (UIButton, every screen's) with 2px
+        // above and below, so the columns get back the height a taller label face would otherwise eat.
+        float stripH = Mathf.Max(LabelH + 8f, UIButton.KitPx + 4f);
         float colH = H - 22f - (stripH + 8f);
 
         // --- left: the car, then who is driving it -----------------------------------------------------
@@ -322,7 +323,7 @@ public static class IronOvalGarageBuilder
         ui.statusLabel = status;
 
         var race = IronOvalUI.Button(strip, "Race", "RACE", new Vector2(72f, 18f));
-        Anchor((RectTransform)race.transform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(72f, 18f),
+        Anchor((RectTransform)race.transform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(72f, UIButton.KitPx),
                pivot: new Vector2(1f, 0.5f));
         race.onClick.AddListener(ui.Race);
 
@@ -330,7 +331,7 @@ public static class IronOvalGarageBuilder
         // face detaches from its plate and the label wraps a letter per line.
         var back = IronOvalUI.TabButton(strip, "Back", "BACK", new Vector2(56f, 18f));
         Anchor((RectTransform)back.transform.parent, new Vector2(1f, 0.5f), new Vector2(-88f, 0f),
-               new Vector2(56f, 18f), pivot: new Vector2(1f, 0.5f));
+               new Vector2(56f, UIButton.KitPx), pivot: new Vector2(1f, 0.5f));
         back.onClick.AddListener(ui.Back);
 
         var lines = new GameObject("IronOvalScanlines", typeof(IronOvalScanlines));

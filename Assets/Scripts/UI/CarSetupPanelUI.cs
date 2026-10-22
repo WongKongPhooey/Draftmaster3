@@ -104,6 +104,10 @@ public class CarSetupPanelUI : MonoBehaviour
         Cursor.visible = true;
 
         ResolveRefs();
+        // Every screen's button height and caption (UIButton), whatever the prefab was last restyled to.
+        IronOvalUI.StandardiseButton(softButton);
+        IronOvalUI.StandardiseButton(hardButton);
+        IronOvalUI.StandardiseButton(confirmButton);
 
         if (softButton != null) { softButton.onClick.RemoveAllListeners(); softButton.onClick.AddListener(() => SetCompound(TireModel.Compound.Soft)); }
         if (hardButton != null) { hardButton.onClick.RemoveAllListeners(); hardButton.onClick.AddListener(() => SetCompound(TireModel.Compound.Hard)); }

@@ -51,3 +51,34 @@ panels are not measured. Scenes have to be open to be audited — the tool never
 Known exception: the satnav's node names (`TravelMap/MapPlot/Nodes/*/Label`) are authored at 8 and 16
 and zoom with the board (2.4x when the map opens), so they read at roughly 19 and 38px there. They are
 kept small on purpose — at full size the middle of the country turns into a wall of overlapping names.
+
+## Buttons
+
+Every button in the game is one size, taken from the pause menu (`RacePauseMenu`). Code:
+`Assets/Scripts/Controls/UIButton.cs`. Tests: `Assets/Tests/Editor/ButtonStandardTests.cs`.
+
+| | Kit px | 1080p screen | 1920x1080 canvas |
+|---|---:|---:|---:|
+| **Plate height** | 20 | 60 | 60 |
+| **Caption** | 8 (Label) | 24 | 24 |
+
+The caption is the display face (Silkscreen), regular weight, no extra tracking, centred. A plain button
+is the red plate with `text`-coloured caption; a tab is the flat plate with a `textDim` caption (gold or
+white when selected). On a phone the caption takes the data face (fixedsys 16) and the plate grows to hold
+it with the same padding — about 33 kit px.
+
+Where to get it, so nothing types its own number:
+
+- **IMGUI (`PixelGUI`)**: height `PixelGUI.MenuButtonH`, drawn with `PixelGUI.Button` / `PixelGUI.Tab`.
+- **640x360 canvas (`IronOvalUI`)**: `IronOvalUI.Button` / `TabButton` force the height; only the width is the caller's.
+- **1920x1080 runtime panels (legacy `Text`)**: plate `IronOvalUI.ButtonHeight()`, caption `IronOvalUI.ButtonCaption(text, colour)`.
+- **A button authored in a prefab or scene**: its binder calls `IronOvalUI.StandardiseButton(button)`.
+
+`Draftmaster > UI > Audit Buttons` lists every captioned uGUI button the build reaches (build scenes +
+`Resources`) in `Docs/ButtonAudit.md` with what is off. `Draftmaster > UI > Standardise Buttons In Prefabs`
+fixes those prefabs in place (it touches only the buttons). Scenes are fixed through their builders.
+
+Not buttons, and left to their own sizes: menu list rows with a cursor (title menu, SINGLE RACE rows,
+OPTIONS rows, dialogue choices), on-screen interact prompts (`PixelGUI.ActionButton` / `PromptButton`),
+icon and swatch buttons, a window's corner close glyph (X), the satnav's map pins, and the F-key debug
+panels.

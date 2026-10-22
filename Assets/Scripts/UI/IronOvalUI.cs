@@ -201,11 +201,15 @@ public static class IronOvalUI
     // The confirm button. One sprite for every state: the sheet bakes the highlight and shade in and
     // asks for the pressed look to come from offsetting the content 2px, so there is no second drawing
     // to keep in sync. Disabled tints the whole plate to the inner-shade colour.
+    //
+    // Every button is the game's one height (UIButton: 20px on this 640x360 grid, the pause menu's) whatever
+    // `size.y` asks for — only the width is the caller's — and its caption is ButtonCaption's.
     public static Button Button(Transform parent, string name, string content, Vector2 size)
     {
         var t = Theme;
         var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
         go.transform.SetParent(parent, false);
+        size.y = UIButton.KitPx;
         ((RectTransform)go.transform).sizeDelta = size;
 
         var img = go.GetComponent<Image>();
@@ -232,7 +236,8 @@ public static class IronOvalUI
         crt.anchorMax = Vector2.one;
         crt.offsetMin = crt.offsetMax = Vector2.zero;
 
-        var label = Label(crt, "Label", content, Role.Header, t == null ? Color.white : t.text);
+        var label = Label(crt, "Label", content);
+        ButtonCaption(label, t == null ? Color.white : t.text);
         var lrt = label.rectTransform;
         lrt.anchorMin = Vector2.zero;
         lrt.anchorMax = Vector2.one;
@@ -241,6 +246,7 @@ public static class IronOvalUI
         // A button caption that wraps has outgrown its plate; let it overflow so the mistake is visible
         // at author time rather than silently splitting a word across two lines.
         label.textWrappingMode = TextWrappingModes.NoWrap;
+        GrowForHandheld((RectTransform)go.transform, label, content, size);
 
         go.AddComponent<IronOvalPressOffset>().content = crt;
         return button;
@@ -253,6 +259,7 @@ public static class IronOvalUI
         var t = Theme;
         var shadow = new GameObject(name, typeof(RectTransform), typeof(Image));
         shadow.transform.SetParent(parent, false);
+        size.y = UIButton.KitPx;   // one button height, as Button
         ((RectTransform)shadow.transform).sizeDelta = size;
         var srt = (RectTransform)shadow.transform;
         var simg = shadow.GetComponent<Image>();
@@ -271,24 +278,88 @@ public static class IronOvalUI
         var fimg = face.GetComponent<Image>();
         fimg.color = selected ? (t == null ? Color.red : t.danger) : (t == null ? Color.grey : t.plateDeep);
 
-        // On a phone the 8px caption face is too small to read, so the caption takes the data face that
-        // dialogue and quest text are set in, and the plate grows to hold it with 4px above and below.
-        bool handheld = PixelGUI.Handheld;
-        var label = Label(frt, "Label", content, handheld ? Role.Data : Role.HeaderSmall,
-                          selected ? (t == null ? Color.white : t.text) : (t == null ? Color.grey : t.textDim));
+        var label = Label(frt, "Label", content);
+        ButtonCaption(label, selected ? (t == null ? Color.white : t.text) : (t == null ? Color.grey : t.textDim));
         var lrt = label.rectTransform;
         lrt.anchorMin = Vector2.zero;
         lrt.anchorMax = Vector2.one;
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         label.alignment = TextAlignmentOptions.Center;
-        if (handheld)
-        {
-            var fit = label.GetPreferredValues(content);
-            srt.sizeDelta = new Vector2(Mathf.Max(size.x, Mathf.Ceil(fit.x) + 12f),
-                                        Mathf.Max(size.y, Mathf.Ceil(fit.y) + 8f));
-        }
+        GrowForHandheld(srt, label, content, size);
 
         return face.GetComponent<Button>();
+    }
+
+    // A button's caption, the same on every button in the game and matching the IMGUI panels'
+    // (PixelGUI.ButtonStyle): the display face at the Label size, regular weight, no extra tracking. On a
+    // phone the 8px face is too small to read, so it takes the data face dialogue and quest text are set in.
+    public static void ButtonCaption(TMP_Text label, Color colour)
+    {
+        Apply(label, PixelGUI.Handheld ? Role.Data : Role.HeaderSmall, colour);
+        label.characterSpacing = 0f;
+        label.fontStyle = FontStyles.Normal;
+    }
+
+    // The same caption for a legacy uGUI Text on a canvas authored `referenceHeight` tall (the 1920x1080
+    // runtime panels): the display face at the Label size, on a phone the data face at the Data size.
+    public static void ButtonCaption(Text label, Color colour, float referenceHeight = 1080f)
+    {
+        bool handheld = PixelGUI.Handheld;
+        label.font = handheld ? BrandFonts.Body : BrandFonts.Display;
+        label.fontSize = handheld ? UIType.CanvasPx(TypeRole.Data, referenceHeight, 16)
+                                  : UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 8);
+        label.fontStyle = FontStyle.Normal;
+        label.color = colour;
+    }
+
+    // Brings a button authored in a prefab or scene onto the standard: the plate to ButtonHeight (unless it
+    // stretches with its parent, which then owns its height) and the caption to ButtonCaption, keeping the
+    // caption's colour, which is usually carrying state. For a binder to call once it has found its parts.
+    // `referenceHeight` is the canvas's authored height; 0 reads it off the button's CanvasScaler.
+    public static void StandardiseButton(Button button, float referenceHeight = 0f)
+    {
+        if (button == null) return;
+        if (referenceHeight <= 0f)
+        {
+            var scaler = button.GetComponentInParent<CanvasScaler>(true);
+            referenceHeight = scaler != null && scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize
+                              && scaler.referenceResolution.y > 0f ? scaler.referenceResolution.y : 1080f;
+        }
+        if (button.transform is RectTransform rt && Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y))
+            rt.sizeDelta = new Vector2(rt.sizeDelta.x, ButtonHeight(referenceHeight));
+
+        var tmp = button.GetComponentInChildren<TMP_Text>(true);
+        if (tmp != null)
+        {
+            var colour = tmp.color;
+            var alignment = tmp.alignment;
+            ButtonCaption(tmp, colour);
+            tmp.fontSize = PixelGUI.Handheld ? UIType.CanvasPx(TypeRole.Data, referenceHeight, 16)
+                                             : UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 8);
+            tmp.alignment = alignment;
+            return;
+        }
+        var text = button.GetComponentInChildren<Text>(true);
+        if (text != null) ButtonCaption(text, text.color, referenceHeight);
+    }
+
+    // A button's height on a canvas authored `referenceHeight` tall: UIButton's, and on a phone the IMGUI
+    // panels' grown plate (PixelGUI.MenuButtonH) carried across, so the two families still match there.
+    public static float ButtonHeight(float referenceHeight = 1080f)
+    {
+        float shortSide = Mathf.Min(Screen.width, Screen.height);
+        if (!PixelGUI.Handheld || shortSide <= 0f) return UIButton.CanvasPx(referenceHeight);
+        return Mathf.Ceil(PixelGUI.MenuButtonH * referenceHeight / shortSide);
+    }
+
+    // On a phone the plate grows to hold the bigger caption with its padding above and below, as
+    // PixelGUI.MenuButtonH does for the IMGUI panels.
+    static void GrowForHandheld(RectTransform plate, TMP_Text label, string content, Vector2 size)
+    {
+        if (!PixelGUI.Handheld) return;
+        var fit = label.GetPreferredValues(content);
+        plate.sizeDelta = new Vector2(Mathf.Max(size.x, Mathf.Ceil(fit.x) + 12f),
+                                      Mathf.Max(size.y, Mathf.Ceil(fit.y) + 8f + PixelGUI.MenuButtonPad * 2f));
     }
 
     // The square icon tab: TabButton's plate and hard drop shadow carrying one of the kit's 16x16 icons

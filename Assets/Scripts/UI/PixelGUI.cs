@@ -130,6 +130,13 @@ public static class PixelGUI
         return HandheldType.ButtonHeight(Handheld, desktopPx, _buttonLineH, _button.padding.top, Scale);
     }
 
+    // The kit's standard menu button: one line of label plus its plate padding, with MenuButtonPad more
+    // above and below so a stack of them doesn't read cramped. 20px tall on a desktop (60 at 1080p); on a
+    // handheld the bigger button face's plate plus the same pad. Panels with a column of buttons use this
+    // rather than their own number, so every menu's buttons come out the same height.
+    public const float MenuButtonPad = 2f;
+    public static float MenuButtonH => ButtonH(LineH + Px(6f)) + Px(MenuButtonPad * 2f);
+
     // ---- palette ------------------------------------------------------------------------------------
     // Shortcuts, so a panel does not have to null-check the theme on every colour it draws.
     public static Color Text => Theme != null ? Theme.text : Color.white;

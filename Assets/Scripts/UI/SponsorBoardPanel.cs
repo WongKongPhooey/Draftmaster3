@@ -173,7 +173,7 @@ public class SponsorBoardPanel : MonoBehaviour
 
     float AddButton(string label, string action, float y, UnityEngine.Events.UnityAction onClick)
     {
-        float h = label.Contains("\n") ? 60f : 36f;
+        float h = Mathf.Max(label.Contains("\n") ? 60f : 36f, IronOvalUI.ButtonHeight());
 
         var go = new GameObject("Row", typeof(RectTransform));
         go.transform.SetParent(_rows, false);
@@ -190,16 +190,17 @@ public class SponsorBoardPanel : MonoBehaviour
         var img = btnGo.AddComponent<Image>();
         img.color = PixelGUI.PlateLight;
         var brt = btnGo.GetComponent<RectTransform>();
-        brt.anchorMin = new Vector2(1, 0); brt.anchorMax = new Vector2(1, 1);
+        brt.anchorMin = new Vector2(1, 0.5f); brt.anchorMax = new Vector2(1, 0.5f);
         brt.pivot = new Vector2(1, 0.5f);
-        brt.sizeDelta = new Vector2(168, 0);
+        brt.sizeDelta = new Vector2(168, IronOvalUI.ButtonHeight());   // every screen's button height
         brt.anchoredPosition = new Vector2(0, 0);
 
         var btn = btnGo.AddComponent<Button>();
         btn.targetGraphic = img;
         btn.onClick.AddListener(onClick);
 
-        var btnText = MakeText("Text", brt, BrandFonts.Display, 16, FontStyle.Normal, TextAnchor.MiddleCenter, PixelGUI.Gold);
+        var btnText = MakeText("Text", brt, BrandFonts.Display, 24, FontStyle.Normal, TextAnchor.MiddleCenter, PixelGUI.Gold);
+        IronOvalUI.ButtonCaption(btnText, PixelGUI.Gold);
         btnText.text = action;
         var trt = btnText.rectTransform;
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;

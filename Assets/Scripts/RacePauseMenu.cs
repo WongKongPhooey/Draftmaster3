@@ -251,8 +251,8 @@ public class RacePauseMenu : MonoBehaviour
         float headingH = PixelGUI.Heading.fontSize;
         float toggleH = Mathf.Max(PixelGUI.LineH,
                                   PixelGUI.SnapUp(_toggle.CalcHeight(new GUIContent("  Racing line"), w - inset * 2f)));
-        float tabH = PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f));   // same plate height as the buttons below
-        float buttonH = PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f));
+        float tabH = PixelGUI.MenuButtonH;   // same plate height as the buttons below
+        float buttonH = PixelGUI.MenuButtonH;
         float footer = PixelGUI.LineH;
 
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
