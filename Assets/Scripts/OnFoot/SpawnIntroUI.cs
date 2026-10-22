@@ -244,9 +244,11 @@ public class SpawnIntroUI : MonoBehaviour
 
         if (overFade) { DrawTitle(); return; }
 
-        DrawMarkers();
+        // The satnav is a whole screen of its own; markers pointing at the paddock behind it are noise there.
+        bool markers = !TravelMapScreen.IsOpen;
+        if (markers) DrawMarkers();
         DrawTitle();
-        StepMarkerClicks();
+        if (markers) StepMarkerClicks();
     }
 
     // A press inside a settled marker's box is a press ON that marker. Done after drawing because the

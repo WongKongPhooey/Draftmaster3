@@ -53,7 +53,10 @@ public class LocationTitle : MonoBehaviour
         var player = OnFootController.Current;
         if (player == null) return;                        // in the car, or a scene with no on-foot body
 
-        float d = Vector2.Distance(player.transform.position, transform.position);
+        // Indoors, only what is in the room with you, as OnFootController's prompts have it: the team scooter
+        // parks by the RV door, and range alone named it through the wall from inside the motorhome. Out of
+        // reach counts as out of range, so the card is still owed when they step outside.
+        float d = InReach() ? Vector2.Distance(player.transform.position, transform.position) : float.MaxValue;
         float forget = forgetRadius > 0f ? forgetRadius : radius * 1.5f;
 
         if (_armed && d <= radius)
@@ -75,6 +78,15 @@ public class LocationTitle : MonoBehaviour
         SpawnIntroUI.Banner(title, subtitle);
         _pending = false;
         _lastShown = Time.unscaledTime;
+    }
+
+    // Outdoors everything is; in the motorhome only what stands inside it; in the team's garage nothing (no
+    // place is named from in there).
+    bool InReach()
+    {
+        var room = RVInterior.Occupied;
+        if (room != null) return room.Contains(transform.position);
+        return PopupGarageInterior.Occupied == null;
     }
 
     void OnDrawGizmosSelected()

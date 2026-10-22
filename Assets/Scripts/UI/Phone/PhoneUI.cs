@@ -315,7 +315,8 @@ public class PhoneUI : MonoBehaviour
         if (!TouchDriveControls.TouchPlatform || InputGlyphs.UsingGamepad) return false;
         if (body == null || body.RemotePuppet) return false;
         if (IsOpen || Summoned) return true;
-        if (RacePauseMenu.IsPaused || WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen)
+        if (RacePauseMenu.IsPaused || WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen ||
+            TravelMapScreen.IsOpen)
             return false;
         // Something else has the player (a conversation, a cutscene): the phone would refuse to open anyway.
         return !body.MovementLocked && !NPCInteractable.AnyConversationActive;

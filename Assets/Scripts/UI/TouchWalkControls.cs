@@ -116,7 +116,8 @@ public class TouchWalkControls : MonoBehaviour
     // which counts a conversation — see the note at the top.
     static bool ScreenOwnsTouches =>
         RacePauseMenu.IsPaused || PhoneUI.IsOpen || WeekendScheduleUI.IsOpen ||
-        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen || SponsorOfferPopup.IsOpen || TutorialPopup.IsOpen;
+        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen || SponsorOfferPopup.IsOpen || TutorialPopup.IsOpen ||
+        TravelMapScreen.IsOpen;
 
     static bool StickShows
     {
