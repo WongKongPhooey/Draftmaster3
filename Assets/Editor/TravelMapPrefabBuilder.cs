@@ -172,6 +172,10 @@ public static class TravelMapPrefabBuilder
         }
     }
 
+    // Pushes TravelGraph's positions (coordinates and TravelMapLayout edited in code) onto the markers and
+    // re-bakes the highways. Use this after editing positions in code; Save And Rebuild would first read
+    // the markers' old positions back out of the prefab as if they had been dragged.
+    [MenuItem("Draftmaster/Travel Map/Snap Markers To Graph Layout")]
     public static void SnapMarkersToGraph()
     {
         var root = BeginEdit(out bool inStage);

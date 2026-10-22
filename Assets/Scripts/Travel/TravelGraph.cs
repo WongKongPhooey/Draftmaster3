@@ -187,6 +187,10 @@ public static class TravelGraph
 
         // --- Roads: generated from the layout, so moving a circuit re-routes the map around it ---
         BuildRoads();
+        // Then the ones closed by hand (TravelMapLayout.ClosedRoads): a clean map beats a complete one.
+        foreach (var (a, b) in TravelMapLayout.ClosedRoads)
+            if (!RemoveEdge(a, b))
+                Debug.LogWarning($"TravelGraph: closed road {a} - {b} isn't one BuildRoads drew — nothing to close.");
         foreach (var e in _edges) _circuitRoads.Add(e);   // before any of them are split by a shop
 
         // --- Your own shop, in the middle of the country ---

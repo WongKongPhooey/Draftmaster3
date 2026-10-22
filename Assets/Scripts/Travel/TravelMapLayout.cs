@@ -24,7 +24,10 @@ public static class TravelMapLayout
     {
         // BEGIN PLACED
         { "AllAmerican", new Vector2(0.0900f, 0.4055f) },   // All American
+        { "Bristol", new Vector2(0.7361f, 0.5021f) },   // Bristol
+        { "Charlotte", new Vector2(0.7755f, 0.5516f) },   // Charlotte
         { "Daytona", new Vector2(0.7607f, 0.7393f) },   // Daytona
+        { "NorthWilkesboro", new Vector2(0.7646f, 0.5168f) },   // North Wilkesboro
         // END PLACED
     };
 
@@ -35,6 +38,18 @@ public static class TravelMapLayout
         // BEGIN MOUNTS
         // END MOUNTS
     };
+
+    // Roads the generator draws that the map is better without, as the two circuits they join. Removed
+    // after the roads are built and before any shop is mounted, so a shop can't sit on one. Hand-written,
+    // not generated — the save leaves this alone.
+    static readonly (string a, string b)[] Closed =
+    {
+        ("Sonoma", "Evergreen"),
+        ("Elko", "Milwaukee"),
+        ("LongPond", "NewHampshire"),   // Pocono - New Hampshire
+    };
+
+    public static IReadOnlyList<(string a, string b)> ClosedRoads => Closed;
 
     public static int Count => Placed.Count;
     public static int MountCount => Mounts.Count;
