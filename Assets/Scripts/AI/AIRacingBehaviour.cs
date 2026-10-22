@@ -175,6 +175,21 @@ public class AIRacingBehaviour : MonoBehaviour
     public float fastPassOffset = 0f;
     public float passOffsetFullDeltaMph = 8f;
     float _passPaceDelta;
+    [Tooltip("Off the lanes, a pass on the same car keeps the side it committed to while that side stays free, instead " +
+             "of re-picking every step: the racing line swinging across the road flipped the pick, and each flip threw " +
+             "away the run. Off: measured only together with roadChaseHeadwayShare (Docs/AI-NR2003.md, 2026-10-22).")]
+    public bool roadPassKeepSide = false;
+    SplineDriver _roadPassCar;   // the car a road-course pass is on
+    [Tooltip("Off the lanes (road courses), a driver quicker than the car ahead of it follows it this much closer: the " +
+             "time-headway part of the follow gap is scaled by this share. The braking term and hardFollowGap still " +
+             "apply. At the full headway the quickest car at Watkins Glen sat 13-20 m behind cars 0.3-0.5 s a lap " +
+             "slower - outside any tow and too far back to be alongside by a braking zone - and stalled around P20. " +
+             "0.5 (with roadPassKeepSide) got it to 5-8 m and P24 -> P21 on lap 1, but it stalled there and HARD contacts " +
+             "doubled (6 -> 12), so 1 = off for now. See Docs/AI-NR2003.md, 2026-10-22.")]
+    [Range(0.2f, 1f)] public float roadChaseHeadwayShare = 1f;
+    [Tooltip("Base pace (AIDriverBinding's pace multiplier) a driver needs over the car ahead to chase it closer; the " +
+             "full closer headway is reached at twice this. The field spans about 0.93-1.04.")]
+    public float roadChaseMinPace = 0.01f;
     [Tooltip("Max lateral target offset (m) from side-by-side repulsion.")]
     public float sidewaysMaxPush = 2.5f;
     [Tooltip("Lateral offset (m) when defending an inside line from a faster pursuer.")]
@@ -472,6 +487,9 @@ public class AIRacingBehaviour : MonoBehaviour
                 // A stopped car is driven round on the wide side of the road — the side away from where it sits —
                 // not on whichever side the next corner favours.
                 overtakeDir = stoppedCar ? AroundSide(aheadLat) : ChooseOvertakeSide(aheadLat);
+                if (roadPassKeepSide && !stoppedCar && !Lanes && _commitTimer > 0f && ahead == _roadPassCar
+                    && _commitDir != 0f && !SideOccupied(_commitDir))
+                    overtakeDir = _commitDir;
                 // In lanes, a pass goes into the lane beside the car ahead - on the chosen side if it is clear,
                 // the other if not - and not at all if neither is: tuck in behind and take the tow instead.
                 if (!stoppedCar && Lanes && LaneGeometry(out _, out _, out _))
@@ -483,6 +501,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
                 if (wantOvertake) SetPassTarget(stoppedCar, aheadLat);
                 if (wantOvertake) _passPaceDelta = _spline.DesiredMph - ahead.DesiredMph;
+                if (wantOvertake && !Lanes) _roadPassCar = stoppedCar ? null : ahead;
             }
         }
 
@@ -523,8 +542,8 @@ public class AIRacingBehaviour : MonoBehaviour
                 if (lg <= 0f || lg > scanDist) continue;
                 float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
                 if (ov <= 0f) continue;
-                speedCap = Mathf.Min(speedCap, FollowCap(other.CurrentMph, lg, ov, headway, followMargin,
-                                                         launchCapBlend, underYellow));
+                speedCap = Mathf.Min(speedCap, FollowCap(other.CurrentMph, lg, ov, headway * ChaseHeadwayShare(other),
+                                                         followMargin, launchCapBlend, underYellow));
             }
         }
 
@@ -690,6 +709,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 if (needed * overtakeDir > overtakeLineOffset) desiredTactical = needed;
             }
         }
+        if (!wantOvertake) _roadPassCar = null;
 
         // Pack racing: the lane is everything. Which lane to be in is decided by how the lanes are flowing (PackLanes);
         // once a car moves it goes all the way - nobody backs out of a lane change in a pack.
@@ -987,6 +1007,17 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    // Share of the follow headway kept behind this car: less behind a slower driver on a road course (roadChaseHeadwayShare),
+    // so a quicker car runs close enough to it to have a run. Whole headway in lanes, in a pack and under yellow.
+    float ChaseHeadwayShare(SplineDriver other)
+    {
+        if (Lanes || roadChaseHeadwayShare >= 1f || UnderYellow) return 1f;
+        if (!_byDriver.TryGetValue(other, out var them) || them == null) return 1f;
+        float edge = _basePaceMultiplier - them._basePaceMultiplier;
+        float min = Mathf.Max(roadChaseMinPace, 1e-4f);
+        return Mathf.Lerp(1f, roadChaseHeadwayShare, Mathf.InverseLerp(min, 2f * min, edge));
     }
 
     // The speed (mph) a car in our corridor this far (m) ahead allows us, faded by how squarely it sits in our path.

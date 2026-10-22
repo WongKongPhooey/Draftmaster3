@@ -633,6 +633,9 @@ public class PackRaceSimTests
             // Flat 3.6 m: charger P14-18 (was P22-24), contacts 36 -> 52, HARD 8.5 -> 16.5; flat 4.2: P16-17, HARD 21.5.
             ("fast pass 4.2 by 8 mph", new Dictionary<string, object> { { "fastPassOffset", 4.2f } }),
             ("fast pass 4.2 by 4 mph", new Dictionary<string, object> { { "fastPassOffset", 4.2f }, { "passOffsetFullDeltaMph", 4f } }),
+            // A quicker driver follows at half the headway and keeps its pass side (2026-10-22, 4-lap trace seed 1:
+            // charger P21 P21 P21 P22 against P24 P24 P23 P22, contacts 18 -> 24, HARD 6 -> 12).
+            ("chase headway 0.5 keep side", new Dictionary<string, object> { { "roadChaseHeadwayShare", 0.5f }, { "roadPassKeepSide", true } }),
         };
         foreach (var (name, racing) in variants)
             foreach (int seed in new[] { 1, 2 })
