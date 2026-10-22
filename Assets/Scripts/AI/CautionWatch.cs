@@ -17,7 +17,7 @@ using UnityEngine;
 // tracker itself does it: on a client the AI are network puppets with their brains disabled, so they are not
 // in RaceField, but the tracker still has them with a live progress and speed. With no tracker (a headless
 // sim), RaceField is read instead. Cars in the pit lane are skipped — a car sitting on its jacks is stationary
-// and is not a hazard on the track.
+// and is not a hazard on the track. So are retired cars (AIRetirement): out of the race and parked off the circuit.
 //
 // Distance is measured along the centerline, not as the crow flies: a car stopped on the far side of a
 // short oval is metres away in world space and most of a lap away on the road.
@@ -144,6 +144,8 @@ public class CautionWatch : MonoBehaviour
         {
             var e = order[i];
             if (e == null || e.tf == null) continue;
+            // Retired (AIRetirement): parked behind the infield wall, out of the race and no hazard to anybody.
+            if (AIRetirement.IsRetired(e.tf)) { _slowSince.Remove(e.tf); _wallHitAt.Remove(e.tf); continue; }
             // trackDistance, not progress: the AI test their own DistanceOnTrack (from segment[0]) against these,
             // and progress is counted from the start/finish line. At Watkins Glen that put every wreck 250 m
             // behind where it was — the field lifted for a yellow a quarter-kilometre short of the scene, then
@@ -164,6 +166,7 @@ public class CautionWatch : MonoBehaviour
         {
             var d = drivers[i];
             if (d == null || d.TrackLength <= 0f) continue;
+            if (AIRetirement.IsRetired(d.transform)) { _slowSince.Remove(d.transform); continue; }
             _lapLength = d.TrackLength;
             bool stopped = d.CurrentMph <= stoppedMph && !d.IsOnPit;
             if (StoppedLongEnough(d.transform, stopped, now))

@@ -141,6 +141,7 @@ public class RaceDirector : MonoBehaviour
                 {
                     var e = rt.Order[i];
                     if (e == null || e.tf == null || _finishedBy.ContainsKey(e.tf)) continue;
+                    if (AIRetirement.IsRetired(e.tf)) continue;   // out of the race: nobody waits for it
                     running++;
                     if (e.isPlayer) playerDone = false;
                 }

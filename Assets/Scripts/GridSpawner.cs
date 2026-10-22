@@ -629,6 +629,9 @@ public class GridSpawner : MonoBehaviour
                 input.steerGain = aiSteerGain;
                 input.speedGain = aiSpeedGain;
 
+                // Breaks down when too damaged and retires off the circuit when stuck (race only).
+                if (go.GetComponent<AIRetirement>() == null) go.AddComponent<AIRetirement>();
+
                 // Deformable bodywork so AI dent like the player. A SpriteRenderer and the MeshRenderer that
                 // VehicleDamage requires can't share a GameObject, so replace the sprite with the deformable mesh —
                 // mirroring the player car (VehicleDamage + MeshRenderer, no SpriteRenderer). Added before
