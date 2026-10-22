@@ -79,7 +79,7 @@ public class TypeScaleTests
         var texts = root.GetComponentsInChildren<Text>(true)
                         .Where(t => nodes == null || !t.transform.IsChildOf(nodes))
                         .ToList();
-        Assert.Greater(texts.Count, 10);
+        Assert.Greater(texts.Count, 4);
 
         foreach (var t in texts)
         {
@@ -90,21 +90,25 @@ public class TypeScaleTests
         }
     }
 
+    // The satnav's map takes the full width: no side panel, no title, no cash, no header icon — the
+    // header is one status line, and the way-on buttons sit in the footer beside the notice.
     [Test]
-    public void Satnav_side_panel_reads_at_the_data_size_and_scrolls()
+    public void Satnav_map_spans_the_width_with_a_one_line_header()
     {
         var root = AssetDatabase.LoadAssetAtPath<GameObject>(TravelMapPath);
-        var panel = root.transform.Find("SidePanel");
-        Assert.IsNotNull(panel);
-        var scroll = panel.GetComponent<ScrollRect>();
-        Assert.IsNotNull(scroll, "the panel's type no longer fits a fixed box; it has to scroll");
-        Assert.IsNotNull(scroll.content);
-        Assert.IsTrue(scroll.vertical);
+        foreach (var gone in new[] { "SidePanel", "TitleLabel", "TitleIcon", "CashLabel", "CashIcon" })
+            Assert.IsNull(root.transform.Find(gone), gone + " should have been removed");
 
-        var rows = scroll.content.Find("CarRows")?.GetComponent<Text>();
-        Assert.IsNotNull(rows, "CarRows under the scroll content");
-        Assert.AreEqual(UIType.CanvasPx(TypeRole.Data, 1080f, 16), rows.fontSize);
-        Assert.AreEqual(HorizontalWrapMode.Wrap, rows.horizontalOverflow);
+        Assert.IsNotNull(root.transform.Find("Footer/ActionButton"), "ActionButton in the footer");
+        Assert.IsNotNull(root.transform.Find("Footer/WalkButton"), "WalkButton in the footer");
+        Assert.IsNotNull(root.transform.Find("Footer/NoticeLabel"), "NoticeLabel in the footer");
+
+        var plot = (RectTransform)root.transform.Find("MapPlot");
+        // Anchored to both edges, so it is the width of whatever screen it is on, not a fixed 1920's worth.
+        Assert.AreEqual(0f, plot.anchorMin.x, "the map window should be anchored to the left edge");
+        Assert.AreEqual(1f, plot.anchorMax.x, "the map window should be anchored to the right edge");
+        Assert.Greater(1920f + plot.sizeDelta.x, 1800f, "the map window should run the width of the canvas");
+        Assert.AreEqual(UIType.CanvasPx(TypeRole.Data, 1080f, 16), root.transform.Find("SubLabel").GetComponent<Text>().fontSize);
     }
 
     static int Cell(Font font)

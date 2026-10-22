@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -17,12 +16,12 @@ using UnityEngine.UI;
 //      anywhere else, click any circuit. Stop budget = direct route + DetourAllowance.
 //   2. The route is drawn (light blue roads) from where you are to the race. Tap any other place to call in
 //      there on the way — it slots in wherever it lengthens the drive least and the route is redrawn
-//      (TravelRoute); tap it again to take it off. Tap the next node on the route, or DRIVE TO, to drive
-//      one stop along it. The first leg between two races is the tutorial: the car will not move until
-//      Team HQ is on the route (TravelTutorial). Minor locations show a side panel —
-//      junkyards sell a weekly random salvage roll, engine shops a fixed catalog. Buying installs.
-//      Your own Team Factory sits in the middle of the map (the teal wrench): the parts your shop has
-//      built since your last visit are free there, and they only leave the rack if you drive out.
+//      (TravelRoute); tap it again to take it off. GO sends the RV sprite down the route: it rolls straight
+//      through racetracks and pulls in at every other place it crosses (shop, salvage yard, Team HQ),
+//      where you VISIT or CONTINUE. The first leg between two races is the tutorial: the car will not move
+//      until Team HQ is on the route (TravelTutorial). Minor locations are shopped on foot (VISIT ->
+//      Landmark scene, LandmarkShopPanel): junkyards sell a weekly random salvage roll, engine shops a
+//      fixed catalog, and your own Team Factory (the teal wrench) racks what your shop has built.
 //   3. At the destination: START RACE WEEKEND resets the weekend and loads the circuit's scene (falls
 //      back to reloading the current scene when the circuit isn't in the build).
 // The board is 75 dots across the whole country, which at one-to-one is a wall of pinheads nobody can
@@ -69,9 +68,7 @@ public class TravelMapScreen : MonoBehaviour
     const float EdgeWidth = 3f, EdgeWidthLive = 5f, EdgeWidthRoute = 7f;
 
     [Header("Header")]
-    public Text titleLabel;
-    public Text subLabel;
-    public Text cashLabel;
+    public Text subLabel;             // the one header line: week, where you are, the route
     public Button closeButton;
 
     [Header("Map")]
@@ -80,18 +77,10 @@ public class TravelMapScreen : MonoBehaviour
     public RectTransform herePin;     // cream pin that hops to wherever you are (optional)
     public RectTransform destPin;     // red chequered flag over this week's race (optional)
 
-    [Header("Side panel")]
-    public Text carRowsLabel;
-    public Text locationHeader;
-    public Text flavorLabel;
-    public Button actionButton;       // context-dependent: START RACE WEEKEND or TOW
+    [Header("Footer")]
+    public Text noticeLabel;          // a notice for three seconds, then the zoom/pan controls, dimmed
+    public Button actionButton;       // context-dependent: GO / CONTINUE, START RACE WEEKEND or TOW
     public Button walkButton;         // minor locations: park and walk around (Landmark scene)
-    public Text shopHeader;
-    public RectTransform shopRowsRoot;
-    public GameObject stockRowTemplate; // inactive child of shopRowsRoot, cloned per part
-
-    [Header("Notice")]
-    public Text noticeLabel;
 
     [Header("Zoom")]
     [Tooltip("How far in the map opens. 1 = the whole country in the window, which is what it used to do.")]
@@ -101,7 +90,18 @@ public class TravelMapScreen : MonoBehaviour
     [Tooltip("Zoomed all the way in.")]
     public float maxZoom = 4.5f;
 
+    [Header("Drive")]
+    [Tooltip("How fast the RV crosses the board, in board pixels a second.")]
+    public float rvSpeed = 160f;
+    [Tooltip("No hop is quicker than this, however short the road, so a two-towns-apart hop still reads.")]
+    public float rvMinHopSeconds = 0.5f;
+    [Tooltip("The RV sprite's size on the board, in board pixels (the art is 2:1, nose to the left).")]
+    public Vector2 rvSize = new Vector2(36f, 18f);
+
     readonly Dictionary<string, TravelNodeMarker> _markers = new();
+    // How much each name matters right now, set by the marker refresh and read by DeclutterLabels.
+    readonly Dictionary<TravelNodeMarker, int> _labelRank = new();
+    float _labelScaleLaidOut = -1f;
     readonly List<EdgeLine> _edges = new();
     float _noticeUntil;
 
@@ -117,10 +117,23 @@ public class TravelMapScreen : MonoBehaviour
     bool _pinching;
     Vector2 _pinchMid;
     float _pinchGap;
-    string _subBase;
+    string _hint;
+    Color _noticeColor;
+    static readonly Color HintColor = new Color32(0x9a, 0xa3, 0xb8, 0xff); // the kit's dim text
     int _hintVersion = -1;
     bool _hintTouch;
     string _focusedOn;
+
+    // The drive. `_rv` is the RV sprite, a child of the nodes root so it pans and zooms with the board.
+    // While `_driving` it runs from `_hopFrom` to `_hopTo` over `_hopSeconds`; `_stoppedOnRoute` is set when
+    // it pulls in somewhere on the way, which turns GO into CONTINUE; `_rvParked` keeps it on the board
+    // wherever it last stopped.
+    const string RvSpritePath = "Environment/motorhome";
+    RectTransform _rv;
+    bool _driving, _stoppedOnRoute, _rvParked;
+    TravelNode _hopTo;
+    Vector2 _hopFrom, _hopEnd;
+    float _hopT, _hopSeconds;
     Vector2 _contentMin, _contentMax;
     bool _boundsKnown;
 
@@ -169,14 +182,15 @@ public class TravelMapScreen : MonoBehaviour
             marker.button.onClick.AddListener(() => OnNodeClicked(marker));
         }
 
-        noticeLabel.text = "";
+        _noticeColor = noticeLabel.color;
+        ApplyHint();
         // Between two rounds the next race is already decided, so the route to it is drawn from the off.
         // Not while this week's weekend is still running: the map is only a look at the road until then.
         if (WeekendHoldsTheCar) Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason);
         else if (TravelState.BookNextCalendarRace())
             Notice(TravelTutorial.LegBooked
                 ? Draftmaster.Tracks.TravelTutorialRoute.Prompt
-                : $"Next race: {TravelGraph.Get(TravelState.DestinationId).name}. Tap a place to call in there on the way.");
+                : $"Next race: {TravelGraph.Get(TravelState.DestinationId).name}. Tap places to call in on the way, then GO.");
         SetUpView();
         Refresh();
         OpenView();
@@ -206,12 +220,12 @@ public class TravelMapScreen : MonoBehaviour
 
     void Update()
     {
-        if (noticeLabel.text.Length > 0 && Time.unscaledTime >= _noticeUntil)
-            noticeLabel.text = "";
+        if (_hint == null && Time.unscaledTime >= _noticeUntil)
+            ApplyHint();
+        else if (_hint != null && (_hintVersion != InputGlyphs.Version || _hintTouch != InputGlyphs.UsingTouch))
+            ApplyHint();
 
-        if (_subBase != null && (_hintVersion != InputGlyphs.Version || _hintTouch != InputGlyphs.UsingTouch))
-            ApplySubLabel();
-
+        UpdateDrive();
         UpdateView();
     }
 
@@ -236,10 +250,14 @@ public class TravelMapScreen : MonoBehaviour
         }
     }
 
-    void Notice(string msg)
+    // A notice shows for three seconds; a sticky one stays until the next notice (a question waiting on
+    // the footer's buttons, like VISIT or CONTINUE).
+    void Notice(string msg, bool sticky = false)
     {
+        _hint = null;
         noticeLabel.text = msg;
-        _noticeUntil = Time.unscaledTime + 3f;
+        noticeLabel.color = _noticeColor;
+        _noticeUntil = sticky ? float.PositiveInfinity : Time.unscaledTime + 3f;
     }
 
     // ---------------- the window onto the map ----------------
@@ -247,7 +265,7 @@ public class TravelMapScreen : MonoBehaviour
     // The plot is the fixed-size rect the two roots are stretched across (MapPlot in the prefab), so it is
     // the window; the roots are the paper being slid about behind it. Found rather than wired, so the
     // authored prefab needs no rebuild, and masked here for the same reason — without it a zoomed map
-    // spills over the header and the side panel.
+    // spills over the header and the footer.
     void SetUpView()
     {
         _plot = nodesRoot != null ? nodesRoot.parent as RectTransform : null;
@@ -257,11 +275,13 @@ public class TravelMapScreen : MonoBehaviour
 
     // Where the map opens: this week's race. While a destination is booked that is the destination; with
     // none booked the player is parked at the venue — during a race weekend the satnav is opened inside an
-    // RV at the circuit — so it is wherever they stand.
+    // RV at the circuit — so it is wherever they stand. Mid-weekend the map is only for browsing, so it
+    // opens on where they stand whatever is booked.
     void OpenView()
     {
         if (_plot == null) return;
-        var node = TravelGraph.Get(TravelState.DestinationId) ?? TravelGraph.Get(TravelState.CurrentNodeId);
+        var here = TravelGraph.Get(TravelState.CurrentNodeId);
+        var node = WeekendHoldsTheCar ? here : TravelGraph.Get(TravelState.DestinationId) ?? here;
         _focusedOn = node != null ? node.id : null;
         FocusOn(node, openZoom, instant: true);
     }
@@ -414,6 +434,103 @@ public class TravelMapScreen : MonoBehaviour
         var scale = new Vector3(_zoom, _zoom, 1f);
         if (nodesRoot != null) { nodesRoot.localScale = scale; nodesRoot.anchoredPosition = offset; }
         if (edgesRoot != null) { edgesRoot.localScale = scale; edgesRoot.anchoredPosition = offset; }
+        if (Mathf.Abs(LabelScale - _labelScaleLaidOut) > 0.04f) DeclutterLabels();
+    }
+
+    // ---------------- place names ----------------
+    //
+    // The middle of the country is packed — Charlotte, Concord, Rockingham and North Wilkesboro inside a
+    // thumb's width of each other — so every name cannot be printed at once and be read. Names are laid out
+    // most important first; each takes the first side of its dot (under, over, right, left) where it would
+    // not land on a name already placed or on somebody else's dot, and a name with no clear side is left
+    // off. The dots always stay, and the names that matter right now (where you are, where you are going,
+    // your stops, your factory) are always printed.
+    //
+    // Names grow with the map up to the zoom it opens at, then hold their size: zooming in past that
+    // spreads the dots apart under names that no longer grow, so the ones left off come back.
+    float LabelScale => _zoom <= openZoom ? 1f : openZoom / Mathf.Max(_zoom, 0.01f);
+
+    // 4 the names in play right now, 3 where the car can go next, 2 racetracks, 1 a place you have been, 0 "?".
+    static int LabelRank(TravelNode n, bool shout, bool reachable)
+    {
+        if (shout) return 4;
+        if (reachable) return 3;
+        if (n.isCircuit) return 2;
+        return TravelState.IsVisited(n.id) ? 1 : 0;
+    }
+
+    const float LabelGap = 3f;   // board pixels between a dot and its name, and between two names
+
+    void DeclutterLabels()
+    {
+        float k = LabelScale;
+        _labelScaleLaidOut = k;
+
+        var order = new List<TravelNodeMarker>(_markers.Values);
+        order.Sort((a, b) =>
+        {
+            int ra = _labelRank.TryGetValue(a, out int x) ? x : 0, rb = _labelRank.TryGetValue(b, out int y) ? y : 0;
+            if (ra != rb) return rb.CompareTo(ra);
+            return string.CompareOrdinal(a.nodeId, b.nodeId);
+        });
+
+        // Everything a name must stay off: every dot, and the two pins, in the nodes root's own space.
+        var dots = new List<(TravelNodeMarker owner, Rect rect)>(order.Count + 2);
+        foreach (var m in order)
+            if (m.dot != null) dots.Add((m, Around(m.transform.localPosition, m.dot.rectTransform.rect.size)));
+        foreach (var pin in new[] { herePin, destPin })
+            if (pin != null && pin.gameObject.activeSelf && pin.parent == nodesRoot)
+                dots.Add((null, Around(pin.localPosition, pin.rect.size)));
+
+        var placed = new List<Rect>(order.Count);
+        foreach (var m in order)
+        {
+            var label = m.label;
+            if (label == null) continue;
+            if (string.IsNullOrEmpty(label.text)) { label.enabled = false; continue; }
+
+            var lrt = label.rectTransform;
+            lrt.localScale = new Vector3(k, k, 1f);
+            Vector2 size = new Vector2(label.preferredWidth, label.preferredHeight) * k;
+            Vector2 c = m.transform.localPosition;
+            float reach = (m.dot != null ? m.dot.rectTransform.rect.height : 12f) * 0.5f + LabelGap;
+            float side = (m.dot != null ? m.dot.rectTransform.rect.width : 12f) * 0.5f + LabelGap;
+
+            // The factory's name goes over its dot first: Indianapolis is packed in right under it.
+            bool overFirst = m.Node != null && m.Node.locationType == TravelLocationType.TeamFactory;
+            Vector2 under = new Vector2(0f, -(reach + size.y * 0.5f));
+            Vector2 over = new Vector2(0f, reach + size.y * 0.5f);
+            Vector2 right = new Vector2(side + size.x * 0.5f, 0f);
+            Vector2 left = new Vector2(-(side + size.x * 0.5f), 0f);
+            var tries = overFirst ? new[] { over, under, right, left } : new[] { under, over, right, left };
+
+            Vector2? chosen = null;
+            foreach (var offset in tries)
+            {
+                var r = Around(c + offset, size);
+                if (Clear(r, placed, dots, m)) { chosen = offset; break; }
+            }
+            int rank = _labelRank.TryGetValue(m, out int rk) ? rk : 0;
+            if (chosen == null && rank >= 4) chosen = tries[0];   // where you are and where you're going: always
+            if (chosen == null) { label.enabled = false; continue; }
+
+            label.enabled = true;
+            lrt.anchorMin = lrt.anchorMax = new Vector2(0.5f, 0.5f);
+            lrt.pivot = new Vector2(0.5f, 0.5f);
+            lrt.anchoredPosition = chosen.Value;
+            label.alignment = TextAnchor.MiddleCenter;
+            placed.Add(Around(c + chosen.Value, size));
+        }
+    }
+
+    static Rect Around(Vector2 centre, Vector2 size) => new Rect(centre - size * 0.5f, size);
+
+    static bool Clear(Rect r, List<Rect> placed, List<(TravelNodeMarker owner, Rect rect)> dots, TravelNodeMarker self)
+    {
+        var padded = new Rect(r.x - LabelGap * 0.5f, r.y - LabelGap * 0.5f, r.width + LabelGap, r.height + LabelGap);
+        for (int i = 0; i < placed.Count; i++) if (padded.Overlaps(placed[i])) return false;
+        for (int i = 0; i < dots.Count; i++) if (dots[i].owner != self && padded.Overlaps(dots[i].rect)) return false;
+        return true;
     }
 
     // Keep the window on the country. An axis whose content is narrower than the window is centred on it
@@ -556,6 +673,14 @@ public class TravelMapScreen : MonoBehaviour
         PlacePin(herePin, TravelGraph.Get(currentId));
         PlacePin(destPin, TravelGraph.Get(destId));
         TintEdges(currentId, Draftmaster.Tracks.TravelRoutePlan.Route(currentId, null, destId, id => TravelGraph.Neighbors(id)));
+        foreach (var m in _markers.Values)
+        {
+            var n = m.Node;
+            if (n == null) continue;
+            bool shout = n.id == currentId || n.id == destId || n.locationType == TravelLocationType.TeamFactory;
+            _labelRank[m] = LabelRank(n, shout, false);
+        }
+        DeclutterLabels();
     }
 
     static bool IsFactory(string nodeId)
@@ -572,6 +697,7 @@ public class TravelMapScreen : MonoBehaviour
         bool choosing = dest == null;
         bool isCurrent = n == current;
 
+        if (_driving) return;
         if (isCurrent) { Refresh(); return; }
         if (WeekendHoldsTheCar) { Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason); return; }
         if (choosing)
@@ -589,9 +715,8 @@ public class TravelMapScreen : MonoBehaviour
             return;
         }
 
-        // On the road: the next node along the drawn route is where a tap drives. Anywhere else is a stop
-        // to add to the route — or, tapped again, to take off it — and the route is redrawn either way.
-        if (n.id == TravelRoute.NextHop()) { DriveTo(n); return; }
+        // On the road: a tap adds a stop to the route — or, tapped again, takes it off — and the route is
+        // redrawn either way. GO drives it.
         if (n == dest) { Notice($"The route already ends at {dest.name}."); return; }
 
         if (TravelRoute.HasStop(n.id))
@@ -619,16 +744,111 @@ public class TravelMapScreen : MonoBehaviour
         Refresh();
     }
 
-    // One stop along the route. The tutorial can hold the car back (Team HQ not on the route yet).
-    void DriveTo(TravelNode n)
+    // ---------------- the drive ----------------
+
+    // GO / CONTINUE: the RV appears where you stand and sets off down the route.
+    void StartDrive()
     {
         if (WeekendHoldsTheCar) { Notice(Draftmaster.Weekend.WeekendDeparture.HeldReason); return; }
-        if (!TravelTutorial.CanMoveTo(n.id)) { Notice(TravelTutorial.BlockedReason(n.id)); return; }
-        if (TravelState.MoveTo(n.id))
+        _stoppedOnRoute = false;
+        _driving = true;
+        PlaceRv(ContentPoint(TravelGraph.Get(TravelState.CurrentNodeId)), Vector2.zero);
+        if (!NextHop()) StopDriving();
+        Refresh();
+    }
+
+    // Lines up the next road along the route, or says why there isn't one and returns false.
+    bool NextHop()
+    {
+        var path = TravelRoute.Path();
+        if (path == null || path.Count == 0 || TravelState.StopsLeft <= 0) return false;
+        var next = TravelGraph.Get(path[0]);
+        if (next == null) return false;
+        if (!TravelTutorial.CanMoveTo(next.id)) { Notice(TravelTutorial.BlockedReason(next.id)); return false; }
+
+        _hopTo = next;
+        _hopFrom = ContentPoint(TravelGraph.Get(TravelState.CurrentNodeId));
+        _hopEnd = ContentPoint(next);
+        _hopT = 0f;
+        _hopSeconds = Mathf.Max(rvMinHopSeconds, Vector2.Distance(_hopFrom, _hopEnd) / Mathf.Max(1f, rvSpeed));
+        return true;
+    }
+
+    void UpdateDrive()
+    {
+        if (!_driving || _hopTo == null) return;
+
+        _hopT += Time.unscaledDeltaTime;
+        float k = Mathf.Clamp01(_hopT / _hopSeconds);
+        Vector2 at = Vector2.Lerp(_hopFrom, _hopEnd, Mathf.SmoothStep(0f, 1f, k));
+        PlaceRv(at, _hopEnd - _hopFrom);
+        // The view rides along with the RV rather than hopping node to node behind it.
+        _focusTarget = ClampFocus(at, _zoomTarget);
+        if (k < 1f) return;
+
+        var arrived = _hopTo;
+        _hopTo = null;
+        if (!TravelState.MoveTo(arrived.id)) { StopDriving(); Refresh(); return; }
+        _focusedOn = arrived.id;
+
+        var dest = TravelGraph.Get(TravelState.DestinationId);
+        if (arrived == dest)
         {
-            if (!n.isCircuit) Notice($"Pulled in at {n.name}.");
-            Refresh();
+            StopDriving();
+            Notice($"Made it to {arrived.name}.");
         }
+        else if (!arrived.isCircuit)
+        {
+            // Anywhere that is not a racetrack is somewhere to stop: a shop, a yard, your own factory.
+            StopDriving();
+            _stoppedOnRoute = true;
+            Notice($"Pulled in at {MapName(arrived)}. Visit, or continue on?", sticky: true);
+        }
+        else if (!NextHop())
+        {
+            StopDriving();
+            if (TravelState.StopsLeft <= 0) Notice("Out of stops. The flatbed knows the way.", sticky: true);
+        }
+        Refresh();
+    }
+
+    void StopDriving()
+    {
+        _driving = false;
+        _hopTo = null;
+        _rvParked = true;
+    }
+
+    // The RV sprite, made on first use. Pointing along `heading` when it has one; the art faces left.
+    void PlaceRv(Vector2 at, Vector2 heading)
+    {
+        if (_rv == null)
+        {
+            var go = new GameObject("RV", typeof(RectTransform), typeof(Image));
+            _rv = (RectTransform)go.transform;
+            _rv.SetParent(nodesRoot, false);
+            _rv.anchorMin = _rv.anchorMax = _rv.pivot = new Vector2(0.5f, 0.5f);
+            _rv.sizeDelta = rvSize;
+            var img = go.GetComponent<Image>();
+            img.sprite = Resources.Load<Sprite>(RvSpritePath);
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+        }
+        _rv.gameObject.SetActive(true);
+        _rv.localPosition = at;
+        if (heading.sqrMagnitude > 0.01f)
+            _rv.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(heading.y, heading.x) * Mathf.Rad2Deg + 180f);
+        _rv.SetAsLastSibling();
+    }
+
+    // Once it has set off, the RV stays on the board — on the road or parked where it stopped — and does
+    // the "you are here" pin's job; before that (or after a tow) the pin does.
+    void ShowRvOrPin(TravelNode current)
+    {
+        bool rv = _driving || _rvParked;
+        if (_rv != null) _rv.gameObject.SetActive(rv);
+        if (rv && herePin != null) herePin.gameObject.SetActive(false);
+        if (rv && _rv != null) _rv.SetAsLastSibling();
     }
 
     // A place's name as the map shows it: somewhere never visited is still a "?".
@@ -651,22 +871,25 @@ public class TravelMapScreen : MonoBehaviour
         var dest = TravelGraph.Get(TravelState.DestinationId);
         if (TravelState.HasDestination && dest == null) TravelState.DestinationId = ""; // stale save vs renamed node
         bool choosing = dest == null;
+        // Mid-weekend the car is going nowhere, so the map is just for browsing: no route, no next race,
+        // no roads lit out of where you stand — only the "you are here" halo.
+        bool browsing = WeekendHoldsTheCar;
 
-        titleLabel.text = choosing
-            ? "THE ROAD    —    choose your next race (click a circuit)"
-            : $"THE ROAD TO {dest.name.ToUpperInvariant()}";
-        var path = choosing ? null : TravelRoute.Path();
-        _subBase = choosing
-            ? $"Week {TravelState.Week}   ·   You are at {current.name}"
-            : $"Week {TravelState.Week}   ·   At {current.name}   ·   ROUTE: {path?.Count ?? 0}   ·   STOPS LEFT: {TravelState.StopsLeft}";
-        ApplySubLabel();
-        cashLabel.text = PlayerWallet.CashText;
+        var path = choosing || browsing ? null : TravelRoute.Path();
+        // The clock ticks half a day a stop, Mon AM to Fri AM (TravelDays), so it reads down with the stops.
+        subLabel.text = browsing
+            ? $"Race weekend · At {current.name}"
+            : choosing
+            ? $"{TravelState.DayLabel} · At {current.name} · Pick your next race"
+            : $"{TravelState.DayLabel} · At {current.name} · ROUTE: {path?.Count ?? 0} · STOPS LEFT: {TravelState.StopsLeft}";
 
         // The view rides along with the player as they hop, keeping whatever zoom they chose.
         FollowFocus(current);
 
-        RefreshMarkers(choosing, current, dest, path);
-        RefreshSidePanel(choosing, current, dest, path);
+        if (browsing) RefreshMarkersBrowsing(current);
+        else RefreshMarkers(choosing, current, dest, path);
+        ShowRvOrPin(current);
+        RefreshActions(choosing, current, dest, path);
         RefreshTutorialPrompt();
     }
 
@@ -676,7 +899,8 @@ public class TravelMapScreen : MonoBehaviour
 
     void RefreshTutorialPrompt()
     {
-        string text = TravelTutorial.PromptText();
+        // Mid-weekend there is no route to follow, so no instruction about one either.
+        string text = WeekendHoldsTheCar ? null : TravelTutorial.PromptText();
         string id = text == null ? null : TravelTutorial.PromptId + ":" + text;
         if (id == _tutorialPrompt) return;
 
@@ -685,18 +909,45 @@ public class TravelMapScreen : MonoBehaviour
         if (id != null) ControlHints.ShowSticky(id, null, null, text, once: false, urgent: true);
     }
 
-    // The hint rides on the sub line because the map no longer shows the whole country at once, and it
-    // names the controls of whatever is in the player's hands — so it is redrawn when that changes.
-    void ApplySubLabel()
+    // The controls hint sits in the footer whenever no notice is up, because the map no longer shows the
+    // whole country at once. It names the controls of whatever is in the player's hands, so it is redrawn
+    // when that changes.
+    void ApplyHint()
     {
         _hintVersion = InputGlyphs.Version;
         _hintTouch = InputGlyphs.UsingTouch;
-        string hint =
+        _hint =
             InputGlyphs.UsingGamepad
                 ? $"{InputGlyphs.PadName(PadBindings.MapZoomIn)} / {InputGlyphs.PadName(PadBindings.MapZoomOut)} zoom"
-            : _hintTouch ? "pinch zooms, two-finger drag pans"
-            : "wheel zooms, right-drag pans";
-        subLabel.text = _subBase + "   ·   " + hint;
+            : _hintTouch ? "Pinch zooms, two-finger drag pans"
+            : "Wheel zooms, right-drag pans";
+        noticeLabel.text = _hint;
+        noticeLabel.color = HintColor;
+    }
+
+    // The browsing board: every place in its own colour, where you are framed in cream, and nothing else
+    // marked — no destination flag, no route, no stops, no roads lit as the way out. Places stay clickable
+    // so a tap can say why the car is staying put.
+    void RefreshMarkersBrowsing(TravelNode current)
+    {
+        foreach (var marker in _markers.Values)
+        {
+            var n = marker.Node;
+            bool isCurrent = n == current;
+            marker.button.interactable = true;
+            marker.halo.enabled = isCurrent;
+            if (isCurrent) marker.halo.color = CurrentHalo;
+            marker.dot.color = DotColor(n);
+            marker.label.text = LabelFor(n);
+            bool shout = isCurrent || n.locationType == TravelLocationType.TeamFactory;
+            marker.label.fontSize = shout ? 16 : 8;
+            marker.label.color = isCurrent ? CurrentHalo : LabelColor(n);
+            _labelRank[marker] = LabelRank(n, shout, false);
+        }
+        PlacePin(herePin, current);
+        PlacePin(destPin, null);
+        TintEdges(null, null);
+        DeclutterLabels();
     }
 
     void RefreshMarkers(bool choosing, TravelNode current, TravelNode dest, List<string> path)
@@ -732,6 +983,7 @@ public class TravelMapScreen : MonoBehaviour
             bool shout = isCurrent || isDest || waypoint || n.locationType == TravelLocationType.TeamFactory;
             marker.label.fontSize = shout ? 16 : 8;
             marker.label.color = isCurrent ? CurrentHalo : (isDest || waypoint ? DestHalo : LabelColor(n));
+            _labelRank[marker] = LabelRank(n, shout, reachable || choosable);
         }
 
         // The two pins are single objects that hop about rather than one per node: where you are, and
@@ -739,6 +991,7 @@ public class TravelMapScreen : MonoBehaviour
         PlacePin(herePin, current);
         PlacePin(destPin, dest);
         TintEdges(current != null ? current.id : null, path);
+        DeclutterLabels();
     }
 
     // Parks a pin just above a node's dot, or hides it when there is nothing to point at.
@@ -783,128 +1036,79 @@ public class TravelMapScreen : MonoBehaviour
         return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name.ToUpperInvariant();
     }
 
-    // ---------------- side panel ----------------
+    // ---------------- footer buttons ----------------
 
-    // The panel scrolls (its type is the shared scale's, and a busy stop is taller than the screen), so
-    // arriving somewhere new starts it from the top rather than wherever the last place was scrolled to.
-    string _sidePanelShowing;
-
-    void RefreshSidePanel(bool choosing, TravelNode current, TravelNode dest, List<string> path)
+    // The way on, in the footer beside the notice: GO down the route, START RACE WEEKEND at the race,
+    // TOW when the stops run out, and the walk-around button at a minor location. The map itself says the
+    // rest (where you are is the cream halo, the route is the light-blue road, the header has the counts).
+    void RefreshActions(bool choosing, TravelNode current, TravelNode dest, List<string> path)
     {
-        string showing = choosing ? "" : current.id;
-        if (showing != _sidePanelShowing)
-        {
-            _sidePanelShowing = showing;
-            var scroll = locationHeader.GetComponentInParent<ScrollRect>();
-            if (scroll != null) scroll.verticalNormalizedPosition = 1f;
-        }
-
-        // Car build summary — what's installed, so shop comparisons are one glance.
-        var sb = new StringBuilder();
-        foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
-            sb.AppendLine(PlayerCarBuild.DescribeSlot(slot));
-        carRowsLabel.text = sb.ToString().TrimEnd();
-
-        ClearShopRows();
         actionButton.gameObject.SetActive(false);
         // Optional: an older prefab may have no walk button at all (Draftmaster > Travel Map > Restyle
-        // rebuilds it). Missing it should cost you the button, not the whole side panel.
+        // rebuilds it). Missing it should cost you the button, not the whole footer.
         if (walkButton != null) walkButton.gameObject.SetActive(false);
-        shopHeader.gameObject.SetActive(false);
 
-        // Mid-weekend: no destination, no DRIVE TO, no tow — just where you are and why you are staying.
-        if (WeekendHoldsTheCar)
-        {
-            locationHeader.text = current.name.ToUpperInvariant();
-            flavorLabel.text = Draftmaster.Weekend.WeekendDeparture.HeldReason;
-            return;
-        }
-
-        if (choosing)
-        {
-            locationHeader.text = "";
-            flavorLabel.text = "Pick the next race on the map. Your stop budget covers the direct route plus a small detour — plan it past somewhere useful.";
-            return;
-        }
-
-        locationHeader.text = current.name.ToUpperInvariant();
-        string flavor;
+        // Mid-weekend or still choosing: nothing to press until a race is booked. On the road: nothing to
+        // press until the RV pulls in.
+        if (WeekendHoldsTheCar || choosing || _driving) return;
 
         if (current.isCircuit)
         {
-            if (current == dest && !TravelTutorial.CanStartWeekend)
-                flavor = "You're early. Team HQ first.";
-            else if (current == dest)
-            {
-                flavor = "This is the place. Time to go racing.";
+            if (current == dest && TravelTutorial.CanStartWeekend)
                 ShowAction("START RACE WEEKEND", () => StartRaceWeekend(current));
-            }
-            else flavor = $"A racetrack, but not this week's. {dest.name} is waiting.";
         }
-        else
+        else if (walkButton != null)
         {
-            flavor = current.flavor;
-            BuildShopRows(current);
-
-            // Park up and walk the place on foot (shared Landmark scene; costs nothing).
-            if (walkButton != null)
+            // Park up and walk the place on foot (shared Landmark scene; costs nothing). The shops are there.
+            walkButton.gameObject.SetActive(true);
+            walkButton.GetComponentInChildren<Text>().text =
+                current.locationType == TravelLocationType.TeamFactory ? "VISIT TEAM HQ" : "VISIT";
+            walkButton.onClick.RemoveAllListeners();
+            bool teamHQ = current.locationType == TravelLocationType.TeamFactory;
+            walkButton.onClick.AddListener(() =>
             {
-                walkButton.gameObject.SetActive(true);
-                walkButton.GetComponentInChildren<Text>().text =
-                    current.locationType == TravelLocationType.TeamFactory ? "GO INSIDE TEAM HQ" : "STOP & LOOK AROUND";
-                walkButton.onClick.RemoveAllListeners();
-                bool teamHQ = current.locationType == TravelLocationType.TeamFactory;
-                walkButton.onClick.AddListener(() =>
+                if (teamHQ)
                 {
-                    if (teamHQ)
+                    if (!LandmarkLoader.TeamHQInBuild)
                     {
-                        if (!LandmarkLoader.TeamHQInBuild)
-                        {
-                            Notice("TeamGarage scene missing from Build Settings.");
-                            return;
-                        }
-                        Close();
-                        LandmarkLoader.VisitTeamHQ();
-                        return;
-                    }
-                    if (!LandmarkLoader.SceneInBuild)
-                    {
-                        Notice("Landmark scene missing from Build Settings — run Draftmaster > Travel Map > Build Landmark Scene.");
+                        Notice("TeamGarage scene missing from Build Settings.");
                         return;
                     }
                     Close();
-                    LandmarkLoader.Visit(TravelState.CurrentNodeId);
-                });
-            }
+                    LandmarkLoader.VisitTeamHQ();
+                    return;
+                }
+                if (!LandmarkLoader.SceneInBuild)
+                {
+                    Notice("Landmark scene missing from Build Settings — run Draftmaster > Travel Map > Build Landmark Scene.");
+                    return;
+                }
+                Close();
+                LandmarkLoader.Visit(TravelState.CurrentNodeId);
+            });
         }
 
-        // The way on: the next stop along the route, unless the tutorial is still waiting on Team HQ.
+        // The way on: GO down the route (CONTINUE once pulled in on the way), unless the tutorial is still
+        // waiting on Team HQ.
         string next = path != null && path.Count > 0 ? path[0] : null;
-        if (current != dest && next != null && TravelState.StopsLeft > 0)
-        {
-            var nextNode = TravelGraph.Get(next);
-            flavor += $"\n\nROUTE: {path.Count} stops to {dest.name}. Tap a place on the map to call in there on the way.";
-            if (!TravelTutorial.RouteReady)
-                flavor += "\n\n" + Draftmaster.Tracks.TravelTutorialRoute.Prompt + " Tap Team HQ to add it to your route.";
-            else if (TravelTutorial.CanMoveTo(next))
-                ShowAction($"DRIVE TO {MapName(nextNode).ToUpperInvariant()}", () => DriveTo(nextNode));
-        }
+        if (current != dest && next != null && TravelState.StopsLeft > 0 && TravelTutorial.RouteReady
+            && TravelTutorial.CanMoveTo(next))
+            ShowAction(_stoppedOnRoute ? "CONTINUE" : "GO", StartDrive);
 
         // Stranded? Tow covers the rest of the way, for a price. Never a softlock.
         if (current != dest && TravelState.StopsLeft <= 0)
         {
-            flavor += "\n\nOut of stops. The flatbed knows the way.";
             ShowAction($"TOW TO {dest.name.ToUpperInvariant()} ({PlayerWallet.Format(TowCost)})", () =>
             {
                 PlayerWallet.Add(-TowCost); // clamped at $0 — the tow always runs
                 TravelState.CurrentNodeId = dest.id;
+                TravelState.LegHops = Draftmaster.Tracks.TravelDays.HalfDaysOnTheRoad; // in for Friday morning
                 TravelRoute.Clear();
+                _stoppedOnRoute = _rvParked = false;
                 Notice($"Towed to {dest.name}. The driver talked the whole way.");
                 Refresh();
             });
         }
-
-        flavorLabel.text = flavor;
     }
 
     void ShowAction(string label, UnityEngine.Events.UnityAction onClick)
@@ -913,94 +1117,6 @@ public class TravelMapScreen : MonoBehaviour
         actionButton.GetComponentInChildren<Text>().text = label;
         actionButton.onClick.RemoveAllListeners();
         actionButton.onClick.AddListener(onClick);
-    }
-
-    void ClearShopRows()
-    {
-        for (int i = shopRowsRoot.childCount - 1; i >= 0; i--)
-        {
-            var child = shopRowsRoot.GetChild(i).gameObject;
-            if (child != stockRowTemplate) Destroy(child);
-        }
-        shopRowsRoot.sizeDelta = new Vector2(shopRowsRoot.sizeDelta.x, 0f);
-    }
-
-    void BuildShopRows(TravelNode loc)
-    {
-        if (loc.locationType == TravelLocationType.None) return;
-        shopHeader.gameObject.SetActive(true);
-
-        int count = 0;
-        if (loc.locationType == TravelLocationType.Junkyard)
-        {
-            shopHeader.text = "SALVAGE THIS WEEK";
-            foreach (var (part, price) in PartCatalog.JunkyardStock(loc.id, TravelState.Week))
-            {
-                if (TravelState.WasBought(loc.id, part.id)) continue;
-                AddStockRow(part, price, () => TravelState.MarkBought(loc.id, part.id));
-                count++;
-            }
-        }
-        else if (loc.locationType == TravelLocationType.TeamFactory)
-        {
-            // Everything your own shop has finished and nobody has driven out to fetch yet. Free, and
-            // gone from the rack once taken - unlike a junkyard shelf, it does not reroll next week.
-            shopHeader.text = "ON THE RACK - YOURS TO TAKE";
-            foreach (var (part, _) in PartCatalog.FactoryStock(TravelState.Week))
-            {
-                if (TravelState.WasCollected(part.id)) continue;
-                AddStockRow(part, 0, () => TravelState.MarkCollected(part.id), free: true);
-                count++;
-            }
-            if (count == 0) shopHeader.text = "NOTHING ON THE RACK - THEY ARE STILL BUILDING";
-        }
-        else // EngineShop
-        {
-            shopHeader.text = "FOR SALE";
-            if (loc.shopStock != null)
-                foreach (var id in loc.shopStock)
-                {
-                    var part = PartCatalog.Get(id);
-                    if (part == null) continue;
-                    AddStockRow(part, part.price, null);
-                    count++;
-                }
-        }
-
-        // Outer layout group reads child heights, so the container must claim its own space.
-        float rowH = ((RectTransform)stockRowTemplate.transform).sizeDelta.y + 4f;
-        shopRowsRoot.sizeDelta = new Vector2(shopRowsRoot.sizeDelta.x, count * rowH);
-    }
-
-    void AddStockRow(PartDef part, int price, System.Action onBought, bool free = false)
-    {
-        var row = Instantiate(stockRowTemplate, shopRowsRoot);
-        row.SetActive(true);
-
-        bool installed = PlayerCarBuild.InstalledId(part.slot) == part.id;
-        row.transform.Find("NameLabel").GetComponent<Text>().text = part.name + (installed ? "   [INSTALLED]" : "");
-        row.transform.Find("EffectLabel").GetComponent<Text>().text = part.EffectSummary() + "\n" + PlayerCarBuild.DescribeSlot(part.slot);
-
-        var buy = row.transform.Find("BuyButton").GetComponent<Button>();
-        if (installed) buy.gameObject.SetActive(false);
-        else
-        {
-            buy.GetComponentInChildren<Text>().text = free ? "COLLECT" : PlayerWallet.Format(price);
-            buy.onClick.AddListener(() =>
-            {
-                if (free || PlayerWallet.TrySpend(price))
-                {
-                    PlayerCarBuild.Install(part);
-                    PlayerStatsLedger.Increment(free ? "partscollected" : "partsbought");
-                    onBought?.Invoke();
-                    Notice(free
-                        ? $"{part.name} collected and fitted. The shop already knew it would fit."
-                        : $"{part.name} installed. Old {part.slot.ToString().ToLowerInvariant()} scrapped.");
-                }
-                else Notice("Not enough cash.");
-                Refresh();
-            });
-        }
     }
 
     void StartRaceWeekend(TravelNode circuit)

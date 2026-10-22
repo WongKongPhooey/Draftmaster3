@@ -28,12 +28,17 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
    (`TravelRoute`, pure rules in `Draftmaster.Tracks.TravelRoutePlan`, tested). Tap any other place to add
    it as a stop — it slots in wherever it lengthens the drive least and the route is recalculated; tap it
    again to take it off; a stop the budget can't afford is refused. The route never passes through the
-   destination on the way to a stop. Tap the next node on the route (or **DRIVE TO** in the side panel) to
-   drive one stop along it. Stops are stored in `travel.route.stops` and cleared when a new leg is booked.
-   Arriving anywhere opens the side panel. Minor
+   destination on the way to a stop. **GO** (footer) sends an RV sprite (`Resources/Environment/motorhome`)
+   down the route: it rolls straight through racetracks (gold) and pulls in at every other place it
+   crosses — parts shop, salvage yard, Team HQ — whether or not you added it as a stop. There the footer
+   offers **VISIT** (walk it on foot: Landmark scene, or the TeamGarage for HQ) or **CONTINUE**. Each hop
+   still costs a stop, and each stop is half a day: the header's clock runs Mon AM → Fri AM
+   (`Draftmaster.Tracks.TravelDays`, `TravelState.LegHops`), so 8 stops lands on the next weekend's first
+   morning; past 8 it holds at Fri AM, and a tow arrives Fri AM. Stops are stored in `travel.route.stops` and cleared when a new leg is booked.
+   Mid-weekend (`WeekendHoldsTheCar`) the map is for browsing only: no route, no flag, no buttons. Minor
    locations are grey "?" dots until first visited — after that they show name + type (`[E]` engine
    shop / `[J]` junkyard) forever. That's the discovery/learning mechanic.
-4. **Shop**: junkyards sell a 3-item salvage roll (deterministic per location+week, 45–70% of book
+4. **Shop** (on foot, `LandmarkShopPanel` — the map has no side panel): junkyards sell a 3-item salvage roll (deterministic per location+week, 45–70% of book
    price, duds *and* gems in the pool — reading the shelf is a skill); engine shops sell a fixed
    catalog at full price. **Buying installs immediately** and scraps the old part (one part per slot).
 5. **Race**: at the destination, START RACE WEEKEND → `RaceWeekend.ResetWeekend()` + scene load

@@ -11,6 +11,7 @@ public static class TravelState
     const string DestKey = "travel.dest";
     const string StopsKey = "travel.stops";
     const string WeekKey = "travel.week";
+    const string LegHopsKey = "travel.leghops";
     const string VisitedKey = "travel.visited";
     const string BoughtKeyPrefix = "travel.bought."; // + week.locationId.partId -> junkyard item taken
     const string CollectedKeyPrefix = "travel.collected."; // + partId -> taken off the factory bench, for good
@@ -43,6 +44,15 @@ public static class TravelState
         set { PlayerPrefs.SetInt(WeekKey, value); PlayerPrefs.Save(); }
     }
 
+    // Stops driven on this leg — one half-day each, so it is also the satnav's clock (TravelDays.Label).
+    public static int LegHops
+    {
+        get => PlayerPrefs.GetInt(LegHopsKey, 0);
+        set { PlayerPrefs.SetInt(LegHopsKey, Mathf.Max(0, value)); PlayerPrefs.Save(); }
+    }
+
+    public static string DayLabel => TravelDays.Label(LegHops);
+
     public static bool HasDestination => !string.IsNullOrEmpty(DestinationId);
 
     // Choose the next race venue: budget = direct route + a small detour allowance. New week -> junkyards reroll.
@@ -60,6 +70,7 @@ public static class TravelState
         int budget = tutorial ? TravelTutorial.BudgetFrom(CurrentNodeId) : direct + TravelGraph.DetourAllowance;
         DestinationId = circuitId;
         StopsLeft = budget;
+        LegHops = 0;
         Week = Week + 1;
         TravelRoute.Clear();   // a new leg starts as the direct road; the player taps stops onto it
         return true;
@@ -82,6 +93,7 @@ public static class TravelState
         if (!TravelTutorial.CanMoveTo(nodeId)) return false;
         CurrentNodeId = nodeId;
         StopsLeft = StopsLeft - 1;
+        LegHops = LegHops + 1;
         TravelTutorial.OnArrived(nodeId);
         TravelRoute.OnArrived(nodeId);
         bool firstVisit = MarkVisited(nodeId);
@@ -104,6 +116,7 @@ public static class TravelState
         if (HasDestination) CurrentNodeId = DestinationId;
         DestinationId = "";
         StopsLeft = 0;
+        LegHops = 0;
         TravelRoute.Clear();
     }
 
