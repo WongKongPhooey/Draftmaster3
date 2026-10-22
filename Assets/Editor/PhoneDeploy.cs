@@ -12,15 +12,19 @@ using Debug = UnityEngine.Debug;
 // phone over wireless debugging, put the new build on it.
 //
 //   1. The version's last number goes up by one (0.3.8 -> 0.3.9), and the Android version code with it, saved
-//      straight into ProjectSettings so the title screen (Application.version) shows it.
+//      straight into ProjectSettings so the title screen (Application.version) shows it. A patch only COUNTS the
+//      bump (UserSettings/PhoneDeployPendingBumps.txt) and leaves the version alone: a new version code changes
+//      the APK, and pram answers a changed APK by reinstalling it and re-pushing every one of the ~2,100 Data
+//      files one adb call at a time over wifi (~16 min, 2026-10-22) instead of the few that changed. The next
+//      full build or release bundle applies every counted bump at once, so the numbers come out the same.
 //   2. The Run Device in the Android build settings is read. Only when it is the HONOR (model FCP_N49) on a
 //      wireless adb connection, and adb can actually see it right now, does anything get built. A Run Device
 //      left on the default (or anything not wireless) is pointed at the HONOR when adb can see it over
 //      wireless debugging, rather than skipping the build.
 //   3. Patch And Run when a patch will do; Build And Run when it will not (the caller asks for a full build when
-//      the change touched packages, project settings or native plugins; a patch also needs a development APK
-//      build, so an App Bundle or a non-development setup always gets the full one). A patch that fails is
-//      retried once as a full build.
+//      the change touched packages, project settings or native plugins). The build settings are forced to a
+//      development APK first, which a patch needs. A patch that fails is retried once as a full build, after
+//      the domain reload the patch left pending.
 //
 // Driven by Tokenmaxxer through the Unity MCP as menu items, so nothing in here may open a dialog (a modal
 // wedges the editor for the rest of the night). The menu item only schedules the work and returns, because a
@@ -41,12 +45,14 @@ public static class PhoneDeploy
         public string mode;        // what was actually built: "patch", "full" or ""
         public string version;
         public int versionCode;
+        public int pendingBumps;   // bumps counted by patches and not yet applied to the version
         public string device;
         public string message;
         public string startedAt;
         public string finishedAt;
     }
 
+    // The bump is counted, not applied — see the top of the file. The menu path stays as Tokenmaxxer calls it.
     [MenuItem("Draftmaster/Build/After Task: Bump Version + Patch And Run On Phone", priority = 200)]
     static void AfterTaskPatch() => Schedule("patch");
 
@@ -59,7 +65,8 @@ public static class PhoneDeploy
 
     // A Google Play upload: release (not Development) App Bundle at the current version, then the build settings go
     // straight back to a development APK so the next After Task patch still works. Same status file, request
-    // "release"; no version bump (After Task bumps keep the version code ahead of the last upload) and no Run.
+    // "release"; no bump of its own, but any bumps patches counted are applied first (After Task bumps keep the
+    // version code ahead of the last upload), and no Run.
     [MenuItem("Draftmaster/Build/Build Play Store Bundle (Release .aab)", priority = 220)]
     static void ReleaseBundle()
     {
@@ -81,6 +88,8 @@ public static class PhoneDeploy
                 Finish(s, "skipped", "", "Editor is in Play Mode; no release build.");
                 return;
             }
+            // Patches only counted their bumps; an upload has to carry them, or its code could trail the last one.
+            if (PendingBumps > 0) BumpVersion(s, PendingBumps);
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
                 Finish(s, "skipped", "", $"Active platform is {EditorUserBuildSettings.activeBuildTarget}, not Android.");
@@ -156,16 +165,18 @@ public static class PhoneDeploy
                 return;
             }
 
-            if (s.bump) BumpVersion(s);
+            if (s.bump && s.request == "patch") CountBump(s);
+            else if (s.bump) BumpVersion(s, 1 + PendingBumps);
             else
             {
                 s.version = PlayerSettings.bundleVersion;
                 s.versionCode = PlayerSettings.Android.bundleVersionCode;
+                s.pendingBumps = PendingBumps;
             }
 
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
-                Finish(s, "skipped", "", $"Version bumped. Active platform is {EditorUserBuildSettings.activeBuildTarget}, " +
+                Finish(s, "skipped", "", $"{BumpNote(s)}Active platform is {EditorUserBuildSettings.activeBuildTarget}, " +
                                          "not Android, so no phone build (switching would reimport the project).");
                 return;
             }
@@ -184,19 +195,19 @@ public static class PhoneDeploy
             s.device = device;
             if (string.IsNullOrEmpty(device) || !IsWireless(device))
             {
-                Finish(s, "skipped", "", $"Version bumped. Run Device is '{device}', not a wireless debugging connection.");
+                Finish(s, "skipped", "", $"{BumpNote(s)}Run Device is '{device}', not a wireless debugging connection.");
                 return;
             }
 
             string model = AdbModel(device, out string adbWhy);
             if (model == null)
             {
-                Finish(s, "skipped", "", $"Version bumped. Run Device {device} is not connected right now ({adbWhy}).");
+                Finish(s, "skipped", "", $"{BumpNote(s)}Run Device {device} is not connected right now ({adbWhy}).");
                 return;
             }
             if (!string.Equals(model, PhoneModel, StringComparison.OrdinalIgnoreCase))
             {
-                Finish(s, "skipped", "", $"Version bumped. Run Device is a {model}, not the HONOR {PhoneModel}.");
+                Finish(s, "skipped", "", $"{BumpNote(s)}Run Device is a {model}, not the HONOR {PhoneModel}.");
                 return;
             }
 
@@ -205,33 +216,37 @@ public static class PhoneDeploy
             string unsigned = MissingKeystorePassword();
             if (unsigned != null)
             {
-                Finish(s, "skipped", "", $"Version bumped. Keystore password not set ({unsigned}); re-enter it in " +
+                Finish(s, "skipped", "", $"{BumpNote(s)}Keystore password not set ({unsigned}); re-enter it in " +
                                          "Player Settings > Publishing Settings. Unity forgets it on restart.");
                 return;
             }
 
-            bool patch = s.request == "patch";
-            string whyFull = null;
-            if (patch && EditorUserBuildSettings.buildAppBundle) whyFull = "the build is set to App Bundle (patches are APK only)";
-            else if (patch && !EditorUserBuildSettings.development) whyFull = "the build is not a Development Build (patches need one)";
-            if (whyFull != null) patch = false;
+            // A phone build is always a development APK: patches need both, and an App Bundle can't be installed by
+            // Run anyway. A release bundle puts these back in its finally, but a hand toggle in Build Profiles
+            // would otherwise quietly turn every patch into a full build.
+            if (EditorUserBuildSettings.buildAppBundle || !EditorUserBuildSettings.development)
+            {
+                Debug.Log($"PhoneDeploy: build settings were bundle={EditorUserBuildSettings.buildAppBundle} " +
+                          $"development={EditorUserBuildSettings.development}; set to development APK.");
+                EditorUserBuildSettings.buildAppBundle = false;
+                EditorUserBuildSettings.development = true;
+            }
 
+            bool patch = s.request == "patch";
             var report = Build(s, patch);
             if (patch && report.summary.result != BuildResult.Succeeded)
             {
-                Debug.LogWarning($"PhoneDeploy: patch failed ({report.summary.result}); retrying as a full Build And Run.");
-                whyFull = "the patch build failed";
-                report = Build(s, patch: false);
-                patch = false;
+                // A patch build leaves a domain reload pending, and BuildPlayer refuses to start until it has run
+                // ("A domain reload is pending", result Unknown). So the full build waits for the reload: the
+                // status rides SessionState across it and RetryAfterReload picks it up.
+                Debug.LogWarning($"PhoneDeploy: patch failed ({report.summary.result}); full Build And Run after the domain reload.");
+                s.message = "patch failed; full Build And Run after the domain reload";
+                Write(s);
+                SessionState.SetString(RetryKey, JsonUtility.ToJson(s));
+                EditorUtility.RequestScriptReload();
+                return;
             }
-
-            if (report.summary.result == BuildResult.Succeeded)
-                Finish(s, "deployed", patch ? "patch" : "full",
-                       $"{(patch ? "Patch And Run" : "Build And Run")} to {device} succeeded in " +
-                       $"{report.summary.totalTime.TotalMinutes:0.0} min" + (whyFull != null ? $" (full build because {whyFull})." : "."));
-            else
-                Finish(s, "failed", patch ? "patch" : "full",
-                       $"Build {report.summary.result} with {report.summary.totalErrors} error(s). See Editor.log.");
+            FinishBuild(s, report, patch, null);
         }
         catch (Exception e)
         {
@@ -240,28 +255,102 @@ public static class PhoneDeploy
         }
     }
 
-    // 0.3.8 -> 0.3.9: the last number only. A version with no dot-separated number at the end is left alone.
-    static void BumpVersion(Status s)
+    const string RetryKey = "PhoneDeploy.RetryFull";
+
+    [InitializeOnLoadMethod]
+    static void RetryAfterReload()
+    {
+        string json = SessionState.GetString(RetryKey, "");
+        if (json.Length == 0) return;
+        SessionState.EraseString(RetryKey);
+        var s = JsonUtility.FromJson<Status>(json);
+        EditorApplication.delayCall += () =>
+        {
+            try
+            {
+                // A full install replaces the APK anyway, so the bumps the patches counted cost nothing here.
+                if (s.bump && PendingBumps > 0) BumpVersion(s, PendingBumps);
+                FinishBuild(s, Build(s, patch: false), false, "the patch build failed");
+            }
+            catch (Exception e)
+            {
+                Finish(s, "failed", "full", "Exception: " + e.Message);
+                Debug.LogException(e);
+            }
+        };
+    }
+
+    static void FinishBuild(Status s, BuildReport report, bool patch, string whyFull)
+    {
+        if (report.summary.result == BuildResult.Succeeded)
+            Finish(s, "deployed", patch ? "patch" : "full",
+                   $"{(patch ? "Patch And Run" : "Build And Run")} to {s.device} succeeded in " +
+                   $"{report.summary.totalTime.TotalMinutes:0.0} min" + (whyFull != null ? $" (full build because {whyFull})." : "."));
+        else
+            Finish(s, "failed", patch ? "patch" : "full",
+                   $"{(patch ? "Patch" : "Build")} {report.summary.result} with {report.summary.totalErrors} error(s)" +
+                   (whyFull != null ? $" (full build because {whyFull})" : "") + ". See Editor.log.");
+    }
+
+    // 0.3.8 -> 0.3.9: the last number only, `by` steps at once (a full build applying the bumps patches counted).
+    // A version with no dot-separated number at the end is left alone. Clears the pending count.
+    static void BumpVersion(Status s, int by)
     {
         string v = PlayerSettings.bundleVersion ?? "";
         var parts = v.Split('.');
         if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out int last))
         {
-            parts[parts.Length - 1] = (last + 1).ToString();
+            parts[parts.Length - 1] = (last + by).ToString();
             PlayerSettings.bundleVersion = string.Join(".", parts);
         }
         else
         {
             Debug.LogWarning($"PhoneDeploy: version '{v}' has no number to bump; left as it is.");
         }
-        PlayerSettings.Android.bundleVersionCode = PlayerSettings.Android.bundleVersionCode + 1;
+        PlayerSettings.Android.bundleVersionCode = PlayerSettings.Android.bundleVersionCode + by;
         AssetDatabase.SaveAssets();
+        PendingBumps = 0;
 
         s.version = PlayerSettings.bundleVersion;
         s.versionCode = PlayerSettings.Android.bundleVersionCode;
+        s.pendingBumps = 0;
         s.message = $"version {s.version} (code {s.versionCode})";
         Write(s);
-        Debug.Log($"PhoneDeploy: version bumped {v} -> {s.version}, version code {s.versionCode}.");
+        Debug.Log($"PhoneDeploy: version bumped {v} -> {s.version} ({by} step(s)), version code {s.versionCode}.");
+    }
+
+    // How a skipped deploy reports what happened to the version before it stopped.
+    static string BumpNote(Status s) =>
+        !s.bump ? "" : s.request == "patch" ? $"Version bump counted ({s.pendingBumps} pending). " : "Version bumped. ";
+
+    // A patch's bump: counted for the next full build, the version left as it is so the APK stays in sync.
+    static void CountBump(Status s)
+    {
+        PendingBumps = PendingBumps + 1;
+        s.version = PlayerSettings.bundleVersion;
+        s.versionCode = PlayerSettings.Android.bundleVersionCode;
+        s.pendingBumps = PendingBumps;
+        s.message = $"version {s.version} (code {s.versionCode}), {s.pendingBumps} bump(s) pending";
+        Write(s);
+        Debug.Log($"PhoneDeploy: version bump counted, not applied — {s.pendingBumps} pending for the next full build.");
+    }
+
+    // Outside Library so a Library wipe can't lose it, and not in ProjectSettings so it isn't committed: it
+    // counts this machine's patches.
+    const string PendingFile = "UserSettings/PhoneDeployPendingBumps.txt";
+
+    static int PendingBumps
+    {
+        get
+        {
+            try { return File.Exists(PendingFile) && int.TryParse(File.ReadAllText(PendingFile).Trim(), out int n) ? Math.Max(0, n) : 0; }
+            catch { return 0; }
+        }
+        set
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(PendingFile));
+            File.WriteAllText(PendingFile, Math.Max(0, value).ToString());
+        }
     }
 
     static BuildReport Build(Status s, bool patch)
