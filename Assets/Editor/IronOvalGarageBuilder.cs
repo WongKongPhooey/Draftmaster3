@@ -107,11 +107,6 @@ public static class IronOvalGarageBuilder
         Place((RectTransform)driverPicker.transform, 276f, pickerY, 200f, pickerH);
         ui.driverDropdown = driverPicker;
 
-        var cash = IronOvalUI.Label(band, "Cash", "$0", IronOvalUI.Role.Header, theme.gold);
-        Anchor(cash.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -3f), new Vector2(160f, 14f));
-        cash.alignment = TextAlignmentOptions.Right;
-        ui.cashLabel = cash;
-
         float top = -22f;
         // Band above, weekend strip below. The strip is one text row tall, so the columns get back the
         // height a taller label face would otherwise eat twice over.
@@ -121,8 +116,28 @@ public static class IronOvalGarageBuilder
         // --- left: the car, then who is driving it -----------------------------------------------------
         float leftW = 158f;
         var carSlot = IronOvalUI.ArtSlot(root, "CarSlot", new Vector2(leftW, 50f),
-                                         "[ car sprite ]", keyline: true);
+                                         "[ no car ]", keyline: true);
         Place(carSlot, 8f, top, leftW, 50f);
+        // A real car sits in it now, so the inside is a plain deep plate rather than the placeholder hatch.
+        var hatch = carSlot.Find("Hatch");
+        if (hatch != null && hatch.TryGetComponent<Image>(out var hatchImage))
+        {
+            hatchImage.sprite = null;
+            hatchImage.type = Image.Type.Simple;
+            hatchImage.color = theme.plateDeep;
+        }
+        // The viewed driver's car, centred; GarageScreenUI sizes it to a whole-pixel scale of its sprite.
+        var carGo = new GameObject("Car", typeof(RectTransform), typeof(Image));
+        carGo.transform.SetParent(carSlot, false);
+        var carRt = (RectTransform)carGo.transform;
+        carRt.anchorMin = carRt.anchorMax = carRt.pivot = new Vector2(0.5f, 0.5f);
+        carRt.anchoredPosition = Vector2.zero;
+        carRt.sizeDelta = new Vector2(64f, 32f);
+        var carImage = carGo.GetComponent<Image>();
+        carImage.raycastTarget = false;
+        carImage.preserveAspect = true;
+        carImage.enabled = false;
+        ui.carImage = carImage;
         var caption = carSlot.Find("Caption");
         if (caption != null) ui.carSlotCaption = caption.GetComponent<TextMeshProUGUI>();
 
@@ -263,39 +278,12 @@ public static class IronOvalGarageBuilder
         xpValue.alignment = TextAlignmentOptions.Right;
         ui.xpLabel = xpValue;
 
-        // --- right: the car's numbers and what's bolted on ---------------------------------------------
+        // --- right: what's bolted on ---------------------------------------------------------------------
         float rightW = 161f;
-        var right = Plate(root, "CarStats", theme.plate);
+        var right = Plate(root, "FittedParts", theme.plate);
         Place(right, W - rightW - 8f, top, rightW, colH);
 
-        var carHead = IronOvalUI.Label(right, "Head", "CAR STATS", IronOvalUI.Role.HeaderSmall, theme.gold);
-        Place(carHead.rectTransform, 8f, -6f, 140f, LabelH);
-
-        float ry = -(6f + HeadPitch);
-        float carRowH = LabelH + 10f;
-        for (int i = 0; i < 4; i++)
-        {
-            var rowRt = Row(right, "CarStat_" + i, 8f, ry, rightW - 16f, carRowH);
-
-            var label = IronOvalUI.Label(rowRt, "Label", "-", IronOvalUI.Role.HeaderSmall, theme.textDim);
-            Place(label.rectTransform, 0f, 0f, 80f, LabelH);
-
-            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(64f, LabelH));
-            value.alignment = TextAlignmentOptions.Right;
-
-            // Telemetry blue: the sheet keeps the car's cells a different colour from the driver's.
-            // The bar clears the text row rather than a fixed 11px, so it cannot land on the descenders.
-            var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10, theme.info);
-            Place(cells, 0f, -(LabelH + 1f), rightW - 16f, 8f);
-
-            ui.carStats.Add(new GarageScreenUI.StatRow { label = label, cells = cells, value = value, tint = theme.info });
-            ry -= carRowH + 4f;
-        }
-
-        Place(Plate(right, "Rule", theme.plateLight), 8f, ry, rightW - 16f, 1f);
-        ry -= 8f;
-
+        float ry = -6f;
         var partsHead = IronOvalUI.Label(right, "PartsHead", "FITTED PARTS", IronOvalUI.Role.HeaderSmall, theme.gold);
         Place(partsHead.rectTransform, 8f, ry, 140f, LabelH);
         ry -= HeadPitch;

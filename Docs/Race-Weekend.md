@@ -105,8 +105,10 @@ it shows first is what it would show (qualifying → QUALIFYING, race → racecr
 aptitude), then a fixed per-driver order. Rules `Draftmaster.Weekend.DriverScouting` (pure, tunable constants),
 save `ScoutingLedger` (`scout.<NAME>` bitmask per driver, wiped by CareerReset), hooked in
 `WeekendDirector.Finish`/`FinishRoutedSession` — the result card says how many stats were uncovered. The
-National and Truck fields, which only exist as simulator names, get stable generated stat lines
-(`SimulatedField`) so the laptop can list them. Tests: `DriverScoutingTests`.
+National (Xfinity) and Truck fields are the real 2025 full-time entry lists (`SeriesEntryLists2025`, real
+numbers, teams, makes, ages; talent order from each driver's record in that series). They have no rows in the
+Drivers table, so `SimulatedField` gives them stable generated ratings for the laptop. Real careers are kept
+per driver per series (`SeriesCareers2025`, Tests: `RealSeriesFieldsTests`). Tests: `DriverScoutingTests`.
 
 **SKIP TO HERE (phone SCHEDULE).** Tap a booking on the phone's calendar (or left/right + confirm) for a card:
 what it is, when/where, fee or no-show cost, and SKIP TO HERE. `WeekendSkip.CanSkipTo` allows only forward

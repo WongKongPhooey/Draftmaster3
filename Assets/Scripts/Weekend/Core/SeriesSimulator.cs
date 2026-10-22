@@ -89,8 +89,10 @@ namespace Draftmaster.Weekend
 
         // ------------------------------------------------------------------ rosters
         //
-        // A fictional field per championship so the simulator stands on its own in menu scenes where the
-        // driver database has never been opened. The runtime layer can hand real drivers in instead.
+        // The field per championship, so the simulator stands on its own in menu scenes where the driver
+        // database has never been opened. National and Trucks are the real 2025 full-time entry lists
+        // (SeriesEntryLists2025), in talent order. The Cup field is still fictional here: the real one lives in
+        // the Drivers table (CupRoster2026), and the runtime layer can hand real drivers in instead.
 
         static readonly string[] CupField =
         {
@@ -100,27 +102,13 @@ namespace Draftmaster.Weekend
             "Trey Mullins", "Brady Corso", "Shane Peltier", "Eli Rasmussen", "Cal Winterburn", "Rex Amundsen",
         };
 
-        static readonly string[] NationalField =
-        {
-            "Jimmy Karras", "Owen Balfour", "Dusty Rowe", "Nash Terrell", "Colby Fenn", "Ray Bledsoe",
-            "Ike Hargrove", "Sam Odell", "Buddy Crane", "Levi Marchetti", "Tucker Vance", "Otis Lamm",
-            "Jared Coffey", "Wes Padgett", "Marty Sable", "Kip Ferraro", "Dane Wexler", "Roscoe Lindt",
-            "Cody Trammell", "Emory Fitch", "Bryce Nadeau", "Hal Prentiss",
-        };
-
-        static readonly string[] TruckField =
-        {
-            "Junior Kemp", "Abe Stroud", "Chuck Delaney", "Wyatt Boone", "Milo Prentice", "Grady Vollmer",
-            "Tate Ashby", "Rusty Fenwick", "Clay Muncie", "Vern Kowalski", "Deke Sharpton", "Ozzie Brill",
-            "Hoyt Cassidy", "Angus Reeve", "Pete Larrabee", "Woody Grimes", "Silas Rooker", "Boyd Tinsley",
-            "Rowdy Hearn", "Zane Mattox",
-        };
+        static string[] _national, _trucks;
 
         public static string[] RosterFor(RacingSeries s) => s switch
         {
             RacingSeries.Cup => CupField,
-            RacingSeries.National => NationalField,
-            _ => TruckField,
+            RacingSeries.National => _national ??= SeriesEntryLists2025.Names(RacingSeries.National),
+            _ => _trucks ??= SeriesEntryLists2025.Names(RacingSeries.Trucks),
         };
 
         // ------------------------------------------------------------------ simulation
@@ -306,10 +294,14 @@ namespace Draftmaster.Weekend
                 laps = SeriesCatalog.RaceLaps(series),
             };
 
+            // A real driver races their own number. Anybody else (the fictional Cup field, a roster handed in
+            // without numbers) is dealt one of the synthetic numbers, shuffled per weekend as before.
             var rng = WeekendRandom.For(weekendId, (int)series, 3);
             var numbers = new List<int>(field);
-            for (int i = 0; i < field; i++) numbers.Add(NumberFor(series, i));
+            for (int i = 0; i < field; i++) numbers.Add(SyntheticNumber(series, i));
             rng.Shuffle(numbers);
+            for (int i = 0; i < field; i++)
+                if (SeriesEntryLists2025.TryNumber(series, names[i], out int real)) numbers[i] = real;
 
             for (int i = 0; i < field; i++)
             {
@@ -326,11 +318,17 @@ namespace Draftmaster.Weekend
             return s;
         }
 
-        // Plausible car numbers that cannot collide across the three championships sharing the weekend: each
-        // one takes its own residue mod 3, so no number is ever entered in two of them on the same day. That
-        // matters because the timing towers sit next to each other in the paddock and the player reads the
-        // field by car number, not by name.
-        public static int NumberFor(RacingSeries series, int index) => series switch
+        // The number roster slot `index` races. A real entry list's slot is that car's real number. A
+        // fictional field gets plausible numbers that cannot collide across the three championships sharing
+        // the weekend: each takes its own residue mod 3. Real numbers do repeat across series (there is a #7
+        // in Xfinity and in Trucks), as they do at a real track.
+        public static int NumberFor(RacingSeries series, int index)
+        {
+            if (SeriesEntryLists2025.TryNumberAt(series, index, out int real)) return real;
+            return SyntheticNumber(series, index);
+        }
+
+        static int SyntheticNumber(RacingSeries series, int index) => series switch
         {
             RacingSeries.Cup => 1 + index * 3,
             RacingSeries.National => 2 + index * 3,

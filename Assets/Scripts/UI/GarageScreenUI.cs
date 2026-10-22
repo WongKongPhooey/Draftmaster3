@@ -14,9 +14,9 @@ using Draftmaster.Sponsors;
 // GarageUI declares a `Series` of its own in the global namespace, which would shadow the database model.
 using SeriesInfo = Draftmaster.Data.Series;
 
-// The garage screen, built to the Iron Oval design file's GARAGE pass: car slot and driver identity down
-// the left with career and accolades under it, the driver's own stats in the middle over an XP meter, and
-// the car's numbers plus fitted parts on the right.
+// The garage screen, built to the Iron Oval design file's GARAGE pass: the car and driver identity down the
+// left with career and accolades under it, the driver's own stats in the middle over an XP meter, and the
+// fitted parts on the right.
 //
 // The sheet is a JRPG character sheet, so the job here is binding each field to something the game really
 // keeps rather than inventing an RPG:
@@ -28,10 +28,12 @@ using SeriesInfo = Draftmaster.Data.Series;
 //                 skills, laid out by DriverAttributeSheet. No row at all = the block reads as unrated
 //                 rather than showing zeros.
 //   XP            fan appeal 0-100, the progress meter this game actually has.
-//   CAREER        PlayerStatsLedger counters (starts / wins / top 10s).
-//   ACCOLADES     derived from those same counters, so a line only appears once it's been earned.
-//   CAR STATS     the base VehicleInfo with the installed parts applied — top speed, 0-60, grip and
-//                 durability are the numbers the car will actually race with.
+//   CAR           the paint the viewed car races in: the player's own scheme and sponsor decals
+//                 (PaintShop.RenderPlayerCar), a rival's livery from their championship's carset.
+//   CAREER        the player's PlayerStatsLedger counters (starts / wins / top 10s); a real driver's real
+//                 career in the series being browsed (SeriesCareers — one record per driver per series, so
+//                 a Cup regular's Xfinity starts show under Xfinity).
+//   ACCOLADES     derived from those same numbers, so a line only appears once it's been earned.
 //   FITTED PARTS  the four real part slots. Empty reads "stock", dimmed.
 //
 // The top bar carries two dropdowns — the series, and the field entered in it — so the sheet can be read
@@ -54,7 +56,9 @@ public class GarageScreenUI : MonoBehaviour
     public TMP_Dropdown seriesDropdown;
     [Tooltip("Top-bar driver picker: the selected series' field, by car number. Changing it redraws the sheet.")]
     public TMP_Dropdown driverDropdown;
-    public TextMeshProUGUI cashLabel;
+    [Tooltip("The car slot's picture: the viewed driver's car, drawn at a whole-pixel scale that fits the slot.")]
+    public Image carImage;
+    [Tooltip("Shown in the car slot when there is no paint to draw.")]
     public TextMeshProUGUI carSlotCaption;
     public TextMeshProUGUI driverName;
     public TextMeshProUGUI driverNumber;
@@ -68,8 +72,6 @@ public class GarageScreenUI : MonoBehaviour
 
     [Tooltip("One row per DriverAttributeSheet.All entry, in that order: label, cells, value.")]
     public List<StatRow> driverStats = new();
-    [Tooltip("Four car-stat rows: label, cells, value.")]
-    public List<StatRow> carStats = new();
     [Tooltip("Three career rows: label, value.")]
     public List<TextPair> careerRows = new();
     [Tooltip("Accolade lines, filled top-down.")]
@@ -91,7 +93,7 @@ public class GarageScreenUI : MonoBehaviour
         public TextMeshProUGUI label;
         public RectTransform cells;
         public TextMeshProUGUI value;
-        [Tooltip("Cell colour. Gold for the driver's stats, telemetry blue for the car's, as the sheet has it.")]
+        [Tooltip("Cell colour. Gold for the driver's stats, as the sheet has it.")]
         public Color tint = new Color(0.91f, 0.69f, 0.24f, 1f);
     }
 
@@ -107,6 +109,8 @@ public class GarageScreenUI : MonoBehaviour
     // What the top bar is currently pointed at.
     List<SeriesInfo> _series = new();
     List<Driver> _field = new();
+    // The championship the field was drawn from, which decides which carset a rival's paint comes out of.
+    SeriesInfo _fieldSeries;
     Driver _viewed;
     // False until the pickers have been filled — a sheet built before they existed still shows the
     // player rather than an empty column.
@@ -208,6 +212,7 @@ public class GarageScreenUI : MonoBehaviour
     void ShowField(int seriesIndex, int preferredCarNumber)
     {
         var series = seriesIndex >= 0 && seriesIndex < _series.Count ? _series[seriesIndex] : null;
+        _fieldSeries = series;
         _field = SeriesRoster.Drivers(series);
         int driverIndex = SeriesRoster.DriverIndexFor(_field, preferredCarNumber);
         _viewed = driverIndex >= 0 && driverIndex < _field.Count ? _field[driverIndex] : null;
@@ -244,7 +249,7 @@ public class GarageScreenUI : MonoBehaviour
     Driver ViewedRow() => _browsing ? _viewed : PlayerDriver.Row();
 
     // Whether the sheet is showing the player's own ride, which is what decides if the player-only blocks
-    // (career, accolades, fan appeal, the car and its parts) are theirs to fill.
+    // (the ledger's career and accolades, fan appeal, the paint and the parts) are theirs to fill.
     bool ViewingPlayer(Driver row)
     {
         if (!_browsing) return true;
@@ -272,13 +277,13 @@ public class GarageScreenUI : MonoBehaviour
         bool mine = ViewingPlayer(row);
 
         int number = row != null ? row.CarNumber : (mine ? PlayerDriver.CarNumber : 0);
-        if (cashLabel != null) cashLabel.text = PlayerWallet.CashText;
-        if (carSlotCaption != null)
-            carSlotCaption.text = number > 0 ? $"[ car sprite — #{number} ]" : "[ no car ]";
+        // #0 is a real number (Sheldon Creed's Xfinity car), so "has a car" is having a row, not number > 0.
+        bool hasCar = row != null || number > 0;
+        FillCar(mine, hasCar, number);
         // Only the player's own name is overridden by their career name; a rival keeps theirs.
         if (driverName != null)
             driverName.text = (mine ? PlayerDriver.DisplayName(row) : FullName(row)).ToUpperInvariant();
-        if (driverNumber != null) driverNumber.text = number > 0 ? "#" + number : "#—";
+        if (driverNumber != null) driverNumber.text = hasCar ? "#" + number : "#—";
         FillIdentity(theme, row);
 
         int starts = PlayerStatsLedger.Get("starts");
@@ -294,10 +299,21 @@ public class GarageScreenUI : MonoBehaviour
             if (theme != null) driverLevel.color = mine ? theme.textDim : theme.textDisabled;
         }
 
-        FillCareer(mine, starts, wins, top10s);
-        FillAccolades(theme, mine, starts, wins, top5s, top10s);
+        var browsing = BrowsedSeries();
+        var record = default(Draftmaster.Weekend.SeriesCareers2025.Record);
+        bool real = !mine && SeriesCareers.TryGet(row, browsing, out record);
+        // A real driver who had not started a race in this series before 2026 (Layne Riggs in the Cup) reads
+        // as a clean sheet, not as unrecorded.
+        if (!real && !mine && IsRealDriver(row))
+        {
+            record = new Draftmaster.Weekend.SeriesCareers2025.Record(0, 0, 0, 0, null);
+            real = true;
+        }
+        if (real) FillCareer(browsing, record);
+        else FillCareer(mine, starts, wins, top10s);
+        if (real) FillAccolades(theme, browsing, record);
+        else FillAccolades(theme, mine, starts, wins, top5s, top10s);
         FillDriverStats(theme, row, mine);
-        FillCarStats(mine);
         FillParts(theme, mine);
 
         // The player's fan appeal is the meter this game keeps; a rival's standing with the crowd is the
@@ -317,13 +333,94 @@ public class GarageScreenUI : MonoBehaviour
         }
     }
 
-    // The ledger counts the player's races and nobody else's, so a rival's career reads as unrecorded
-    // rather than being handed the player's numbers.
+    // The car the viewed driver races. The player's is rendered from their saved scheme and placed sponsor
+    // decals, so the sheet shows the car they will actually drive; anyone else wears their number in their
+    // championship's carset. A number nobody has painted keeps the slot's caption instead of a blank box.
+    void FillCar(bool mine, bool hasCar, int number)
+    {
+        Sprite sprite = null;
+        if (hasCar)
+        {
+            if (mine) sprite = PaintShop.RenderPlayerCar();
+            if (sprite == null) sprite = Resources.Load<Sprite>(CarsetOf(_fieldSeries) + "livery" + number);
+        }
+
+        if (carImage != null)
+        {
+            carImage.sprite = sprite;
+            carImage.enabled = sprite != null;
+            if (sprite != null)
+            {
+                // Whole-pixel scale only, so the car stays as crisp as it is on track.
+                var slot = carImage.rectTransform.parent as RectTransform;
+                float w = sprite.rect.width, h = sprite.rect.height;
+                float room = slot != null ? Mathf.Min((slot.rect.width - 8f) / w, (slot.rect.height - 8f) / h) : 1f;
+                float scale = Mathf.Max(1f, Mathf.Floor(room));
+                carImage.rectTransform.sizeDelta = new Vector2(w * scale, h * scale);
+            }
+        }
+
+        if (carSlotCaption != null)
+        {
+            carSlotCaption.gameObject.SetActive(sprite == null);
+            carSlotCaption.text = hasCar ? $"[ no paint for #{number} ]" : "[ no car ]";
+        }
+    }
+
+    // The carset a championship's cars are painted in — the same three GridSpawner puts on track.
+    static string CarsetOf(SeriesInfo series)
+    {
+        if (SimulatedField.TryRacingSeries(series, out var racing))
+            return racing == Draftmaster.Weekend.RacingSeries.Trucks ? "cts25" : "xfi25";
+        return CupRoster2026.CarsetPrefix;
+    }
+
+    // Which of the three championships the top bar is browsing; the seeded Drivers field is the Cup.
+    Draftmaster.Weekend.RacingSeries BrowsedSeries() =>
+        SimulatedField.TryRacingSeries(_fieldSeries, out var racing) ? racing : Draftmaster.Weekend.RacingSeries.Cup;
+
+    static bool IsRealDriver(Driver row)
+    {
+        foreach (Draftmaster.Weekend.RacingSeries series in System.Enum.GetValues(typeof(Draftmaster.Weekend.RacingSeries)))
+            if (SeriesCareers.TryGet(row, series, out _)) return true;
+        return false;
+    }
+
+    static string SeriesWord(Draftmaster.Weekend.RacingSeries series) => series switch
+    {
+        Draftmaster.Weekend.RacingSeries.National => "XFINITY",
+        Draftmaster.Weekend.RacingSeries.Trucks => "TRUCK",
+        _ => "CUP",
+    };
+
+    // The ledger counts the player's races and nobody else's. A rival with no real Cup career on file reads
+    // as unrecorded rather than being handed the player's numbers.
     void FillCareer(bool mine, int starts, int wins, int top10s)
     {
         SetPair(careerRows, 0, "STARTS", mine ? starts.ToString() : "—");
         SetPair(careerRows, 1, "WINS", mine ? wins.ToString() : "—");
         SetPair(careerRows, 2, "TOP 10s", mine ? top10s.ToString() : "—");
+    }
+
+    // A real driver's real career in this series, to the end of 2025.
+    void FillCareer(Draftmaster.Weekend.RacingSeries series, Draftmaster.Weekend.SeriesCareers2025.Record record)
+    {
+        SetPair(careerRows, 0, SeriesWord(series) + " STARTS", record.Starts.ToString());
+        SetPair(careerRows, 1, "WINS", record.Wins.ToString());
+        SetPair(careerRows, 2, "TOP 10s", record.Top10s.ToString());
+    }
+
+    // The honours a real driver's record in this series carries; titles in gold.
+    void FillAccolades(PixelUITheme theme, Draftmaster.Weekend.RacingSeries series,
+                       Draftmaster.Weekend.SeriesCareers2025.Record record)
+    {
+        string word = SeriesWord(series);
+        var lines = new List<(string text, bool gold)>();
+        if (record.Titles == 1) lines.Add(($"{word} CHAMPION {record.TitleYears[0]}", true));
+        else if (record.Titles > 1) lines.Add(($"{record.Titles}× {word} CHAMPION", true));
+        if (record.Poles > 0) lines.Add(($"{record.Poles} {word} POLE{(record.Poles == 1 ? "" : "S")}", false));
+        lines.Add((record.Starts > 0 ? "RECORD TO END OF 2025" : $"NO {word} STARTS BEFORE 2026", false));
+        ShowAccolades(theme, lines);
     }
 
     // Every line here is something the ledger can prove. Nothing earned yet says so plainly.
@@ -347,6 +444,11 @@ public class GarageScreenUI : MonoBehaviour
                 lines.Add((starts > 0 ? "NOTHING TO PUT ON THE WALL YET" : "NO STARTS YET", false));
         }
 
+        ShowAccolades(theme, lines);
+    }
+
+    void ShowAccolades(PixelUITheme theme, List<(string text, bool gold)> lines)
+    {
         for (int i = 0; i < accoladeLines.Count; i++)
         {
             var label = accoladeLines[i];
@@ -421,37 +523,6 @@ public class GarageScreenUI : MonoBehaviour
         }
         else SetStatus("");
     }
-
-    // What the car will actually race with: the base VehicleInfo plus every installed part. Parts are the
-    // player's own upgrades, so a rival's entry is the spec car — the same chassis with nothing on it.
-    void FillCarStats(bool mine)
-    {
-        var baseInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
-        float topAdd = 0f, accelScale = 1f, gripAdd = 0f, wearScale = 1f;
-        foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
-        {
-            var part = mine ? PlayerCarBuild.Installed(slot) : null;
-            if (part == null) continue;
-            topAdd += part.topSpeedAdd;
-            accelScale *= part.accelScale;
-            gripAdd += part.gripAdd;
-            wearScale *= part.wearScale;
-        }
-
-        float topSpeed = (baseInfo != null ? baseInfo.topSpeed : 200) + topAdd;
-        float zeroSixty = (baseInfo != null ? baseInfo.zeroToSixty : 3.4f) / Mathf.Max(0.1f, accelScale);
-        float grip = (baseInfo != null ? baseInfo.maxLateralG : 1.5f) + gripAdd;
-        float durability = 1f / Mathf.Max(0.1f, wearScale);   // >1 = tyres last longer than stock
-
-        SetStat(carStats, 0, "TOP SPEED", Mathf.InverseLerp(150f, 230f, topSpeed), Mathf.RoundToInt(topSpeed) + " MPH");
-        SetStat(carStats, 1, "ACCEL", Mathf.InverseLerp(5f, 3f, zeroSixty), "0-60 " + zeroSixty.ToString("0.0") + "s");
-        SetStat(carStats, 2, "GRIP", Mathf.InverseLerp(1f, 2f, grip), grip.ToString("0.00") + " G");
-        SetStat(carStats, 3, "DURABILITY", Mathf.InverseLerp(0.7f, 1.4f, durability), DurabilityWord(durability));
-    }
-
-    static string DurabilityWord(float durability) =>
-        durability >= 1.25f ? "IRON" : durability >= 1.05f ? "GOOD" :
-        durability >= 0.95f ? "STOCK" : durability >= 0.8f ? "FAIR" : "FRAGILE";
 
     void FillParts(PixelUITheme theme, bool mine)
     {

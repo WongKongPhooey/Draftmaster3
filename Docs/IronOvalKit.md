@@ -186,11 +186,10 @@ menu item, and both ends pick it up. The four lifecycle columns (`DebutSeason`, 
 | DRIVER STATS (gold cells) | every attribute that row carries, laid out by `DriverAttributeSheet`: `ABILITY` / `POTENTIAL` (0-100) full width, then the sixteen 0-20 skills in three groups — TRACK TYPES and STANDING down the left column, CRAFT down the right. No row at all reads as dashes rather than eighteen empty bars |
 | XP bar | fan appeal 0-100 (`FanAppeal`), labelled as such |
 | LV | races run — `1 + starts/5`, the only ladder that exists |
-| CAREER | `PlayerStatsLedger` starts / wins / top 10s |
-| ACCOLADES | derived from those counters, so a line only appears once earned |
-| CAR STATS (telemetry-blue cells) | base `VehicleInfo` (`Resources/Vehicles/Cup24`) with the installed parts applied: top speed, 0-60, grip, durability — the numbers the car will actually race with |
+| Car slot | the viewed car's paint at a whole-pixel scale: the player's own scheme + placed sponsor decals (`PaintShop.RenderPlayerCar`), anyone else's `<carset>livery<N>` for the series being browsed (`cup26` / `xfi25` / `cts25`) |
+| CAREER | the player: `PlayerStatsLedger` starts / wins / top 10s. A real driver: their real career **in the series being browsed**, to the end of 2025 (`SeriesCareers` → `DriverSeriesStats` table, seeded from `Draftmaster.Weekend.SeriesCareers2025`) |
+| ACCOLADES | derived from those numbers — titles (gold), poles, "RECORD TO END OF 2025" — so a line only appears once earned |
 | FITTED PARTS | the four real part slots (`PlayerCarBuild`). Empty reads `stock`, dimmed |
-| ◈ 12,400 | `PlayerWallet.CashText` |
 | SERIES / DRIVER pickers | `SeriesRoster` — the `Series` table (or the `DummySeries` seed list when no database is open) and the field entered in the picked one |
 | Roster strip (4 team drivers) | **substituted**: the sheet's roster switching moved to the top bar's two pickers, which reach every driver in the world rather than four; the bottom strip carries the weekend (track + session) and the way out to the track |
 

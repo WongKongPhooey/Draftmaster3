@@ -93,6 +93,10 @@ public class DatabaseManager : MonoBehaviour
         db.CreateTable<Draftmaster.Data.Standing>();
         db.CreateTable<Draftmaster.Data.Career>();
         db.CreateTable<Draftmaster.Data.Transaction>();
+
+        // Real careers per driver per series, seeded to the end of 2025; results are added here from now on.
+        db.CreateTable<Draftmaster.Data.DriverSeriesStats>();
+        if (db.Table<Draftmaster.Data.DriverSeriesStats>().Count() == 0) db.InsertAll(SeriesCareers.SeedRows());
     }
 
     static void SeedDriversIfEmpty(SQLiteConnection db)
