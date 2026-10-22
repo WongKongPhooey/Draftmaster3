@@ -251,6 +251,130 @@ public class FormationLapSimTests
         Assert.IsEmpty(r.contacts, Report($"{trackId}: the handed-over player car touched the field", r, 15));
     }
 
+    // A full-course caution on an oval (FullCourseCaution): from racing speed, the safety car comes back out ahead of
+    // the leader, the field forms up behind it on the formation brain, and once the track is clear and it has run its
+    // minimum laps it pits and the green waves again near the line — after at least two laps behind it.
+    [TestCase("Daytona")]
+    public void ACautionRunsTwoLapsBehindTheSafetyCarThenGoesGreen(string trackId)
+    {
+        var r = Run(trackId, 20);
+        Assert.IsTrue(r.wentGreen, Report($"{trackId}: the formation lap never went green", r, 5));
+
+        var splineType = Runtime("SplineDriver");
+        var fcType = Runtime("FormationController");
+        var scType = Runtime("SafetyCar");
+        var directorType = Runtime("FormationDirector");
+        var raceStartType = Runtime("RaceStart");
+        var phaseType = raceStartType.GetNestedType("Phase");
+        var currentProp = raceStartType.GetProperty("Current");
+        var cars = _lastCars;
+        var scSpline = cars[0];
+        var sc = scSpline.GetComponent(scType);
+        var director = (Component)directorType.GetProperty("Instance").GetValue(null);
+        Assert.IsNotNull(director);
+
+        var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fcStep = fcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var scStep = scType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var directorStep = directorType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var posProp = splineType.GetProperty("CommandedLocalPos");
+        var headProp = splineType.GetProperty("CommandedHeadingDeg");
+        var onPitProp = splineType.GetProperty("IsOnPit");
+        var distProp = splineType.GetProperty("DistanceOnTrack");
+        var mphProp = splineType.GetProperty("CurrentMph");
+        float lap = (float)splineType.GetProperty("TrackLength").GetValue(scSpline);
+        float dt = Time.fixedDeltaTime;
+        int n = cars.Count;
+
+        // Race: nothing here runs AIRacingBehaviour, so lift the formation's last speed cap and let the field run its
+        // race pace for a while.
+        for (int i = 1; i < n; i++) Set(cars[i], "aiMaxSpeedMph", 200f);
+        for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
+            foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
+        float raceMph = 0f;
+        for (int i = 1; i < n; i++) raceMph = Mathf.Max(raceMph, (float)mphProp.GetValue(cars[i]));
+
+        // The caution, as FullCourseCaution.Declare throws it: the safety car out 80 m ahead of the leader.
+        float leader = -1f, best = -1f;
+        for (int i = 1; i < n; i++)
+        {
+            if ((bool)onPitProp.GetValue(cars[i])) continue;
+            float d = (float)distProp.GetValue(cars[i]);
+            float ahead = 0f;   // the leader is the car with the most empty road in front of it
+            float nearest = float.MaxValue;
+            for (int j = 1; j < n; j++)
+                if (j != i && !(bool)onPitProp.GetValue(cars[j]))
+                    nearest = Mathf.Min(nearest, Mathf.Repeat((float)distProp.GetValue(cars[j]) - d, lap));
+            ahead = nearest;
+            if (ahead > best) { best = ahead; leader = d; }
+        }
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + 80f, 2f });
+        currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
+        var holdOut = scType.GetField("HoldOut");
+
+        var travelled = new float[n];
+        var prevD = new float[n];
+        for (int i = 0; i < n; i++) prevD[i] = (float)distProp.GetValue(cars[i]);
+        var pos = new Vector2[n];
+        var fwd = new Vector2[n];
+        var touching = new HashSet<long>();
+        var contacts = new List<string>();
+        var greenPhase = Enum.Parse(phaseType, "Green");
+        float t = 0f, scTravelAtPit = -1f;
+        bool green = false;
+        int steps = Mathf.RoundToInt(900f / dt);
+        for (int step = 0; step < steps && !green; step++)
+        {
+            t = (step + 1) * dt;
+            // The wreck is cleared 10 s in (CautionWatch sees nothing stopped any more).
+            if (t > 10f) holdOut.SetValue(sc, false);
+            for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
+            scStep.Invoke(sc, null);
+            directorStep.Invoke(director, null);
+            foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);
+            if (scTravelAtPit < 0f && (bool)scType.GetProperty("Pitted").GetValue(sc))
+                scTravelAtPit = (float)scType.GetProperty("Travelled").GetValue(sc);
+            green = Equals(currentProp.GetValue(null), greenPhase);
+
+            for (int i = 0; i < n; i++)
+            {
+                float d = (float)distProp.GetValue(cars[i]);
+                bool onPit = (bool)onPitProp.GetValue(cars[i]);
+                float delta = Mathf.Repeat(d - prevD[i] + lap * 0.5f, lap) - lap * 0.5f;
+                if (!onPit && delta > 0f) travelled[i] += delta;
+                prevD[i] = d;
+                pos[i] = (Vector2)posProp.GetValue(cars[i]);
+                float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
+                fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
+            }
+            // Contact once the field has had 15 s to slow from race pace and fall in behind the safety car. (Before
+            // that it is the race pace with no racing brain, which this harness does not model.)
+            // Nor on the green step itself: the hand-back to the racing brain (AIRacingBehaviour.TakeLateral) is not
+            // in this harness, which is why the formation runs above stop at the green too.
+            if (t < 15f || green) continue;
+            for (int i = 0; i < n; i++)
+            for (int j = i + 1; j < n; j++)
+            {
+                if (i == 0 && !scSpline.gameObject.activeSelf) continue;
+                if ((pos[i] - pos[j]).sqrMagnitude > 64f) continue;
+                long key = (long)i * 1000 + j;
+                if (Penetration(pos[i], fwd[i], pos[j], fwd[j]) <= 0f) { touching.Remove(key); continue; }
+                if (touching.Add(key)) contacts.Add($"t{t:0.0} {cars[i].name} / {cars[j].name} at {(float)distProp.GetValue(cars[i]):0} m");
+            }
+        }
+
+        float leaderLaps = 0f;
+        for (int i = 1; i < n; i++) leaderLaps = Mathf.Max(leaderLaps, travelled[i] / lap);
+        string summary = $"[CautionSim] {trackId}: race pace {raceMph:0} mph; green {(green ? "after" : "NOT after")} {t:0} s; " +
+                         $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
+                         $"{contacts.Count} contacts\n  " + string.Join("\n  ", contacts);
+        Debug.Log(summary);
+        Assert.IsTrue(green, summary);
+        Assert.Greater(scTravelAtPit, 0f, summary);
+        Assert.GreaterOrEqual(leaderLaps, 1.95f, summary);
+        Assert.IsEmpty(contacts, summary);
+    }
+
     [TestCase("WatkinsGlen")]
     [TestCase("Daytona")]
     public void TheFieldStaysCloseBehindAPlayerOnPole(string trackId)

@@ -10,6 +10,10 @@ using UnityEngine;
 // from transforms (a forward cone) rather than the spline, and estimate each car's speed from its motion.
 // Added at runtime by NetworkedCarBindings for the owning client; it governs ONLY during the Formation phase
 // (NetworkedCarBindings owns the PreGrid hold and the Green release).
+//
+// Under a full-course caution (single player, FullCourseCaution) it holds the player behind whichever car is in
+// front of them on the road — the field is in running order then, not grid order — and never above cautionMaxMph.
+// Down pit road it lets go: the pit limiter has the car there.
 public class PaceLapAssist : MonoBehaviour
 {
     [HideInInspector] public PlayerVehicleController pvc;
@@ -29,6 +33,14 @@ public class PaceLapAssist : MonoBehaviour
     public float hardGap = 6f;
     [Tooltip("If our locked leader is more than this far ahead (m), prompt the player to close up.")]
     public float catchUpGap = 30f;
+
+    [Header("Caution")]
+    [Tooltip("Under a full-course caution the player is never let go faster than this (mph) — enough to catch the train up, not to race.")]
+    public float cautionMaxMph = 90f;
+    [Tooltip("Under a caution a car counts as the one in front only if it is within this far (m) across from the player. Further over it is passed alongside, not followed.")]
+    public float cautionLaneHalfWidth = 2.6f;
+    [Tooltip("Under a caution a car slower than this (mph) is an obstacle to drive round, not a car to hold station behind.")]
+    public float cautionMovingMph = 15f;
 
     const float MphToMps = 1f / 2.237f;
 
@@ -55,7 +67,7 @@ public class PaceLapAssist : MonoBehaviour
     {
         if (pvc == null) return;
 
-        if (RaceStart.Current != RaceStart.Phase.Formation)
+        if (!RaceStart.UnderSafetyCar)
         {
             // Not the formation lap — drop our hold + prompt. NetworkedCarBindings owns PreGrid/Green governing.
             _leader = null; _showPrompt = false;
@@ -142,6 +154,7 @@ public class PaceLapAssist : MonoBehaviour
     // Speed-capped to that car (no overtaking) with a prompt to line up behind it.
     void UpdateSpline()
     {
+        if (RaceStart.IsCaution) { UpdateCaution(); return; }
         var field = RaceField.Drivers;
         float trackLen = 0f;
         for (int i = 0; i < field.Count; i++)
@@ -221,6 +234,56 @@ public class PaceLapAssist : MonoBehaviour
         if (gap < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
         else if (gap > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
         else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
+    }
+
+    // Caution: hold behind the nearest moving car in front on the road, whoever it is, capped at cautionMaxMph. The
+    // leader of the train holds the director's close-up pace once the safety car peels off, as the AI front row does.
+    void UpdateCaution()
+    {
+        var track = pvc.ObstacleTrack;
+        if (track != null && track.IsOnPitSurface(transform.position))
+        {
+            pvc.speedGovernorMps = Mathf.Infinity;   // pit road: the limiter's business
+            _showPrompt = false;
+            return;
+        }
+
+        var field = RaceField.Drivers;
+        float playerDist = pvc.TrackDistance;
+        float myLat = pvc.TrackLateral;
+        SplineDriver ahead = null;
+        float gap = float.MaxValue;
+        for (int i = 0; i < field.Count; i++)
+        {
+            var d = field[i];
+            if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.TrackLength <= 0f) continue;
+            if (d.CurrentMph < cautionMovingMph) continue;
+            if (Mathf.Abs(d.LateralOnTrack - myLat) > cautionLaneHalfWidth) continue;
+            float g = Mathf.Repeat(d.DistanceOnTrack - playerDist, d.TrackLength);
+            if (g <= 0f || g >= d.TrackLength * 0.5f || g >= gap) continue;
+            gap = g;
+            ahead = d;
+        }
+
+        float gov = cautionMaxMph * MphToMps;
+        var paceCar = ahead != null ? ahead.GetComponent<SafetyCar>() : null;
+        if (ahead != null)
+        {
+            float aheadMps = ahead.CurrentMph * MphToMps;
+            if (gap <= hardGap) gov = Mathf.Min(gov, aheadMps * 0.8f);
+            else if (gap < holdGap) gov = Mathf.Min(gov, aheadMps);
+        }
+        var sc = FormationDirector.Instance != null ? FormationDirector.Instance.SafetyCarInstance : null;
+        bool leading = ahead == null || paceCar != null || gap > catchUpGap * 4f;
+        if (sc != null && leading && (sc.ClosingUp || sc.Pitted))
+            gov = Mathf.Min(gov, FormationDirector.Instance.CloseUpLeaderMph * MphToMps);
+        pvc.speedGovernorMps = gov;
+
+        _showPrompt = true;
+        _promptColor = new Color(1f, 0.85f, 0.2f);
+        if (ahead == null) { _promptText = "CAUTION — hold your position"; return; }
+        string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
+        _promptText = gap > catchUpGap ? $"CAUTION — close up behind {who}" : $"CAUTION — hold station behind {who}";
     }
 
     void UpdatePrompt(Vector2 myPos, Vector2 fwd)

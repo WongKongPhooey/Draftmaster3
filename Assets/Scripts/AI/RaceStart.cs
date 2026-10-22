@@ -7,12 +7,16 @@ using UnityEngine;
 //   PreGrid   — cars parked (AI in pit boxes, safety car at pit exit); nobody moves.
 //   Formation — safety car laps at cruise pace; AI file out and form a weaving train behind it.
 //   Green     — race is on; AI race normally, player released.
+//   Caution   — full-course yellow on an oval (FullCourseCaution): the safety car is back out, the field runs
+//               single file behind it on the formation brain, pit road is open, and the green comes again at the
+//               line once the safety car has pitted. Appended last so the replicated byte values of the first
+//               three do not move.
 //
 // Defaults to Green so any scene WITHOUT a FormationDirector behaves exactly as before
 // (AI race the instant they spawn).
 public static class RaceStart
 {
-    public enum Phase { PreGrid, Formation, Green }
+    public enum Phase { PreGrid, Formation, Green, Caution }
 
     static Phase _current = Phase.Green;
 
@@ -46,6 +50,11 @@ public static class RaceStart
     public static bool IsGreen => _current == Phase.Green;
     public static bool IsFormation => _current == Phase.Formation;
     public static bool IsPreGrid => _current == Phase.PreGrid;
+    public static bool IsCaution => _current == Phase.Caution;
+    // The race is under way: green, or under a full-course caution. Pit road is open in both, and damage counts.
+    public static bool IsRunning => _current == Phase.Green || _current == Phase.Caution;
+    // A safety car leads the field: the formation lap, or a caution.
+    public static bool UnderSafetyCar => _current == Phase.Formation || _current == Phase.Caution;
 
     // A fresh scene load shares this static with the previous one. Reset so a second race doesn't
     // inherit Green from the last. FormationDirector.Awake sets the real starting phase.

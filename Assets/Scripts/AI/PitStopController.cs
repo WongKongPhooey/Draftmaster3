@@ -2,7 +2,8 @@ using UnityEngine;
 
 // AI pit strategy: once the tyres are worn past a threshold, the car peels into the pit lane at the entry node,
 // drives to its box, holds for a service stop (fresh tyres + repaired bodywork), then rejoins. The racing brain
-// is parked while on pit road so it doesn't try to race down the lane.
+// is parked while on pit road so it doesn't try to race down the lane. Under a full-course caution pit road stays
+// open, and a damaged car comes in for repairs (cautionRepairDamage).
 //
 // When the race is over (RaceDirector.TookChequer) the car runs its cool-down lap, then comes in the same way
 // and parks in its box for good — no service, no rejoin.
@@ -49,6 +50,12 @@ public class PitStopController : MonoBehaviour
     public float forcedPitSpread = 25f;
     [Tooltip("A race shorter than this many laps never forces a stop — on fresh tyres nobody pits in a sprint, and handing the lead to whoever stays out is no race.")]
     public int forcedPitMinRaceLaps = 10;
+
+    [Header("Under caution")]
+    [Tooltip("Under a full-course caution (RaceStart.Caution) a car with at least this much bodywork damage (VehicleDamage.DamageLevel, 0..1 — a full-severity hit adds ~0.18) comes in for repairs.")]
+    [Range(0f, 1f)] public float cautionRepairDamage = 0.02f;
+    [Tooltip("Under a full-course caution a car comes in for tyres once they are this share of the way to its green-flag wear threshold — a stop costs little behind the safety car.")]
+    [Range(0f, 1f)] public float cautionWearShare = 0.5f;
 
     [Header("After the chequer")]
     [Tooltip("Once this car has taken the chequered flag, run a cool-down lap and then park in its pit box.")]
@@ -106,7 +113,7 @@ public class PitStopController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!RaceStart.IsGreen || _spline == null || _spline.TrackLength <= 0f) return;
+        if (!RaceStart.IsRunning || _spline == null || _spline.TrackLength <= 0f) return;
         var tb = _spline.track;
         if (tb == null || tb.track == null) return;
 
@@ -381,9 +388,13 @@ public class PitStopController : MonoBehaviour
         if (forceAllowed && !_forcedDone && _greenTime >= 0f && Time.time - _greenTime >= _forcedThreshold)
             return true;
 
+        // Under caution: come in to have damage repaired, and for tyres well before they would be due under green.
+        bool caution = RaceStart.IsCaution;
+        if (caution && _bodywork != null && _bodywork.DamageLevel >= cautionRepairDamage) return true;
+
         // Strategy: pit when the tyres are worn past this car's threshold.
         if (_tires == null) return false;
         float avgWear = 0.5f * (_tires.FrontWear + _tires.RearWear);
-        return avgWear >= _threshold;
+        return avgWear >= (caution ? _threshold * cautionWearShare : _threshold);
     }
 }

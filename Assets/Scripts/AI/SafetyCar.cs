@@ -6,6 +6,10 @@ using UnityEngine;
 // The pace/safety car. Leads the field around one formation lap at a fixed cruise pace, then dives
 // into the pit lane and parks. Rides a kinematic SplineDriver on the main spline; this component only
 // caps its pace, counts the lap, triggers the pit-in, blinks its roof light and despawns afterwards.
+//
+// Sent back out for a full-course caution (DeployForCaution, from FullCourseCaution): it reappears on the track
+// ahead of the race leader and runs cruise pace until it has covered the caution's minimum distance and the
+// director stops holding it out (HoldOut), then closes the field up and pits exactly as at the end of the pace lap.
 [RequireComponent(typeof(SplineDriver))]
 public class SafetyCar : MonoBehaviour
 {
@@ -73,7 +77,16 @@ public class SafetyCar : MonoBehaviour
     // (FormationDirector).
     public event Action OnPitEntry;
 
+    // Under a caution: while true the car stays out (the track is not clear yet) — no close-up, no pit-in.
+    [NonSerialized] public bool HoldOut;
+    // True from DeployForCaution until the car next pits.
+    public bool CautionLap => _caution;
+    // Metres covered since the car came out (the formation lap, or this caution).
+    public float Travelled => _travelled;
+
     SplineDriver _spline;
+    bool _caution;
+    float _cautionPitFloor;   // metres it must cover under this caution before it may pit
     float _travelled;
     float _prevDist;
     bool _hasPrev;
@@ -119,7 +132,7 @@ public class SafetyCar : MonoBehaviour
     {
         BlinkLight();
 
-        if (RaceStart.Current != RaceStart.Phase.Formation) return;
+        if (!RaceStart.UnderSafetyCar) return;
         _spline.aiMaxSpeedMph = cruiseMph;
         _spline.aiMinDecelMphPerSec = 0f;
 
@@ -174,6 +187,9 @@ public class SafetyCar : MonoBehaviour
                 toPit = Mathf.Repeat(_pitEntryDistance - cur, lap);
                 if (_travelled + toPit < PitFloor(lap)) toPit = float.MaxValue;
             }
+            // Under caution the line only counts on the run in to the pit entry it will take (every other lap it
+            // is just the line), and nothing counts while the director is holding the car out.
+            if (_caution && (HoldOut || toPit == float.MaxValue)) toLine = toPit = float.MaxValue;
             if (Mathf.Min(toLine, toPit) <= closeUpDistanceM)
             {
                 ClosingUp = true;
@@ -185,7 +201,9 @@ public class SafetyCar : MonoBehaviour
         // car peels away whatever the field is doing.
         if (_paceMph < 0f) _paceMph = cruiseMph;
         float followerFloor = 0f;
-        float wantMph = ClosingUp ? cruiseMph : WaitingPace(out followerFloor);
+        // Under caution the field is strung out round the whole lap when it comes out: waiting for it would crawl.
+        // The train catches up (FormationController's far catch-up) while the car runs cruise.
+        float wantMph = ClosingUp || _caution ? cruiseMph : WaitingPace(out followerFloor);
         _paceMph = Mathf.MoveTowards(_paceMph, wantMph, waitSlewMphPerSec * Time.fixedDeltaTime);
         _paceMph = Mathf.Max(_paceMph, Mathf.Min(followerFloor, cruiseMph));
         if (!ClosingUp) _spline.aiMaxSpeedMph = Mathf.Min(_spline.aiMaxSpeedMph, _paceMph);
@@ -194,14 +212,15 @@ public class SafetyCar : MonoBehaviour
         // authored fraction OR the arc from where this car joined to the entry, whichever is shorter, so it
         // always fires on the first pass. It is still a floor — a car that spawned yards short of the entry
         // does not pit off the line — it just cannot be set past the point it is guarding any more.
-        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= PitFloor(lap))
+        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= PitFloor(lap) && !(_caution && HoldOut))
         {
             float gap = _pitEntryDistance - cur;
             if (gap < 0f) gap += lap;
             if (gap <= pitEntryWindow) PitIn();
         }
 
-        if (!_pitting) { YieldToTraffic(); HoldForPitExit(lap, cur); }
+        // Under caution the cars in the pit lane are making stops, not filing out behind it: don't wait for them.
+        if (!_pitting) { YieldToTraffic(); if (!_caution) HoldForPitExit(lap, cur); }
     }
 
     // Round again before the field is all out of the pit lane: stop short of the pit exit until it is.
@@ -231,6 +250,7 @@ public class SafetyCar : MonoBehaviour
     // the pit lane - and then it goes round once more.
     float PitFloor(float lap)
     {
+        if (_caution) return _cautionPitFloor;
         float pitFloor = lap * minLapFractionBeforePit;
         if (_firstPassDistance > 0f)
         {
@@ -337,9 +357,48 @@ public class SafetyCar : MonoBehaviour
         }
     }
 
+    // Back out for a full-course caution: on the track at `distance` (main-spline metres) at cruise pace, held out
+    // until HoldOut is cleared and it has covered at least `minLaps` laps — counted so the green, which waves as the
+    // leader reaches the line after this car pits, comes after that many laps behind it.
+    public void DeployForCaution(float distance, float minLaps)
+    {
+        if (_spline == null) _spline = GetComponent<SplineDriver>();
+        gameObject.SetActive(true);
+        float lap = _spline.TrackLength;
+
+        _caution = true;
+        HoldOut = true;
+        _pitting = false;
+        ClosingUp = false;
+        _travelled = 0f;
+        _hasPrev = false;
+        _firstPassDistance = -1f;
+        _paceMph = cruiseMph;
+        _despawnTimer = despawnAfterPitSeconds;
+
+        _spline.usePitLane = false;
+        _spline.spawnInPit = false;
+        _spline.pitParkDistance = -1f;
+        _spline.pitStopHold = false;
+        _spline.parkedHold = false;
+        _spline.lateralOffset = 0f;
+        _spline.tacticalLateralOffset = 0f;
+        _spline.ClearPitApproach();
+        _spline.aiMaxSpeedMph = cruiseMph;
+        _spline.aiMinDecelMphPerSec = 0f;
+        _spline.speed = cruiseMph * PackAvoidance.MphToMps;
+        _spline.startDistance = lap > 0f ? Mathf.Repeat(distance, lap) : distance;
+        _spline.PlaceAtStartDistance();
+
+        if (_pitEntryDistance < 0f && _spline.track != null && _spline.track.track != null)
+            _pitEntryDistance = _spline.track.track.PitEntryDistanceOnLap;
+        _cautionPitFloor = CautionRules.PitFloor(lap, _pitEntryDistance, StartFinishDistance, minLaps, pitEntryWindow);
+    }
+
     void PitIn()
     {
         _pitting = true;
+        _caution = false;
         ClosingUp = false; // pace car is leaving the surface; the field keeps its rows via FormationDirector.FieldClosingUp
         _despawnTimer = despawnAfterPitSeconds;
 

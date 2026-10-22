@@ -11,6 +11,9 @@ using UnityEngine;
 //
 // Also enforces the player's hold-station pace cap during the formation lap (toggle with
 // enforceHoldStation — off = free-follow, where the player drives unrestricted).
+//
+// A full-course caution (FullCourseCaution, added here at Start) reuses the same safety car and the same restart:
+// once the safety car pits again, the green waves as the leader reaches the line.
 public class FormationDirector : MonoBehaviour
 {
     public static FormationDirector Instance { get; private set; }
@@ -88,7 +91,9 @@ public class FormationDirector : MonoBehaviour
     // True while the leader has slowed in the close-up zone before the line. FormationControllers read this to
     // pack the field into tight two-wide rows for the final run to the green.
     // Stays true after the safety car has pitted, while the leader brings the field to the line.
-    public bool FieldClosingUp => _safetyCar != null && (_safetyCar.ClosingUp || (_safetyCar.Pitted && RaceStart.IsFormation));
+    public bool FieldClosingUp => _safetyCar != null && (_safetyCar.ClosingUp || (_safetyCar.Pitted && RaceStart.UnderSafetyCar));
+    // The one safety car, for a caution to send back out (null if none was spawned).
+    public SafetyCar SafetyCarInstance => _safetyCar;
 
     void Awake()
     {
@@ -198,6 +203,9 @@ public class FormationDirector : MonoBehaviour
         }
 
         SpawnSafetyCar();
+
+        // Full-course cautions on ovals: same safety car, same restart.
+        if (GetComponent<FullCourseCaution>() == null) gameObject.AddComponent<FullCourseCaution>();
     }
 
     void SpawnSafetyCar()
@@ -288,7 +296,7 @@ public class FormationDirector : MonoBehaviour
         RaceStart.Current = RaceStart.Phase.Formation;
     }
 
-    PlayerVehicleController PlayerCar =>
+    public PlayerVehicleController PlayerCar =>
         playerCar != null ? playerCar : (pitLaneStart != null ? pitLaneStart.car : null);
 
     // Whether the parked field should now roll off on the formation lap. The car's own resolved throttle is the
@@ -309,11 +317,15 @@ public class FormationDirector : MonoBehaviour
         RaceStart.Current = RaceStart.Phase.Green;
     }
 
-    // After the safety car pits, the leader takes the field on to the line and the green waves as it gets there.
+    // After the safety car pits, the leader takes the field on to the line and the green waves as it gets there —
+    // at the end of the formation lap, and again at the end of a caution.
     void FixedUpdate()
     {
-        if (_safetyCar == null || !_safetyCar.Pitted || RaceStart.Current != RaceStart.Phase.Formation)
+        if (_safetyCar == null || !_safetyCar.Pitted || !RaceStart.UnderSafetyCar)
+        {
+            _heldSincePitIn = -1f;   // a caution's restart starts its own count
             return;
+        }
         bool first = _heldSincePitIn < 0f;
         _heldSincePitIn = first ? 0f : _heldSincePitIn + Time.fixedDeltaTime;
 

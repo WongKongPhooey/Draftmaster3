@@ -214,7 +214,8 @@ public class IronOvalRaceHUD : MonoBehaviour
     void DrawCautionFlag()
     {
         var watch = CautionWatch.Instance;
-        if (watch == null || !watch.CautionAhead) return;
+        // Up for a stopped car ahead, and for the whole of a full-course caution (FullCourseCaution).
+        if (!RaceStart.IsCaution && (watch == null || !watch.CautionAhead)) return;
 
         float size = PixelGUI.Px(cautionFlagSize);
         float x = Screen.width - size - PixelGUI.Px(8f);

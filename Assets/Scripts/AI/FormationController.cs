@@ -6,6 +6,11 @@ using UnityEngine;
 // it gently to mimic warming the tyres. Dormant in every other phase — AIRacingBehaviour owns the car once the
 // race goes green.
 //
+// Also drives it under a full-course CAUTION (FullCourseCaution): the same train behind the safety car, but single
+// file — the field is in running order by then, not grid order, so grid-slot columns, row partners and slot
+// anchors mean nothing — with no weave. A car coming in for a stop under the caution belongs to its
+// PitStopController on pit road.
+//
 // Works purely through SplineDriver's public knobs (aiMaxSpeedMph / aiMinDecelMphPerSec / tacticalLateralOffset /
 // paceMultiplier), so the car's path, corner speeds and dynamic motion are unchanged.
 //
@@ -141,6 +146,7 @@ public class FormationController : MonoBehaviour
     SplineDriver _spline;
     PlayerVehicleController _pvc;
     SplineInputDriver _input;
+    PitStopController _pit;
     readonly PackPlanner _planner = new PackPlanner();
     PackSettings _closeUpPack; // pack with the close-up headway and buffer
     float _prevLine;           // last step's racing-line lateral, for how fast the line is swinging across the road
@@ -271,12 +277,27 @@ public class FormationController : MonoBehaviour
         // Lazy-fetch: GridSpawner may add this component before the dynamic-model components exist.
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_input == null) _input = GetComponent<SplineInputDriver>();
+        if (_pit == null) _pit = GetComponent<PitStopController>();
 
         // The collider can be sized after this component was added, so read it again now.
         ResolveExtents(gameObject, out _halfLength, out _halfWidth, refresh: true);
 
-        // Kinematic while forming up; a kinematic car (no dynamic model) also stays kinematic for racing.
-        bool driveKinematic = phase == RaceStart.Phase.Formation || kinematic;
+        bool underSafetyCar = phase == RaceStart.Phase.Formation || phase == RaceStart.Phase.Caution;
+
+        // A caution comes out with the car racing on its dynamic model, wherever that has put it (sliding, on the
+        // apron, a lane over from its brain's point). Latch the spline onto where the car actually IS before it
+        // takes the transform, or the switch teleports it back onto the brain's pose. The racing brain's lateral
+        // carries on as the planner's starting tactical so nothing snaps across the road either.
+        if (phase == RaceStart.Phase.Caution && _spline != null && _spline.isActiveAndEnabled && _spline.externalMotionController)
+        {
+            _lateral = _spline.tacticalLateralOffset;
+            _weaveEnv = 0f;
+            _planner.Reset();
+            _spline.EngageFromCurrentPose(_pvc != null ? _pvc.SpeedMph : _spline.CurrentMph);
+        }
+
+        // Kinematic behind the safety car; a kinematic car (no dynamic model) also stays kinematic for racing.
+        bool driveKinematic = underSafetyCar || kinematic;
         if (driveKinematic)
         {
             if (_input != null) _input.enabled = false;
@@ -296,16 +317,16 @@ public class FormationController : MonoBehaviour
         // skewed by AIDriverBinding aggression) all converge at an apex — offset or not, two different base
         // paths can cross there and put a pair in contact. Run the whole field on the SAME line (ideal) for
         // the formation lap so the pair separation is exactly the column difference everywhere.
-        if (phase == RaceStart.Phase.Formation && _spline != null && !_lineFactorSaved)
+        if (underSafetyCar && _spline != null && !_lineFactorSaved)
         {
             _savedLineFactor = _spline.lineFactor;
             _spline.lineFactor = 0f;
             _lineFactorSaved = true;
         }
 
-        // Leaving the formation lap (green or pregrid): drop any weave/lateral the formation applied —
+        // Leaving the formation lap or a caution (green or pregrid): drop any weave/lateral the formation applied —
         // AIRacingBehaviour owns the lateral line once racing.
-        if (phase != RaceStart.Phase.Formation)
+        if (!underSafetyCar)
         {
             _lateral = 0f;
             _weaveEnv = 0f;
@@ -333,9 +354,24 @@ public class FormationController : MonoBehaviour
     void FixedUpdate()
     {
         if (_spline == null || _spline.TrackLength <= 0f) return;
-        if (RaceStart.Current != RaceStart.Phase.Formation) return;
+        if (!RaceStart.UnderSafetyCar) return;
+        bool caution = RaceStart.IsCaution;
 
         float dt = Time.fixedDeltaTime;
+
+        // In for a stop under the caution: on pit road the PitStopController owns the car — its box approach, the
+        // cut across to the box strip and its own lane ACC. Taking the lane over from it here would ease the car
+        // back off the strip and lift its braking for the box. Out on the track it is still part of the train.
+        if (caution && _spline.usePitLane && _pit != null && _pit.isActiveAndEnabled && _pit.IsPitting)
+        {
+            _wasPit = true;
+            _hasPrevLine = false;
+            DbgOnPit = true;
+            HasPlan = false;
+            _lateral = _spline.tacticalLateralOffset;
+            return;
+        }
+
         float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
         bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
         _planner.Settings = closingUp && !_spline.usePitLane ? CloseUpPack() : pack;
@@ -378,13 +414,13 @@ public class FormationController : MonoBehaviour
         // partner (PairAlign).
         float far = FarCatchUp(out bool leading);
         float farBonus = farCatchUpBonusMph * far;
-        float anchor = SlotAnchorMph();
+        float anchor = caution ? 0f : SlotAnchorMph();   // under caution the field is in running order, not grid order
         float baseCap;
         if (settling) baseCap = pitOutMph;
         else if (closingUp)
         {
             float frontRow = FormationDirector.Instance.CloseUpLeaderMph;
-            float align = PairAlign();
+            float align = caution ? 0f : PairAlign();
             float bonus = leading ? 0f : closeUpBonusMph * (corner ? cornerCatchUpScale : 1f);
             baseCap = frontRow + bonus + (corner ? Mathf.Min(0f, align) : align);
         }
@@ -407,10 +443,11 @@ public class FormationController : MonoBehaviour
         // Lateral intent: the two-wide column the WHOLE lap (double file), with a gentle tyre-warming weave on early
         // straights that fades out near the line so the rows sit steady for the start. Through turns the column
         // eases toward centre (cornerColumnScale) but never collapses to single file.
-        bool weaveOk = !settling && !corner && !closingUp && !_planner.Swerving;
+        // Under caution: single file on the line, no weave.
+        bool weaveOk = !caution && !settling && !corner && !closingUp && !_planner.Swerving;
         _weaveEnv = FormationLanes.StepEnvelope(_weaveEnv, weaveOk, dt, weaveRampSeconds, weaveFadeOutSeconds);
         int slot = columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
-        float column = FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
+        float column = caution ? 0f : FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
         float boundLo = float.NegativeInfinity, boundHi = float.PositiveInfinity;
         _spline.GetLateralBounds(out boundLo, out boundHi);
         float fitted = FormationLanes.FitColumn(column, _spline.UntacticalLateral, boundLo, boundHi);
@@ -472,7 +509,8 @@ public class FormationController : MonoBehaviour
     {
         float len = _spline.TrackLength;
         float myC = _spline.CentreDistanceOnTrack;
-        int partner = MySlot() >= 0 ? MySlot() ^ 1 : int.MinValue;
+        // No row partners under caution: the field runs single file in running order.
+        int partner = MySlot() >= 0 && !RaceStart.IsCaution ? MySlot() ^ 1 : int.MinValue;
         float best = float.MaxValue, bestOther = float.MaxValue;
         bool bestIsPace = false, bestOtherIsPace = false;
 

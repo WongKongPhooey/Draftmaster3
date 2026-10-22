@@ -68,8 +68,8 @@ public class VehicleCollision : MonoBehaviour
 
     // Everything before the green flag: parked on the grid, and the lap behind the pace car. Bodywork does
     // not fold and nobody takes it personally — an AI field that shuffles into itself on the way round would
-    // otherwise start the race dented and already feuding.
-    bool DamageSuppressed => noDamageBeforeGreen && !RaceStart.IsGreen;
+    // otherwise start the race dented and already feuding. A caution is the race, not before it: damage counts.
+    bool DamageSuppressed => noDamageBeforeGreen && !RaceStart.IsRunning;
 
     void Awake()
     {

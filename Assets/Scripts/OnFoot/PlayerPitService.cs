@@ -74,7 +74,7 @@ public class PlayerPitService : MonoBehaviour
         // Coming down the lane with a stop to make: call the crew so their sign man is out and the board is
         // down over the box before the car gets there. Only ever the player's OWN box — a sign man waving at
         // every box driven past would be worse than none. SignalApproach ignores the repeats.
-        if (hasBox && onPit && needs && !_serviced && RaceStart.IsGreen)
+        if (hasBox && onPit && needs && !_serviced && RaceStart.IsRunning)
         {
             var crew = PitCrewRegistry.ForBox(PitLane.PlayerBox);
             if (crew != null &&
@@ -82,7 +82,7 @@ public class PlayerPitService : MonoBehaviour
                 crew.SignalApproach(playerCar.transform);
         }
 
-        if (onPit && inBox && slow && needs && !_serviced && RaceStart.IsGreen)
+        if (onPit && inBox && slow && needs && !_serviced && RaceStart.IsRunning)
         {
             if (!_crewWorking)
             {
