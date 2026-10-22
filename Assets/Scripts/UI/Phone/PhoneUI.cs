@@ -231,6 +231,7 @@ public class PhoneUI : MonoBehaviour
         if (_player == null) return;                       // in the car, or a scene with no on-foot body
         if (!_open && _player.MovementLocked && !_summoned) return;   // a conversation or cutscene has the player
 
+        if (!_open) _openedAt = Time.unscaledTime;
         _open = true;
         _summoned = false;
         _scroll = Vector2.zero;
@@ -455,13 +456,29 @@ public class PhoneUI : MonoBehaviour
 
         GUI.matrix = Matrix4x4.TRS(new Vector3(pivotX, pivotY, 0f),
                                    Quaternion.Euler(0f, 0f, tiltDegrees), Vector3.one * _zoom);
-        DrawBody(new Rect(-w * 0.5f, -h, w, h));
+        var body = new Rect(-w * 0.5f, -h, w, h);
+        DrawBody(body);
+
+        // A tap or click anywhere off the device puts it away. Tested in the device's own (tilted, magnified)
+        // space, after the body has drawn, so its buttons take their own taps first; only once it is fully
+        // up, and never with the finger that opened it.
+        if (_open && _slide >= 0.999f && PressedOutside(body)) CloseInternal();
 
         GUI.matrix = prevMatrix;
         GUI.depth = prevDepth;
     }
 
     float _zoom = 1f;                  // device magnification over the kit scale (see OnGUI)
+    float _openedAt;                   // unscaled time the device came up, so the opening tap can't close it
+
+    bool PressedOutside(Rect body)
+    {
+        if (TouchTaps.Driven) return TouchTaps.HitOutside(body, _openedAt);
+        var e = Event.current;
+        if (e.type != EventType.MouseDown || e.button != 0 || body.Contains(e.mousePosition)) return false;
+        e.Use();
+        return true;
+    }
 
     // Magnified text has to be point-sampled or each glyph's pixel edges smear across the screen pixels
     // they now straddle. At 1:1 the filter makes no difference, so this is harmless to leave set.

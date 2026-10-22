@@ -136,6 +136,19 @@ public class TouchTaps : MonoBehaviour
         return true;
     }
 
+    // Hit's opposite: true once, on the repaint pass, for a tap that landed OUTSIDE `r` — a screen held up
+    // over the game that a tap anywhere else puts away (the phone). `downAfter` rejects a finger that came
+    // down before the screen was up. Draw it after everything inside `r`, so a button in there takes its own
+    // tap first.
+    public static bool HitOutside(Rect r, float downAfter = float.NegativeInfinity)
+    {
+        if (!_pending || TapDownAt <= downAfter || Event.current == null || Event.current.type != EventType.Repaint)
+            return false;
+        if (r.Contains(GUIUtility.ScreenToGUIPoint(_tapAt))) return false;
+        _pending = false;
+        return true;
+    }
+
     // Drop-in for GUI.Button. Drawing is still GUI.Button's own, so hover and pressed looks are unchanged.
     public static bool Button(Rect r, GUIContent content, GUIStyle style)
     {
