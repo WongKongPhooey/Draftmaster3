@@ -150,7 +150,9 @@ prefab the scene references, and take changes to the look back to the design pro
 `Draftmaster > Art > Build Garage Screen Scene` generates `Assets/Scenes/GarageScreen.unity`
 (`GarageScreenUI` binder), built from the design file's **updated** GARAGE pass — car slot with the
 driver's identity, career and accolades down the left, their full database stat block over an XP meter in
-the middle, the car's numbers and fitted parts on the right. Preview:
+the middle, the driver's traits over their relationship with the player on the right. The canvas
+matches height, so on a screen wider than 16:9 (a phone) the left column holds the left edge, the right
+column the right edge, and the stat block stretches between them to use the whole width. Preview:
 `Assets/Screenshots/ironoval_garage.png`.
 
 The sheet is a JRPG character sheet. Nothing here is faked to match it; every field is bound to something
@@ -170,10 +172,9 @@ the grid — it is a viewer, nothing on the screen writes back. `SeriesRoster` a
 and therefore the top stock-car championship's entry list. Series with no entries yet say `NO ENTRY LIST
 YET` rather than borrowing somebody else's drivers.
 
-The blocks that are only true of the player — CAREER, ACCOLADES, the fan-appeal meter, LV, and the car
-with its fitted parts — say so when the sheet is pointed at a rival instead of showing the player's
-numbers under their name. A rival's meter reads their `FanSupport` rating on the same 0-100 scale, and
-their car is the spec car with nothing bolted to it.
+The blocks that are only true of the player — CAREER, ACCOLADES, the fan-appeal meter and LV — say so
+when the sheet is pointed at a rival instead of showing the player's numbers under their name. A rival's
+meter reads their `FanSupport` rating on the same 0-100 scale.
 
 Row order is `DriverAttributeSheet.All` and the builder adds rows in that order, because `GarageScreenUI`
 fills them by index. Add a stat column to `Driver`, add it to the right group in that sheet, re-run the
@@ -186,10 +187,11 @@ menu item, and both ends pick it up. The four lifecycle columns (`DebutSeason`, 
 | DRIVER STATS (gold cells) | every attribute that row carries, laid out by `DriverAttributeSheet`: `ABILITY` / `POTENTIAL` (0-100) full width, then the sixteen 0-20 skills in three groups — TRACK TYPES and STANDING down the left column, CRAFT down the right. No row at all reads as dashes rather than eighteen empty bars |
 | XP bar | fan appeal 0-100 (`FanAppeal`), labelled as such |
 | LV | races run — `1 + starts/5`, the only ladder that exists |
-| Car slot | the viewed car's paint at a whole-pixel scale: the player's own scheme + placed sponsor decals (`PaintShop.RenderPlayerCar`), anyone else's `<carset>livery<N>` for the series being browsed (`cup26` / `xfi25` / `cts25`) |
+| Car slot | 72 px tall, so a 64x32 car fills it at 2x. The viewed car's paint at a whole-pixel scale: the player's own scheme + placed sponsor decals (`PaintShop.RenderPlayerCar`), anyone else's `<carset>livery<N>` for the series being browsed (`cup26` / `xfi25` / `cts25`) |
 | CAREER | the player: `PlayerStatsLedger` starts / wins / top 10s. A real driver: their real career **in the series being browsed**, to the end of 2025 (`SeriesCareers` → `DriverSeriesStats` table, seeded from `Draftmaster.Weekend.SeriesCareers2025`) |
 | ACCOLADES | derived from those numbers — titles (gold), poles, "RECORD TO END OF 2025" — so a line only appears once earned |
-| FITTED PARTS | the four real part slots (`PlayerCarBuild`). Empty reads `stock`, dimmed |
+| TRAITS | what the driver is known for, authored per driver in `DriverTraits` (Ace Emerson: ICON, FAN FAVOURITE, AGGRESSIVE). Nobody written up reads `NONE KNOWN` |
+| RELATIONSHIP | the rivalry score between this driver and the player (`DriverRelationships`, keyed by the player's career name): standing (ally green, rival/furious red), the score and a line on what it means. The player's own sheet reads `N/A` |
 | SERIES / DRIVER pickers | `SeriesRoster` — the `Series` table (or the `DummySeries` seed list when no database is open) and the field entered in the picked one |
 | Roster strip (4 team drivers) | **substituted**: the sheet's roster switching moved to the top bar's two pickers, which reach every driver in the world rather than four; the bottom strip carries the weekend (track + session) and the way out to the track |
 

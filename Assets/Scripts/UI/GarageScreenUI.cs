@@ -15,8 +15,8 @@ using Draftmaster.Sponsors;
 using SeriesInfo = Draftmaster.Data.Series;
 
 // The garage screen, built to the Iron Oval design file's GARAGE pass: the car and driver identity down the
-// left with career and accolades under it, the driver's own stats in the middle over an XP meter, and the
-// fitted parts on the right.
+// left with career and accolades under it, the driver's own stats in the middle over an XP meter, and their
+// traits over their relationship with the player on the right.
 //
 // The sheet is a JRPG character sheet, so the job here is binding each field to something the game really
 // keeps rather than inventing an RPG:
@@ -34,11 +34,14 @@ using SeriesInfo = Draftmaster.Data.Series;
 //                 career in the series being browsed (SeriesCareers — one record per driver per series, so
 //                 a Cup regular's Xfinity starts show under Xfinity).
 //   ACCOLADES     derived from those same numbers, so a line only appears once it's been earned.
-//   FITTED PARTS  the four real part slots. Empty reads "stock", dimmed.
+//   TRAITS        what the driver is known for (DriverTraits), authored per driver; none reads as such.
+//   RELATIONSHIP  the rivalry score between this driver and the player (DriverRelationships): its standing,
+//                 the number and a line on what it means. The player's own sheet has nobody to relate to,
+//                 so it reads N/A.
 //
 // The top bar carries two dropdowns — the series, and the field entered in it — so the sheet can be read
 // for anyone on the grid, not just the player. Where a block is only true of the player (their career
-// counters, their accolades, their fan appeal, the parts bolted to their car) it says so plainly rather
+// counters, their accolades, their fan appeal) it says so plainly rather
 // than showing the player's numbers under a rival's name: SeriesRoster answers who races where, and
 // nothing on this screen writes anything back.
 //
@@ -76,8 +79,12 @@ public class GarageScreenUI : MonoBehaviour
     public List<TextPair> careerRows = new();
     [Tooltip("Accolade lines, filled top-down.")]
     public List<TextMeshProUGUI> accoladeLines = new();
-    [Tooltip("Four fitted-part rows: slot, item.")]
-    public List<TextPair> partRows = new();
+    [Tooltip("Trait lines, filled top-down.")]
+    public List<TextMeshProUGUI> traitLines = new();
+    [Tooltip("Two relationship rows (standing, score): label, value.")]
+    public List<TextPair> relationshipRows = new();
+    [Tooltip("What the relationship means, or N/A on the player's own sheet.")]
+    public TextMeshProUGUI relationshipNote;
 
     public RectTransform xpBar;
     public TextMeshProUGUI xpLabel;
@@ -314,7 +321,9 @@ public class GarageScreenUI : MonoBehaviour
         if (real) FillAccolades(theme, browsing, record);
         else FillAccolades(theme, mine, starts, wins, top5s, top10s);
         FillDriverStats(theme, row, mine);
-        FillParts(theme, mine);
+        string shownName = mine ? PlayerDriver.DisplayName(row) : FullName(row);
+        FillTraits(theme, shownName);
+        FillRelationship(theme, mine, row != null ? shownName : null);
 
         // The player's fan appeal is the meter this game keeps; a rival's standing with the crowd is the
         // Fan Support their row is rated on, put on the same 0-100 scale.
@@ -524,16 +533,61 @@ public class GarageScreenUI : MonoBehaviour
         else SetStatus("");
     }
 
-    void FillParts(PixelUITheme theme, bool mine)
+    void FillTraits(PixelUITheme theme, string name)
     {
-        var slots = new[] { PartSlot.Engine, PartSlot.Gearbox, PartSlot.Tires, PartSlot.Chassis };
-        for (int i = 0; i < partRows.Count && i < slots.Length; i++)
+        var traits = DriverTraits.For(name);
+        for (int i = 0; i < traitLines.Count; i++)
         {
-            var part = mine ? PlayerCarBuild.Installed(slots[i]) : null;
-            SetPair(partRows, i, slots[i].ToString().ToUpperInvariant(), part != null ? part.name : "stock");
-            if (theme != null && partRows[i].value != null)
-                partRows[i].value.color = part != null ? theme.text : theme.textDisabled;
+            var line = traitLines[i];
+            if (line == null) continue;
+            if (i < traits.Count)
+            {
+                line.text = DriverTraits.Label(traits[i]);
+                if (theme != null) line.color = theme.text;
+            }
+            else if (i == 0 && traits.Count == 0)
+            {
+                line.text = "NONE KNOWN";
+                if (theme != null) line.color = theme.textDisabled;
+            }
+            else line.text = "";
         }
+    }
+
+    // The rivalry score between this driver and the player, as the racing keeps it — keyed by the name the
+    // player's car carries on track, which is their career name.
+    void FillRelationship(PixelUITheme theme, bool mine, string name)
+    {
+        bool known = !mine && !string.IsNullOrEmpty(name);
+        float score = known ? DriverRelationships.Get(PlayerDriver.DisplayName(PlayerDriver.Row()), name) : 0f;
+        var standing = DriverRelationships.StandingOf(score);
+
+        for (int i = 0; i < relationshipRows.Count; i++)
+        {
+            var pair = relationshipRows[i];
+            // The player's own sheet: N/A straight under the heading, where the standing would be.
+            if (pair.label != null)
+            {
+                pair.label.text = mine ? (i == 0 ? "N/A" : "") : !known ? "" : i == 0 ? "STANDING" : "SCORE";
+                if (theme != null) pair.label.color = mine ? theme.text : theme.textDim;
+            }
+            if (pair.value == null) continue;
+            pair.value.text = !known ? "" : i == 0 ? standing.ToString().ToUpperInvariant()
+                                                   : (score > 0f ? "+" : "") + Mathf.RoundToInt(score);
+            if (theme != null && i == 0)
+                pair.value.color = standing == DriverRelationships.Standing.Ally ? theme.confirm
+                                 : standing == DriverRelationships.Standing.Neutral ? theme.text : theme.danger;
+        }
+
+        if (relationshipNote == null) return;
+        relationshipNote.text = !known ? "" : standing switch
+        {
+            DriverRelationships.Standing.Ally => "FRIENDLY. WILL WORK WITH YOU IN THE DRAFT.",
+            DriverRelationships.Standing.Rival => "A DECLARED RIVALRY. EXPECT NO FAVOURS.",
+            DriverRelationships.Standing.Furious => "OUT FOR PAYBACK. WATCH YOUR MIRRORS.",
+            _ => score == 0f ? "NO HISTORY BETWEEN YOU YET." : "NOTHING EITHER WAY.",
+        };
+        if (theme != null) relationshipNote.color = theme.textDim;
     }
 
     // ------------------------------------------------------------------ helpers
