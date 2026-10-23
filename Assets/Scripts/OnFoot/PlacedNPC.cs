@@ -315,10 +315,16 @@ public class PlacedNPC : MonoBehaviour
         // where they are — markers, not people.
         if (!GameSession.OnFootAllowed) { _skipped = true; return false; }
 
-        if (!appear.IsMet()) { _skipped = true; return false; }
+        if (!appear.IsMet())
+        {
+            if (givesTheDaysObjective) Debug.Log($"PlacedNPC '{Label}': not standing up — {appear.FirstUnmet()}.");
+            _skipped = true;
+            return false;
+        }
 
         // The liaison only turns up now and then — always the first time, never twice running. Rolled here,
-        // after her conditions, so only a real chance to meet her counts; when she stays away the weekend
+        // after her conditions, so only a real chance to meet her counts; the visit is recorded when her
+        // walk-up actually plays (LiaisonVisit.Met), not here. When she stays away the weekend
         // books its own next thing (PitLaneStart reports no objective giver in the cast).
         if (role == Role.TeamLiaison && !Draftmaster.Weekend.LiaisonVisit.Roll()) { _skipped = true; return false; }
 
@@ -453,6 +459,7 @@ public class PlacedNPC : MonoBehaviour
             _trigger.Triggered = () =>
             {
                 appear.MarkSeen();
+                if (role == Role.TeamLiaison) Draftmaster.Weekend.LiaisonVisit.Met();
                 // The sheet has moved on since she stood up if a session was driven in between — practice
                 // ends in this scene, not with a reload — so read it again now she is actually speaking.
                 RefreshLinesFromSheet();
@@ -464,6 +471,7 @@ public class PlacedNPC : MonoBehaviour
         // Nothing to walk out of: he comes over as the scene opens, one frame later so the player has
         // finished spawning (OnFootController wires its input in its own Start).
         appear.MarkSeen();
+        if (role == Role.TeamLiaison) Draftmaster.Weekend.LiaisonVisit.Met();
         StartCoroutine(PlayNextFrame());
     }
 

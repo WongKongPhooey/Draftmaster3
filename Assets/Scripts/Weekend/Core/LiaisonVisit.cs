@@ -34,14 +34,29 @@ namespace Draftmaster.Weekend
         }
 
         // The live decision, against the save. Call once per chance to meet her and act on the answer.
+        //
+        // A "yes" is not written down here — only Met() does that, when she actually speaks. Standing her up
+        // is not meeting her: a scene that loads and reloads, or a load the driver never walks out of the
+        // motorhome in, used to spend the certain first meeting and then rule her out the next time as
+        // "twice running", so a fresh save could start without her.
         public static bool Roll()
         {
             bool visit = ShouldVisit(PlayerPrefs.GetInt(MetKey, 0) == 1, PlayerPrefs.GetInt(LastKey, 0) == 1,
                                      Random.value);
-            PlayerPrefs.SetInt(LastKey, visit ? 1 : 0);
-            if (visit) PlayerPrefs.SetInt(MetKey, 1);
-            PlayerPrefs.Save();
+            if (!visit)
+            {
+                PlayerPrefs.SetInt(LastKey, 0);
+                PlayerPrefs.Save();
+            }
             return visit;
+        }
+
+        // She has walked up and had her say. This is what makes the next chance a "twice running" one.
+        public static void Met()
+        {
+            PlayerPrefs.SetInt(MetKey, 1);
+            PlayerPrefs.SetInt(LastKey, 1);
+            PlayerPrefs.Save();
         }
 
         // Back to a driver who has never met her: the next chance is a certain one.
