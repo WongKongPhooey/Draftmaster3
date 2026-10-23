@@ -20,15 +20,15 @@ using Draftmaster.Sim;
 // — walking up pit road, stood beside the car after a tow — never got in it, so the car is left exactly as it
 // was and their walking body is simply parked until they stop being the chief.
 //
-// As crew chief the player sees pit-wall telemetry the driver doesn't: fuel load and last-pit lap for the
-// whole field. Tap again to go back to whoever they were.
+// As crew chief the player gets the TIMING button beside the headset, which opens the timing screen.
+// Tap the headset again to go back to whoever they were.
 //
 // The chief can also watch the cars rather than the pit wall: , and . (d-pad left/right on a pad) step the
-// camera through the field in running order and back round to the chief, and clicking a row on the timing
-// screen cuts straight to that car. The chief stands still while the camera is away from them.
+// camera through the field in running order and back round to the chief. The chief stands still while the
+// camera is away from them.
 //
 // Camera + car hand-off are reused from DriveModeController; this component just owns the on-foot avatar, the
-// camera target while on foot, and the data panel.
+// camera target while on foot, and the duty buttons.
 public class CrewChiefController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -58,8 +58,6 @@ public class CrewChiefController : MonoBehaviour
     public Key watchNextKey = Key.Period;
 
     [Header("HUD")]
-    [Tooltip("Capacity (litres) assumed for the fuel % when a car has no FuelTank yet.")]
-    public bool showHud = true;
     [Tooltip("Side of the square icon button, in 640x360 UI pixels.")]
     public float buttonSize = 32f;
     [Tooltip("Gap from the bottom-right corner to the button, in 640x360 UI pixels. The x default clears " +
@@ -87,7 +85,7 @@ public class CrewChiefController : MonoBehaviour
     Transform _watching;     // the car the camera is on; null = the chief at the pit wall
     Material _unlit;
 
-    // Shown on the timing screen and in the one-off hint, so both teach the same buttons.
+    // Shown in the one-off hint.
     string WatchKeys => $"{KeyName(watchPrevKey)} {KeyName(watchNextKey)}";
     static string WatchPad => InputGlyphs.Pad(PadBindings.WatchPrevCar) + "/" + InputGlyphs.Pad(PadBindings.WatchNextCar);
 
@@ -231,7 +229,6 @@ public class CrewChiefController : MonoBehaviour
 
     void Enter()
     {
-        showHud = true;
         if (_playerCar == null) _playerCar = GameObject.Find("PlayerCar");
 
         // Where the player is standing, asked BEFORE the chief's body exists — that body is an
@@ -545,86 +542,6 @@ public class CrewChiefController : MonoBehaviour
         var es = new GameObject("EventSystem");
         es.AddComponent<UnityEngine.EventSystems.EventSystem>();
         es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-    }
-
-    void OnGUI()
-    {
-        if (!_active || !showHud) return;
-        var rt = RacePositionTracker.Instance;
-        if (rt == null) return;
-
-        // The pit-wall timing screen, in the kit's furniture: framed plate, Silkscreen column heads, VT323
-        // rows so the six columns line up without measuring anything.
-        var order = rt.Order;
-        float row = PixelGUI.Px(11f);
-        float w = PixelGUI.Px(212f);
-        float h = PixelGUI.Px(36f) + (Mathf.Min(order.Count, 45) + 1) * row;
-        float x = Screen.width - w - PixelGUI.Px(8f);
-        float y = PixelGUI.Px(40f);
-
-        PixelGUI.Panel(new Rect(x, y, w, h));
-        // Closing it on a phone hides the board, not the pit wall; the next visit brings it back.
-        if (PixelGUI.KeyTab(new Rect(x, y, w, h),
-                            toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString(),
-                            PadBindings.CrewChief))
-        {
-            showHud = false;
-            return;
-        }
-        var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
-        float cx = c.x, cy = c.y;
-
-        GUI.Label(new Rect(cx, cy, c.width, PixelGUI.Px(10f)), "CREW CHIEF · PIT WALL", PixelGUI.HeadingSmall);
-        cy += PixelGUI.Px(12f);
-        GUI.Label(new Rect(cx, cy, c.width, PixelGUI.Px(10f)),
-                  $"{"POS",-4}{"#",-5}{"DRIVER",-16}{"LAP",-6}{"PIT",-7}{"FUEL",-6}", PixelGUI.LabelDim);
-        cy += PixelGUI.Px(11f);
-        PixelGUI.Rule(cx, cy, c.width);
-        cy += PixelGUI.Px(3f);
-
-        var style = PixelGUI.Data;
-        var prev = style.normal.textColor;
-        for (int i = 0; i < order.Count; i++)
-        {
-            var e = order[i];
-            if (e == null || e.tf == null) continue;
-
-            bool isPlayer = _playerCar != null && e.tf == _playerCar.transform;
-            style.normal.textColor = isPlayer ? PixelGUI.Gold : PixelGUI.Text;
-
-            // The car on camera gets the leaderboard's featured-row fill. Each row is a button: click to cut
-            // to that car, click it again to come back to the pit wall.
-            var rowRect = new Rect(cx, cy, c.width, row);
-            if (e.tf == _watching)
-                PixelGUI.Fill(rowRect, new Color(PixelGUI.Info.r, PixelGUI.Info.g, PixelGUI.Info.b, 0.30f));
-            if (TouchTaps.Button(rowRect, GUIContent.none, GUIStyle.none))
-                Watch(e.tf == _watching ? null : e.tf);
-
-            var fuel = e.tf.GetComponent<FuelTank>();
-            string fuelStr = fuel != null ? $"{Mathf.RoundToInt(fuel.Fraction * 100f)}%" : "--";
-            // A car about to run dry is the whole reason this screen exists, so it gets the alarm colour
-            // even on a row that is not the player's.
-            if (fuel != null && fuel.Fraction < 0.12f) style.normal.textColor = PixelGUI.Danger;
-
-            var hist = e.tf.GetComponent<PitHistory>();
-            string pitStr = (hist != null && hist.HasPitted) ? $"L{hist.lastPitLap + 1}" : "—";
-
-            string name = string.IsNullOrEmpty(e.name) ? "?" : (e.name.Length > 14 ? e.name.Substring(0, 14) : e.name);
-            GUI.Label(new Rect(cx, cy, c.width, row),
-                $"{("P" + e.position),-4}{("#" + e.carNumber),-5}{name,-16}{Mathf.Max(1, e.lap + 1),-6}{pitStr,-7}{fuelStr,-6}", style);
-            cy += row;
-        }
-        style.normal.textColor = prev;
-
-        // How to get at the cars: the only standing reminder, beyond the one-off hint.
-        cy += PixelGUI.Px(2f);
-        string keys = InputGlyphs.UsingGamepad
-            ? InputGlyphs.PadName(PadBindings.WatchPrevCar) + "/" +
-              InputGlyphs.PadName(PadBindings.WatchNextCar).Replace("D-PAD ", "")
-            : WatchKeys;
-        string footer = _watching != null ? $"{keys}  NEXT CAR · CLICK ROW = BACK"
-                                          : $"{keys}  WATCH CARS · CLICK A ROW";
-        GUI.Label(new Rect(cx, cy, c.width, row), footer, PixelGUI.LabelDim);
     }
 
     Material UnlitSprite()
