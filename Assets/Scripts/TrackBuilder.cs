@@ -32,9 +32,9 @@ public class TrackBuilder : MonoBehaviour
     [Tooltip("Width (m) of a painted box line, across the lane.")]
     public float pitBoxLineWidth = 0.15f;
     public Color pitBoxLineColor = Color.white;
-    [Tooltip("Material for the box lines. Null = a flat unlit fill in pitBoxLineColor is built automatically.")]
+    [Tooltip("Material for the box lines. Null = a sprite-shader fill in pitBoxLineColor is built automatically. Use a transparent/sprite material: an opaque one at the lines' z hides the car sprites parked over them.")]
     public Material pitBoxLineMaterial;
-    [Tooltip("Sorting order for the painted box lines (above the box-lane tarmac).")]
+    [Tooltip("Sorting order for the painted box lines (above the box-lane tarmac, below the cars).")]
     public int pitBoxLineSortingOrder = 2;
 
     // A full Cup field plus the player, for when there is no GridSpawner to ask (prefab-mode authoring).
@@ -409,6 +409,7 @@ public class TrackBuilder : MonoBehaviour
         var verts = new List<Vector3>((fit.boxes + 1) * 4);
         var uvs = new List<Vector2>((fit.boxes + 1) * 4);
         var tris = new List<int>((fit.boxes + 1) * 6);
+        var colors = new List<Color>((fit.boxes + 1) * 4);
 
         for (int i = 0; i <= fit.boxes; i++)
         {
@@ -428,6 +429,7 @@ public class TrackBuilder : MonoBehaviour
             uvs.Add(new Vector2(1f, 0f));
             uvs.Add(new Vector2(0f, 1f));
             uvs.Add(new Vector2(1f, 1f));
+            for (int k = 0; k < 4; k++) colors.Add(pitBoxLineColor);
             tris.Add(v + 0); tris.Add(v + 2); tris.Add(v + 3);
             tris.Add(v + 0); tris.Add(v + 3); tris.Add(v + 1);
         }
@@ -438,6 +440,7 @@ public class TrackBuilder : MonoBehaviour
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.SetUVs(0, uvs);
+        mesh.SetColors(colors);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
@@ -450,14 +453,15 @@ public class TrackBuilder : MonoBehaviour
         mr.sortingOrder = pitBoxLineSortingOrder;
     }
 
+    // Sprite shader, not an opaque unlit one: the lines sit in front of the strip's tarmac in z, and an opaque
+    // quad there writes depth before the transparent car sprites draw, painting the lines over every parked car.
+    // As a sprite-queue mesh the sorting order decides instead — above the tarmac, below the cars. The colour
+    // rides in the mesh's vertex colours, which the sprite shader multiplies in.
     Material BuildBoxLineMaterial()
     {
-        Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
-        if (sh == null) sh = Shader.Find("Unlit/Color");
-        var m = new Material(sh) { name = "PitBoxLineWhite" };
-        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", pitBoxLineColor);
-        else if (m.HasProperty("_Color")) m.SetColor("_Color", pitBoxLineColor);
-        return m;
+        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
+        return new Material(sh) { name = "PitBoxLineWhite" };
     }
 
     // Sub-range of a sample list between two distances, with exact interpolated samples at both ends.
