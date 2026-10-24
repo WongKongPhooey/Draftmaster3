@@ -93,6 +93,7 @@ public class PackRaceSimTests
         public float traceWindowFrom, traceWindowTo;
         public bool traceCharger;                 // with fastestAtBack: log the charger against the car ahead once a second
         public float? sideAwareness;              // TrackConditions.AiSideAwareness override
+        public float? dirtyAir;                   // TrackConditions.DirtyAirLoss override
         public float traceSlowMph;                // > 0: when a car first drops below this (after 25 s), log its last 2 s
         // Rolling start (startSeconds > 0): the field double file as the formation hands it over at the green - the
         // leader startLineMetres short of the start/finish line, rows rowGap apart, the two columns columnLateral either
@@ -408,6 +409,24 @@ public class PackRaceSimTests
             var r = Run("Martinsville", new Settings { cars = 24, laps = 8, seed = seed, columns = 2, traceHard = 6 });
             sb.Append(Summary($"  seed {seed}", r));
             foreach (var l in r.lines) if (l.Contains("HARD")) sb.Append("    ").Append(l).Append('\n');
+            Despawn();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    // Dirty air (Draftmaster.Sim.DirtyAir, NR2003's wake costing the follower downforce): off against the speedway
+    // value on two intermediates - passes, contacts, how close the field runs and how much of it is two-wide.
+    [Explicit("Diagnostic: dirty air off and on at Charlotte and Atlanta, 16 cars, two rosters each.")]
+    [Test, Timeout(3600000)]
+    public void DirtyAirOvals()
+    {
+        var sb = new StringBuilder("[PackSim] dirty air, 16 cars, 4 laps\n");
+        foreach (var id in new[] { "Charlotte", "Atlanta" })
+        foreach (float loss in new[] { 0f, 0.06f })
+        foreach (int seed in new[] { 1, 2 })
+        {
+            var r = Run(id, new Settings { cars = 16, laps = 4, seed = seed, columns = 2, dirtyAir = loss });
+            sb.Append(Summary($"  {id} dirty air {loss:0.00} seed {seed}", r));
             Despawn();
         }
         Debug.Log(sb.ToString());
@@ -960,6 +979,7 @@ public class PackRaceSimTests
         if (set.draftScale.HasValue) conditions.GetField("DraftScale").SetValue(null, set.draftScale.Value);
         if (set.followScale.HasValue) conditions.GetField("AiFollowScale").SetValue(null, set.followScale.Value);
         if (set.sideAwareness.HasValue) conditions.GetField("AiSideAwareness").SetValue(null, set.sideAwareness.Value);
+        if (set.dirtyAir.HasValue) conditions.GetField("DirtyAirLoss").SetValue(null, set.dirtyAir.Value);
         Runtime("RaceStart").GetMethod("ResetToDefault").Invoke(null, null);   // green
 
         var vehicleInfo = Resources.Load("Vehicles/Cup24");

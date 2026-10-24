@@ -288,6 +288,72 @@ draft = -2 * dragCoeff_me * r^10 * (1 + 4 r^2 dv) * (1 - gap / (r^3 * v_other * 
 - Type 6 (pushing) gets a constant −0.015 m/tick² instead. Being pushed is a flat bonus, not
   distance-shaped.
 
+## Dirty air: the wake costs grip as well as drag (`FUN_005afd80`, *observed*, 2026-10-24)
+
+The draft formula above is the AI *planner's* estimate of a tow. The aero itself is one shared pass that
+runs for every car, player and AI alike, outside the AI code (`0x5afd80`, found once the whole exe was
+dumped; it sits in the physics range). Each tick it resets three per-car multipliers to 1 (`+0x59e` drag,
+`+0x5a2` and `+0x5a6` two lift/drag coefficient terms, reset in `FUN_0052c640`) and then:
+
+```
+for each car ahead (walking the order list, while raw gap < 264 and chain weight > 0.01):
+    x      = gap * 75 / max(5, |velocity| * car.k_d4)     // gap normalised by speed: a longer wake when fast
+    lat    = |my lateral - its lateral|;  skip if lat >= 7
+    w      = Wake(x, lat) * car.k_d0 * chain             // table below, interpolated across lat 0 / 3.5 / 7
+    aheadDrag *= 1 + w
+    +0x5a2   *= 1 + w * x / ((1 + 0.0004 x^2) * sqrt(x^2 + lat^2))
+    chain  *= 0.45 + 0.0786 * lat                         // a second car straight ahead counts 45%
+same for each car behind (raw gap < 66, x negated) -> behindDrag, +0x5a6 (0.001 instead of 0.0004)
++0x59e = min(aheadDrag, behindDrag) * (1 - 0.3 * (1 - max(aheadDrag, behindDrag)))
+clamp all three to [0.5, 1.1]
+```
+
+The wake table (`0x6f7228`, 31 rows from x = -45 to 180 in steps of 7.5, two columns: lat 0 and 3.5; lat 7
+is 0). It peaks just behind the car and fades to nothing at x = 180; the negative-x end is the car
+*behind*, which cuts the leader's drag at very short range (bump-draft) and nothing past x = -37.5:
+
+| x | -30 | -15 | 0 | 7.5 | 30 | 60 | 90 | 120 | 150 | 180 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| lat 0 | -0.021 | -0.081 | -0.119 | **-0.126** | -0.113 | -0.093 | -0.069 | -0.047 | -0.026 | 0 |
+| lat 3.5 | -0.007 | -0.020 | -0.021 | -0.028 | -0.050 | -0.055 | -0.046 | -0.029 | -0.013 | 0 |
+
+The AI car reads those multipliers in `FUN_0051eca0`: dynamic pressure `q = ½ρ·v_air²`, then
+`drag = q/m · (… + 0x5a2·k_b8·spoiler + k_c4·0x5a6·valance …) · 0x59e` and **lift** `+0x1ad6 = q/m ·
+(k_200·0x5a6·valance + 0x5a2·k_bc·spoiler + (1 − 0x59e)·k_d8 + …)`. Normal load `+0x1ad2 = weight term −
+lift`, and `FUN_0051ea30` makes the traction circle `+0x1972 = load × friction(load)`. So **the same wake that
+tows the car down the straight takes downforce, and therefore grip, off it in the corner, and both grow with
+v²**. A quicker car catches the car ahead on the straight, cannot drive round the back of it through the
+turn, and has to get to clean air in another lane: the 1.5-mile-oval racing NR2003 is known for, from one
+mechanism, with no AI rule behind it. (`FUN_0051f860` adds the wind to `v_air`.)
+
+*Unknown:* the per-car coefficients (`+0x58a` → `k_a0…k_d8`) come from the encrypted car data in
+`series/*/cup.dat`, so the absolute size of the grip loss isn't recoverable from the exe. The units of x and
+lat look like feet (7 ft ≈ a car's width), which puts the wake's reach at roughly 1 s of gap at Cup speed.
+
+**In Draftmaster 3** (2026-10-24): `Draftmaster.Sim.DirtyAir.GripFactor(tow, v, loss)` = `1 − loss · tow ·
+min(1, (v / 75 m/s)²)`, with `tow` the existing `DraftAero` slipstream factor (the same wake that already
+gives the tow). `PlayerVehicleController` multiplies both axles' grip by it for every car (as NR2003 does), and
+`SplineInputDriver`'s grip governor includes it so the AI lifts for the grip it has lost instead of sliding.
+`TrackTuning.dirtyAirLoss` sets `loss` per kind of track. **It is 0 everywhere for now.**
+
+Measured at 0.06 on speedways (~6% grip right behind a car at 170 mph), `PackRaceSimTests.DirtyAirOvals`, 16
+cars x 4 laps from a double-file start:
+
+| Run | Passes | Contacts (HARD) | Median gap | 2-wide | Best laps |
+|---|---|---|---|---|---|
+| Charlotte seed 1, off / on | 35 / 19 | 2 (0) / 2 (0) | 16.6 / 22.1 m | 19.6 / 16.3% | 41.93..43.99 / 41.91..44.22 s |
+| Charlotte seed 2, off / on | 52 / 49 | 11 (0) / 9 (0) | 14.8 / 14.9 m | 26.1 / 24.0% | 42.27..43.94 / 42.39..44.60 s |
+| Atlanta seed 1, off / on | 24 / 18 | 5 (0) / 6 (1) | 22.7 / 20.7 m | 15.4 / 9.9% | 41.67..43.59 / 41.69..44.05 s |
+| Atlanta seed 2, off / on | 45 / 28 | 1 (0) / 8 (1) | 18.2 / 16.9 m | 20.9 / 14.4% | 41.79..43.75 / 41.79..43.70 s |
+
+Passes fell in every pair (mean 39 to 28.5), side contacts rose a little (19 to 25, HARD 0 to 2), and less
+running was two-wide. That is the physics without the AI half: NR2003's lateral field scores each slot by the
+acceleration it allows, so a slot in the wake is worth less and the car moves to clean air on its own. Our lanes
+AI has no idea of a slot's grip, so it just sits in the wake and passes less. **To turn it on:** give the pass and
+lane choice (or `LateralField`) a clean-air term from the same `DirtyAir.GripFactor`, re-run `DirtyAirOvals`, and
+play-test the player's car behind an AI on an intermediate (it loses the same grip). The same runs show again that
+**no AI car is ever at full throttle off the plate tracks** (`flat out 0.0%` in every row).
+
 ## Lane room from the lines (`FUN_00526b90`, *observed*)
 
 At load, for each 3 m point, from `race`, `maxrace` and `minrace`:
@@ -515,11 +581,15 @@ abandonware and must not be committed here):
 | `game/` | extracted game files (`papy_ai.ini`, `tracks/*/track.ini`, `*.lp`) |
 | `proj/` | saved Ghidra project with analysis |
 | `decomp/ai/`, `decomp/ai_ann/` | decompiled C for `0x500000` to `0x540000`; `_ann` substitutes constants and parameter names |
+| `decomp/all/` | every function `0x400000` to `0x6e0000` (14,704 files, ~2 min headless with `DumpRange.java`); grep it for a car field offset to find who writes it |
+| `decomp/sel_ann/` | annotated picks from `all/` (the aero pass and its helpers) |
 | `ghidra_scripts/DumpRange.java`, `DecompAt.java` | headless dump / decompile-at-address scripts |
 | `tools/decomp_at.sh <addr>…` | decompile more functions into `decomp/ai_ann` |
 | `tools/annotate.py`, `lp.py`, `isx.py`, `tracks.py` | constant annotator, `.lp` reader, installer extractor, track.ini table |
+| `tools/table.py <addr>…` | dumps an interpolation table in `FUN_00567818`'s format (`x0, 1/step, n, cols`, rows) |
 
 Key addresses: per-tick brain `0x52b930`, pacing pass `0x52b520`, relationship state machine
 dispatch `0x533540` (table `0x74bdec`), field build `0x533830`, stamp `0x530ca0` / `0x533ea0`, resolve
 `0x534050`, follow controller `0x52acd0`, lane table `0x526b90`, AI car accel `0x51e2a0`, parameter
-table `0x74aa78`.
+table `0x74aa78`, shared aero / wake pass `0x5afd80` (wake table `0x6f7228`), AI aero load and drag `0x51eca0`,
+AI traction circle `0x51ea30`.

@@ -58,6 +58,9 @@ public static class TrackConditions
     [Tooltip("How much grip a worn tyre gives up at this track (TrackTuning.tyreGripLossScale): little on a superspeedway's flat-out turns. Set per track when it loads.")]
     public static float TyreGripLossScale = 1f;
 
+    [Tooltip("Dirty air at this track (TrackTuning.dirtyAirLoss): the share of grip a full tow's wake costs at speed, every car (Draftmaster.Sim.DirtyAir). 0 = none. Set per track when it loads.")]
+    public static float DirtyAirLoss = 0f;
+
     [Tooltip("How far back the tow reaches at this track (TrackTuning.draftRangeScale): multiplies VehicleInfo.draftingMaxGap. Set per track when it loads.")]
     public static float DraftRangeScale = 1f;
 
@@ -99,6 +102,7 @@ public static class TrackConditions
         DraftRangeScale = 1f;
         TyreWearScale = 1f;
         TyreGripLossScale = 1f;
+        DirtyAirLoss = 0f;
         AiFollowScale = 1f;
         AiLanes = true;
         TrackGripScale = 1f;
@@ -117,6 +121,7 @@ public static class TrackConditions
         if (tuning.tyreWearScale > 0f) TyreWearScale = tuning.tyreWearScale;
         if (tuning.tyreGripLossScale > 0f) TyreGripLossScale = tuning.tyreGripLossScale;
         if (tuning.draftFollowScale > 0f) AiFollowScale = tuning.draftFollowScale;
+        DirtyAirLoss = Mathf.Max(0f, tuning.dirtyAirLoss);
         AiLanes = tuning.raceInLanes;
         AiPackRacing = tuning.packRacing;
         PushScale = Mathf.Max(0f, tuning.pushScale);
@@ -159,6 +164,7 @@ public static class TrackConditions
         DraftRangeScale = 1f;
         TyreWearScale = 1f;
         TyreGripLossScale = 1f;
+        DirtyAirLoss = 0f;
         AiFollowScale = 1f;
         AiLanes = true;
         TrackGripScale = 1f;

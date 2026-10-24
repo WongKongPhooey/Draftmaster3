@@ -264,6 +264,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Aero draft state this step (0..1), for HUD / telemetry / audio.
     public float TowFactor { get; private set; }        // slipstream caught from a car ahead
     public float SideDraftFactor { get; private set; }
+    // Grip left to the tyres in the wake of the car ahead (Draftmaster.Sim.DirtyAir): 1 in clean air.
+    public float DirtyAirGrip { get; private set; } = 1f;
     public float PushFactor { get; private set; }       // pushed along by a line of cars nose to tail behind us (DraftAero.Push)  // side draft suffered from a rival's nose on our quarter
 
     // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
@@ -633,6 +635,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float tow = 0f, sideDraft = 0f, push = 0f;
         if (enableDraft) ComputeDraft(out tow, out sideDraft, out push);
         TowFactor = tow; SideDraftFactor = sideDraft; PushFactor = push;
+        // The same wake that tows the car down the straight takes downforce off it in the corner (NR2003).
+        DirtyAirGrip = Draftmaster.Sim.DirtyAir.GripFactor(tow, speedNow, TrackConditions.DirtyAirLoss);
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
@@ -692,8 +696,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
         float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;
-        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * (1f - understeerBias);
-        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * (1f + understeerBias);
+        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * DirtyAirGrip * (1f - understeerBias);
+        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * DirtyAirGrip * (1f + understeerBias);
 
         // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
         muF *= surfGrip;

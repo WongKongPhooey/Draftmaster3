@@ -39,6 +39,7 @@ namespace Draftmaster.Tracks
         public float tyreWearScale;      // multiplier on wear rate
         public float tyreGripLossScale;  // multiplier on how much grip a worn tyre loses (0 = full loss, as everywhere)
         public float fuelBurnScale;      // multiplier on burn rate
+        public float dirtyAirLoss;       // share of grip a full tow's wake costs at speed (Draftmaster.Sim.DirtyAir; 0 = none)
 
         public float lineSpread;         // 0-1: how far off the ideal line the AI will race
         public float cautionProneness;   // 0-1: rough likelihood of contact-driven cautions
@@ -107,6 +108,13 @@ namespace Draftmaster.Tracks
                         raceInLanes = true,
                         pushScale = 0.3f,
                         sideAwareness = 0.6f,      // two wide off the corners, give a little room
+                        // Aero push (NR2003's wake cuts the follower's downforce with the same table as its drag):
+                        // OFF for now. At 0.06 (~6% grip right behind a car at 170 mph) the pack sim
+                        // (PackRaceSimTests.DirtyAirOvals, Charlotte + Atlanta, two rosters) lost a quarter of its
+                        // passes (39 -> 28.5 a run) with a few more side contacts (19 -> 25, HARD 0 -> 2): the AI
+                        // has nothing that looks for clean air in another lane, which is how NR2003's lateral field
+                        // turns the same wake into passing. Turn on with that, and play-test the player's car.
+                        dirtyAirLoss = 0f,
                         tyreWearScale = 1f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.75f,

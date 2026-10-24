@@ -456,7 +456,7 @@ public class SplineInputDriver : MonoBehaviour
         // Bent bodywork costs grip in the car's friction circle; without it here a car carrying heavy damage
         // was still commanded its undamaged corner speed and ran wide (incident log 2026-09-24: 0.85-0.90
         // damage cars going off in the R133 right-hander at 40 m/s, well under the undamaged cap of 57).
-        if (_car != null) grip *= _car.DamageGripFactor;
+        if (_car != null) grip *= _car.DamageGripFactor * _car.DirtyAirGrip;   // and the wake of a car ahead
         return vi.maxLateralG * Mathf.Max(0.05f, grip) * 9.81f;
     }
 }
