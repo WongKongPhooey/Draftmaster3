@@ -7,6 +7,10 @@ using UnityEngine;
 //
 // The sprite is a unit (1×1 m) rounded glow rect scaled to (boxWidth, boxLength), so marker-local
 // coordinates are normalized: a point is inside the box iff |x| and |y| ≤ 0.5.
+//
+// While it is lit it also hangs an objective marker on the box (SpawnIntroUI, the same pip the paddock's
+// bookings use), measured from the car, so the distance to the box counts down on the way down pit road.
+// Only while the box is still ahead: pulling away from it, a marker pointing back is noise.
 public class PlayerPitBoxMarker : MonoBehaviour
 {
     [Tooltip("Box length (m), along the pit lane. Must comfortably exceed the car length (~4.8).")]
@@ -19,12 +23,24 @@ public class PlayerPitBoxMarker : MonoBehaviour
     [Range(0f, 1f)] public float minAlpha = 0.35f;
     [Tooltip("Sorting order — under the cars (~5) and the box props (4).")]
     public int sortingOrder = 3;
+    [Tooltip("The objective marker on the box is hidden once the car is this close (m) — the glow says the rest.")]
+    public float guideHideWithinMetres = 2.5f;
+
+    public const string GuideLabel = "YOUR BOX";
+    // Above any paddock booking (10): driving down pit road, the box is the one place the player is due.
+    public const int GuidePriority = 20;
+
+    // The marker's icon: the box's own glow rect, so the pip is a picture of what it points at.
+    static Sprite _guideIcon;
+    public static Sprite GuideIcon => _guideIcon != null ? _guideIcon : (_guideIcon = BuildSprite());
 
     public bool IsBuilt => _builtBox >= 0;
 
     SpriteRenderer _sr;
     int _builtBox = -1;
     bool _visible;
+    Transform _car;
+    bool _guiding;
 
     public static PlayerPitBoxMarker Ensure()
     {
@@ -61,8 +77,10 @@ public class PlayerPitBoxMarker : MonoBehaviour
         Apply();
     }
 
-    public void SetVisible(bool visible)
+    // car: what the box marker's distance is measured from. Without one the glow shows and the marker does not.
+    public void SetVisible(bool visible, Transform car = null)
     {
+        _car = car;
         if (_visible == visible) return;
         _visible = visible;
         Apply();
@@ -99,6 +117,7 @@ public class PlayerPitBoxMarker : MonoBehaviour
 
     void Update()
     {
+        UpdateGuide();
         if (!_visible || !IsBuilt) return;
         float pulse = Mathf.Lerp(minAlpha, 1f, 0.5f + 0.5f * Mathf.Sin(Time.time * pulseHz * 2f * Mathf.PI));
         var c = color;
@@ -109,6 +128,37 @@ public class PlayerPitBoxMarker : MonoBehaviour
     void Apply()
     {
         if (_sr != null) _sr.enabled = _visible && IsBuilt;
+    }
+
+    void UpdateGuide()
+    {
+        bool want = _visible && IsBuilt && _car != null && BoxAhead(_car.position, transform.position,
+                                                                   transform.up, boxLength * 0.5f);
+        if (want)
+        {
+            // Every frame, not once: re-describing an existing marker is free and keeps its fly-in, and it
+            // survives the marker UI being stood up again under it.
+            SpawnIntroUI.Ensure().AddMarker(transform, GuideIcon, guideHideWithinMetres, GuideLabel, GuidePriority,
+                                            measureFrom: _car);
+        }
+        else if (_guiding && SpawnIntroUI.Instance != null)
+            SpawnIntroUI.Instance.RemoveMarker(transform);
+        _guiding = want;
+    }
+
+    void OnDisable()
+    {
+        if (_guiding && SpawnIntroUI.Instance != null) SpawnIntroUI.Instance.RemoveMarker(transform);
+        _guiding = false;
+    }
+
+    // Is the box still in front of a car running down the lane? along = the lane's direction of travel at
+    // the box. Counts as ahead until the car's centre is past the box's far end.
+    public static bool BoxAhead(Vector3 car, Vector3 box, Vector3 along, float halfLength)
+    {
+        Vector2 d = (Vector2)(box - car);
+        Vector2 a = ((Vector2)along).normalized;
+        return Vector2.Dot(d, a) > -halfLength;
     }
 
     // Unit glow rect: bright border, faint fill, alpha falling off toward the inside of the border.

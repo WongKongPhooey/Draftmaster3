@@ -203,6 +203,19 @@ public class PitChallengeRun : MonoBehaviour
     {
         _phase = p;
         _phaseTime = 0f;
+        GuideToBox(p == Phase.Countdown || p == Phase.Running);
+    }
+
+    // The objective marker on the box, counting the metres down from the car on the run in — the same
+    // "YOUR BOX" pip a race stop gets (PlayerPitBoxMarker). Down once the car is in it or the run is over.
+    void GuideToBox(bool on)
+    {
+        if (_boxMarker == null) return;
+        if (on)
+            SpawnIntroUI.Ensure().AddMarker(_boxMarker.transform, PlayerPitBoxMarker.GuideIcon, 2.5f, PlayerPitBoxMarker.GuideLabel,
+                                            PlayerPitBoxMarker.GuidePriority, measureFrom: _car.transform);
+        else if (SpawnIntroUI.Instance != null)
+            SpawnIntroUI.Instance.RemoveMarker(_boxMarker.transform);
     }
 
     void Settle(bool completed)
@@ -247,6 +260,7 @@ public class PitChallengeRun : MonoBehaviour
 
     void Cleanup()
     {
+        GuideToBox(false);
         if (_boxMarker != null) Destroy(_boxMarker);
         if (_loneCrew != null) Destroy(_loneCrew);
         if (Current == this) Current = null;
@@ -255,6 +269,7 @@ public class PitChallengeRun : MonoBehaviour
 
     void OnDestroy()
     {
+        GuideToBox(false);
         if (_boxMarker != null) Destroy(_boxMarker);
         if (_loneCrew != null) Destroy(_loneCrew);
         if (Current == this) Current = null;
@@ -357,6 +372,7 @@ public class PitChallengeRun : MonoBehaviour
         float z = -0.05f;
         Vector3 a = _boxAlong * (BoxLength * 0.5f), w = _boxAcross * (BoxWidth * 0.5f);
         Vector3 c = new Vector3(_boxCentre.x, _boxCentre.y, z);
+        _boxMarker.transform.position = c;   // the objective marker hangs on this (GuideToBox)
         line.SetPosition(0, c - a - w);
         line.SetPosition(1, c + a - w);
         line.SetPosition(2, c + a + w);

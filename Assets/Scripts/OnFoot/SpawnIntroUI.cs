@@ -53,6 +53,12 @@ public class SpawnIntroUI : MonoBehaviour
         // pointer to someone you can already see is clutter.
         public bool companion;
         public Color tint;
+
+        // Measured from this rather than the on-foot player, for a marker that is driven to — the pit box
+        // on the way down pit road. The walker is switched off in the car and left where they got in, so
+        // their distance means nothing there. Such a marker always shows its distance: on approach every
+        // metre is the point of it.
+        public Transform measureFrom;
     }
 
     // The one on screen. The weekend's objectives hang their markers on it rather than drawing a second
@@ -116,7 +122,7 @@ public class SpawnIntroUI : MonoBehaviour
     // is the player's own car used to stack a second marker on top of the spawn's, so the same object
     // carried two icons and two distances.
     public void AddMarker(Transform target, Sprite icon, float hideWithinMetres = 0f,
-                          string label = "", int priority = 0)
+                          string label = "", int priority = 0, Transform measureFrom = null)
     {
         if (target == null) return;
 
@@ -127,6 +133,7 @@ public class SpawnIntroUI : MonoBehaviour
             _markers[i].hideWithinMetres = hideWithinMetres;
             _markers[i].label = label;
             _markers[i].priority = priority;
+            _markers[i].measureFrom = measureFrom;
             return;   // introTimer is kept: re-describing is not a reason to fly in again, PulseMarker is
         }
 
@@ -137,8 +144,29 @@ public class SpawnIntroUI : MonoBehaviour
             hideWithinMetres = hideWithinMetres,
             label = label,
             priority = priority,
+            measureFrom = measureFrom,
         });
     }
+
+    // The marker UI without a title card, for things that mark somewhere from the car — a race with no
+    // pit-lane walk-up has never stood one up.
+    public static SpawnIntroUI Ensure()
+    {
+        if (Instance != null) return Instance;
+        var go = new GameObject("SpawnIntroUI");
+        Instance = go.AddComponent<SpawnIntroUI>();
+        return Instance;
+    }
+
+    public bool HasMarker(Transform target)
+    {
+        for (int i = 0; i < _markers.Count; i++)
+            if (_markers[i].target == target) return true;
+        return false;
+    }
+
+    // Whoever this marker's distance is measured from: its own measureFrom, else the walker.
+    Transform From(Marker m) => m.measureFrom != null ? m.measureFrom : _player;
 
     // Someone to keep track of, rather than somewhere to be.
     //
@@ -314,7 +342,7 @@ public class SpawnIntroUI : MonoBehaviour
         for (int i = 0; i < _markers.Count; i++) _markers[i].hitRect = default;
 
         var cam = Camera.main;
-        if (cam == null || _player == null) return;
+        if (cam == null) return;
 
         var live = Live();
         if (live != null) DrawMarker(live, cam, offScreenOnly: false);
@@ -323,14 +351,14 @@ public class SpawnIntroUI : MonoBehaviour
         for (int i = 0; i < _markers.Count; i++)
         {
             var c = _markers[i];
-            if (!c.companion || c.target == null) continue;
+            if (!c.companion || c.target == null || From(c) == null) continue;
             DrawMarker(c, cam, offScreenOnly: true);
         }
     }
 
     void DrawMarker(Marker m, Camera cam, bool offScreenOnly)
     {
-        float dist = Vector2.Distance(_player.position, m.target.position);
+        float dist = Vector2.Distance(From(m).position, m.target.position);
 
         Vector3 sp = cam.WorldToScreenPoint(m.target.position);
         Vector2 gui = new Vector2(sp.x, Screen.height - sp.y); // GUI space runs y-down
@@ -395,7 +423,7 @@ public class SpawnIntroUI : MonoBehaviour
         if (settled)
         {
             // What it is, then how far away. An unlabelled pip is a guess.
-            string distanceText = (!onScreen || dist >= distanceLabelMinMetres)
+            string distanceText = (!onScreen || dist >= distanceLabelMinMetres || m.measureFrom != null)
                 ? $"{Mathf.RoundToInt(dist)}m"
                 : null;
             DrawLabels(pos, dir, m.label, distanceText);
@@ -423,8 +451,11 @@ public class SpawnIntroUI : MonoBehaviour
         // Close enough that the marker would be sat on top of the thing it points at: draw nothing, rather
         // than falling through to the objective underneath and sending the player back across the paddock
         // the moment they arrive.
-        if (best != null && best.hideWithinMetres > 0f &&
-            Vector2.Distance(_player.position, best.target.position) < best.hideWithinMetres) return null;
+        if (best == null) return null;
+        var from = From(best);
+        if (from == null) return null;
+        if (best.hideWithinMetres > 0f &&
+            Vector2.Distance(from.position, best.target.position) < best.hideWithinMetres) return null;
 
         return best;
     }
