@@ -264,6 +264,49 @@ namespace Draftmaster.Weekend
             Save();
         }
 
+        // Developer jump (the debug panel's weekend list): put the clock at `target`'s start as though the
+        // player had attended everything before it, and reopen everything from it onwards, so the weekend can be
+        // moved forwards or back to any booking. Nothing is charged and nothing is credited: no no-show
+        // penalties, no skip tolls, no outcomes — the meters stay where they were. A null target walks off the
+        // end of Sunday afternoon with everything attended. Anything already missed before the target stays
+        // missed; only what is at or after it is reopened.
+        public static void DevJumpTo(WeekendActivity target)
+        {
+            var t = Timetable;
+            if (t == null) return;
+            var d = Data;
+
+            int at = target == null ? int.MaxValue : Position(target.slot, target.startMinute);
+            foreach (var a in t.Activities)
+            {
+                if (a == null) continue;
+                if (Position(a.slot, a.startMinute) < at)
+                {
+                    if (!IsDone(a.id) && !IsMissed(a.id)) d.done.Add(a.id);
+                }
+                else
+                {
+                    d.done.Remove(a.id);
+                    d.missed.Remove(a.id);
+                }
+            }
+
+            if (target == null)
+            {
+                d.slotIndex = WeekendSlots.Count;
+                d.clockMinute = WeekendSlots.ClosesAt((WeekendSlot)(WeekendSlots.Count - 1));
+            }
+            else
+            {
+                d.slotIndex = (int)target.slot;
+                d.clockMinute = target.startMinute;   // its own start, so it reads Available, not Missed
+            }
+            Save();
+        }
+
+        // Minutes since Friday morning opened, so two bookings on different days compare as one number.
+        static int Position(WeekendSlot slot, int minute) => (int)slot * 24 * 60 + minute;
+
         // The timetable the sweep works against. The ledger has no opinion about what is on the sheet, so the
         // runtime layer keeps this pointed at the live one.
         public static WeekendTimetable Timetable;

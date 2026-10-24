@@ -101,6 +101,24 @@ public class DebugStatsOverlay : MonoBehaviour
         return sum / k;
     }
 
+    // Where the readout sits, so the weekend debug panel (WeekendDebugPanel) can hang underneath it.
+    //
+    // Left edge, a third of the way down: clear of the position/speed block at the top, the touch pedals
+    // at the bottom, and the tyre panel and minimap on the right, in both landscape and portrait.
+    public static Rect BoxRect
+    {
+        get
+        {
+            float pad = PixelGUI.Px(4f);
+            float w = PixelGUI.Px(52f) + PixelGUI.Px(64f) + pad * 2f;
+            float h = PixelGUI.DataLineH * 6f + pad * 2f;
+            var safe = Screen.safeArea;
+            float x = Mathf.Round(safe.x + PixelGUI.Px(6f));
+            float y = Mathf.Round(Screen.height - safe.yMax + Screen.height * 0.3f);
+            return new Rect(x, y, w, h);
+        }
+    }
+
     void OnGUI()
     {
         if (!Visible || Event.current.type != EventType.Repaint) return;
@@ -109,18 +127,12 @@ public class DebugStatsOverlay : MonoBehaviour
         float pad = PixelGUI.Px(4f);
         float labelW = PixelGUI.Px(52f);
         float valueW = PixelGUI.Px(64f);
-        float w = labelW + valueW + pad * 2f;
-        float h = line * 6f + pad * 2f;
-
-        // Left edge, a third of the way down: clear of the position/speed block at the top, the touch pedals
-        // at the bottom, and the tyre panel and minimap on the right, in both landscape and portrait.
-        var safe = Screen.safeArea;
-        float x = Mathf.Round(safe.x + PixelGUI.Px(6f));
-        float y = Mathf.Round(Screen.height - safe.yMax + Screen.height * 0.3f);
+        var box = BoxRect;
+        float x = box.x, y = box.y;
 
         var old = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+        GUI.DrawTexture(box, Texture2D.whiteTexture);
         GUI.color = old;
 
         float ly = y + pad;

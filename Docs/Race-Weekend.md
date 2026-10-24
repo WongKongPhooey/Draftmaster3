@@ -118,6 +118,16 @@ the half-day skip. `WeekendDirector.SkipTo` books the target as the objective an
 the summary card. The pause menu's WEEKEND SCHEDULE row was removed — the phone is the schedule (F10 still
 opens the full sheet). Tests in `WeekendSkipTests`.
 
+**Developer weekend panel.** Turn on `Esc > Debug stats` and a `[+] WEEKEND` box appears under the FPS readout
+during a career weekend (host only; `WeekendDebugPanel`). **SKIP QUEST** credits the current objective — the
+session being driven, or the booking the marker points at — as attended with a neutral outcome and books the
+next one (`WeekendDirector.DevSkipQuest`; refused mid-conversation or while sat in a grandstand; a session
+skipped from the car lands back at the RV, with no race result or classification). **JUMP TO** lists every
+booking; picking one moves the weekend straight there, forwards or back — everything before it counts as
+attended, everything from it on is reopened, no penalties, tolls or outcomes — then fast travels to the RV
+with it booked (`WeekendDirector.DevJumpTo` → `WeekendLedger.DevJumpTo`). `END OF WEEKEND` walks off Sunday.
+Tests in `WeekendDevJumpTests`.
+
 ## 2. The session schedule
 
 This is the shape of a modern compressed stock-car weekend: all three championships practise on Friday and

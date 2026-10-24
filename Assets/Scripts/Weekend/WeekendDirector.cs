@@ -174,10 +174,11 @@ public class WeekendDirector : MonoBehaviour
 
         // Arriving back at the motorhome from a skip ahead: lights up and say what the skip cost. After the
         // modal reset, which would otherwise take the card's freeze with it.
-        if (_skipReport != null)
+        if (_fadeInOnLoad)
         {
             var report = _skipReport;
             _skipReport = null;
+            _fadeInOnLoad = false;
             ScreenFade.FromBlack(0.15f, 0.45f);
             WeekendResultCard.ShowSkipSummary(report);
         }
@@ -644,6 +645,7 @@ public class WeekendDirector : MonoBehaviour
     // The skip waiting to be reported once the fast travel has landed. A static rather than a pref: it only
     // has to survive the one scene load the skip itself makes.
     static WeekendSkip.Report _skipReport;
+    static bool _fadeInOnLoad;   // the landing faded to black on the way out; light up again when it arrives
 
     // The sheet's SKIP TO button. Gives up the rest of the half-day (WeekendSkip charges for what that walks
     // past), and fast travels the player back to their motorhome: the race scene is reloaded with nothing
@@ -685,6 +687,7 @@ public class WeekendDirector : MonoBehaviour
         return true;
     }
 
+    // A null report (the debug panel's jumps) lands the same way with no summary to show.
     static void LandAfterSkip(WeekendSkip.Report report)
     {
         ClearRoute();
@@ -699,8 +702,69 @@ public class WeekendDirector : MonoBehaviour
         }
 
         _skipReport = report;
+        _fadeInOnLoad = true;
         string scene = SceneManager.GetActiveScene().name;
         ScreenFade.ToBlack(0.35f, () => CoopScene.Load(scene));
+    }
+
+    // ------------------------------------------------------------------ developer shortcuts
+
+    // The debug panel's weekend list (WeekendDebugPanel): move the weekend straight to `target` — forwards or
+    // back — as though everything before it had been attended and everything from it on is still to come.
+    // Nothing is charged or credited (WeekendLedger.DevJumpTo). Null jumps past the end of Sunday. Lands like
+    // a skip, back at the motorhome with the scene reloaded, with `target` already booked as the objective.
+    public static void DevJumpTo(WeekendActivity target)
+    {
+        if (Coop.IsGuest) return;
+        _ = Timetable;
+        if (WeekendLedger.Timetable == null) return;
+
+        // Somebody handing the day over would only re-book the first thing on the sheet over the top of it.
+        MarkBriefed();
+        WeekendLedger.DevJumpTo(target);
+        WeekendAppointment.Clear();
+        if (target != null) WeekendAppointment.Make(target);
+        WeekendModal.Reset();
+        LandAfterSkip(null);
+    }
+
+    // The debug panel's SKIP QUEST: the current objective — the session being driven, or else the booking the
+    // marker points at — is credited as attended with a neutral outcome, exactly as finishing it would, and
+    // the next booking goes up behind it. A session skipped from the car lands back at the motorhome, the way
+    // a skip does. Returns a line for the panel to show.
+    public static string DevSkipQuest()
+    {
+        if (Coop.IsGuest) return "Host only.";
+        if (NPCInteractable.AnyConversationActive) return "Finish the conversation first.";
+        if (GrandstandSpectate.Watching) return "Leave the grandstand first.";
+
+        _ = Timetable;
+        if (WeekendLedger.Timetable == null) return "No weekend running.";
+        if (WeekendLedger.WeekendOver) return "The weekend is over.";
+
+        bool driving = RaceWeekend.SessionLive && Timetable.ById(PendingRouteId) != null;
+        var a = driving ? Timetable.ById(PendingRouteId)
+                        : WeekendAppointment.Pending ?? BookNextUp(replaceExisting: true);
+        if (a == null) return WeekendBedtime.Due() ? "Nothing left today - go to bed." : "No objective to skip.";
+
+        // A booking the clock has not reached yet (or has run past) is put back in reach first.
+        if (!WeekendLedger.CanDo(a, out _)) WeekendLedger.DevJumpTo(a);
+
+        var outcome = WeekendOutcome.Nothing.WithHeadline("Skipped (debug).");
+        if (driving)
+        {
+            // The session's own director never gets to close it out, so credit it here and go home.
+            FinishRoutedSession(outcome, showCard: false);
+            WeekendAppointment.Clear();
+            WeekendModal.Reset();
+            LandAfterSkip(null);
+        }
+        else
+        {
+            if (a.IsOnTrack) { ClearRoute(); RaceWeekend.SessionLive = false; }
+            Finish(a, outcome, inWorld: true);
+        }
+        return "Skipped " + a.title + ".";
     }
 
     // ------------------------------------------------------------------ weekend end
