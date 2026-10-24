@@ -102,7 +102,7 @@ anything about a track that makes it *that* track.
 
 The dressing above is the furniture every track needs. The grass beyond it was left bare; the scenery scatter
 fills it with the things that sit round a real track — fans' motorhomes in camps, people at the fence, and
-greenery once the art exists.
+trees and bushes (placeholder art for now).
 
 `Draftmaster > Tracks > Scenery > Scatter Scenery (Open or Selected Package)` writes `SceneryPiece` objects under
 the package's `Environment/Scenery` (a `TrackScenery` object holding the settings). A package open on a prefab
@@ -119,8 +119,8 @@ defaults, in placement order:
 | Row | What |
 | --- | --- |
 | Spectators | Knots of 2-5 paper-doll fans 14-40 m from the road edge, facing the track. 12 groups per km |
+| Greenery | **Placeholder art** — five top-down trees and bushes in `Resources/Environment/Greenery` (`placeholder_*.png`, 12.8 px/m), dealt into an empty Greenery row on the next scatter. Swap real sprites into the row's list (or replace the PNGs) and re-scatter. 4 per hectare, 20-140 m out, unturned. Placed before the camps, so the camps' fans can't eat the piece cap first |
 | Fan Motorhomes | The paddock lot's three motorhome sprites, pastel-tinted, 10 x 3.75 m, in camps 30-130 m out, parked along the track or nose-in per camp, 0-3 fans outside each. 18 per hectare of camp |
-| Greenery | **Empty — waiting on art.** Add sprites to its list (long side along +X, footprint 0 = the sprite's own size) and re-scatter. 4 per hectare, 20-140 m out |
 
 A row with nothing to draw is skipped and named in the report, so the greenery row can sit there until it's
 drawn. Rows are placed in order against one piece cap, so put the cheap or important ones first.

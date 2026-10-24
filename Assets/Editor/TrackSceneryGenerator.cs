@@ -20,6 +20,7 @@ public static class TrackSceneryGenerator
 {
     const string PackageDir = "Assets/Resources/TrackPackages";
     const string PaletteAssetPath = "Assets/Resources/Tracks/SceneryPalette.asset";
+    const string GreeneryDir = "Assets/Resources/Environment/Greenery";
     public const string SceneryName = "Scenery";
 
     const float SpriteZ = -0.2f;      // towards the camera from the grass (+0.1) and the road (0)
@@ -109,6 +110,7 @@ public static class TrackSceneryGenerator
         var scenery = EnsureScenery(packageRoot, package);
         var palette = scenery.Palette;
         if (palette == null) palette = EnsureDefaultPalette();
+        FillEmptyGreenery(palette);
 
         // Entries that can actually draw something, and the layout's view of them.
         var usable = new List<int>();
@@ -473,7 +475,7 @@ public static class TrackSceneryGenerator
     public static SceneryPalette EnsureDefaultPalette()
     {
         var palette = AssetDatabase.LoadAssetAtPath<SceneryPalette>(PaletteAssetPath);
-        if (palette != null) return palette;
+        if (palette != null) { FillEmptyGreenery(palette); return palette; }
 
         palette = ScriptableObject.CreateInstance<SceneryPalette>();
         palette.entries = DefaultEntries();
@@ -489,8 +491,8 @@ public static class TrackSceneryGenerator
             .Select(n => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Resources/Environment/{n}.png"))
             .Where(s => s != null).ToArray();
 
-        // Order matters: kinds are placed in palette order against one piece cap, so the fence-line crowd goes
-        // first and can't be starved by a superspeedway's acres of camping.
+        // Order matters: kinds are placed in palette order against one piece cap, so the fence-line crowd and the
+        // (cheap) greenery go first and can't be starved by a superspeedway's acres of camping.
         return new[]
         {
             new SceneryPalette.Entry
@@ -503,6 +505,13 @@ public static class TrackSceneryGenerator
             },
             new SceneryPalette.Entry
             {
+                name = "Greenery", look = SceneryPalette.Look.Sprites, sprites = GreenerySprites(),
+                perKm = 0f, perHectare = 4f, minSetback = 20f, maxSetback = 140f, spacing = 1f,
+                facing = SceneryFacing.Fixed,
+                sortingOrder = 3,
+            },
+            new SceneryPalette.Entry
+            {
                 name = "Fan Motorhomes", look = SceneryPalette.Look.Sprites, sprites = motorhomes,
                 size = new Vector2(10f, 3.75f),        // the drivers' lot's own rig size
                 pastelTint = true,
@@ -511,14 +520,39 @@ public static class TrackSceneryGenerator
                 followers = "Spectators", followersMin = 0, followersMax = 3, followerReach = 3f,
                 sortingOrder = 2,
             },
-            new SceneryPalette.Entry
-            {
-                name = "Greenery", look = SceneryPalette.Look.Sprites, sprites = new Sprite[0],
-                perKm = 0f, perHectare = 4f, minSetback = 20f, maxSetback = 140f, spacing = 1f,
-                facing = SceneryFacing.Fixed,
-                sortingOrder = 3,
-            },
         };
+    }
+
+    // Placeholder trees and bushes (top-down, drawn at 12.8 px/m) until real greenery art exists. A Greenery
+    // row with no sprites of its own is given whatever is in GreeneryDir; once the row has art — the real
+    // sprites dropped into its list — this leaves it alone.
+    static Sprite[] GreenerySprites() =>
+        AssetDatabase.FindAssets("t:Sprite", new[] { GreeneryDir })
+            .Select(g => AssetDatabase.GUIDToAssetPath(g)).Distinct()
+            .Select(p => AssetDatabase.LoadAssetAtPath<Sprite>(p))
+            .Where(s => s != null).ToArray();
+
+    static void FillEmptyGreenery(SceneryPalette palette)
+    {
+        int i = palette.IndexOf("Greenery");
+        if (i < 0 || palette.entries[i].HasArt) return;
+        var sprites = GreenerySprites();
+        if (sprites.Length == 0) return;
+        palette.entries[i].sprites = sprites;
+
+        // Trees are the cheapest piece there is, one sprite each: they go ahead of the camps, whose fans would
+        // otherwise eat a superspeedway's whole piece cap before a single tree was planted.
+        int camps = palette.IndexOf("Fan Motorhomes");
+        if (camps >= 0 && camps < i)
+        {
+            var order = palette.entries.ToList();
+            var greenery = order[i];
+            order.RemoveAt(i);
+            order.Insert(camps, greenery);
+            palette.entries = order.ToArray();
+        }
+        EditorUtility.SetDirty(palette);
+        AssetDatabase.SaveAssetIfDirty(palette);
     }
 
     static string Id(GameObject packageRoot)

@@ -171,14 +171,15 @@ Re-dressing (`Dress Selected Package`) only ever replaces pieces **it** generate
 `Environment` / `Paddock` roots, or carrying its names. Hand-made pieces are kept and reported. Kerbs,
 garages, signage and camera towers are hand work by design.
 
-**Filling the empty grass** — fans' motorhomes, spectators at the fence, and greenery once it's drawn — is
+**Filling the empty grass** — fans' motorhomes, spectators at the fence, and (placeholder) trees and bushes — is
 `Draftmaster > Tracks > Scenery > Scatter Scenery (Open or Selected Package)`. With a package open in
 Prefab Mode / In Context it scatters into that (Prefab Mode auto-save will write it); otherwise it loads,
 scatters and saves the selected package. Pieces land under `Environment/Scenery`, keep clear of the road,
 pit lane, paddock, RV, stands, run-off and anything hand-placed, and draw themselves on enable. The
 `Scenery` object's inspector has the seed, density, clearances and Scatter/Clear buttons; tick `locked` on
-a piece to keep it through a re-scatter. What gets scattered is `Resources/Tracks/SceneryPalette` — add a
-sprite list to its empty **Greenery** row (or a new row) and re-scatter. Detail: `Docs/Tracks.md` § Scenery.
+a piece to keep it through a re-scatter. What gets scattered is `Resources/Tracks/SceneryPalette` — its
+**Greenery** row holds placeholder sprites from `Resources/Environment/Greenery` — swap real art into its
+list (or a new row) and re-scatter. Every package was scattered 2026-10-24 (seed 1). Detail: `Docs/Tracks.md` § Scenery.
 
 **Daytona is authored, not just dressed.** Its paddock (infield, behind the chord pit road) and Watkins
 Glen's key areas in it come from `Draftmaster > Tracks > Daytona > Author Daytona (Watkins Glen Blueprint)`.
