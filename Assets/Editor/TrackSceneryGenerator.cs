@@ -535,13 +535,19 @@ public static class TrackSceneryGenerator
     static void FillEmptyGreenery(SceneryPalette palette)
     {
         int i = palette.IndexOf("Greenery");
-        if (i < 0 || palette.entries[i].HasArt) return;
-        var sprites = GreenerySprites();
-        if (sprites.Length == 0) return;
-        palette.entries[i].sprites = sprites;
+        if (i < 0) return;
+        bool changed = false;
+        if (!palette.entries[i].HasArt)
+        {
+            var sprites = GreenerySprites();
+            if (sprites.Length == 0) return;
+            palette.entries[i].sprites = sprites;
+            changed = true;
+        }
 
         // Trees are the cheapest piece there is, one sprite each: they go ahead of the camps, whose fans would
-        // otherwise eat a superspeedway's whole piece cap before a single tree was planted.
+        // otherwise eat a superspeedway's whole piece cap before a single tree was planted. Checked every
+        // time, not only on the fill, so a palette that already has its trees still gets reordered.
         int camps = palette.IndexOf("Fan Motorhomes");
         if (camps >= 0 && camps < i)
         {
@@ -550,7 +556,9 @@ public static class TrackSceneryGenerator
             order.RemoveAt(i);
             order.Insert(camps, greenery);
             palette.entries = order.ToArray();
+            changed = true;
         }
+        if (!changed) return;
         EditorUtility.SetDirty(palette);
         AssetDatabase.SaveAssetIfDirty(palette);
     }
