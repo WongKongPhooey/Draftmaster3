@@ -12,8 +12,6 @@ public class PlayerPitService : MonoBehaviour
     public PlayerVehicleController playerCar;
     [Tooltip("Seconds stationary on pit road before the stop completes.")]
     public float serviceSeconds = 3.5f;
-    [Tooltip("Distance (m) from the pit centerline still counted as 'in the pit lane'.")]
-    public float pitLateralMax = 6f;
     [Tooltip("Speed (m/s) below which the car counts as stopped for service.")]
     public float stopSpeedMps = 1.5f;
     [Tooltip("Tell the crew the player is coming once the car is this close (m) to their box, so the sign man is out with the board down before it arrives — the board is what marks the stop.")]
@@ -140,17 +138,10 @@ public class PlayerPitService : MonoBehaviour
         return vc != null ? vc.halfExtents : new Vector2(1.0f, 2.4f);
     }
 
-    bool OnPitLane(Vector3 worldPos)
-    {
-        var pit = track.SamplePitCenterline();
-        if (pit.Count < 2) return false;
-        float d = track.NearestPitDistance(worldPos);
-        var s = track.SamplePitAt(d, pit);
-        Vector2 local = track.transform.InverseTransformPoint(worldPos);
-        // Cover the box lane too — the player's box sits on it, outside the pit ribbon proper.
-        float max = track.HasPitBoxLane ? Mathf.Max(pitLateralMax, Mathf.Abs(track.PitBoxLaneOuterLateral) + 0.5f) : pitLateralMax;
-        return Vector2.Distance(local, s.position) < max;
-    }
+    // On the pit ribbon or the box lane, and NOT on the racing surface. A plain distance from the pit centreline
+    // also took in the track running alongside pit road and the entry/exit blends, so the box lit up and its
+    // YOUR BOX marker came on with the car still out on track.
+    bool OnPitLane(Vector3 worldPos) => track.IsOnPitSurface(worldPos);
 
     // Registry read, not a scene search. This is asked every frame until it answers, and it answers with
     // nothing for the whole time the player is walking around the paddock.

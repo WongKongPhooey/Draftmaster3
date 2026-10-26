@@ -12,6 +12,7 @@ namespace Draftmaster.Tracks
         FaceTrack,    // -Y at the nearest road — spectators
         Random,       // any angle — bushes, litter
         Fixed,        // angle 0 (plus jitter) — art that must stay upright on screen
+        NoseToTrack,  // -X (a vehicle's cab end) at the nearest road — fans' motorhomes parked nose-in
     }
 
     // One kind of thing to scatter, in plain numbers. The editor fills these from a SceneryPalette entry;
@@ -30,6 +31,8 @@ namespace Draftmaster.Tracks
         public SceneryFacing facing;
         public float angleJitter;    // +/- degrees
         public float turnChance;     // AlongTrack: chance a whole camp parks nose-in (turned 90) instead
+        public float rowJitter;      // 0 = anywhere in the band. > 0 = nearest the road first, cells ranked by
+                                     // setback plus up to this many metres of noise, so rows stay a little ragged
         public int followerKind;     // -1 = none. A kind placed in a little group round each one of these
         public int followersMin;
         public int followersMax;
@@ -180,6 +183,13 @@ namespace Draftmaster.Tracks
                         if (d.sqrMagnitude < 1e-6f) return jitter;
                         return Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg + 90f + jitter;
                     }
+                    case SceneryFacing.NoseToTrack:
+                    {
+                        Vector2 target = roadIndex >= 0 ? req.road[roadIndex].position : fallbackTarget;
+                        Vector2 d = target - p;
+                        if (d.sqrMagnitude < 1e-6f) return jitter;
+                        return Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg + 180f + jitter;
+                    }
                     case SceneryFacing.Random:
                         return (float)rng.NextDouble() * 360f;
                     default:
@@ -211,13 +221,31 @@ namespace Draftmaster.Tracks
                 result.wanted[k] = budget;
                 if (budget <= 0) continue;
 
+                // Front-loaded kinds take the ground nearest the road first: the fence line fills before the
+                // back field, and when the budget or the cap runs out it is the far end that goes empty.
+                bool nearFirst = kind.rowJitter > 0f;
+                if (nearFirst)
+                {
+                    var keys = new float[candidates.Count];
+                    for (int i = 0; i < keys.Length; i++)
+                        keys[i] = grid.setback[candidates[i]] + (float)rng.NextDouble() * kind.rowJitter;
+                    var ordered = candidates.ToArray();
+                    Array.Sort(keys, ordered);
+                    candidates = new List<int>(ordered);
+                }
+
                 int leaders = 0;
                 for (int n = candidates.Count; n > 0 && leaders < budget && total < req.maxPieces; n--)
                 {
-                    // Fisher-Yates as we go: only as much shuffling as there are tries.
-                    int pick = rng.Next(n);
-                    int cellIndex = candidates[pick];
-                    candidates[pick] = candidates[n - 1];
+                    int cellIndex;
+                    if (nearFirst) cellIndex = candidates[candidates.Count - n];
+                    else
+                    {
+                        // Fisher-Yates as we go: only as much shuffling as there are tries.
+                        int pick = rng.Next(n);
+                        cellIndex = candidates[pick];
+                        candidates[pick] = candidates[n - 1];
+                    }
                     if (grid.blocked[cellIndex]) continue;
 
                     Vector2 p = grid.Centre(cellIndex) + new Vector2(

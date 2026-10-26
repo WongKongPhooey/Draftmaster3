@@ -18,7 +18,7 @@ public class TrackScenery : MonoBehaviour
 
     [Header("Keep clear (metres)")]
     [Tooltip("Nothing nearer the racing surface's edge than this — the walls, the catch fence and the run-off.")]
-    [Min(0f)] public float roadClearance = 12f;
+    [Min(0f)] public float roadClearance = 5f;
     [Tooltip("Round the pit lane and its box lane.")]
     [Min(0f)] public float pitClearance = 30f;
     [Tooltip("Round the player's RV and spawn points. The drivers' motorhome lot and the team garages are laid " +
@@ -36,6 +36,9 @@ public class TrackScenery : MonoBehaviour
     [Header("Limits")]
     [Tooltip("Hard cap on pieces at this track, groups included.")]
     [Min(0)] public int maxPieces = 1200;
+
+    [Tooltip("Which round of default changes this package's settings have had (the scatter upgrades older ones).")]
+    public int revision;
 
     public SceneryPalette Palette => palette != null ? palette : SceneryPalette.LoadDefault();
 }

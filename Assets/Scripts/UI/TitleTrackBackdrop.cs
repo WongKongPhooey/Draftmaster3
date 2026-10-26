@@ -26,6 +26,10 @@ public class TitleTrackBackdrop : MonoBehaviour
     [Header("Layout")]
     [Tooltip("Where the wall's centre sits, as a fraction of the screen's width from the left.")]
     [Range(0f, 1f)] public float wallAt = 0.5f;
+    [Tooltip("Put the wall's track face on the left edge of the crash's slot instead (TitleCrash.ColumnRightPx, " +
+             "hung off the right of the screen the way TitleCrashScene places it), so the crash is on the tarmac " +
+             "whatever shape the screen is. wallAt is ignored while this is on.")]
+    public bool wallAtCrashSlot = true;
     [Tooltip("Wall thickness in metres when there is no SAFER barrier style to draw (a plain strip of `wall`). " +
              "With the style, the SAFER barrier's own width is used.")]
     public float wallWidthMetres = 1f;
@@ -49,7 +53,7 @@ public class TitleTrackBackdrop : MonoBehaviour
     public float fenceDepthZ = -0.5f;
 
     Camera _camera;
-    Vector2 _builtFor;              // (aspect, orthographic size) the quads were last laid out for
+    Vector3 _builtFor;              // (aspect, orthographic size, zoom) the quads were last laid out for
     Transform _root;
     readonly Mesh[] _meshes = new Mesh[4];
 
@@ -57,7 +61,7 @@ public class TitleTrackBackdrop : MonoBehaviour
     // the scene changes, so a scene opened (or a capture taken) before then would show no ground at all.
     void OnEnable()
     {
-        _builtFor = Vector2.zero;
+        _builtFor = Vector3.zero;
         EnsureBuilt();
     }
 
@@ -66,7 +70,7 @@ public class TitleTrackBackdrop : MonoBehaviour
     // Can't build here (no object creation inside OnValidate), so ask the editor for a tick instead.
     void OnValidate()
     {
-        _builtFor = Vector2.zero;
+        _builtFor = Vector3.zero;
 #if UNITY_EDITOR
         if (!Application.isPlaying) UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
 #endif
@@ -79,7 +83,7 @@ public class TitleTrackBackdrop : MonoBehaviour
     // style have changed underneath it.
     public void Rebuild()
     {
-        _builtFor = Vector2.zero;
+        _builtFor = Vector3.zero;
         EnsureBuilt();
     }
 
@@ -88,7 +92,7 @@ public class TitleTrackBackdrop : MonoBehaviour
         if (_camera == null) _camera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
         if (_camera == null || !_camera.orthographic) return;
 
-        var key = new Vector2(_camera.aspect, _camera.orthographicSize);
+        var key = new Vector3(_camera.aspect, _camera.orthographicSize, TitleCameraZoom.Factor(_camera));
         if (key == _builtFor && _root != null) return;
         _builtFor = key;
         Build();
@@ -106,14 +110,23 @@ public class TitleTrackBackdrop : MonoBehaviour
         float pxPerMetre = TitleCrash.CarLengthPx / 5f;
         float halfH = _camera.orthographicSize;
         float halfW = halfH * _camera.aspect;
-        float m = halfH * 2f / TitleCrash.CanvasHeight * pxPerMetre;   // world units per metre
+        // A zoomed-out camera (TitleCameraZoom) is divided back out, so the track stays its size and more of it shows.
+        float viewPx = TitleCrash.CanvasHeight * TitleCameraZoom.Factor(_camera);   // reference px down the screen
+        float m = halfH * 2f / viewPx * pxPerMetre;   // world units per metre
 
         // The screen in metres, centred on the camera.
         float right = halfW / m, top = halfH / m;
         float left = -right, bottom = -top;
 
-        float wallMid = Mathf.Lerp(left, right, wallAt);
         float wallW = BarrierWidthMetres;
+        float wallMid = Mathf.Lerp(left, right, wallAt);
+        if (wallAtCrashSlot)
+        {
+            // A reference pixel is the screen's height over viewPx, at any aspect.
+            float slotPx = TitleCrash.CanvasWidth - TitleCrash.ColumnRightPx;
+            float slotLeft = right - slotPx * (top - bottom) / viewPx;
+            wallMid = slotLeft - wallW * 0.5f;
+        }
         float wallL = wallMid - wallW * 0.5f, wallR = wallMid + wallW * 0.5f;   // wallR = the track-side face
         float finishMid = Mathf.Lerp(top, bottom, finishLineAt);
         float finishB = finishMid - finishLineMetres * 0.5f, finishT = finishMid + finishLineMetres * 0.5f;

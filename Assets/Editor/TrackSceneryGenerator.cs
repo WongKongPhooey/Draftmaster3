@@ -111,6 +111,8 @@ public static class TrackSceneryGenerator
         var palette = scenery.Palette;
         if (palette == null) palette = EnsureDefaultPalette();
         FillEmptyGreenery(palette);
+        UpgradePalette(palette);
+        UpgradeSettings(scenery);
 
         // Entries that can actually draw something, and the layout's view of them.
         var usable = new List<int>();
@@ -172,6 +174,7 @@ public static class TrackSceneryGenerator
             facing = e.facing,
             angleJitter = e.angleJitter,
             turnChance = e.turnChance,
+            rowJitter = e.rowJitter,
             followerKind = -1,
             followersMin = e.followersMin,
             followersMax = e.followersMax,
@@ -479,6 +482,7 @@ public static class TrackSceneryGenerator
 
         palette = ScriptableObject.CreateInstance<SceneryPalette>();
         palette.entries = DefaultEntries();
+        palette.revision = PaletteRevision;
         Directory.CreateDirectory(Path.GetDirectoryName(PaletteAssetPath));
         AssetDatabase.CreateAsset(palette, PaletteAssetPath);
         AssetDatabase.SaveAssets();
@@ -498,15 +502,15 @@ public static class TrackSceneryGenerator
             new SceneryPalette.Entry
             {
                 name = "Spectators", look = SceneryPalette.Look.Spectator,
-                perKm = 12f, minSetback = 14f, maxSetback = 40f, spacing = 0.4f,
-                facing = SceneryFacing.FaceTrack, angleJitter = 25f,
+                perKm = 12f, minSetback = SpectatorSetback.x, maxSetback = SpectatorSetback.y, spacing = 0.4f,
+                facing = SceneryFacing.FaceTrack, angleJitter = SpectatorJitter, rowJitter = SpectatorRowJitter,
                 followers = "Spectators", followersMin = 1, followersMax = 4, followerReach = 2.5f,
                 sortingOrder = 4,
             },
             new SceneryPalette.Entry
             {
                 name = "Greenery", look = SceneryPalette.Look.Sprites, sprites = GreenerySprites(),
-                perKm = 0f, perHectare = 4f, minSetback = 20f, maxSetback = 140f, spacing = 1f,
+                perKm = 0f, perHectare = 4f, minSetback = GreenerySetback.x, maxSetback = GreenerySetback.y, spacing = 1f,
                 facing = SceneryFacing.Fixed,
                 sortingOrder = 3,
             },
@@ -515,12 +519,57 @@ public static class TrackSceneryGenerator
                 name = "Fan Motorhomes", look = SceneryPalette.Look.Sprites, sprites = motorhomes,
                 size = new Vector2(10f, 3.75f),        // the drivers' lot's own rig size
                 pastelTint = true,
-                perKm = 0f, perHectare = 18f, minSetback = 30f, maxSetback = 130f, spacing = 2.5f, campsOnly = true,
-                facing = SceneryFacing.AlongTrack, angleJitter = 6f, turnChance = 0.4f,
+                perKm = 0f, perHectare = 18f, minSetback = CampSetback.x, maxSetback = CampSetback.y, spacing = 2.5f, campsOnly = true,
+                facing = SceneryFacing.NoseToTrack, angleJitter = CampJitter, rowJitter = CampRowJitter,
                 followers = "Spectators", followersMin = 0, followersMax = 3, followerReach = 3f,
                 sortingOrder = 2,
             },
         };
+    }
+
+    // Revision 1 (2026-10-24): scenery hugs the track. The fence-line crowd stands just behind the wall (walls sit
+    // 1 m off the road edge) and fills from the front; camps fill from the road outwards and every motorhome
+    // parks nose-in to the track instead of a random half of them backing onto it or lying alongside.
+    const int PaletteRevision = 1;
+    static readonly Vector2 SpectatorSetback = new Vector2(6f, 30f);
+    const float SpectatorJitter = 10f, SpectatorRowJitter = 6f;
+    static readonly Vector2 GreenerySetback = new Vector2(8f, 140f);
+    static readonly Vector2 CampSetback = new Vector2(10f, 130f);
+    const float CampJitter = 4f, CampRowJitter = 25f;
+
+    // The shared palette asset predates these numbers; bring its three default rows up to them once. A row
+    // renamed or added by hand is left alone, and so is everything after the revision is stamped.
+    static void UpgradePalette(SceneryPalette palette)
+    {
+        if (palette.revision >= PaletteRevision) return;
+        int i = palette.IndexOf("Spectators");
+        if (i >= 0)
+        {
+            var e = palette.entries[i];
+            e.minSetback = SpectatorSetback.x; e.maxSetback = SpectatorSetback.y;
+            e.angleJitter = SpectatorJitter; e.rowJitter = SpectatorRowJitter;
+        }
+        i = palette.IndexOf("Greenery");
+        if (i >= 0) { palette.entries[i].minSetback = GreenerySetback.x; palette.entries[i].maxSetback = GreenerySetback.y; }
+        i = palette.IndexOf("Fan Motorhomes");
+        if (i >= 0)
+        {
+            var e = palette.entries[i];
+            e.minSetback = CampSetback.x; e.maxSetback = CampSetback.y;
+            e.facing = SceneryFacing.NoseToTrack; e.angleJitter = CampJitter; e.rowJitter = CampRowJitter;
+            e.turnChance = 0f;
+        }
+        palette.revision = PaletteRevision;
+        EditorUtility.SetDirty(palette);
+        AssetDatabase.SaveAssetIfDirty(palette);
+    }
+
+    // A package's road clearance still on the old 12 m default comes in to the new 5 m; one set by hand stays.
+    static void UpgradeSettings(TrackScenery scenery)
+    {
+        if (scenery.revision >= PaletteRevision) return;
+        if (Mathf.Approximately(scenery.roadClearance, 12f)) scenery.roadClearance = 5f;
+        scenery.revision = PaletteRevision;
     }
 
     // Placeholder trees and bushes (top-down, drawn at 12.8 px/m) until real greenery art exists. A Greenery

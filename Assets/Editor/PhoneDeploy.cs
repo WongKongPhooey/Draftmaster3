@@ -310,6 +310,7 @@ public static class PhoneDeploy
         PlayerSettings.Android.bundleVersionCode = PlayerSettings.Android.bundleVersionCode + by;
         AssetDatabase.SaveAssets();
         PendingBumps = 0;
+        WriteDisplayVersion(PlayerSettings.bundleVersion);
 
         s.version = PlayerSettings.bundleVersion;
         s.versionCode = PlayerSettings.Android.bundleVersionCode;
@@ -317,6 +318,25 @@ public static class PhoneDeploy
         s.message = $"version {s.version} (code {s.versionCode})";
         Write(s);
         Debug.Log($"PhoneDeploy: version bumped {v} -> {s.version} ({by} step(s)), version code {s.versionCode}.");
+    }
+
+    // 0.7.9 stepped by 3 -> 0.7.12; a version with no number at the end comes back as it is.
+    static string Stepped(string v, int by)
+    {
+        var parts = (v ?? "").Split('.');
+        if (parts.Length == 0 || !int.TryParse(parts[parts.Length - 1], out int last)) return v;
+        parts[parts.Length - 1] = (last + by).ToString();
+        return string.Join(".", parts);
+    }
+
+    // The version the title screen shows (BuildVersion.Display): the counted one, so a patch carries it in its
+    // data while the APK's version name stays put.
+    const string DisplayVersionFile = "Assets/Resources/BuildVersion.txt";
+
+    static void WriteDisplayVersion(string v)
+    {
+        File.WriteAllText(DisplayVersionFile, v);
+        AssetDatabase.ImportAsset(DisplayVersionFile, ImportAssetOptions.ForceSynchronousImport);
     }
 
     // How a skipped deploy reports what happened to the version before it stopped.
@@ -327,6 +347,7 @@ public static class PhoneDeploy
     static void CountBump(Status s)
     {
         PendingBumps = PendingBumps + 1;
+        WriteDisplayVersion(Stepped(PlayerSettings.bundleVersion, PendingBumps));
         s.version = PlayerSettings.bundleVersion;
         s.versionCode = PlayerSettings.Android.bundleVersionCode;
         s.pendingBumps = PendingBumps;

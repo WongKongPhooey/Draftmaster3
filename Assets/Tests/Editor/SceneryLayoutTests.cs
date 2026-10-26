@@ -185,6 +185,50 @@ public class SceneryLayoutTests
     }
 
     [Test]
+    public void MotorhomesParkNoseInToTheTrack()
+    {
+        var req = Circle();
+        req.kinds[0].facing = SceneryFacing.NoseToTrack;
+        req.kinds[0].angleJitter = 4f;
+        var result = SceneryLayout.Solve(req);
+        int checkedCount = 0;
+        foreach (var p in result.placements)
+        {
+            if (p.kind != 0) continue;
+            float r = p.angle * Mathf.Deg2Rad;
+            Vector2 nose = -new Vector2(Mathf.Cos(r), Mathf.Sin(r));   // local -X, the cab end of the art
+            Vector2 towardRoad = p.position.magnitude > Radius ? -p.position.normalized : p.position.normalized;
+            Assert.Greater(Vector2.Dot(nose, towardRoad), 0.9f, $"motorhome at {p.position} doesn't point at the track");
+            checkedCount++;
+        }
+        Assert.Greater(checkedCount, 0);
+    }
+
+    [Test]
+    public void AFrontLoadedKindFillsFromTheRoadEdgeOut()
+    {
+        float MeanSetback(SceneryResult r)
+        {
+            float sum = 0f; int n = 0;
+            foreach (var p in r.placements)
+                if (p.kind == 1 && p.leader < 0) { sum += SetbackOf(p.position); n++; }
+            Assert.Greater(n, 0);
+            return sum / n;
+        }
+
+        var spread = Circle();
+        spread.kinds[1].maxSetback = 120f;
+        var front = Circle();
+        front.kinds[1].maxSetback = 120f;
+        front.kinds[1].rowJitter = 6f;
+
+        float spreadMean = MeanSetback(SceneryLayout.Solve(spread));
+        float frontMean = MeanSetback(SceneryLayout.Solve(front));
+        Assert.Less(frontMean, spreadMean - 20f, "a front-loaded kind should crowd the road edge");
+        Assert.Less(frontMean, front.kinds[1].minSetback + 15f);
+    }
+
+    [Test]
     public void SameSeedSameLayoutAndADifferentSeedMovesIt()
     {
         var a = SceneryLayout.Solve(Circle(3)).placements;

@@ -10,7 +10,7 @@ using UnityEngine;
 //
 // GridSpawner.SpawnAmbientField builds that field on the cheap kinematic brain — SplineDriver writes the transform
 // itself, no PlayerVehicleController — with AIRacingBehaviour and a driver's ratings on top, exactly as this does.
-// PackRaceSimTests covers the player's own (dynamic-model) field; this one says whether the watched field races:
+// The player's own (dynamic-model) field had PackRaceSimTests (removed 2026-10-25, in git history); this one says whether the watched field races:
 // how many places change hands and how much of the time cars spend side by side, rather than circulating nose to
 // tail in one line.
 //

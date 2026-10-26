@@ -7,6 +7,11 @@ public interface ICollisionResponder
     // Mass (kg) of this car. Used to weight momentum transfer in car-vs-car contacts.
     float Mass { get; }
 
+    // Yaw inertia (kg·m²) an off-centre hit turns against, as the car's own spin response feels it. Sets how much
+    // of a car-vs-car impulse goes into turning the car rather than shoving it (Draftmaster.Sim.CarContact).
+    // +inf = the car can't be spun.
+    float YawInertia { get; }
+
     // worldMtv: minimum translation vector (world space) to separate this car from the contact.
     // contactPoint: world-space point of contact. Its lever arm from the car centre produces yaw torque (spin).
     // severity: 0..1 closing severity used to scale speed loss.

@@ -114,42 +114,6 @@ public class FormationLapSimTests
         Debug.Log(sb.ToString());
     }
 
-    // The formation lap's shape all the way round - how long the field is, how soon it closes up, and how many cars are
-    // out of their grid slot - with no player, a player on pole and a player mid-field, all driving free.
-    [Explicit("Diagnostic: the formation lap's shape through the lap - Daytona, Watkins Glen, Darlington; player on pole and mid-field.")]
-    [Test, Timeout(3600000)]
-    public void FormationShapeBaseline()
-    {
-        var sb = new StringBuilder("[FormationSim] shape baseline");
-        foreach (var (id, box) in new[] { ("Daytona", -1), ("WatkinsGlen", -1), ("Darlington", -1), ("Daytona", 0), ("Daytona", 12), ("WatkinsGlen", 12) })
-        {
-            Despawn();
-            var r = box < 0 ? Run(id, FieldSize) : Run(id, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
-            sb.Append($"\n  {id} {(box < 0 ? "AI only" : $"player in box {box}")}: green {r.wentGreen} after {r.seconds:0}s, field through the lap {r.fieldLengthMean:0} m " +
-                      $"(worst {r.fieldLengthWorst:0}, at pit-in {r.fieldLengthAtPitIn:0}, at green {r.fieldLengthAtGreen:0}), row gap at green {r.meanRowGapAtGreen:0.0} m, " +
-                      $"{r.outOfPlaceMean:0.0} cars out of place, {r.contacts.Count} contacts");
-        }
-        Debug.Log(sb.ToString());
-    }
-
-    // The same on the demo's three tracks, the player free-driving on pole and mid-field.
-    [Explicit("Diagnostic: formation shape at Watkins Glen, Daytona and Martinsville - AI only, player on pole, player mid-field.")]
-    [Test, Timeout(3600000)]
-    public void FormationShapeDemoTracks()
-    {
-        var sb = new StringBuilder("[FormationSim] demo tracks shape");
-        foreach (var id in new[] { "WatkinsGlen", "Daytona", "Martinsville" })
-        foreach (int box in new[] { -1, 0, 12 })
-        {
-            Despawn();
-            var r = box < 0 ? Run(id, FieldSize) : Run(id, FieldSize, playerBox: box, playerFormsUp: false, playerDrivesFree: true);
-            sb.Append($"\n  {id} {(box < 0 ? "AI only" : $"player in box {box}")}: green {r.wentGreen} after {r.seconds:0}s, field through the lap {r.fieldLengthMean:0} m " +
-                      $"(worst {r.fieldLengthWorst:0}, at pit-in {r.fieldLengthAtPitIn:0}, at green {r.fieldLengthAtGreen:0}), row gap at green {r.meanRowGapAtGreen:0.0} m, " +
-                      $"{r.outOfPlaceMean:0.0} cars out of place, {r.contacts.Count} contacts, green {r.secondsAfterPitIn:0} s after pit-in [{r.setup}]");
-        }
-        Debug.Log(sb.ToString());
-    }
-
     static bool s_snapshotAtPitIn, s_timeline;
 
     [Explicit("Diagnostic: slots 5-15 and the player once a second from the pit boxes, the player starting mid-field.")]

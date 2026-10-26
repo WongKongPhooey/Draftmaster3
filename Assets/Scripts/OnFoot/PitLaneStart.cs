@@ -340,7 +340,7 @@ public class PitLaneStart : MonoBehaviour
             _orthoTarget = drivingOrthoSize;
 
             _entered = true;
-            _briefed = true;   // nobody to brief and no setup panel: this is a race, not a race weekend
+            _briefed = true;   // nobody to brief: this is a race, not a race weekend
             AmbienceLoop.Play(ambienceClip, ambienceVolume);
             StartCoroutine(DriveOnceTheFieldIsUp());
             return;
@@ -460,7 +460,15 @@ public class PitLaneStart : MonoBehaviour
         // boxes before the phase moves off PreGrid and releases them.
         yield return new WaitForFixedUpdate();
 
-        StartDriving(CarSetup.Load());
+        // A single race has no practice or qualifying to work on the car in, so — unlike a career race day,
+        // which runs the race-morning plan — the setup sheet comes up here, sat in the box with the field
+        // waiting, and the hand-over happens on CONFIRM.
+        if (showSetupPanel)
+        {
+            SetPhase(EntryPhase.Setup);
+            CarSetupPanelUI.Open(CarSetup.Load(), StartDriving);
+        }
+        else StartDriving(CarSetup.Load());
     }
 
     // ------------------------------------------------------------------ waking up

@@ -204,6 +204,7 @@ public class TitleCrashScene : MonoBehaviour
     RectTransform _canvasRt;
     Camera _camera;
     float _unit;                 // world units per reference pixel
+    float _zoom = 1f;            // TitleCameraZoom's factor when the layout was resolved
     bool _built;
     int _tries;
 
@@ -402,9 +403,13 @@ public class TitleCrashScene : MonoBehaviour
         if (layoutCanvas != null)
         {
             var rt = layoutCanvas.transform as RectTransform;
-            if (rt != null && rt.rect.width > 1f)
+            if (rt != null && rt.rect.height > 1f)
             {
-                float unit = (rt.rect.width / TitleCrash.CanvasWidth) * rt.lossyScale.x;
+                // Off the height, like the canvas scaler: off the width, a portrait screen shrank every car.
+                // A zoomed-out camera (TitleCameraZoom) grows the canvas in the world; divided back out, the
+                // cars stay their size and the camera sees more around them.
+                _zoom = TitleCameraZoom.Factor(layoutCanvas.rootCanvas.worldCamera);
+                float unit = (rt.rect.height / (TitleCrash.CanvasHeight * _zoom)) * rt.lossyScale.y;
                 if (unit > 0f) { _canvasRt = rt; _unit = unit; return true; }
             }
 
@@ -418,18 +423,24 @@ public class TitleCrashScene : MonoBehaviour
         _canvasRt = null;
         _camera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
         if (_camera == null || !_camera.orthographic) return false;
-        _unit = (_camera.orthographicSize * 2f) / TitleCrash.CanvasHeight;
+        _zoom = TitleCameraZoom.Factor(_camera);
+        _unit = (_camera.orthographicSize * 2f) / (TitleCrash.CanvasHeight * _zoom);
         return _unit > 0f;
     }
 
-    // Reference-canvas pixel (origin bottom-left) -> world point on the tableau's plane.
+    // Reference-canvas pixel (origin bottom-left) -> world point on the tableau's plane. One scale both ways,
+    // set by the height, and the reference frame hung off the RIGHT edge: the crash lives right of the copy
+    // column, so a narrower screen loses column off the left rather than squashing the cars into each other.
+    // At 16:9 this is exactly the reference frame. Zoomed out, the frame is centred top to bottom.
     Vector3 PxToWorld(Vector2 px)
     {
+        float midY = TitleCrash.CanvasHeight * 0.5f;
         if (_canvasRt != null)
         {
             var r = _canvasRt.rect;
-            var local = new Vector3(r.xMin + (px.x / TitleCrash.CanvasWidth) * r.width,
-                                    r.yMin + (px.y / TitleCrash.CanvasHeight) * r.height, 0f);
+            float perPx = r.height / (TitleCrash.CanvasHeight * _zoom);
+            var local = new Vector3(r.xMax - (TitleCrash.CanvasWidth - px.x) * perPx,
+                                    r.center.y + (px.y - midY) * perPx, 0f);
             var world = _canvasRt.TransformPoint(local) - _shakeApplied;
             return new Vector3(world.x, world.y, depthZ);
         }
@@ -437,8 +448,9 @@ public class TitleCrashScene : MonoBehaviour
         var centre = _camera != null ? _camera.transform.position - _shakeApplied : Vector3.zero;
         float halfW = _camera != null ? _camera.orthographicSize * _camera.aspect : TitleCrash.CanvasWidth * _unit * 0.5f;
         float halfH = _camera != null ? _camera.orthographicSize : TitleCrash.CanvasHeight * _unit * 0.5f;
-        return new Vector3(centre.x - halfW + (px.x / TitleCrash.CanvasWidth) * halfW * 2f,
-                           centre.y - halfH + (px.y / TitleCrash.CanvasHeight) * halfH * 2f, depthZ);
+        float perPxW = halfH * 2f / (TitleCrash.CanvasHeight * _zoom);
+        return new Vector3(centre.x + halfW - (TitleCrash.CanvasWidth - px.x) * perPxW,
+                           centre.y + (px.y - midY) * perPxW, depthZ);
     }
 
     // The paint. The hero wears the player's number once there's a career behind it — same number the

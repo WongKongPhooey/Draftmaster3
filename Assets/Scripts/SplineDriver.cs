@@ -36,6 +36,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public void ApplyCarImpact(Vector2 worldMtv, Vector2 contactPoint, Vector2 worldDeltaV, float severity)
         => ApplyContact(worldMtv, contactPoint, severity);
 
+    // Glued to the path: a hit never turns it.
+    public float YawInertia => float.PositiveInfinity;
+
     public TrackBuilder track;
     public VehicleInfo vehicleInfo;
     [Tooltip("Scales the target speed at every point on track. <1 slows the car down, >1 speeds it up. Driver stats (qualifying/consistency) feed this.")]

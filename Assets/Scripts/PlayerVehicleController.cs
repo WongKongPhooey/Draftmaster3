@@ -220,6 +220,17 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public VehicleInfo vehicleInfo;
 
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
+    // What ApplyCarImpact's spin actually turns against: the yaw inertia, divided by spinSensitivity. Before
+    // RecomputeGeometry has run, a wheelbase-sized box stands in.
+    public float YawInertia
+    {
+        get
+        {
+            if (spinSensitivity <= 0f) return float.PositiveInfinity;
+            float iz = _iz > 0f ? _iz : Mass * 1.96f;
+            return iz / spinSensitivity;
+        }
+    }
     public float SpeedMps => Mathf.Sqrt(_vx * _vx + _vy * _vy);
     public float SpeedMph => SpeedMps * 2.237f;
     // Body-slip angle (overall slide), degrees.

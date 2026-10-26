@@ -422,7 +422,7 @@ public class TitleScreenUI : MonoBehaviour
         {
             var label = FindLabel(root.transform, VersionLabelName);
             if (label == null) continue;
-            label.text = "v" + Application.version;
+            label.text = "v" + BuildVersion.Display;
             return;
         }
     }

@@ -221,7 +221,7 @@ public class MainMenuUI : MonoBehaviour {
 		loginBtnLabel = GameObject.Find("LoginButtonLabel");
 		
 		versionLabel = GameObject.Find("VersionLabel");
-		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + Application.version;
+		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + BuildVersion.Display;
 		
 		updateLabel = GameObject.Find("VersionNotice");
 		updateLabelUILabel = updateLabel.GetComponent<TMPro.TMP_Text>();

@@ -251,8 +251,16 @@ public class VehicleCollision : MonoBehaviour
                 Vector2 dvA = Vector2.zero, dvB = Vector2.zero;
                 if (vn > 0f)
                 {
-                    float invSum = (1f / mA) + (1f / mB);
-                    float j = (1f + vehicleRestitution) * vn / Mathf.Max(invSum, 1e-4f);
+                    // With each car's turning in the denominator: an off-centre hit spends itself partly on
+                    // spinning the cars and shoves them apart less (see CarContact). Head-on bumps are unchanged.
+                    // The other car's inertia from the controller its VehicleCollision picked: GetComponent can
+                    // answer with the dormant SplineDriver on a dynamic AI car, which can't be spun.
+                    float iA = _responder != null ? _responder.YawInertia : float.PositiveInfinity;
+                    var spunB = otherVC != null && otherVC._responder != null ? otherVC._responder : otherResponder;
+                    float j = Draftmaster.Sim.CarContact.NormalImpulse(
+                        vn, vehicleRestitution, n,
+                        mA, iA, d.pointA - (Vector2)transform.position,
+                        mB, spunB.YawInertia, d.pointB - (Vector2)other.transform.position);
                     dvA = -(j / mA) * n; // A slows / rebounds
                     dvB = (j / mB) * n;  // B is shunted forward
                 }

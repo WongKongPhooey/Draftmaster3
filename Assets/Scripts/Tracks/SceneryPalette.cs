@@ -64,6 +64,10 @@ public class SceneryPalette : ScriptableObject
         [Tooltip("Along Track only: chance a whole camp parks nose-in to the track instead of alongside it.")]
         [Range(0f, 1f)] public float turnChance;
 
+        [Tooltip("0 = anywhere in the setback band. Above 0 = fill from the road edge outwards, this many metres " +
+                 "of randomness on the order so the rows stay ragged.")]
+        [Min(0f)] public float rowJitter;
+
         [Header("Group round each one")]
         [Tooltip("Name of another entry to stand a few of round each of these (fans outside a motorhome). Empty = none.")]
         public string followers;
@@ -115,6 +119,9 @@ public class SceneryPalette : ScriptableObject
     }
 
     public Entry[] entries = new Entry[0];
+
+    [Tooltip("Which round of default changes this asset has had (TrackSceneryGenerator upgrades older ones).")]
+    public int revision;
 
     [Header("Camping patches")]
     [Tooltip("Metres across a typical camp.")]
