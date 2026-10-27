@@ -121,21 +121,20 @@ public static class PixelGUI
     // The same for the fixed-advance data face, which is what rows, columns and readouts are set in.
     public static float DataLineH { get { Ensure(); return _data.fontSize + Px(2f); } }
 
-    // The height of a Button or Tab. Pass the height the panel was laid out with on a desktop; on a handheld
-    // the label is the dialogue/quest face (see Ensure), so the plate grows to fit one line of it with the
-    // button's own padding above and below. Desktop gets `desktopPx` back untouched.
+    // The height of a Button or Tab. Pass the height the panel was laid out with; the caption is the
+    // dialogue/quest face (see Ensure), so the plate grows to fit one line of it with the button's own
+    // padding above and below whenever the height asked for is shorter than that.
     public static float ButtonH(float desktopPx)
     {
         Ensure();
-        return HandheldType.ButtonHeight(Handheld, desktopPx, _buttonLineH, _button.padding.top, Scale);
+        return HandheldType.ButtonHeight(true, desktopPx, _buttonLineH, _button.padding.top, Scale);
     }
 
-    // The kit's standard menu button: one line of label plus its plate padding, with MenuButtonPad more
-    // above and below so a stack of them doesn't read cramped. 20px tall on a desktop (60 at 1080p); on a
-    // handheld the bigger button face's plate plus the same pad. Panels with a column of buttons use this
-    // rather than their own number, so every menu's buttons come out the same height.
+    // The kit's standard menu button: one line of caption plus its plate padding, with MenuButtonPad more
+    // above and below so a stack of them doesn't read cramped — UIButton.KitPx on a desktop. Panels with a
+    // column of buttons use this rather than their own number, so every menu's buttons come out the same height.
     public const float MenuButtonPad = 2f;
-    public static float MenuButtonH => ButtonH(LineH + Px(6f)) + Px(MenuButtonPad * 2f);
+    public static float MenuButtonH => ButtonH(0f) + Px(MenuButtonPad * 2f);
 
     // ---- palette ------------------------------------------------------------------------------------
     // Shortcuts, so a panel does not have to null-check the theme on every colour it draws.
@@ -156,9 +155,11 @@ public static class PixelGUI
     // The 9-sliced window plate, for GUI.Box and GUILayout areas. Panel() is the richer version: it adds
     // the dithered interior, which a GUIStyle background cannot tile.
     public static GUIStyle Window { get { Ensure(); return _window; } }
-    // Silkscreen, gold, 16pt cell — section headers.
+    // Fixedsys, gold, one 16pt cell — section headers. Fixedsys rather than Silkscreen because Silkscreen has
+    // no lower case, and headings are Title Case (Docs/Type-Scale.md, "Letter case").
     public static GUIStyle Heading { get { Ensure(); return _heading; } }
-    // Silkscreen at its native 8pt — the small all-caps label over a readout.
+    // Silkscreen at its native 8pt — the small label over a readout. The one tier still in Silkscreen: no face
+    // with lower case draws cleanly at 8, so it reads as small caps.
     public static GUIStyle HeadingSmall { get { Ensure(); return _headingSmall; } }
     // VT323 list row, dim until selected.
     public static GUIStyle Row { get { Ensure(); return _row; } }
@@ -216,8 +217,9 @@ public static class PixelGUI
         // asks its face which cell it wants. With the theme on one typeface throughout (VT323) this
         // collapses to 16 for text and 32 for headings.
         int labelPt = CellOf(display, 8) * scale;
-        int headingPt = CellOf(display, 8) * 2 * scale;
         int vt = 16 * scale;
+        // Headings are the type scale's Heading size (16) in the data face, on its own cell.
+        int headingPt = Mathf.Max(1, Mathf.RoundToInt(16f / CellOf(data, 16))) * CellOf(data, 16) * scale;
         int prosePt = CellOf(prose, 20) * scale;
 
         _window = new GUIStyle();
@@ -230,7 +232,7 @@ public static class PixelGUI
         }
         _window.padding = new RectOffset(12 * scale, 12 * scale, 10 * scale, 10 * scale);
 
-        _heading = Style(display, headingPt, Gold, TextAnchor.UpperLeft, wordWrap: true, rich: true);
+        _heading = Style(data, headingPt, Gold, TextAnchor.UpperLeft, wordWrap: true, rich: true);
         _headingSmall = Style(display, labelPt, Gold, TextAnchor.UpperLeft, rich: true);
         _label = Style(display, labelPt, Text, TextAnchor.MiddleLeft, rich: true);
         _labelDim = Style(display, labelPt, TextDim, TextAnchor.MiddleLeft, rich: true);
@@ -251,11 +253,12 @@ public static class PixelGUI
         // The confirm plate. Its highlight and shade are baked into the sprite, so there is no second
         // drawing for hover or press — the kit asks for the pressed state to come from a 2px offset,
         // which Button() below applies to the label.
-        // On a phone the 8pt display face is too small to read on a button, so buttons and tabs are set in
-        // the same face and size as the dialogue and quest descriptions (the data face at one cell — the
-        // objective strip's detail line, see HandheldType). ButtonH() then sizes the plate around it.
-        Font buttonFace = handheld ? data : display;
-        int buttonPt = handheld ? vt : labelPt;
+        // Buttons and tabs are set in the data face at one cell (Fixedsys 16) — the same face and size as the
+        // dialogue and quest descriptions, and one with lower case for the Title Case captions. This was the
+        // phone's caption first (the 8pt display face is too small to read in the hand); desktop took it too
+        // when the game moved off all caps. ButtonH() sizes the plate around it.
+        Font buttonFace = data;
+        int buttonPt = vt;
 
         _button = Style(buttonFace, buttonPt, Text, TextAnchor.MiddleCenter);
         var plate = t != null ? t.buttonRed : null;
@@ -269,8 +272,9 @@ public static class PixelGUI
             _button.onNormal.background = tex;
             _button.border = new RectOffset(3 * scale, 3 * scale, 3 * scale, 3 * scale);
         }
-        _button.padding = new RectOffset(6 * scale, 6 * scale, 4 * scale, 4 * scale);
-        _buttonDisabled = handheld ? Style(buttonFace, buttonPt, TextDisabled, TextAnchor.MiddleCenter) : _footer;
+        // 2px above and below the caption: Fixedsys's own line already carries its leading.
+        _button.padding = new RectOffset(6 * scale, 6 * scale, 2 * scale, 2 * scale);
+        _buttonDisabled = Style(buttonFace, buttonPt, TextDisabled, TextAnchor.MiddleCenter);
 
         // Flat nav tab: solid plate, no 9-slice — Tab() draws the plate and its hard shadow itself.
         _tab = Style(buttonFace, buttonPt, TextDim, TextAnchor.MiddleCenter);

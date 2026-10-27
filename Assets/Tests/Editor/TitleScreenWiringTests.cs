@@ -73,7 +73,7 @@ public class TitleScreenWiringTests
     public void SeasonRowsHaveSomewhereToRace()
     {
         var menu = Menu();
-        Assert.AreEqual(Continue, CommandOf(menu, "CAREER"), "CAREER should resume the selected track.");
+        Assert.AreEqual(Continue, CommandOf(menu, "Career"), "CAREER should resume the selected track.");
 
         // There is deliberately no NEW SEASON row: CAREER is the only door into the career, and a second
         // row that also opened one was picked by mistake more often than it was picked on purpose. The
@@ -267,8 +267,8 @@ public class TitleScreenWiringTests
             CollectionAssert.DoesNotContain(drawn, retired,
                                             $"The title menu draws the retired {retired} row.");
 
-        CollectionAssert.Contains(drawn, "RESTART DEMO", "The title menu has no RESTART DEMO row.");
-        Assert.AreEqual(RestartDemo, CommandOf(menu, "RESTART DEMO"),
+        CollectionAssert.Contains(drawn, "Restart Demo", "The title menu has no Restart Demo row.");
+        Assert.AreEqual(RestartDemo, CommandOf(menu, "Restart Demo"),
                         "The RESTART DEMO row does not run the restart command.");
     }
 

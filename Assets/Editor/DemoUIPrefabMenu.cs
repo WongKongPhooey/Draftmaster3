@@ -48,7 +48,7 @@ public static class DemoUIPrefabMenu
         var panel = NewImage("Panel", root.transform, PanelBg);
         Center(panel.rectTransform, 780f, 660f);
 
-        var title = NewText("Title", panel.transform, "CAR SETUP", 40, HeadingFont, Ink, TextAnchor.MiddleLeft);
+        var title = NewText("Title", panel.transform, "Car Setup", 40, HeadingFont, Ink, TextAnchor.MiddleLeft);
         TopLeft(title.rectTransform, 44f, -34f, 500f, 56f);
 
         var subtitle = NewText("Subtitle", panel.transform, "Chief's waiting on your call", 18, BodyFont, Muted, TextAnchor.MiddleLeft);
@@ -57,12 +57,12 @@ public static class DemoUIPrefabMenu
         // --- Tyres
         var tyres = NewGroup("Tyres", panel.transform);
         TopLeft(tyres, 0f, -140f, 780f, 130f);
-        var tyreLabel = NewText("Label", tyres, "TYRES", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        var tyreLabel = NewText("Label", tyres, "Tyres", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(tyreLabel.rectTransform, 46f, -8f, 240f, 36f);
 
-        var soft = NewButton("SoftButton", tyres, "SOFT", Accent, Ink);
+        var soft = NewButton("SoftButton", tyres, "Soft", Accent, Ink);
         TopLeft(soft.GetComponent<RectTransform>(), 260f, -4f, 200f, 60f);
-        var hard = NewButton("HardButton", tyres, "HARD", Idle, Muted);
+        var hard = NewButton("HardButton", tyres, "Hard", Idle, Muted);
         TopLeft(hard.GetComponent<RectTransform>(), 480f, -4f, 200f, 60f);
 
         var note = NewText("Note", tyres, "Softs: more grip, gone sooner.", 17, BodyFont, Muted, TextAnchor.MiddleLeft);
@@ -71,7 +71,7 @@ public static class DemoUIPrefabMenu
         // --- Fuel
         var fuel = NewGroup("Fuel", panel.transform);
         TopLeft(fuel, 0f, -272f, 780f, 90f);
-        var fuelLabel = NewText("Label", fuel, "FUEL", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        var fuelLabel = NewText("Label", fuel, "Fuel", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(fuelLabel.rectTransform, 46f, -10f, 240f, 36f);
         var fuelSlider = NewSlider("Slider", fuel, CarSetup.MinFuel, CarSetup.MaxFuel, 12f, true);
         TopLeft(fuelSlider.GetComponent<RectTransform>(), 260f, -18f, 340f, 24f);
@@ -83,34 +83,34 @@ public static class DemoUIPrefabMenu
         // --- Balance
         var balance = NewGroup("Balance", panel.transform);
         TopLeft(balance, 0f, -376f, 780f, 100f);
-        var balLabel = NewText("Label", balance, "BALANCE", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        var balLabel = NewText("Label", balance, "Balance", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(balLabel.rectTransform, 46f, -10f, 240f, 36f);
         var balSlider = NewSlider("Slider", balance, -1f, 1f, 0f, false);
         TopLeft(balSlider.GetComponent<RectTransform>(), 260f, -18f, 340f, 24f);
         var balValue = NewText("Value", balance, "Neutral", 22, HeadingFont, Ink, TextAnchor.MiddleRight);
         TopLeft(balValue.rectTransform, 610f, -10f, 130f, 36f);
-        var loose = NewText("LooseLabel", balance, "OVERSTEER", 14, BodyFont, Muted, TextAnchor.MiddleLeft);
+        var loose = NewText("LooseLabel", balance, "Oversteer", 14, BodyFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(loose.rectTransform, 260f, -50f, 160f, 26f);
-        var tight = NewText("TightLabel", balance, "UNDERSTEER", 14, BodyFont, Muted, TextAnchor.MiddleRight);
+        var tight = NewText("TightLabel", balance, "Understeer", 14, BodyFont, Muted, TextAnchor.MiddleRight);
         TopLeft(tight.rectTransform, 440f, -50f, 160f, 26f);
 
         // --- Steering ratio
         var steering = NewGroup("Steering", panel.transform);
         TopLeft(steering, 0f, -476f, 780f, 100f);
-        var steerLabel = NewText("Label", steering, "STEERING", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        var steerLabel = NewText("Label", steering, "Steering", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(steerLabel.rectTransform, 46f, -10f, 240f, 36f);
         var steerSlider = NewSlider("Slider", steering, Draftmaster.Sim.SteeringRatio.Min, Draftmaster.Sim.SteeringRatio.Max,
                                     Draftmaster.Sim.SteeringRatio.Baseline, true);
         TopLeft(steerSlider.GetComponent<RectTransform>(), 260f, -18f, 340f, 24f);
         var steerValue = NewText("Value", steering, "1:8", 22, HeadingFont, Ink, TextAnchor.MiddleRight);
         TopLeft(steerValue.rectTransform, 610f, -10f, 130f, 36f);
-        var quick = NewText("QuickLabel", steering, "QUICK", 14, BodyFont, Muted, TextAnchor.MiddleLeft);
+        var quick = NewText("QuickLabel", steering, "Quick", 14, BodyFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(quick.rectTransform, 260f, -50f, 160f, 26f);
-        var slow = NewText("SlowLabel", steering, "SLOW", 14, BodyFont, Muted, TextAnchor.MiddleRight);
+        var slow = NewText("SlowLabel", steering, "Slow", 14, BodyFont, Muted, TextAnchor.MiddleRight);
         TopLeft(slow.rectTransform, 440f, -50f, 160f, 26f);
 
         // --- Confirm
-        var confirm = NewButton("ConfirmButton", panel.transform, "CONFIRM", Accent, Ink, ButtonSprite);
+        var confirm = NewButton("ConfirmButton", panel.transform, "Confirm", Accent, Ink, ButtonSprite);
         TopLeft(confirm.GetComponent<RectTransform>(), 260f, -582f, 260f, 60f);
 
         var confirmHint = NewText("ConfirmHint", panel.transform, "Enter / A", 15, BodyFont, Muted, TextAnchor.MiddleCenter);
@@ -139,7 +139,7 @@ public static class DemoUIPrefabMenu
 
         var badge = NewImage("KeyBadge", panel.transform, new Color(0.85f, 0.86f, 0.9f, 1f));
         TopLeft(badge.rectTransform, 14f, -13f, 150f, 40f);
-        var key = NewText("Key", badge.transform, "LEFT SHIFT", 19, HeadingFont, new Color(0.08f, 0.08f, 0.1f), TextAnchor.MiddleCenter);
+        var key = NewText("Key", badge.transform, "Left Shift", 19, HeadingFont, new Color(0.08f, 0.08f, 0.1f), TextAnchor.MiddleCenter);
         Stretch(key.rectTransform);
 
         var hint = NewText("Hint", panel.transform, "Hold to run", 22, BodyFont, Ink, TextAnchor.MiddleLeft);

@@ -56,7 +56,7 @@ public static class OptionsSceneBuilder
     [MenuItem("Draftmaster/UI/Wire OPTIONS Row To Options Screen")]
     public static void WireTitleRow()
     {
-        Debug.Log(TitleScreenRowEditor.AddRow("OPTIONS", TitleScreenUI.Command.LoadScene, "Options",
+        Debug.Log(TitleScreenRowEditor.AddRow("Options", TitleScreenUI.Command.LoadScene, "Options",
                                               after: TitleScreenUI.Command.LoadScene));
     }
 }

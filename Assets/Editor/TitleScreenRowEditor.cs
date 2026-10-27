@@ -24,7 +24,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Add SINGLE RACE Row To Title Screen")]
     public static void AddSingleRaceRow()
     {
-        Debug.Log(AddRow("SINGLE RACE", TitleScreenUI.Command.LoadScene, "SingleRace",
+        Debug.Log(AddRow("Single Race", TitleScreenUI.Command.LoadScene, "SingleRace",
                          after: TitleScreenUI.Command.Continue));
     }
 
@@ -39,7 +39,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Wire MULTIPLAYER Row To Co-op Join")]
     public static void WireMultiplayerRow()
     {
-        Debug.Log(AddRow("MULTIPLAYER", TitleScreenUI.Command.JoinCoop, "",
+        Debug.Log(AddRow("Multiplayer", TitleScreenUI.Command.JoinCoop, "",
                          after: TitleScreenUI.Command.LoadScene));
     }
 
@@ -51,7 +51,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Rename CONTINUE Row To CAREER")]
     public static void RenameContinueRow()
     {
-        Debug.Log(RenameRow("CONTINUE", "CAREER"));
+        Debug.Log(RenameRow("CONTINUE", "Career"));
     }
 
     // NEW SEASON is gone: CAREER already opens the career, and two rows for one door is the kind of thing
@@ -79,6 +79,53 @@ public static class TitleScreenRowEditor
     {
         Debug.Log(RemoveRow("EXHIBITION"));
         Debug.Log(RemoveRow("TEAM FACTORY"));
+    }
+
+    // The rows were authored in capitals; the game is Title Case now (Docs/Type-Scale.md, "Letter case").
+    // Each goes through RenameRow, so label, drawn text and Row_<Label> object name move together, and
+    // nothing else in the hand-edited scene is touched. Idempotent.
+    [MenuItem("Draftmaster/UI/Title Case The Title Menu Rows")]
+    public static void TitleCaseRows()
+    {
+        foreach (var (from, to) in new[]
+                 {
+                     ("CAREER", "Career"), ("SINGLE RACE", "Single Race"), ("MULTIPLAYER", "Multiplayer"),
+                     ("OPTIONS", "Options"), ("RESTART DEMO", "Restart Demo"),
+                 })
+            Debug.Log(RenameRow(from, to));
+        Debug.Log(SetRowFace());
+    }
+
+    // The menu rows are the title screen's buttons, so they take the button face (Fixedsys, the theme's data
+    // face — Silkscreen has no lower case). Only each row's label text changes: its size is kept, moved onto
+    // Fixedsys's 16px cell, and Silkscreen's tracking is dropped as on every other button.
+    static string SetRowFace()
+    {
+        var face = PixelUITheme.Instance != null ? PixelUITheme.Instance.data : null;
+        if (face == null) return "No data face on the theme — rows left alone.";
+
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var ui = Object.FindObjectsByType<TitleScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .FirstOrDefault();
+        if (ui == null) return $"No TitleScreenUI in {ScenePath}.";
+
+        int changed = 0;
+        foreach (var row in ui.rows)
+        {
+            var text = row != null ? row.labelText : null;
+            if (text == null || text.font == face) continue;
+            text.font = face;
+            if (face.material != null) text.fontSharedMaterial = face.material;
+            text.fontSize = Mathf.Max(16f, Mathf.Round(text.fontSize / 16f) * 16f);
+            text.characterSpacing = 0f;
+            EditorUtility.SetDirty(text);
+            changed++;
+        }
+        if (changed == 0) return "Title menu rows already in the button face — left alone.";
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        return $"Title screen: {changed} menu row(s) set in {face.name}.";
     }
 
     // Bring every row's drawn text back to its label. The label is the row's identity — the wiring tests

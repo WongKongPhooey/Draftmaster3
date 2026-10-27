@@ -15,6 +15,10 @@ Iron Oval kit is drawn on — and every surface converts that to its own canvas:
 | **Data** | 16 | 48 | rows, columns, numbers, part lists, status lines |
 | **Label** | 8 | 24 | buttons, small caps captions, map keys, footers — **the floor** |
 
+Faces: **Heading**, **Data**, **Body**, **Dialogue** and button captions are Fixedsys (16px cell, true
+lower case). **Label** — the 8px tier: footers, key hints, captions over a readout — stays Silkscreen,
+because nothing with lower case draws cleanly at 8; it reads as small caps.
+
 Nothing is smaller than **Label**. On a 1080p screen that is 24px; on any canvas it is
 `8 * referenceHeight / 360`.
 
@@ -59,13 +63,13 @@ Every button in the game is one size, taken from the pause menu (`RacePauseMenu`
 
 | | Kit px | 1080p screen | 1920x1080 canvas |
 |---|---:|---:|---:|
-| **Plate height** | 20 | 60 | 60 |
-| **Caption** | 8 (Label) | 24 | 24 |
+| **Plate height** | 26 | 78 | 78 |
+| **Caption** | 16 (Data) | 48 | 48 |
 
-The caption is the display face (Silkscreen), regular weight, no extra tracking, centred. A plain button
-is the red plate with `text`-coloured caption; a tab is the flat plate with a `textDim` caption (gold or
-white when selected). On a phone the caption takes the data face (fixedsys 16) and the plate grows to hold
-it with the same padding — about 33 kit px.
+The caption is the data face (Fixedsys 16), regular weight, no extra tracking, centred — Fixedsys because
+captions are Title Case and Silkscreen has no lower case. A plain button is the red plate with
+`text`-coloured caption; a tab is the flat plate with a `textDim` caption (gold or white when selected). A
+caption wider than its plate widens the plate; the height never changes.
 
 Where to get it, so nothing types its own number:
 

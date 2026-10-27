@@ -103,7 +103,8 @@ public class PixelUITheme : ScriptableObject
     [Tooltip("Bitmap pixel font for body copy, dialogue and data. Rendered RASTER (not SDF) so glyphs " +
              "land on the pixel grid instead of being anti-aliased off it.")]
     public TMP_FontAsset body;
-    [Tooltip("Display face for headings and big numbers — the racing brand voice against the pixel body.")]
+    [Tooltip("The 8px label tier — footers, key hints, captions over a readout (Silkscreen). Headings and " +
+             "button captions are in `data`: Silkscreen has no lower case, and they are Title Case.")]
     public TMP_FontAsset display;
     [Tooltip("Fixed-advance face for dense columns: running order, timing, tyre readouts. Its constant " +
              "advance width keeps columns aligned with no tab work. Iron Oval: VT323.")]
@@ -112,8 +113,8 @@ public class PixelUITheme : ScriptableObject
              "overlays) that cannot take a TMP asset. Iron Oval: VT323, the data face — most IMGUI in " +
              "this project is a readout. Use whole multiples of its 16pt cell.")]
     public Font imguiFont;
-    [Tooltip("IMGUI counterpart of `display` — Silkscreen, for headings, labels and buttons. Whole " +
-             "multiples of 8pt only; a bitmap face resampled to 12 or 20pt loses its stems.")]
+    [Tooltip("IMGUI counterpart of `display` — Silkscreen, for the 8pt label tier. Headings and buttons " +
+             "are in `imguiFont`. Whole multiples of 8pt only; a bitmap face resampled to 12 or 20pt loses its stems.")]
     public Font imguiDisplayFont;
     [Tooltip("IMGUI counterpart of `body` — Pixelify Sans, for prose (dialogue, quest copy). Whole " +
              "multiples of its 20pt design grid.")]

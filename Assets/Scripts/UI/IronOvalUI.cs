@@ -48,7 +48,9 @@ public static class IronOvalUI
             // renders as overlapping mush, which is not obvious until you look at it at 1:1.
             // Header / HeaderSmall / Data / Body are the shared type scale (Draftmaster.Controls.UIType) —
             // this canvas is the kit's own 640x360 grid, so its kit sizes go in as they are.
-            case Role.Header:      font = t.display; size = UIType.KitPx(TypeRole.Heading); defaultColour = t.gold; break;
+            // Headings are Fixedsys: Title Case needs lower case, which Silkscreen does not have. Only the
+            // 8px HeaderSmall tier stays Silkscreen — nothing with lower case draws cleanly that small.
+            case Role.Header:      font = t.data;    size = UIType.KitPx(TypeRole.Heading); defaultColour = t.gold; break;
             case Role.HeaderSmall: font = t.display; size = UIType.KitPx(TypeRole.Label);   defaultColour = t.gold; break;
             case Role.BodyLarge:   font = t.body;    size = 40; defaultColour = t.text; break;
             // The title-screen voice. 60 is the top of Pixelify's 20-grid ladder — the sheet's 62px
@@ -69,7 +71,7 @@ public static class IronOvalUI
         label.color = colour ?? defaultColour;
         // Silkscreen is drawn to be tracked out; the sheet asks for +1 to +3px on labels. TMP's
         // characterSpacing is in font units (1/100 em), so 12.5 at 16px is 2px.
-        label.characterSpacing = role == Role.Header || role == Role.HeaderSmall ? 12.5f : 0f;
+        label.characterSpacing = role == Role.HeaderSmall ? 12.5f : 0f;
         label.enableAutoSizing = false;
         label.raycastTarget = false;
     }
@@ -202,8 +204,8 @@ public static class IronOvalUI
     // asks for the pressed look to come from offsetting the content 2px, so there is no second drawing
     // to keep in sync. Disabled tints the whole plate to the inner-shade colour.
     //
-    // Every button is the game's one height (UIButton: 20px on this 640x360 grid, the pause menu's) whatever
-    // `size.y` asks for — only the width is the caller's — and its caption is ButtonCaption's.
+    // Every button is the game's one height (UIButton, the pause menu's) whatever `size.y` asks for — only the
+    // width is the caller's, and it grows if the caption needs more — and its caption is ButtonCaption's.
     public static Button Button(Transform parent, string name, string content, Vector2 size)
     {
         var t = Theme;
@@ -291,23 +293,20 @@ public static class IronOvalUI
     }
 
     // A button's caption, the same on every button in the game and matching the IMGUI panels'
-    // (PixelGUI.ButtonStyle): the display face at the Label size, regular weight, no extra tracking. On a
-    // phone the 8px face is too small to read, so it takes the data face dialogue and quest text are set in.
+    // (PixelGUI.ButtonStyle): the data face at the Data size, regular weight, no extra tracking.
     public static void ButtonCaption(TMP_Text label, Color colour)
     {
-        Apply(label, PixelGUI.Handheld ? Role.Data : Role.HeaderSmall, colour);
+        Apply(label, Role.Data, colour);
         label.characterSpacing = 0f;
         label.fontStyle = FontStyles.Normal;
     }
 
     // The same caption for a legacy uGUI Text on a canvas authored `referenceHeight` tall (the 1920x1080
-    // runtime panels): the display face at the Label size, on a phone the data face at the Data size.
+    // runtime panels): the data face at the Data size.
     public static void ButtonCaption(Text label, Color colour, float referenceHeight = 1080f)
     {
-        bool handheld = PixelGUI.Handheld;
-        label.font = handheld ? BrandFonts.Body : BrandFonts.Display;
-        label.fontSize = handheld ? UIType.CanvasPx(TypeRole.Data, referenceHeight, 16)
-                                  : UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 8);
+        label.font = BrandFonts.Body;
+        label.fontSize = UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 16);
         label.fontStyle = FontStyle.Normal;
         label.color = colour;
     }
@@ -334,8 +333,7 @@ public static class IronOvalUI
             var colour = tmp.color;
             var alignment = tmp.alignment;
             ButtonCaption(tmp, colour);
-            tmp.fontSize = PixelGUI.Handheld ? UIType.CanvasPx(TypeRole.Data, referenceHeight, 16)
-                                             : UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 8);
+            tmp.fontSize = UIType.CanvasPx(UIButton.CaptionRole, referenceHeight, 16);
             tmp.alignment = alignment;
             return;
         }
@@ -356,8 +354,13 @@ public static class IronOvalUI
     // PixelGUI.MenuButtonH does for the IMGUI panels.
     static void GrowForHandheld(RectTransform plate, TMP_Text label, string content, Vector2 size)
     {
-        if (!PixelGUI.Handheld) return;
         var fit = label.GetPreferredValues(content);
+        if (!PixelGUI.Handheld)
+        {
+            // A desktop plate keeps the standard height; only a caption wider than the plate widens it.
+            plate.sizeDelta = new Vector2(Mathf.Max(size.x, Mathf.Ceil(fit.x) + 12f), size.y);
+            return;
+        }
         plate.sizeDelta = new Vector2(Mathf.Max(size.x, Mathf.Ceil(fit.x) + 12f),
                                       Mathf.Max(size.y, Mathf.Ceil(fit.y) + 8f + PixelGUI.MenuButtonPad * 2f));
     }
@@ -434,7 +437,7 @@ public static class IronOvalUI
     public static TMP_Dropdown Dropdown(Transform parent, string name, Vector2 size, int visibleItems = 8)
     {
         var t = Theme;
-        float rowH = Snap(t == null ? null : t.display, 8) + 4f;
+        float rowH = Snap(t == null ? null : t.data, 16) + 4f;
 
         var go = TMP_DefaultControls.CreateDropdown(new TMP_DefaultControls.Resources());
         go.name = name;
@@ -467,7 +470,7 @@ public static class IronOvalUI
 
         var caption = dropdown.captionText;
         caption.text = "";
-        Apply(caption, Role.HeaderSmall, t == null ? Color.white : t.text);
+        Apply(caption, Role.Data, t == null ? Color.white : t.text);
         Line(caption);
         // The text box is deliberately taller than the plate: a truncating label whose box is shorter
         // than one line of its face renders NOTHING, and every face here draws taller than its cell.
@@ -483,7 +486,7 @@ public static class IronOvalUI
 
             var caret = arrow.gameObject.AddComponent<TextMeshProUGUI>();
             caret.text = "v";
-            Apply(caret, Role.HeaderSmall, t == null ? Color.white : t.gold);
+            Apply(caret, Role.Data, t == null ? Color.white : t.gold);
             caret.alignment = TextAlignmentOptions.Center;
             arrow.anchorMin = arrow.anchorMax = new Vector2(1f, 0.5f);
             arrow.pivot = new Vector2(1f, 0.5f);
@@ -561,7 +564,7 @@ public static class IronOvalUI
         if (itemText != null)
         {
             itemText.text = "";
-            Apply(itemText, Role.HeaderSmall, t == null ? Color.white : t.text);
+            Apply(itemText, Role.Data, t == null ? Color.white : t.text);
             Line(itemText);
             Stretch(itemText.rectTransform, new Vector2(12f, -2f), new Vector2(-6f, 2f));
         }

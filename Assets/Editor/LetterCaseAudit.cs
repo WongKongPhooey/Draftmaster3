@@ -71,6 +71,62 @@ public static class LetterCaseAudit
         Debug.Log($"[LetterCaseAudit] {findings.Count} all-caps text(s) across {prefabs} prefabs and the demo scenes — {ReportPath}");
     }
 
+    // Prefabs the fixer leaves alone: the satnav is mid-rework in its own builder, and the logo's letters
+    // are artwork, split across objects ("DRAF" + "T").
+    static readonly string[] FixExcluded =
+    {
+        "Assets/Resources/UI/TravelMap.prefab",
+        "Assets/UI/Logo/DraftmasterLogo.prefab",
+    };
+
+    // Puts the short all-caps labels in the prefabs the build reaches into Title Case, touching nothing else.
+    // Only labels: four words or fewer and no sentence punctuation — a sentence wants sentence case and a
+    // person to decide it. Scenes are left to their builders and row tools. Re-runs the audit after.
+    [MenuItem("Draftmaster/UI/Title Case Labels In Prefabs", false, 74)]
+    public static void FixPrefabs()
+    {
+        var shipped = ButtonAudit.Shipped();
+        int changed = 0;
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!shipped.Contains(path) || FixExcluded.Contains(path)) continue;
+            if (ThirdParty.Any(p => path.StartsWith(p, System.StringComparison.OrdinalIgnoreCase))) continue;
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset == null || !HasLabelToFix(asset)) continue;
+
+            var root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                int n = 0;
+                foreach (var t in root.GetComponentsInChildren<Text>(true))
+                    if (IsLabelToFix(t.text)) { t.text = Draftmaster.Controls.UIText.TitleCase(t.text); n++; }
+                foreach (var t in root.GetComponentsInChildren<TMP_Text>(true))
+                    if (IsLabelToFix(t.text)) { t.text = Draftmaster.Controls.UIText.TitleCase(t.text); n++; }
+                if (n > 0)
+                {
+                    PrefabUtility.SaveAsPrefabAsset(root, path);
+                    changed += n;
+                    Debug.Log($"[LetterCaseAudit] {n} label(s) to Title Case in {path}");
+                }
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        Debug.Log($"[LetterCaseAudit] {changed} label(s) to Title Case");
+        Run();
+    }
+
+    static bool HasLabelToFix(GameObject root) =>
+        root.GetComponentsInChildren<Text>(true).Any(t => IsLabelToFix(t.text)) ||
+        root.GetComponentsInChildren<TMP_Text>(true).Any(t => IsLabelToFix(t.text));
+
+    static bool IsLabelToFix(string text)
+    {
+        if (!IsAllCaps(text) || text.IndexOfAny(new[] { '.', '!', '?', '\n' }) >= 0) return false;
+        if (text.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries).Length > 4) return false;
+        return Draftmaster.Controls.UIText.TitleCase(text) != text;
+    }
+
     static void Collect(GameObject root, string asset, List<Finding> into)
     {
         foreach (var t in root.GetComponentsInChildren<Text>(true)) Check(t.text, t.transform, root.transform, asset, into);

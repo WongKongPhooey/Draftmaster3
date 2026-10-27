@@ -119,7 +119,7 @@ public static class SeriesRoster
 
     // ------------------------------------------------------------------ labels
 
-    // What a series reads as on a 168px dropdown: its full name, which is what the player calls it.
+    // What a series reads as on a dropdown: its full name, which is what the player calls it.
     public static string Label(Draftmaster.Data.Series series)
     {
         if (series == null) return "";

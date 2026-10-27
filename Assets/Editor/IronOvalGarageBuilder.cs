@@ -44,9 +44,10 @@ public static class IronOvalGarageBuilder
     static float LabelH => IronOvalUI.Snap(PixelUITheme.Instance != null ? PixelUITheme.Instance.data : null,
                                            UIType.KitPx(TypeRole.Data)) + 2f;
     // One text row to the next, in a list of plain text rows.
-    static float TextPitch => LabelH;
+    // A pixel under the box: Fixedsys draws its glyphs inside the top 16 of the 18, so rows can share one.
+    static float TextPitch => LabelH - 1f;
     // A heading to the first row under it.
-    static float HeadPitch => LabelH + 2f;
+    static float HeadPitch => LabelH + 1f;
     // The stats block's side margins: as narrow as reads cleanly, since its rows are the tightest fit.
     const float Inset = 6f;
 
@@ -85,17 +86,17 @@ public static class IronOvalGarageBuilder
 
         // --- header band ------------------------------------------------------------------------------
         // The pickers are the standard button's height (UIButton, every screen's), and the band is a picker
-        // plus 2px of air either side.
+        // plus 1px of air either side.
         float pickerH = UIButton.KitPx;
         var band = Plate(root, "HeaderBand", theme.plateLight);
         band.anchorMin = new Vector2(0f, 1f);
         band.anchorMax = new Vector2(1f, 1f);
         band.pivot = new Vector2(0.5f, 1f);
-        band.sizeDelta = new Vector2(0f, pickerH + 4f);
+        band.sizeDelta = new Vector2(0f, pickerH + 2f);
         band.anchoredPosition = Vector2.zero;
 
         var title = IronOvalUI.Label(band, "Title", "Garage", IronOvalUI.Role.Header, theme.text);
-        Place(title.rectTransform, 8f, -(band.sizeDelta.y - 14f) / 2f, 88f, 14f);
+        Place(title.rectTransform, 8f, -(band.sizeDelta.y - LabelH) / 2f, 88f, LabelH);
         // The word is one word: let it run past its box rather than break "Garage" into "Garag" + "e".
         title.textWrappingMode = TextWrappingModes.NoWrap;
 
@@ -103,18 +104,18 @@ public static class IronOvalGarageBuilder
         // driver list is the longer one — a stock-car field is 38 cars — so it gets the wider plate and
         // the deeper list. GarageScreenUI fills both and redraws the sheet when either changes.
         float pickerY = -(band.sizeDelta.y - pickerH) / 2f;
-        var seriesPicker = IronOvalUI.Dropdown(band, "SeriesPicker", new Vector2(168f, pickerH), visibleItems: 7);
-        Place((RectTransform)seriesPicker.transform, 100f, pickerY, 168f, pickerH);
+        var seriesPicker = IronOvalUI.Dropdown(band, "SeriesPicker", new Vector2(196f, pickerH), visibleItems: 7);
+        Place((RectTransform)seriesPicker.transform, 100f, pickerY, 196f, pickerH);
         ui.seriesDropdown = seriesPicker;
 
-        var driverPicker = IronOvalUI.Dropdown(band, "DriverPicker", new Vector2(200f, pickerH), visibleItems: 8);
-        Place((RectTransform)driverPicker.transform, 276f, pickerY, 200f, pickerH);
+        var driverPicker = IronOvalUI.Dropdown(band, "DriverPicker", new Vector2(220f, pickerH), visibleItems: 8);
+        Place((RectTransform)driverPicker.transform, 304f, pickerY, 220f, pickerH);
         ui.driverDropdown = driverPicker;
 
         float top = -(band.sizeDelta.y + 4f);
-        // Band above, weekend strip below. The strip is one button tall (UIButton, every screen's) with 2px
-        // above and below, so the columns get back the height a taller label face would otherwise eat.
-        float stripH = Mathf.Max(LabelH + 8f, UIButton.KitPx + 4f);
+        // Band above, weekend strip below. The strip is one button tall (UIButton, every screen's) with 1px
+        // above and below, so the columns keep as much of the height as they can.
+        float stripH = Mathf.Max(LabelH + 8f, UIButton.KitPx + 2f);
         float colH = H + top - (stripH + 8f);
 
         // --- left: the car, then who is driving it -----------------------------------------------------

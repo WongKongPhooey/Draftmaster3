@@ -73,7 +73,7 @@ public class OptionsScreenTests
             for (int i = 0; i < rows.arraySize; i++)
             {
                 var row = rows.GetArrayElementAtIndex(i);
-                if (row.FindPropertyRelative("label").stringValue != "OPTIONS") continue;
+                if (row.FindPropertyRelative("label").stringValue != "Options") continue;
 
                 Assert.AreEqual(LoadScene, row.FindPropertyRelative("command").enumValueIndex,
                                 "OPTIONS should be a LoadScene row, not the NotWired placeholder it started as.");

@@ -29,13 +29,13 @@ public class ButtonStandardTests
         new[] { typeof(Transform), typeof(string), typeof(string), typeof(Vector2), typeof(bool) }, parent, "T", caption, size, false);
 
     [Test]
-    public void TheStandardIsTwentyKitPixels()
+    public void TheStandardIsTwentySixKitPixels()
     {
-        Assert.AreEqual(20, UIButton.KitPx);
-        Assert.AreEqual(20f, UIButton.CanvasPx(360f));
-        Assert.AreEqual(60f, UIButton.CanvasPx(1080f));
-        Assert.AreEqual(60f, UIButton.ScreenPx(1080f));
-        Assert.AreEqual(24f, UIButton.CaptionScreenPx(1080f), "caption is the Label size: 8 kit px");
+        Assert.AreEqual(26, UIButton.KitPx);
+        Assert.AreEqual(26f, UIButton.CanvasPx(360f));
+        Assert.AreEqual(78f, UIButton.CanvasPx(1080f));
+        Assert.AreEqual(78f, UIButton.ScreenPx(1080f));
+        Assert.AreEqual(48f, UIButton.CaptionScreenPx(1080f), "caption is the Data size: 16 kit px");
     }
 
     // The pause menu is the reference; its plate is MenuButtonH, which on a desktop is UIButton at the
@@ -57,7 +57,7 @@ public class ButtonStandardTests
             Assert.AreEqual(UIButton.KitPx, ((RectTransform)button.transform).sizeDelta.y);
             Assert.AreEqual(60f, ((RectTransform)button.transform).sizeDelta.x, "width stays the caller's");
 
-            var tab = KitTab(root.transform, "BACK", new Vector2(56f, 12f));
+            var tab = KitTab(root.transform, "Back", new Vector2(56f, 12f));
             Assert.AreEqual(UIButton.KitPx, ((RectTransform)tab.transform.parent).sizeDelta.y);
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
@@ -66,19 +66,18 @@ public class ButtonStandardTests
     [Test]
     public void CanvasCaptionsMatchThePauseMenu()
     {
-        if (Handheld) Assert.Ignore("handheld captions take the data face");
         var root = new GameObject("Root", typeof(RectTransform));
         try
         {
-            var a = KitButton(root.transform, "GO", new Vector2(60f, 20f)).GetComponentInChildren<TMP_Text>();
-            var b = KitTab(root.transform, "BACK", new Vector2(56f, 20f)).GetComponentInChildren<TMP_Text>();
+            var a = KitButton(root.transform, "Go", new Vector2(60f, 20f)).GetComponentInChildren<TMP_Text>();
+            var b = KitTab(root.transform, "Back", new Vector2(56f, 20f)).GetComponentInChildren<TMP_Text>();
             var theme = Kit("PixelUITheme").GetProperty("Instance", BindingFlags.Public | BindingFlags.Static).GetValue(null);
             foreach (var label in new[] { a, b })
             {
                 Assert.AreEqual(UIType.KitPx(UIButton.CaptionRole), label.fontSize, label.name);
                 Assert.AreEqual(0f, label.characterSpacing, "no extra tracking, as IMGUI");
                 Assert.AreEqual(FontStyles.Normal, label.fontStyle);
-                if (theme != null) Assert.AreSame(theme.GetType().GetField("display").GetValue(theme), label.font);
+                if (theme != null) Assert.AreSame(theme.GetType().GetField("data").GetValue(theme), label.font);
             }
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
@@ -107,12 +106,12 @@ public class ButtonStandardTests
 
             Call("IronOvalUI", "StandardiseButton", new[] { typeof(Button), typeof(float) }, go.GetComponent<Button>(), 0f);
 
-            Assert.AreEqual(60f, ((RectTransform)go.transform).sizeDelta.y);
+            Assert.AreEqual(78f, ((RectTransform)go.transform).sizeDelta.y);
             Assert.AreEqual(200f, ((RectTransform)go.transform).sizeDelta.x);
-            Assert.AreEqual(24, text.fontSize);
+            Assert.AreEqual(48, text.fontSize);
             Assert.AreEqual(FontStyle.Normal, text.fontStyle);
             Assert.AreEqual(Color.cyan, text.color, "colour carries state and is kept");
-            Assert.AreSame(Get("BrandFonts", "Display"), text.font);
+            Assert.AreSame(Get("BrandFonts", "Body"), text.font);
         }
         finally { UnityEngine.Object.DestroyImmediate(canvas); }
     }

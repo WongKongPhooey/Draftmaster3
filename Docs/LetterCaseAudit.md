@@ -7,20 +7,6 @@ column is the Title Case form — a sentence wants sentence case instead.
 
 | Asset | Text object | Authored | Title Case |
 |---|---|---|---|
-| Assets/Prefabs/UI/MultiplayerMenu.prefab | MultiplayerMenu/Title | DRAFTMASTER — MULTIPLAYER | Draftmaster — Multiplayer |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Balance/Label | BALANCE | Balance |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Balance/LooseLabel | OVERSTEER | Oversteer |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Balance/TightLabel | UNDERSTEER | Understeer |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/ConfirmButton/Text | CONFIRM | Confirm |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Fuel/Label | FUEL | Fuel |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Steering/Label | STEERING | Steering |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Steering/QuickLabel | QUICK | Quick |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Steering/SlowLabel | SLOW | Slow |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Title | CAR SETUP | Car Setup |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Tyres/HardButton/Text | HARD | Hard |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Tyres/Label | TYRES | Tyres |
-| Assets/Resources/UI/CarSetupPanel.prefab | CarSetupPanel/Panel/Tyres/SoftButton/Text | SOFT | Soft |
-| Assets/Resources/UI/ControlHint.prefab | ControlHint/Panel/KeyBadge/Key | LEFT SHIFT | Left Shift |
 | Assets/Resources/UI/TravelMap.prefab | TravelMap/CloseButton/Label | CLOSE | Close |
 | Assets/Resources/UI/TravelMap.prefab | TravelMap/Footer/ActionButton/Label | START RACE WEEKEND | Start Race Weekend |
 | Assets/Resources/UI/TravelMap.prefab | TravelMap/Footer/WalkButton/Label | STOP & LOOK AROUND | Stop & Look Around |
@@ -91,12 +77,7 @@ column is the Title Case form — a sentence wants sentence case instead.
 | Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/DraftmasterLogo/Wordmark/Tagline/Text | A PHOOEY GAME | A Phooey Game |
 | Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Eyebrow | EARLY ALPHA | Early Alpha |
 | Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Footer | (C) PHOOEY 2026 | (C) Phooey 2026 |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_CAREER/Chapter | CHAPTER 3 - 20/08/26 | Chapter 3 - 20/08/26 |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_CAREER/Label | CAREER | Career |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_MULTIPLAYER/Label | MULTIPLAYER | Multiplayer |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_OPTIONS/Label | OPTIONS | Options |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_RESTART_DEMO/Label | RESTART DEMO | Restart Demo |
-| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_SINGLE_RACE/Label | SINGLE RACE | Single Race |
+| Assets/Scenes/TitleScreen.unity | TitleCanvas/Column/Menu/Row_Career/Chapter | CHAPTER 3 - 20/08/26 | Chapter 3 - 20/08/26 |
 | Assets/UI/Logo/DraftmasterLogo.prefab | DraftmasterLogo/Wordmark/ASTER | ASTER | Aster |
 | Assets/UI/Logo/DraftmasterLogo.prefab | DraftmasterLogo/Wordmark/DRAF | DRAF | Draf |
 | Assets/UI/Logo/DraftmasterLogo.prefab | DraftmasterLogo/Wordmark/Shadow/ASTER | ASTER | Aster |

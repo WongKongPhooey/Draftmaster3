@@ -66,7 +66,7 @@ public class SingleRaceFlowTests
             for (int i = 0; i < rows.arraySize; i++)
             {
                 var row = rows.GetArrayElementAtIndex(i);
-                if (row.FindPropertyRelative("label").stringValue != "SINGLE RACE") continue;
+                if (row.FindPropertyRelative("label").stringValue != "Single Race") continue;
 
                 Assert.AreEqual(LoadScene, row.FindPropertyRelative("command").enumValueIndex,
                                 "SINGLE RACE should be a LoadScene row.");
