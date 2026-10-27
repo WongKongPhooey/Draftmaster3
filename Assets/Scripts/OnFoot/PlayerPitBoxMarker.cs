@@ -26,7 +26,7 @@ public class PlayerPitBoxMarker : MonoBehaviour
     [Tooltip("The objective marker on the box is hidden once the car is this close (m) — the glow says the rest.")]
     public float guideHideWithinMetres = 2.5f;
 
-    public const string GuideLabel = "YOUR BOX";
+    public const string GuideLabel = "Your Box";
     // Above any paddock booking (10): driving down pit road, the box is the one place the player is due.
     public const int GuidePriority = 20;
 

@@ -19,7 +19,7 @@ public class IronOvalDialogue : MonoBehaviour
 
     public void Set(string speakerName, string body, string statusText = null)
     {
-        if (speaker != null) speaker.text = speakerName == null ? "" : speakerName.ToUpperInvariant();
+        if (speaker != null) speaker.text = speakerName ?? "";
         if (status != null)
         {
             status.text = statusText ?? "";

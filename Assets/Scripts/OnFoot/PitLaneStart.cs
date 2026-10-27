@@ -976,7 +976,7 @@ public class PitLaneStart : MonoBehaviour
         if (!ControlHints.Taught("run") && !ChiefCheckInBeat.HoldsRunHint
             && (_runHintDue || Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres))
         {
-            ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run",
+            ControlHints.Show("run", "Left Shift", InputGlyphs.Pad(PadBindings.Run), "Hold to run",
                               touchText: "Double-tap the left stick to run / walk");
             _hintedRun = true;
             _runHintDue = false;
@@ -1084,7 +1084,7 @@ public class PitLaneStart : MonoBehaviour
             {
                 setup?.ApplyChangesTo(car.gameObject, before);
                 StartDriving(null);
-            }, "ADJUST SETUP");
+            }, "Adjust Setup");
             return;
         }
 
@@ -1120,7 +1120,7 @@ public class PitLaneStart : MonoBehaviour
             SetPhase(EntryPhase.Driving);
             ParkedCarPin.Release(car);
             car.enabled = true;
-        }, "PIT STOP SETUP");
+        }, "Pit Stop Setup");
     }
 
     // Everything is settled — apply the setup, hand the car over, and tell the rest of the scene we're driving.

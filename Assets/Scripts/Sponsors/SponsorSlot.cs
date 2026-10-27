@@ -42,12 +42,12 @@ namespace Draftmaster.Sponsors
 
         public static string DisplayName(SponsorSlot slot) => slot switch
         {
-            SponsorSlot.Hood => "HOOD",
-            SponsorSlot.Tail => "TAIL",
-            SponsorSlot.QuarterLeft => "LEFT QUARTER",
-            SponsorSlot.QuarterRight => "RIGHT QUARTER",
-            SponsorSlot.Quarters => "QUARTERS",
-            _ => "NOT ON THE CAR",
+            SponsorSlot.Hood => "Hood",
+            SponsorSlot.Tail => "Tail",
+            SponsorSlot.QuarterLeft => "Left Quarter",
+            SponsorSlot.QuarterRight => "Right Quarter",
+            SponsorSlot.Quarters => "Quarters",
+            _ => "Not on the Car",
         };
 
         // The physical panels a slot paints: Quarters is both rear quarters, every other slot is itself.
@@ -58,9 +58,9 @@ namespace Draftmaster.Sponsors
         // The Paint Scheme Designer's names for the three slots it sells.
         public static string DesignerName(SponsorSlot slot) => slot switch
         {
-            SponsorSlot.Hood => "PRIMARY",
-            SponsorSlot.Quarters => "SECONDARY",
-            SponsorSlot.Tail => "TRUNK",
+            SponsorSlot.Hood => "Primary",
+            SponsorSlot.Quarters => "Secondary",
+            SponsorSlot.Tail => "Trunk",
             _ => DisplayName(slot),
         };
     }

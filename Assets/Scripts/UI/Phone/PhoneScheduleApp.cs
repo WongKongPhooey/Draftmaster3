@@ -17,7 +17,7 @@ using UnityEngine.InputSystem;
 public class PhoneScheduleApp : PhoneApp
 {
     public override string Id => "schedule";
-    public override string TileName => "SCHEDULE";
+    public override string TileName => "Schedule";
     public override string TileSubtitle => "What's on today";
     public override Color Accent => PixelGUI.Gold;
 
@@ -77,7 +77,7 @@ public class PhoneScheduleApp : PhoneApp
         y += Row(x, y, w, string.IsNullOrEmpty(t.trackName) ? "The track" : t.trackName,
                  WeekendLedger.WeekendOver ? "-" : WeekendSlots.Clock(WeekendLedger.ClockMinute), PixelGUI.Gold);
         y += Row(x, y, w, SeriesCatalog.Nickname(SeriesCatalog.PlayerSeries) + " entry",
-                 "ROUND " + (t.weekendId + 1), null, dim: true);
+                 "Round " + (t.weekendId + 1), null, dim: true);
         y += PixelGUI.Px(3f);
 
         y += DayTabs(x, y, w);
@@ -86,18 +86,18 @@ public class PhoneScheduleApp : PhoneApp
         y += PixelGUI.Px(6f);
 
         // --- the meters ---
-        y += Section(x, y, w, "STANDING");
-        y += Meter(x, y, w, "FANS", Draftmaster.Fans.FanAppeal.Normalised,
+        y += Section(x, y, w, "Standing");
+        y += Meter(x, y, w, "Fans", Draftmaster.Fans.FanAppeal.Normalised,
                    Mathf.RoundToInt(Draftmaster.Fans.FanAppeal.Value) + "/100", PixelGUI.Confirm);
-        y += Meter(x, y, w, "SPONSOR", Signed01(WeekendLedger.SponsorMood), Signed(WeekendLedger.SponsorMood),
+        y += Meter(x, y, w, "Sponsor", Signed01(WeekendLedger.SponsorMood), Signed(WeekendLedger.SponsorMood),
                    MoodColour(WeekendLedger.SponsorMood));
-        y += Meter(x, y, w, "TEAM", Signed01(WeekendLedger.TeamMorale), Signed(WeekendLedger.TeamMorale),
+        y += Meter(x, y, w, "Team", Signed01(WeekendLedger.TeamMorale), Signed(WeekendLedger.TeamMorale),
                    MoodColour(WeekendLedger.TeamMorale));
-        y += Meter(x, y, w, "PRESS", Signed01(WeekendLedger.MediaStanding), Signed(WeekendLedger.MediaStanding),
+        y += Meter(x, y, w, "Press", Signed01(WeekendLedger.MediaStanding), Signed(WeekendLedger.MediaStanding),
                    MoodColour(WeekendLedger.MediaStanding));
-        y += Meter(x, y, w, "SETUP", WeekendLedger.SetupGain,
+        y += Meter(x, y, w, "Setup", WeekendLedger.SetupGain,
                    Mathf.RoundToInt(WeekendLedger.SetupGain * 100f) + "%", PixelGUI.Info);
-        y += Row(x, y, w, "WEEKEND",
+        y += Row(x, y, w, "Weekend",
                  (WeekendLedger.NetEarnings >= 0 ? "+" : "-") + PlayerWallet.Format(Mathf.Abs(WeekendLedger.NetEarnings)),
                  WeekendLedger.NetEarnings >= 0 ? PixelGUI.Gold : PixelGUI.Danger);
         y += PixelGUI.Px(5f);
@@ -106,7 +106,7 @@ public class PhoneScheduleApp : PhoneApp
         var lines = WeekendLedger.Headlines;
         if (lines.Count > 0)
         {
-            y += Section(x, y, w, "THIS WEEKEND");
+            y += Section(x, y, w, "This Weekend");
             for (int i = lines.Count - 1, shown = 0; i >= 0 && shown < 4; i--, shown++)
                 y += Body(x, y, w, "· " + lines[i], PixelGUI.TextDim);
         }
@@ -304,10 +304,10 @@ public class PhoneScheduleApp : PhoneApp
 
         string status = state switch
         {
-            WeekendLedger.State.Done => "DONE",
-            WeekendLedger.State.Missed => "MISSED",
-            WeekendLedger.State.Past => "GONE BY",
-            _ => WeekendAppointment.IsPending(a) ? "BOOKED - YOUR NEXT STOP" : "",
+            WeekendLedger.State.Done => "Done",
+            WeekendLedger.State.Missed => "Missed",
+            WeekendLedger.State.Past => "Gone by",
+            _ => WeekendAppointment.IsPending(a) ? "Booked - Your Next Stop" : "",
         };
         if (status.Length > 0) y += Row(x, y, w, status, "", state == WeekendLedger.State.Missed ? PixelGUI.Danger : PixelGUI.Confirm);
         y += PixelGUI.Px(3f);
@@ -322,9 +322,9 @@ public class PhoneScheduleApp : PhoneApp
                           PixelGUI.TextDim);
             var button = new Rect(x, y, w, bh);
             PixelGUI.Fill(button, PixelGUI.Gold);
-            string label = InputGlyphs.UsingTouch ? "SKIP TO HERE"
-                         : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(PadBindings.Confirm) + "  SKIP TO HERE"
-                         : "ENTER  SKIP TO HERE";
+            string label = InputGlyphs.UsingTouch ? "Skip to Here"
+                         : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(PadBindings.Confirm) + "  Skip to Here"
+                         : "Enter  Skip to Here";
             PhoneStyles.Label(button, label, PhoneStyles.Heading, PixelGUI.Ink, TextAnchor.MiddleCenter);
             if (!measure && Pressed(button)) TrySkip();
             y += bh + PixelGUI.Px(2f);
@@ -336,7 +336,7 @@ public class PhoneScheduleApp : PhoneApp
 
         var close = new Rect(x, y, w, bh);
         PixelGUI.Fill(close, PixelGUI.Plate);
-        PhoneStyles.Label(close, "CLOSE", PhoneStyles.Data, PixelGUI.Text, TextAnchor.MiddleCenter);
+        PhoneStyles.Label(close, "Close", PhoneStyles.Data, PixelGUI.Text, TextAnchor.MiddleCenter);
         if (!measure && Pressed(close)) _selected = null;
         y += bh;
 

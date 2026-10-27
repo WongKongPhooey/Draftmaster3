@@ -154,9 +154,9 @@ public class PlayerPitService : MonoBehaviour
         if (_timer > 0f && !_serviced)
             Callout($"PITTING…  {Mathf.Max(0f, serviceSeconds - _timer):0.0}s", PixelGUI.Gold, 1f);
         else if (_msgTimer > 0f)
-            Callout("FRESH TYRES", PixelGUI.Confirm, Mathf.Clamp01(_msgTimer));
+            Callout("Fresh Tyres", PixelGUI.Confirm, Mathf.Clamp01(_msgTimer));
         else if (_showBoxHint)
-            Callout("STOP FULLY INSIDE YOUR PIT BOX", PixelGUI.Gold, 1f);
+            Callout("Stop fully inside your pit box", PixelGUI.Gold, 1f);
     }
 
     static void Callout(string text, Color colour, float alpha)

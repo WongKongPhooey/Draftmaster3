@@ -571,9 +571,9 @@ public class PhoneUI : MonoBehaviour
 
     static string SessionLabel()
     {
-        if (RaceWeekend.IsQualifying) return "QUALIFYING";
-        if (RaceWeekend.IsPractice) return "PRACTICE";
-        return "RACE DAY";
+        if (RaceWeekend.IsQualifying) return "Qualifying";
+        if (RaceWeekend.IsPractice) return "Practice";
+        return "Race Day";
     }
 
     void DrawHome(Rect r)
@@ -592,9 +592,9 @@ public class PhoneUI : MonoBehaviour
         }
 
         string keys = InputGlyphs.UsingGamepad
-            ? InputGlyphs.PadName(PadBindings.Phone) + " CLOSE   " + InputGlyphs.PadName(PadBindings.Confirm) + " OPEN"
-            : InputGlyphs.UsingTouch ? "TAP AN APP"
-            : toggleKey.ToString().ToUpperInvariant() + " CLOSE   ENTER OPEN";
+            ? InputGlyphs.PadName(PadBindings.Phone) + " Close   " + InputGlyphs.PadName(PadBindings.Confirm) + " Open"
+            : InputGlyphs.UsingTouch ? "Tap an App"
+            : toggleKey.ToString().ToUpperInvariant() + " Close   Enter Open";
         PhoneStyles.Label(new Rect(r.x, r.yMax - hint, r.width, hint), keys,
                           PhoneStyles.Footer, null, TextAnchor.MiddleCenter);
     }

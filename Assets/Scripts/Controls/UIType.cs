@@ -4,7 +4,7 @@ namespace Draftmaster.Controls
     // than a number of its own — see UIType.
     public enum TypeRole
     {
-        Title,     // the name of a whole screen ("THE ROAD TO DAYTONA")
+        Title,     // the name of a whole screen ("The Road to Daytona")
         Heading,   // a window or section's name, a place name, a big readout like cash
         Body,      // prose: blurbs, descriptions, tutorial text
         Dialogue,  // what somebody says: speech bubbles, conversation windows

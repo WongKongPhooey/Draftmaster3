@@ -51,7 +51,7 @@ namespace Draftmaster.Weekend
 
             var beat = new WeekendBeat
             {
-                speaker = "RACE DIRECTOR",
+                speaker = "Race Director",
                 preamble = new[] { notes[0], notes[1], notes[2], notes[3] },
                 line = "Anything anybody wants to raise before we let you go?",
                 question = "Which of those catches somebody out today?",
@@ -107,7 +107,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "PA ANNOUNCER",
+                speaker = "PA Announcer",
                 preamble = new[] { "...and now, from the outside of row four..." },
                 line = "How do you want it — the full introduction, or just the name?",
                 question = "How do you go out?",
@@ -124,7 +124,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "THE CROWD",
+                speaker = "The Crowd",
                 preamble = new[] { "The stand on the frontstretch is on its feet for the car ahead of you." },
                 line = "There is a gap in the noise, and it is yours.",
                 question = "What do you do with it?",

@@ -131,27 +131,27 @@ public class OptionsUI : MonoBehaviour
 
         _rows.Add(new MenuRow
         {
-            label = "FIRST NAME",
+            label = "First Name",
             kind = RowKind.Text,
-            emptyHint = "(NOT SET)",
+            emptyHint = "(not set)",
             read = () => PlayerDriver.FirstName,
             write = value => PlayerDriver.SetCareerName(value, PlayerDriver.LastName),
         });
 
         _rows.Add(new MenuRow
         {
-            label = "LAST NAME",
+            label = "Last Name",
             kind = RowKind.Text,
-            emptyHint = "(NOT SET)",
+            emptyHint = "(not set)",
             read = () => PlayerDriver.LastName,
             write = value => PlayerDriver.SetCareerName(PlayerDriver.FirstName, value),
         });
 
         _rows.Add(new MenuRow
         {
-            label = "CAREER MODE",
+            label = "Career Mode",
             kind = RowKind.Choice,
-            heading = "CAREER",
+            heading = "Career",
             gapBefore = 22f,
             read = () => Draftmaster.Weekend.CareerModes.Label(Draftmaster.Weekend.CareerModes.Current),
             describe = () => Draftmaster.Weekend.CareerModes.Describe(Draftmaster.Weekend.CareerModes.Current),
@@ -170,14 +170,14 @@ public class OptionsUI : MonoBehaviour
         // room on the sheet for another heading.
         _rows.Add(new MenuRow
         {
-            label = "SOUND",
+            label = "Sound",
             kind = RowKind.Page,
             gapBefore = 26f,
-            read = () => "MASTER  " + SoundMix.Format(SoundVolumes.Percent(SoundChannel.Master)),
+            read = () => "Master  " + SoundMix.Format(SoundVolumes.Percent(SoundChannel.Master)),
             open = () => ShowPage(Page.Sound, 0),
         });
 
-        _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back });
+        _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back });
     }
 
     // One row per part of the mix. Left / right move a level a step and stop at the ends; ENTER and a tap go
@@ -198,7 +198,7 @@ public class OptionsUI : MonoBehaviour
             });
         }
 
-        _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back, gapBefore = 26f });
+        _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back, gapBefore = 26f });
     }
 
     // Swap the sheet: new rows, new chrome, cursor on `index`.
@@ -402,7 +402,7 @@ public class OptionsUI : MonoBehaviour
         DialogueNames.Refresh();
 
         string full = PlayerDriver.CareerName;
-        SetStatus(full.Length > 0 ? $"SAVED — {full.ToUpperInvariant()}" : "NAME CLEARED.");
+        SetStatus(full.Length > 0 ? $"Saved — {full}" : "Name cleared.");
         Redraw();
     }
 
@@ -411,7 +411,7 @@ public class OptionsUI : MonoBehaviour
         _editing = -1;
         _buffer = "";
         _osk.Hide();
-        SetStatus("LEFT AS IT WAS.");
+        SetStatus("Left as it was.");
         Redraw();
     }
 
@@ -483,22 +483,22 @@ public class OptionsUI : MonoBehaviour
         {
             string full = PlayerDriver.CareerName;
             _preview.text = full.Length > 0
-                ? "ON THE CAR:  " + full.ToUpperInvariant()
-                : "NOBODY HAS NAMED YOU YET.";
+                ? "On the car:  " + full
+                : "Nobody has named you yet.";
             _preview.color = full.Length > 0 ? theme.gold : theme.plateLight;
         }
 
         if (_help != null)
         {
-            string ok = InputGlyphs.Label("ENTER", PadBindings.Confirm);
-            string back = InputGlyphs.Label("ESC", PadBindings.Back);
+            string ok = InputGlyphs.Label("Enter", PadBindings.Confirm);
+            string back = InputGlyphs.Label("Esc", PadBindings.Back);
             _help.text = InputGlyphs.UsingTouch
-                ? (_editing >= 0 ? "TYPE A NAME, THEN DONE     TAP THE ROW AGAIN  SAVE" : "TAP A ROW TO CHANGE IT")
+                ? (_editing >= 0 ? "Type a name     Tap the Row Again  Save" : "Tap a row to change it")
                 : _editing >= 0
-                ? $"TYPE A NAME     {ok}  SAVE     {back}  CANCEL"
+                ? $"Type a Name     {ok}  Save     {back}  Cancel"
                 : InputGlyphs.UsingGamepad
-                    ? $"D-PAD  MOVE / CHANGE     {ok}  CHANGE     {back}  BACK"
-                    : "ARROWS  MOVE / CHANGE     ENTER  CHANGE     ESC  BACK";
+                    ? $"D-Pad  Move / Change     {ok}  Change     {back}  Back"
+                    : "Arrows  Move / Change     Enter  Change     Esc  Back";
         }
     }
 
@@ -541,19 +541,19 @@ public class OptionsUI : MonoBehaviour
         backdrop.color = theme.ink;
         Stretch((RectTransform)backdrop.transform);
 
-        var title = IronOvalUI.Label(root, "Title", "OPTIONS", IronOvalUI.Role.Header, theme.text);
+        var title = IronOvalUI.Label(root, "Title", "Options", IronOvalUI.Role.Header, theme.text);
         Place((RectTransform)title.transform, new Vector2(0f, 1f), new Vector2(24f, -20f),
               new Vector2(400f, 28f), TextAlignmentOptions.TopLeft);
 
         bool sound = _page == Page.Sound;
-        var section = IronOvalUI.Label(root, "Section", sound ? "SOUND" : "DRIVER", IronOvalUI.Role.HeaderSmall, theme.gold);
+        var section = IronOvalUI.Label(root, "Section", sound ? "Sound" : "Driver", IronOvalUI.Role.HeaderSmall, theme.gold);
         section.characterSpacing = 4f;
         Place((RectTransform)section.transform, new Vector2(0f, 1f), new Vector2(24f, -56f),
               new Vector2(560f, 12f), TextAlignmentOptions.TopLeft);
 
         var blurb = IronOvalUI.Label(root, "Blurb",
-                                     sound ? "HOW LOUD EACH PART OF THE MIX IS. OFF SILENCES IT."
-                                           : "WHAT THE SPOTTER, THE CREW AND THE TIMING TOWER CALL YOU.",
+                                     sound ? "How loud each part of the mix is. Off silences it."
+                                           : "What the spotter, the crew and the timing tower call you.",
                                      IronOvalUI.Role.Body, theme.plateLight);
         Place((RectTransform)blurb.transform, new Vector2(0f, 1f), new Vector2(24f, -74f),
               new Vector2(560f, 18f), TextAlignmentOptions.TopLeft);

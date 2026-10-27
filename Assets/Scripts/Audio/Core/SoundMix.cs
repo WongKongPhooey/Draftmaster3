@@ -75,7 +75,7 @@ namespace Draftmaster.Audio
             SoundChannel.Effects => "EFFECTS",
             SoundChannel.Crowd => "CROWD",
             SoundChannel.Interface => "PHONE",
-            _ => channel.ToString().ToUpperInvariant(),
+            _ => channel.ToString(),
         };
 
         public static string Describe(SoundChannel channel) => channel switch

@@ -432,6 +432,38 @@ public class RaceDirector : MonoBehaviour
         return o;
     }
 
+    // What the pause menu's end row should say during a race, or null once the classification is already up.
+    // A race the weekend booked hands back to the timetable like any other session; a single race just ends.
+    public static string PauseMenuExitLabel
+    {
+        get
+        {
+            var d = Instance;
+            if (d == null || !d.isActiveAndEnabled || d._phase >= Phase.Results) return null;
+            return string.IsNullOrEmpty(WeekendDirector.PendingRouteId) ? "End Race" : "End Session";
+        }
+    }
+
+    // Ended from the pause menu: the flag falls where the field is, the same as the stragglers' clock running
+    // out, and the results screen goes up with the running order as the classification. Cars still out take
+    // the chequer next time by and cool down.
+    public void EndRaceNow()
+    {
+        var rt = RacePositionTracker.Instance;
+        if (rt == null || _phase >= Phase.Results) return;
+
+        if (_phase == Phase.Waiting) _greenTime = Time.time;
+        BaselineLaps(rt);
+        SnapshotChequerLaps(rt);
+        // Past the stragglers' window already, so nobody is held open for a late finish.
+        _checkeredTime = Time.time - stragglerTimeout - 1f;
+        _phase = Phase.Checkered;
+        CheckFinishes(rt);
+        ClassifyRemaining(rt);
+        RecordCareerResult();
+        _phase = Phase.Results;
+    }
+
     public void NextWeekend()
     {
         if (DriveOrientationController.HoldSceneChangeForLandscape(NextWeekend)) return;
@@ -489,14 +521,14 @@ public class RaceDirector : MonoBehaviour
         {
             if (drawLapCounter && !IronOvalRaceHUD.DrawsLapCount) DrawLapCounter();
             if (_phase == Phase.Checkered && Time.time - _checkeredTime < bannerSeconds)
-                DrawBanner("CHECKERED FLAG");
+                DrawBanner("Checkered Flag");
         }
         else if (_phase == Phase.Results)
         {
             if (_panelHidden)
             {
                 if (PixelGUI.Button(new Rect(Screen.width - PixelGUI.Px(96f), PixelGUI.Px(38f),
-                                             PixelGUI.Px(88f), PixelGUI.MenuButtonH), "RESULTS"))
+                                             PixelGUI.Px(88f), PixelGUI.MenuButtonH), "Results"))
                     _panelHidden = false;
             }
             else
@@ -524,7 +556,7 @@ public class RaceDirector : MonoBehaviour
         var style = PixelGUI.Data;
         var prevAlign = style.alignment;
         style.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(box, $"LAP {lap}/{raceLaps}", style);
+        GUI.Label(box, $"Lap {lap}/{raceLaps}", style);
         style.alignment = prevAlign;
     }
 
@@ -584,14 +616,14 @@ public class RaceDirector : MonoBehaviour
         // --- header band ---------------------------------------------------------------------------
         PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
         GUI.Label(new Rect(c.x + PixelGUI.Px(4f), c.y + PixelGUI.Px(4f), c.width, PixelGUI.Px(12f)),
-                  "RACE RESULTS", PixelGUI.Heading);
+                  "Race Results", PixelGUI.Heading);
         var meta = PixelGUI.DataDim;
         var metaAlign = meta.alignment;
         meta.alignment = TextAnchor.MiddleRight;
         // A single race is not a round of anything, so it is named by the track alone.
         GUI.Label(new Rect(c.x, c.y, c.width - PixelGUI.Px(4f), bandH),
                   GameSession.CareerActive
-                      ? TrackSelection.CurrentDisplayName + "  ROUND " + (RaceWeekend.WeekendId + 1)
+                      ? TrackSelection.CurrentDisplayName + "  Round " + (RaceWeekend.WeekendId + 1)
                       : TrackSelection.CurrentDisplayName, meta);
         meta.alignment = metaAlign;
 
@@ -617,11 +649,11 @@ public class RaceDirector : MonoBehaviour
 
         var head = PixelGUI.HeadingSmall;
         float headH = PixelGUI.Px(10f);
-        GUI.Label(new Rect(posX, cy, numX - posX, headH), "POS", head);
+        GUI.Label(new Rect(posX, cy, numX - posX, headH), "Pos", head);
         GUI.Label(new Rect(numX, cy, nameX - numX, headH), "#", head);
-        GUI.Label(new Rect(nameX, cy, nameW, headH), "DRIVER", head);
-        GUI.Label(new Rect(resultX, cy, bestX - resultX, headH), "RESULT", head);
-        GUI.Label(new Rect(bestX, cy, cx + innerW - bestX, headH), "BEST", head);
+        GUI.Label(new Rect(nameX, cy, nameW, headH), "Driver", head);
+        GUI.Label(new Rect(resultX, cy, bestX - resultX, headH), "Result", head);
+        GUI.Label(new Rect(bestX, cy, cx + innerW - bestX, headH), "Best", head);
         cy += PixelGUI.Px(11f);
         PixelGUI.Rule(cx, cy, listW - PixelGUI.Px(8f));
         cy += PixelGUI.Px(3f);
@@ -638,7 +670,7 @@ public class RaceDirector : MonoBehaviour
 
             string name = string.IsNullOrEmpty(r.name) ? "?" : (r.name.Length > nameChars ? r.name.Substring(0, nameChars) : r.name);
             string result;
-            if (r.onLastLap) result = "LAST LAP";
+            if (r.onLastLap) result = "Last Lap";
             else if (!r.finished) result = "+" + r.lapsDown + "L";
             else if (i == 0) result = "WINNER";
             else if (winnerTime > 0f) result = "+" + (r.raceTime - winnerTime).ToString("0.000");
@@ -672,7 +704,7 @@ public class RaceDirector : MonoBehaviour
             var winAlign = win.alignment;
             win.normal.textColor = lit ? PixelGUI.Ink : PixelGUI.Gold;
             win.alignment = TextAnchor.MiddleCenter;
-            GUI.Label(winRect, "RACE WINNER", win);
+            GUI.Label(winRect, "Race Winner", win);
             win.normal.textColor = winPrev;
             win.alignment = winAlign;
             ry += PixelGUI.Px(20f);
@@ -682,7 +714,7 @@ public class RaceDirector : MonoBehaviour
             var pos = PixelGUI.Data;
             var posPrev = pos.normal.textColor;
             pos.normal.textColor = PixelGUI.Confirm;
-            GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), "YOU FINISHED P" + playerPos, pos);
+            GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), "You finished P" + playerPos, pos);
             pos.normal.textColor = posPrev;
             ry += PixelGUI.Px(18f);
         }
@@ -692,30 +724,30 @@ public class RaceDirector : MonoBehaviour
         if (!GameSession.CareerActive)
         {
             float sbh = bh;
-            if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "RACE AGAIN"))
+            if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "Race Again"))
                 RaceAgain();
             ry += sbh + PixelGUI.Px(4f);
-            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "QUIT TO TITLE", false))
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "Quit to Title", false))
                 QuitToTitle();
             ry += sbh + PixelGUI.Px(4f);
-            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "CLOSE", false)) _panelHidden = true;
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "Close", false)) _panelHidden = true;
             return;
         }
 
         PixelGUI.Fill(new Rect(rx, ry, railW, PixelGUI.Px(76f)), PixelGUI.Plate);
         float ix = rx + PixelGUI.Px(5f), iy = ry + PixelGUI.Px(4f), iw = railW - PixelGUI.Px(10f);
 
-        GUI.Label(new Rect(ix, iy, iw, PixelGUI.Px(10f)), "THIS RACE", PixelGUI.HeadingSmall);
+        GUI.Label(new Rect(ix, iy, iw, PixelGUI.Px(10f)), "This Race", PixelGUI.HeadingSmall);
         iy += PixelGUI.Px(12f);
-        iy += RewardRow(ix, iy, iw, "PURSE", _payout > 0 ? "+" + PlayerWallet.Format(_payout) : "-",
+        iy += RewardRow(ix, iy, iw, "Purse", _payout > 0 ? "+" + PlayerWallet.Format(_payout) : "-",
                         _payout > 0 ? PixelGUI.Gold : PixelGUI.TextDisabled);
-        iy += RewardRow(ix, iy, iw, "SPONSORS", _sponsorPayout > 0 ? "+" + PlayerWallet.Format(_sponsorPayout) : "-",
+        iy += RewardRow(ix, iy, iw, "Sponsors", _sponsorPayout > 0 ? "+" + PlayerWallet.Format(_sponsorPayout) : "-",
                         _sponsorPayout > 0 ? PixelGUI.Confirm : PixelGUI.TextDisabled);
-        iy += RewardRow(ix, iy, iw, "BANK", PlayerWallet.CashText, PixelGUI.Text);
+        iy += RewardRow(ix, iy, iw, "Bank", PlayerWallet.CashText, PixelGUI.Text);
 
         // Fan appeal stands in for the sheet's EXP bar: the progress meter this game actually keeps.
         float appeal = Draftmaster.Fans.FanAppeal.Value;
-        GUI.Label(new Rect(ix, iy + PixelGUI.Px(2f), iw, PixelGUI.Px(10f)), "FAN APPEAL", PixelGUI.HeadingSmall);
+        GUI.Label(new Rect(ix, iy + PixelGUI.Px(2f), iw, PixelGUI.Px(10f)), "Fan Appeal", PixelGUI.HeadingSmall);
         var appealStyle = PixelGUI.DataDim;
         var appealAlign = appealStyle.alignment;
         appealStyle.alignment = TextAnchor.MiddleRight;
@@ -734,13 +766,13 @@ public class RaceDirector : MonoBehaviour
             var gonePrev = gone.normal.textColor;
             gone.normal.textColor = PixelGUI.Danger;
             GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(12f)),
-                      "DEAL ENDED: " + string.Join(", ", names), gone);
+                      "Deal ended: " + string.Join(", ", names), gone);
             gone.normal.textColor = gonePrev;
             ry += PixelGUI.Px(14f);
         }
 
         // The one way out: back on foot in the paddock, with the road trip (the RV's satnav) as what's next.
-        if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "END RACE")) EndRace();
+        if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "End Race")) EndRace();
     }
 
     // One "label ... value" line in the rewards column.

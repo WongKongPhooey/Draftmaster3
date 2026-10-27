@@ -211,7 +211,7 @@ public class PaintShopPanel : MonoBehaviour
         foreach (var (ring, colour) in _numberSwatches)
             ring.enabled = _canRepaint && Same(colour, _scheme.numberColour);
 
-        _pattern.text = factory ? "FACTORY PAINT" : PaintShop.PatternLabel(_scheme.pattern);
+        _pattern.text = factory ? "Factory Paint" : PaintShop.PatternLabel(_scheme.pattern);
         if (_accentRow != null) _accentRow.SetActive(!factory && _scheme.HasPattern);
 
         int income = 0;
@@ -269,7 +269,7 @@ public class PaintShopPanel : MonoBehaviour
         crt.sizeDelta = new Vector2(CardW, CardH);
 
         var title = Label("Title", crt, BrandFonts.Display, 32, PixelGUI.Gold, TextAnchor.UpperLeft);
-        title.text = "PAINT SCHEME DESIGNER";
+        title.text = "Paint Scheme Designer";
         At(title.rectTransform, 44, 32, 900, 48);
         var sub = Label("Sub", crt, _font, 24, PixelGUI.TextDim, TextAnchor.UpperLeft);
         sub.text = "Pick a base coat and a livery, then who goes where. Nothing changes until you save.";
@@ -286,7 +286,7 @@ public class PaintShopPanel : MonoBehaviour
         prt.sizeDelta = new Vector2(640, 320);           // 64x32 livery at 10x
 
         // --- number colour, under the preview: one row of the whole palette ---
-        float ny = Heading(crt, "NUMBER COLOUR", 516f, x: 44f);
+        float ny = Heading(crt, "Number Colour", 516f, x: 44f);
         ny = SwatchGrid(crt, ny, _numberSwatches, PickNumber, x0: 44f, perRow: 16, size: 40f, gap: 5f);
 
         _income = Label("Income", crt, _font, 28, PixelGUI.Confirm, TextAnchor.UpperLeft);
@@ -296,10 +296,10 @@ public class PaintShopPanel : MonoBehaviour
 
         // --- right column ---
         float y = 150f;
-        y = Heading(crt, "BASE COAT", y);
+        y = Heading(crt, "Base Coat", y);
         y = SwatchGrid(crt, y, _baseSwatches, PickBase);
 
-        y = Heading(crt, "LIVERY", y + 8f);
+        y = Heading(crt, "Livery", y + 8f);
         _pattern = Stepper(crt, y, step => CyclePattern(step), out var patternLeft);
         _firstButton = patternLeft;
         y += RowPitch;
@@ -310,10 +310,10 @@ public class PaintShopPanel : MonoBehaviour
         art.anchorMin = art.anchorMax = art.pivot = new Vector2(0, 1);
         art.anchoredPosition = Vector2.zero;
         art.sizeDelta = new Vector2(CardW, CardH);
-        float ay = Heading(art, "LIVERY COLOUR", y);
+        float ay = Heading(art, "Livery Colour", y);
         y = SwatchGrid(art, ay, _accentSwatches, PickAccent) + 4f;
 
-        y = Heading(crt, "SPONSORS", y);
+        y = Heading(crt, "Sponsors", y);
         foreach (var slot in kSlots)
         {
             var label = Label("Slot", crt, BrandFonts.Display, 16, PixelGUI.Gold, TextAnchor.MiddleLeft);
@@ -328,9 +328,9 @@ public class PaintShopPanel : MonoBehaviour
         _status = Label("Status", crt, _font, 24, PixelGUI.TextDim, TextAnchor.UpperLeft);
         At(_status.rectTransform, 44, ny + 76f, 720, 56);
 
-        MakeButton("FACTORY PAINT", crt, 44, CardH - 92, 260, FactoryPaint);
-        MakeButton("CANCEL", crt, CardW - 44 - 220 - 20 - 260, CardH - 92, 260, () => Close(save: false));
-        MakeButton("SAVE", crt, CardW - 44 - 220, CardH - 92, 220, () => Close(save: true));
+        MakeButton("Factory Paint", crt, 44, CardH - 92, 260, FactoryPaint);
+        MakeButton("Cancel", crt, CardW - 44 - 220 - 20 - 260, CardH - 92, 260, () => Close(save: false));
+        MakeButton("Save", crt, CardW - 44 - 220, CardH - 92, 220, () => Close(save: true));
 
         var hint = Label("Hint", crt, _font, 20, PixelGUI.TextDisabled, TextAnchor.MiddleLeft);
         hint.text = $"{InputGlyphs.Back} to leave without saving";
@@ -339,9 +339,9 @@ public class PaintShopPanel : MonoBehaviour
 
     static string PanelWord(SponsorSlot slot) => slot switch
     {
-        SponsorSlot.Hood => "HOOD",
-        SponsorSlot.Quarters => "QUARTERS",
-        SponsorSlot.Tail => "DECKLID",
+        SponsorSlot.Hood => "Hood",
+        SponsorSlot.Quarters => "Quarters",
+        SponsorSlot.Tail => "Decklid",
         _ => "",
     };
 

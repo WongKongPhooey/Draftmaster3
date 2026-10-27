@@ -190,7 +190,7 @@ public class GrandstandSpectate : MonoBehaviour
         var hc = head.normal.textColor;
         head.normal.textColor = PixelGUI.Info;
         GUI.Label(new Rect(content.x, y, content.width, PixelGUI.Px(11f)),
-                  SeriesCatalog.Name(_session.series).ToUpperInvariant() + "  ·  " + KindLabel(), head);
+                  SeriesCatalog.Name(_session.series) + "  ·  " + KindLabel(), head);
         head.normal.textColor = hc;
         y += PixelGUI.Px(12f);
 
@@ -220,10 +220,10 @@ public class GrandstandSpectate : MonoBehaviour
         float by = content.yMax - bh * 2f - PixelGUI.Px(4f);
         float half = (content.width - PixelGUI.Px(4f)) * 0.5f;
 
-        if (PixelGUI.Tab(new Rect(content.x, by, half, bh), "SPEED " + Speeds[_speedIndex] + "x", false))
+        if (PixelGUI.Tab(new Rect(content.x, by, half, bh), "Speed " + Speeds[_speedIndex] + "x", false))
             _speedIndex = (_speedIndex + 1) % Speeds.Length;
 
-        if (!_finished && PixelGUI.Tab(new Rect(content.x + half + PixelGUI.Px(4f), by, half, bh), "SKIP", false))
+        if (!_finished && PixelGUI.Tab(new Rect(content.x + half + PixelGUI.Px(4f), by, half, bh), "Skip", false))
         {
             _progress01 = 1f;
             PumpMoments();
@@ -232,24 +232,24 @@ public class GrandstandSpectate : MonoBehaviour
         }
 
         if (PixelGUI.Button(new Rect(content.x, content.yMax - bh, content.width, bh),
-                            _finished ? "THAT'S THE RESULT" : $"SEEN ENOUGH ({InputGlyphs.Back})"))
+                            _finished ? "That's the Result" : $"Seen Enough ({InputGlyphs.Back})"))
             FinishNow();
     }
 
     string KindLabel() => _session.kind switch
     {
-        ActivityKind.SpectateQualifying => "QUALIFYING",
-        ActivityKind.SpectateRace => "RACE",
-        _ => "PRACTICE",
+        ActivityKind.SpectateQualifying => "Qualifying",
+        ActivityKind.SpectateRace => "Race",
+        _ => "Practice",
     };
 
     string StatusLine()
     {
         if (_session.kind != ActivityKind.SpectateRace)
-            return _finished ? "OVER" : "RUNNING";
+            return _finished ? "Over" : "Running";
 
         int lap = Mathf.Clamp(Mathf.CeilToInt(_progress01 * _session.laps), 1, _session.laps);
-        return _finished ? "CHECKERED" : $"LAP {lap}/{_session.laps}";
+        return _finished ? "Checkered" : $"Lap {lap}/{_session.laps}";
     }
 
     void DrawTower(Rect r)
@@ -294,7 +294,7 @@ public class GrandstandSpectate : MonoBehaviour
     {
         if (_finished) return SeriesSimulator.GapText(e);
         if (index == 0) return "LEADER";
-        if (e.retired && _progress01 > 0.55f) return "OUT";
+        if (e.retired && _progress01 > 0.55f) return "Out";
         float gap = Mathf.Max(0.15f, (e.gapToLeader < 0f ? 12f : e.gapToLeader)) * Mathf.Lerp(0.25f, 1f, _progress01);
         return "+" + gap.ToString("0.00");
     }
@@ -305,7 +305,7 @@ public class GrandstandSpectate : MonoBehaviour
         float x = r.x + pad, y = r.y + PixelGUI.Px(3f);
         float w = r.width - pad * 2f;
 
-        GUI.Label(new Rect(x, y, w, PixelGUI.Px(10f)), "BROADCAST", PixelGUI.HeadingSmall);
+        GUI.Label(new Rect(x, y, w, PixelGUI.Px(10f)), "Broadcast", PixelGUI.HeadingSmall);
         y += PixelGUI.Px(11f);
         PixelGUI.Rule(x, y, w);
         y += PixelGUI.Px(4f);

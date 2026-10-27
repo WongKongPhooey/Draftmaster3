@@ -82,7 +82,7 @@ public class SingleRaceUI : MonoBehaviour
     }
 
     const string HelpKeys = "W/S or ARROWS  MOVE     ENTER  SELECT     ESC  BACK";
-    const string HelpTouch = "TAP TO PICK     DRAG OR UP/DOWN TO SCROLL";
+    const string HelpTouch = "Tap  Pick     Drag or Up/Down  Scroll";
 
     void Update()
     {
@@ -116,8 +116,8 @@ public class SingleRaceUI : MonoBehaviour
         {
             _helpVersion = InputGlyphs.Version;
             _help.text = InputGlyphs.UsingGamepad
-                ? $"D-PAD  MOVE     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  PAGE" +
-                  $"     {InputGlyphs.PadName(PadBindings.Confirm)}  SELECT     {InputGlyphs.PadName(PadBindings.Back)}  BACK"
+                ? $"D-Pad  Move     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  Page" +
+                  $"     {InputGlyphs.PadName(PadBindings.Confirm)}  Select     {InputGlyphs.PadName(PadBindings.Back)}  Back"
                 : InputGlyphs.UsingTouch ? HelpTouch : HelpKeys;
         }
 
@@ -158,7 +158,7 @@ public class SingleRaceUI : MonoBehaviour
         for (int i = 0; i < _tracks.Count; i++)
         {
             var row = _tracks[i];
-            _labels.Add(row.DisplayName.ToUpperInvariant());
+            _labels.Add(row.DisplayName);
 
             string width = Draftmaster.Tracks.TrackDimensions.TryGet(row.Name, out var dim)
                 ? $" · {dim.widthMetres:0.0}m"
@@ -191,7 +191,7 @@ public class SingleRaceUI : MonoBehaviour
         {
             var d = _drivers[i];
             _labels.Add(SeriesRoster.Label(d));
-            _details.Add(string.IsNullOrWhiteSpace(d.TeamName) ? "" : d.TeamName.ToUpperInvariant());
+            _details.Add(string.IsNullOrWhiteSpace(d.TeamName) ? "" : d.TeamName);
             if (d.CarNumber == playerNumber) _index = i;
         }
 
@@ -199,9 +199,9 @@ public class SingleRaceUI : MonoBehaviour
         // so say so and let the player race anyway as whoever they already are.
         if (_drivers.Count == 0)
         {
-            _labels.Add("RACE AS " + (string.IsNullOrEmpty(PlayerDriver.CareerName)
-                                      ? $"CAR #{PlayerDriver.CarNumber}"
-                                      : PlayerDriver.CareerName.ToUpperInvariant()));
+            _labels.Add("Race as " + (string.IsNullOrEmpty(PlayerDriver.CareerName)
+                                      ? $"Car #{PlayerDriver.CarNumber}"
+                                      : PlayerDriver.CareerName));
             _details.Add("no field entered in this series");
         }
     }
@@ -387,17 +387,17 @@ public class SingleRaceUI : MonoBehaviour
 
         _title.text = _step switch
         {
-            Step.Track => "SELECT TRACK",
-            Step.Series => "SELECT SERIES",
-            _ => "SELECT DRIVER",
+            Step.Track => "Select Track",
+            Step.Series => "Select Series",
+            _ => "Select Driver",
         };
 
         // The breadcrumb is what stops the three steps feeling like three unrelated menus.
-        string crumb = _step == Step.Track ? "" : TrackCatalog.DisplayName(_trackId).ToUpperInvariant();
+        string crumb = _step == Step.Track ? "" : TrackCatalog.DisplayName(_trackId);
         if (_step == Step.Driver && _series != null) crumb += "   >   " + SeriesRoster.Label(_series);
         int more = Mathf.Max(0, _labels.Count - visibleRows);
         _breadcrumb.text = string.IsNullOrEmpty(crumb)
-            ? $"{_labels.Count} TRACKS BUILT" + (more > 0 ? "   (SCROLL FOR MORE)" : "")
+            ? $"{_labels.Count} Tracks Built" + (more > 0 ? "   (Scroll for More)" : "")
             : crumb;
     }
 
@@ -434,7 +434,7 @@ public class SingleRaceUI : MonoBehaviour
         backdrop.color = theme.ink;
         Stretch((RectTransform)backdrop.transform);
 
-        _title = IronOvalUI.Label(root, "Title", "SELECT TRACK", IronOvalUI.Role.Header, theme.text);
+        _title = IronOvalUI.Label(root, "Title", "Select Track", IronOvalUI.Role.Header, theme.text);
         Place((RectTransform)_title.transform, new Vector2(0f, 1f), new Vector2(24f, -20f),
               new Vector2(400f, 28f), TextAlignmentOptions.TopLeft);
 
@@ -482,9 +482,9 @@ public class SingleRaceUI : MonoBehaviour
 
         // Paging and BACK as buttons, top right beside the title: a phone has no Page Up or Esc to press.
         // Built in code and wired here, at runtime, like the rows — nothing serialised to lose.
-        AddButton(root, "Back", "BACK", -24f, Back);
-        AddButton(root, "Down", "DOWN", -24f - (ButtonSize.x + 6f), () => Move(visibleRows));
-        AddButton(root, "Up", "UP", -24f - 2f * (ButtonSize.x + 6f), () => Move(-visibleRows));
+        AddButton(root, "Back", "Back", -24f, Back);
+        AddButton(root, "Down", "Down", -24f - (ButtonSize.x + 6f), () => Move(visibleRows));
+        AddButton(root, "Up", "Up", -24f - 2f * (ButtonSize.x + 6f), () => Move(-visibleRows));
 
         var help = IronOvalUI.Label(root, "Help", HelpKeys, IronOvalUI.Role.Body, theme.plateLight);
         _help = help;
@@ -545,10 +545,10 @@ public class SingleRaceUI : MonoBehaviour
 
     static string Nice(TrackType type) => type switch
     {
-        TrackType.Superspeedway => "SUPERSPEEDWAY",
-        TrackType.Speedway => "SPEEDWAY",
-        TrackType.ShortTrack => "SHORT TRACK",
-        TrackType.RoadCourse => "ROAD COURSE",
-        _ => "DIRT",
+        TrackType.Superspeedway => "Superspeedway",
+        TrackType.Speedway => "Speedway",
+        TrackType.ShortTrack => "Short Track",
+        TrackType.RoadCourse => "Road Course",
+        _ => "Dirt",
     };
 }

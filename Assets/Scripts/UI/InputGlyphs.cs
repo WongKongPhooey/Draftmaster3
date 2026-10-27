@@ -122,7 +122,7 @@ public static class InputGlyphs
     public static string Confirm => Label("E", PadBindings.Confirm);
 
     // Backing out of a menu — Esc on keyboard, east face button on a pad.
-    public static string Back => Label("ESC", PadBindings.Back);
+    public static string Back => Label("Esc", PadBindings.Back);
 
     // The phone — PhoneUI reads its toggleKey (P) / Gamepad.selectButton, the small button left of centre.
     public static string PhonePad => PadName(PadBindings.Phone);

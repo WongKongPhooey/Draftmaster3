@@ -22,7 +22,7 @@ public class PhoneSoBuzzApp : PhoneApp
     {
         public string handle;
         public string text;
-        public string tag;        // "INTERESTED" / "SIGNED" / "OUT OF REACH"
+        public string tag;        // "Interested" / "Signed" / "Out of Reach"
         public Color tagColour;
         public int likes;
         public bool muted;        // drawn dim: a brand out of reach, or a hostile fan
@@ -40,7 +40,7 @@ public class PhoneSoBuzzApp : PhoneApp
         float appeal = FanAppeal.Value;
 
         // The gauge. Followers are a readable stand-in for appeal — the number the player watches.
-        y += Section(x, y, w, "YOUR REACH");
+        y += Section(x, y, w, "Your Reach");
         y += Meter(x, y, w, "Fan appeal", appeal / 100f, $"{Mathf.RoundToInt(appeal)}/100", AppealColour(appeal));
         y += Row(x, y, w, "Followers", Followers(appeal).ToString("N0"), PixelGUI.TextDim);
         y += Row(x, y, w, "Sponsor standing", Standing(appeal), PixelGUI.TextDim);
@@ -50,7 +50,7 @@ public class PhoneSoBuzzApp : PhoneApp
         Build(appeal);
 
         y += PixelGUI.Px(6f);
-        y += Section(x, y, w, "MENTIONS");
+        y += Section(x, y, w, "Mentions");
         if (_feed.Count == 0)
             y += Empty(x, y, w, "Quiet out there. Run some races and sign for the fans.");
         for (int i = 0; i < _feed.Count; i++) y += DrawPost(x, y, w, _feed[i]);

@@ -47,7 +47,7 @@ public class EScooterSpawner : MonoBehaviour
 
     [Header("The scooter")]
     [Tooltip("Name over the scooter's title card.")]
-    public string scooterName = "TEAM E-SCOOTER";
+    public string scooterName = "Team E-Scooter";
     [Tooltip("Second line of the title card — the nudge that says it can be used.")]
     public string scooterSubtitle = "Charged and ready";
     [Tooltip("How close the player has to be to step on, metres.")]
@@ -63,7 +63,7 @@ public class EScooterSpawner : MonoBehaviour
     [Tooltip("Also park a second scooter at a random spot in the paddock, different every load.")]
     public bool parkPaddockScooter = true;
     [Tooltip("Name over the paddock scooter's title card.")]
-    public string paddockScooterName = "PADDOCK E-SCOOTER";
+    public string paddockScooterName = "Paddock E-Scooter";
     [Tooltip("Metres of clear ground the paddock scooter needs around its centre — a bit under a scooter " +
              "length, so it is never drawn through the side of a motorhome or a garage.")]
     public float paddockClearance = 1f;

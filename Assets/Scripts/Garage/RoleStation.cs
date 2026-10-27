@@ -52,7 +52,7 @@ public class RoleStation : NPCInteractable
     {
         Role.Fabricator         => "FABRICATOR — Chassis Shop",
         Role.EngineMechanic     => "ENGINE MECHANIC — Dyno Bay",
-        Role.SponsorshipManager => "SPONSORSHIP MANAGER",
+        Role.SponsorshipManager => "Sponsorship Manager",
         _                       => "Crew",
     };
 
@@ -74,7 +74,7 @@ public class RoleStation : NPCInteractable
                 sb.AppendLine($"Current chassis:  {TeamGarageData.CurrentChassisName}");
                 sb.AppendLine($"Condition:        {Bar(TeamGarageData.CurrentChassisCondition)}  {TeamGarageData.CurrentChassisCondition}%");
                 sb.AppendLine();
-                sb.AppendLine($"NEW BUILD — {TeamGarageData.NewBuildName}");
+                sb.AppendLine($"New Build — {TeamGarageData.NewBuildName}");
                 sb.AppendLine($"Progress:         {Bar(TeamGarageData.NewBuildProgress)}  {TeamGarageData.NewBuildProgress}%");
                 sb.AppendLine($"ETA:              {TeamGarageData.NewBuildEtaRaces} races");
                 break;
@@ -89,11 +89,11 @@ public class RoleStation : NPCInteractable
                 break;
 
             case Role.SponsorshipManager:
-                sb.AppendLine("ON THE CAR");
+                sb.AppendLine("On the Car");
                 foreach (var s in TeamGarageData.Sponsors)
                     if (s.Signed) sb.AppendLine($"  {s.Name}  —  ${s.PerRace:N0}/race  —  {s.Demand}");
                 sb.AppendLine();
-                sb.AppendLine("PROSPECTS TO LAND");
+                sb.AppendLine("Prospects to Land");
                 foreach (var s in TeamGarageData.Sponsors)
                     if (!s.Signed) sb.AppendLine($"  {s.Name}  —  ${s.PerRace:N0}/race  —  wants {s.Demand}");
                 break;

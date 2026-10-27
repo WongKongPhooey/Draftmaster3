@@ -777,13 +777,13 @@ public class Ticker : MonoBehaviour
 		
 		//ticker.transform.Translate(-1.5f,0,0);
 		if(CameraRotate.overtime == true){
-			tickerLapsLbl.text = "OVERTIME";
+			tickerLapsLbl.text = "Overtime";
 		} else {
-			tickerLapsLbl.text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
+			tickerLapsLbl.text = "Lap " + CameraRotate.lap + " of " + CameraRotate.raceEnd;
 		}
 		if(CameraRotate.lap == CameraRotate.raceEnd){
 			tickerFlagImg.color = new Color(255,255,255);
-			tickerLapsLbl.text = "FINAL LAP";
+			tickerLapsLbl.text = "Final Lap";
 		}
 		if(carsTagged == false){
 			if(carsArray.Length == 0){

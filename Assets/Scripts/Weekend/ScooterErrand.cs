@@ -54,7 +54,7 @@ public class ScooterErrand : MonoBehaviour
 
         Open = true;
         OptionalObjectives.Add(Objective);
-        SpawnIntroUI.Banner("OPTIONAL — FIND THE TEAM E-SCOOTER", "Quicker than walking to the briefing");
+        SpawnIntroUI.Banner("Optional — Find the team e-scooter", "Quicker than walking to the briefing");
     }
 
     void Update()

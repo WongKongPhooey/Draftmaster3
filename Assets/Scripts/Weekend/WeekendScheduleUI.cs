@@ -165,9 +165,9 @@ public class WeekendScheduleUI : MonoBehaviour
         float bandH = PixelGUI.Px(18f);
         PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
 
-        string track = string.IsNullOrEmpty(t.trackName) ? "THE TRACK" : t.trackName.ToUpperInvariant();
+        string track = string.IsNullOrEmpty(t.trackName) ? "The Track" : t.trackName;
         GUI.Label(new Rect(c.x + PixelGUI.Px(4f), c.y + PixelGUI.Px(4f), c.width, PixelGUI.Px(12f)),
-                  "RACE WEEKEND  ·  " + track, PixelGUI.Heading);
+                  "Race Weekend  ·  " + track, PixelGUI.Heading);
 
         var meta = PixelGUI.DataDim;
         var prev = meta.alignment;
@@ -175,7 +175,7 @@ public class WeekendScheduleUI : MonoBehaviour
         meta.alignment = TextAnchor.MiddleRight;
         meta.normal.textColor = WeekendLedger.WeekendOver ? PixelGUI.TextDisabled : PixelGUI.Gold;
         GUI.Label(new Rect(c.x, c.y, c.width - PixelGUI.Px(4f), bandH),
-                  WeekendLedger.WeekendOver ? "WEEKEND OVER" : WeekendLedger.ClockText, meta);
+                  WeekendLedger.WeekendOver ? "Weekend Over" : WeekendLedger.ClockText, meta);
         meta.alignment = prev;
         meta.normal.textColor = prevCol;
 
@@ -184,8 +184,8 @@ public class WeekendScheduleUI : MonoBehaviour
         // Who you are here as. A truck driver reading the Cup schedule needs to be told which line is theirs.
         var sub = PixelGUI.DataDim;
         GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(11f)),
-                  "ENTERED IN " + SeriesCatalog.Name(SeriesCatalog.PlayerSeries).ToUpperInvariant() +
-                  "  ·  ROUND " + (t.weekendId + 1), sub);
+                  "Entered in " + SeriesCatalog.Name(SeriesCatalog.PlayerSeries) +
+                  "  ·  Round " + (t.weekendId + 1), sub);
         cy += PixelGUI.Px(12f);
 
         if (!string.IsNullOrEmpty(_toast) && Time.unscaledTime < _toastUntil)
@@ -328,7 +328,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 var fc = fee.normal.textColor;
                 fee.normal.textColor = PixelGUI.Gold;
                 GUI.Label(new Rect(ix, iy, iw, PixelGUI.Px(11f)),
-                          "APPEARANCE FEE " + PlayerWallet.Format(a.appearanceFee), fee);
+                          "Appearance Fee " + PlayerWallet.Format(a.appearanceFee), fee);
                 fee.normal.textColor = fc;
                 iy += PixelGUI.Px(12f);
             }
@@ -339,7 +339,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 var mc = must.normal.textColor;
                 must.normal.textColor = PixelGUI.Danger;
                 string cost = a.skipMoneyPenalty > 0 ? " (" + PlayerWallet.Format(a.skipMoneyPenalty) + " to skip)" : "";
-                GUI.Label(new Rect(ix, iy, iw, PixelGUI.Px(11f)), "OBLIGATION" + cost, must);
+                GUI.Label(new Rect(ix, iy, iw, PixelGUI.Px(11f)), "Obligation" + cost, must);
                 must.normal.textColor = mc;
                 iy += PixelGUI.Px(12f);
             }
@@ -355,7 +355,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 var warn = PixelGUI.DataDim;
                 var wc = warn.normal.textColor;
                 warn.normal.textColor = PixelGUI.Danger;
-                iy += Paragraph(new Rect(ix, iy, iw, 0f), "CLASHES WITH " + string.Join(", ", live), warn) + PixelGUI.Px(3f);
+                iy += Paragraph(new Rect(ix, iy, iw, 0f), "Clashes with " + string.Join(", ", live), warn) + PixelGUI.Px(3f);
                 warn.normal.textColor = wc;
             }
 
@@ -364,7 +364,7 @@ public class WeekendScheduleUI : MonoBehaviour
             bool can = WeekendLedger.CanDo(a, out string why);
             if (can)
             {
-                if (PixelGUI.Button(new Rect(ix, by, iw, bh), a.IsOnTrack ? "GET IN THE CAR" : "GO"))
+                if (PixelGUI.Button(new Rect(ix, by, iw, bh), a.IsOnTrack ? "Get in the Car" : "Go"))
                     WeekendDirector.Begin(a);
             }
             else
@@ -375,7 +375,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 var oa = off.alignment;
                 off.normal.textColor = PixelGUI.TextDisabled;
                 off.alignment = TextAnchor.MiddleCenter;
-                GUI.Label(new Rect(ix, by, iw, bh), why.ToUpperInvariant(), off);
+                GUI.Label(new Rect(ix, by, iw, bh), why, off);
                 off.normal.textColor = oc;
                 off.alignment = oa;
             }
@@ -404,7 +404,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 var c = style.normal.textColor;
                 style.normal.textColor = winner.isPlayer ? PixelGUI.Gold : PixelGUI.Confirm;
                 GUI.Label(new Rect(x, y + used, w, row),
-                          winner.isPlayer ? "YOU WON IT" : "WON BY #" + winner.carNumber + " " + winner.driverName, style);
+                          winner.isPlayer ? "You Won It" : "Won by #" + winner.carNumber + " " + winner.driverName, style);
                 style.normal.textColor = c;
                 used += row + PixelGUI.Px(1f);
             }
@@ -415,7 +415,7 @@ public class WeekendScheduleUI : MonoBehaviour
         {
             var dim = PixelGUI.DataDim;
             GUI.Label(new Rect(x, y + used, w, row),
-                      "POINTS LEADER: " + leader.driverName + " (" + leader.points + ")", dim);
+                      "Points Leader: " + leader.driverName + " (" + leader.points + ")", dim);
             used += row + PixelGUI.Px(3f);
         }
 
@@ -429,22 +429,22 @@ public class WeekendScheduleUI : MonoBehaviour
         float y = r.y;
         float rowH = PixelGUI.Px(11f);
 
-        MeterRow(r.x, y, r.width, "FANS", Draftmaster.Fans.FanAppeal.Normalised, PixelGUI.Confirm,
+        MeterRow(r.x, y, r.width, "Fans", Draftmaster.Fans.FanAppeal.Normalised, PixelGUI.Confirm,
                  Mathf.RoundToInt(Draftmaster.Fans.FanAppeal.Value) + "/100"); y += rowH;
-        MeterRow(r.x, y, r.width, "SPONSOR", Signed01(WeekendLedger.SponsorMood), MoodColour(WeekendLedger.SponsorMood),
+        MeterRow(r.x, y, r.width, "Sponsor", Signed01(WeekendLedger.SponsorMood), MoodColour(WeekendLedger.SponsorMood),
                  Signed(WeekendLedger.SponsorMood)); y += rowH;
-        MeterRow(r.x, y, r.width, "TEAM", Signed01(WeekendLedger.TeamMorale), MoodColour(WeekendLedger.TeamMorale),
+        MeterRow(r.x, y, r.width, "Team", Signed01(WeekendLedger.TeamMorale), MoodColour(WeekendLedger.TeamMorale),
                  Signed(WeekendLedger.TeamMorale)); y += rowH;
-        MeterRow(r.x, y, r.width, "PRESS", Signed01(WeekendLedger.MediaStanding), MoodColour(WeekendLedger.MediaStanding),
+        MeterRow(r.x, y, r.width, "Press", Signed01(WeekendLedger.MediaStanding), MoodColour(WeekendLedger.MediaStanding),
                  Signed(WeekendLedger.MediaStanding)); y += rowH;
-        MeterRow(r.x, y, r.width, "SETUP", WeekendLedger.SetupGain, PixelGUI.Info,
+        MeterRow(r.x, y, r.width, "Setup", WeekendLedger.SetupGain, PixelGUI.Info,
                  Mathf.RoundToInt(WeekendLedger.SetupGain * 100f) + "%"); y += rowH;
 
         var cash = PixelGUI.Data;
         var cc = cash.normal.textColor;
         cash.normal.textColor = WeekendLedger.NetEarnings >= 0 ? PixelGUI.Gold : PixelGUI.Danger;
         GUI.Label(new Rect(r.x, y, r.width, rowH),
-                  "WEEKEND " + (WeekendLedger.NetEarnings >= 0 ? "+" : "-") +
+                  "Weekend " + (WeekendLedger.NetEarnings >= 0 ? "+" : "-") +
                   PlayerWallet.Format(Mathf.Abs(WeekendLedger.NetEarnings)), cash);
         cash.normal.textColor = cc;
     }
@@ -471,12 +471,12 @@ public class WeekendScheduleUI : MonoBehaviour
     {
         // Wide enough for the longest label, which only outgrows 150 in the phone's bigger button face.
         float bw = Mathf.Max(PixelGUI.Px(150f), PixelGUI.SnapUp(
-            PixelGUI.ButtonStyle.CalcSize(new GUIContent("START NEXT WEEKEND")).x));
+            PixelGUI.ButtonStyle.CalcSize(new GUIContent("Start Next Weekend")).x));
         float bh = r.height;
 
         if (WeekendLedger.WeekendOver)
         {
-            if (PixelGUI.Button(new Rect(r.x, r.y, bw, bh), "START NEXT WEEKEND"))
+            if (PixelGUI.Button(new Rect(r.x, r.y, bw, bh), "Start Next Weekend"))
             {
                 bool moved = WeekendDirector.NextWeekend();
                 // The next round is somewhere else: the race scene standing here has the old track in it.
@@ -497,8 +497,8 @@ public class WeekendScheduleUI : MonoBehaviour
         {
             var next = (int)WeekendLedger.CurrentSlot + 1;
             string label = next < WeekendSlots.Count
-                ? "SKIP TO " + WeekendSlots.ShortLabel((WeekendSlot)next)
-                : "END THE WEEKEND";
+                ? "Skip to " + WeekendSlots.ShortLabel((WeekendSlot)next)
+                : "End the Weekend";
             // Skipping ahead takes the player back to their motorhome and tells them what it cost there.
             if (PixelGUI.Button(new Rect(r.x, r.y, bw, bh), label))
             {
@@ -508,7 +508,7 @@ public class WeekendScheduleUI : MonoBehaviour
             }
         }
 
-        if (PixelGUI.Tab(new Rect(r.xMax - PixelGUI.Px(70f), r.y, PixelGUI.Px(70f), bh), "CLOSE", false))
+        if (PixelGUI.Tab(new Rect(r.xMax - PixelGUI.Px(70f), r.y, PixelGUI.Px(70f), bh), "Close", false))
             Close();
 
         // Which championship you are entered in is a career decision, so it can only be changed on a weekend
@@ -518,7 +518,7 @@ public class WeekendScheduleUI : MonoBehaviour
         if (WeekendLedger.DoneCount == 0 && WeekendLedger.MissedCount == 0)
         {
             if (PixelGUI.Tab(new Rect(switchX, r.y, switchW, bh),
-                             "SERIES: " + SeriesCatalog.ShortCode(SeriesCatalog.PlayerSeries), false))
+                             "Series: " + SeriesCatalog.ShortCode(SeriesCatalog.PlayerSeries), false))
             {
                 var all = SeriesCatalog.All;
                 int i = System.Array.IndexOf(all, SeriesCatalog.PlayerSeries);
@@ -535,8 +535,8 @@ public class WeekendScheduleUI : MonoBehaviour
         var a = foot.alignment;
         foot.alignment = TextAnchor.MiddleCenter;
         string keys = InputGlyphs.UsingGamepad
-            ? $"D-PAD SELECT  ·  {InputGlyphs.PadName(PadBindings.Confirm)} GO  ·  {InputGlyphs.PadName(PadBindings.Back)} CLOSE"
-            : "W/S SELECT  ·  F10 CLOSE";
+            ? $"D-Pad Select  ·  {InputGlyphs.PadName(PadBindings.Confirm)} Go  ·  {InputGlyphs.PadName(PadBindings.Back)} Close"
+            : "W/S Select  ·  F10 Close";
         GUI.Label(new Rect(r.x + bw, r.y, switchX - r.x - bw, bh), keys, foot);
         foot.alignment = a;
     }

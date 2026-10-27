@@ -91,14 +91,14 @@ public class SponsorBoardPanel : MonoBehaviour
 
     void Refresh()
     {
-        _title.text = "SPONSORSHIP — WHAT'S ON THE CAR";
+        _title.text = "Sponsorship — What's on the Car";
         _income.text = $"On the car: ${SponsorBook.PerRaceIncome():N0} per race";
 
         for (int i = _rows.childCount - 1; i >= 0; i--) Destroy(_rows.GetChild(i).gameObject);
         float y = 0f;
 
         // Panels first: the car itself, one row per slot, showing what's painted there.
-        y = AddHeading("PANELS", y);
+        y = AddHeading("Panels", y);
         foreach (var slot in SponsorSlots.All)
         {
             var occupant = SponsorBook.InSlot(slot);
@@ -109,15 +109,15 @@ public class SponsorBoardPanel : MonoBehaviour
 
             SponsorSlot captured = slot;
             if (_picking != 0)
-                y = AddButton(label, "PLACE HERE", y, () => PlacePicked(captured));
+                y = AddButton(label, "Place Here", y, () => PlacePicked(captured));
             else if (occupant != null)
-                y = AddButton(label, "TAKE OFF", y, () => { SponsorBook.Unplace(occupant.id); _status.text = $"{occupant.sponsorName} came off the {SponsorSlots.DisplayName(captured).ToLowerInvariant()}."; Refresh(); });
+                y = AddButton(label, "Take Off", y, () => { SponsorBook.Unplace(occupant.id); _status.text = $"{occupant.sponsorName} came off the {SponsorSlots.DisplayName(captured).ToLowerInvariant()}."; Refresh(); });
             else
                 y = AddRow(label, y);
         }
 
         y += 12f;
-        y = AddHeading("SIGNED DEALS", y);
+        y = AddHeading("Signed Deals", y);
         if (SponsorBook.Count == 0)
         {
             y = AddRow("Nothing signed. Sponsors' reps work the pit lane on a race weekend — go and talk to them.", y);

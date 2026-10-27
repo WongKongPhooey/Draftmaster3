@@ -124,18 +124,18 @@ public class WeekendResultCard : MonoBehaviour
         {
             if (i == MaxSkippedRows - 1 && report.skipped.Count > MaxSkippedRows)
             {
-                rows.Add(("+" + (report.skipped.Count - i) + " MORE", "SKIPPED", PixelGUI.TextDim));
+                rows.Add(("+" + (report.skipped.Count - i) + " More", "Skipped", PixelGUI.TextDim));
                 break;
             }
             var a = report.skipped[i];
             string title = a.title.Length > 26 ? a.title.Substring(0, 26) : a.title;
-            rows.Add((title.ToUpperInvariant(), a.mandatory ? "NO-SHOW" : "SKIPPED",
+            rows.Add((title, a.mandatory ? "No-Show" : "Skipped",
                       a.mandatory ? PixelGUI.Danger : PixelGUI.TextDim));
         }
 
         var outcome = report.cost;
         outcome.headline = headline;
-        Show(new WeekendActivity { title = "SKIPPED " + WeekendSlots.ShortLabel(report.from) }, outcome);
+        Show(new WeekendActivity { title = "Skipped " + WeekendSlots.ShortLabel(report.from) }, outcome);
         Instance._summary = true;
         Instance._skippedRows = rows;
     }
@@ -267,7 +267,7 @@ public class WeekendResultCard : MonoBehaviour
         }
 
         if (PixelGUI.Button(new Rect(c.x, c.yMax - buttonH, c.width, buttonH),
-                            _inWorld || _summary || _drove ? "GOT IT" : "BACK TO THE SCHEDULE") ||
+                            _inWorld || _summary || _drove ? "Got It" : "Back to the Schedule") ||
             (Time.unscaledTime - _openedAt > 0.4f && ConfirmPressed()))
             Dismiss();
     }
@@ -288,18 +288,18 @@ public class WeekendResultCard : MonoBehaviour
         if (_skippedRows != null) lines.AddRange(_skippedRows);
 
         if (o.money != 0)
-            lines.Add((o.money > 0 ? "EARNED" : "COST",
+            lines.Add((o.money > 0 ? "Earned" : "Cost",
                        (o.money > 0 ? "+" : "-") + PlayerWallet.Format(Mathf.Abs(o.money)),
                        o.money > 0 ? PixelGUI.Gold : PixelGUI.Danger));
 
-        Add(lines, "FAN APPEAL", o.fanAppeal, 0.05f);
-        Add(lines, "SPONSOR MOOD", o.sponsorMood, 0.5f);
-        Add(lines, "TEAM MORALE", o.teamMorale, 0.5f);
-        Add(lines, "PRESS", o.mediaStanding, 0.5f);
+        Add(lines, "Fan Appeal", o.fanAppeal, 0.05f);
+        Add(lines, "Sponsor Mood", o.sponsorMood, 0.5f);
+        Add(lines, "Team Morale", o.teamMorale, 0.5f);
+        Add(lines, "Press", o.mediaStanding, 0.5f);
         if (o.setupGain > 0.001f)
-            lines.Add(("SETUP", "+" + Mathf.RoundToInt(o.setupGain * 100f) + "%", PixelGUI.Info));
+            lines.Add(("Setup", "+" + Mathf.RoundToInt(o.setupGain * 100f) + "%", PixelGUI.Info));
         if (!string.IsNullOrEmpty(o.rivalName) && Mathf.Abs(o.rivalDelta) > 0.5f)
-            lines.Add((o.rivalName.ToUpperInvariant(),
+            lines.Add((o.rivalName,
                        (o.rivalDelta > 0f ? "+" : "") + Mathf.RoundToInt(o.rivalDelta),
                        o.rivalDelta > 0f ? PixelGUI.Confirm : PixelGUI.Danger));
 

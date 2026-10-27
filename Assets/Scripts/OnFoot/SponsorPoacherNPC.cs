@@ -82,7 +82,7 @@ public class SponsorPoacherNPC : NPCInteractable
         if (beatRate > 0)
             terms.Add($"Currently     ${beatRate:N0} per race on your best panel");
 
-        SponsorOfferPopup.Show(this, sponsor.Name.ToUpperInvariant(), "Term sheet — offered in the paddock",
+        SponsorOfferPopup.Show(this, sponsor.Name, "Term sheet — offered in the paddock",
                                terms.ToArray(),
                                "Signing is half the job. A sponsor pays nothing until its decal is on a panel.",
                                Answered);

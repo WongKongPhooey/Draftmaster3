@@ -80,14 +80,14 @@ namespace Draftmaster.Weekend
         // Short tag shown on the left of a timetable row.
         public static string Tag(ActivityKind k)
         {
-            if (IsOnTrack(k)) return "TRACK";
-            if (IsSpectate(k)) return "WATCH";
-            if (IsMedia(k)) return "MEDIA";
-            if (IsFanDuty(k)) return "FANS";
+            if (IsOnTrack(k)) return "Track";
+            if (IsSpectate(k)) return "Watch";
+            if (IsMedia(k)) return "Media";
+            if (IsFanDuty(k)) return "Fans";
             if (IsSponsorDuty(k) || k == ActivityKind.PitChallenge) return "SPONSOR";
-            if (IsTeam(k)) return "TEAM";
-            if (IsCeremony(k)) return "OFFICIAL";
-            return "OPEN";
+            if (IsTeam(k)) return "Team";
+            if (IsCeremony(k)) return "Official";
+            return "Open";
         }
     }
 
@@ -108,7 +108,7 @@ namespace Draftmaster.Weekend
         // read it without a null check.
         public RacingSeries series;
 
-        public string title;      // "CUP QUALIFYING", "AUTOGRAPH SESSION"
+        public string title;      // "Cup Qualifying", "Autograph Session"
         public string subtitle;   // one line of what it actually is
         public string location;   // "Fan zone stage", "Media centre", "Pit road"
 

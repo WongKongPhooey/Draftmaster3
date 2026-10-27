@@ -257,8 +257,8 @@ public class PracticeDirector : MonoBehaviour
         get
         {
             if (Instance == null || !Instance.enabled || Instance._ended) return null;
-            if (WeekendRouted) return "END SESSION";
-            return Instance._isQualifying ? "START RACE" : "QUALIFYING";
+            if (WeekendRouted) return "End Session";
+            return Instance._isQualifying ? "Start Race" : "Qualifying";
         }
     }
 
@@ -359,7 +359,7 @@ public class PracticeDirector : MonoBehaviour
             ? $"{(_isQualifying ? "QUALIFYING" : "PRACTICE")}  {Mathf.FloorToInt(Mathf.Max(0f, remaining) / 60f)}:{Mathf.FloorToInt(Mathf.Max(0f, remaining) % 60f):00}"
             : _wrapUp != null && _wrapUp.AIDriving ? "CHEQUERED FLAG · BRINGING YOU IN"
             : _wrapUp != null && _wrapUp.OnPitRoad ? "CHEQUERED FLAG · STOP IN YOUR BOX"
-            : "CHEQUERED FLAG · FINISH THE LAP OR PIT";
+            : "Chequered flag · finish the lap or pit";
 
         // Up in the corner itself now. It used to be pushed down to clear the red session button that sat
         // above it, and that button is gone.

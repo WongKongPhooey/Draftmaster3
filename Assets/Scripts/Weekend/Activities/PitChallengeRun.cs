@@ -391,30 +391,30 @@ public class PitChallengeRun : MonoBehaviour
         {
             case Phase.Countdown:
                 int n = Mathf.CeilToInt(CountdownSeconds - _phaseTime);
-                big = n > 0 ? n.ToString() : "GO!";
-                small = "PIT-STOP CHALLENGE  -  LIMITER OFF";
+                big = n > 0 ? n.ToString() : "Go!";
+                small = "Pit-Stop Challenge  -  Limiter Off";
                 break;
             case Phase.Running:
-                big = _phaseTime < 0.8f ? "GO!" : $"{_clock:0.00}s";
+                big = _phaseTime < 0.8f ? "Go!" : $"{_clock:0.00}s";
                 colour = _phaseTime < 0.8f ? PixelGUI.Confirm : PixelGUI.Gold;
-                small = "STOP FULLY INSIDE THE BOX";
+                small = "Stop Fully Inside the Box";
                 break;
             case Phase.Servicing:
                 big = $"{_clock:0.00}s";
-                small = $"FOUR TYRES...  {Mathf.Max(0f, PitChallenge.ServiceSeconds - _serviceTime):0.0}";
+                small = $"Four tyres...  {Mathf.Max(0f, PitChallenge.ServiceSeconds - _serviceTime):0.0}";
                 break;
             case Phase.Leaving:
                 big = $"{_clock:0.00}s";
                 colour = PixelGUI.Confirm;
-                small = "GO GO GO - CLEAR THE BOX";
+                small = "Go go go - clear the box";
                 break;
             default:
                 var grade = PitChallenge.GradeFor(_clock, _par, _completed);
-                big = _completed ? $"{_clock:0.00}s" : "NO TIME";
+                big = _completed ? $"{_clock:0.00}s" : "No Time";
                 colour = _completed ? PixelGUI.Confirm : PixelGUI.Danger;
                 small = PitChallenge.Label(grade)
-                        + (_completed ? $"   PAR {_par:0.0}s" : "   MISSED THE BOX")
-                        + (_completed && _personalBest ? "   NEW BEST" : _best > 0f ? $"   BEST {_best:0.00}s" : "");
+                        + (_completed ? $"   Par {_par:0.0}s" : "   Missed the Box")
+                        + (_completed && _personalBest ? "   New Best" : _best > 0f ? $"   Best {_best:0.00}s" : "");
                 break;
         }
 

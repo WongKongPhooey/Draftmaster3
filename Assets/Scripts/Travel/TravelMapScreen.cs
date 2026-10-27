@@ -1031,9 +1031,9 @@ public class TravelMapScreen : MonoBehaviour
 
     static string LabelFor(TravelNode n)
     {
-        if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name.ToUpperInvariant();
+        if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name;
         if (!TravelState.IsVisited(n.id)) return "?";
-        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name.ToUpperInvariant();
+        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name;
     }
 
     // ---------------- footer buttons ----------------
@@ -1055,7 +1055,7 @@ public class TravelMapScreen : MonoBehaviour
         if (current.isCircuit)
         {
             if (current == dest && TravelTutorial.CanStartWeekend)
-                ShowAction("START RACE WEEKEND", () => StartRaceWeekend(current));
+                ShowAction("Start Race Weekend", () => StartRaceWeekend(current));
         }
         else if (walkButton != null)
         {
@@ -1093,12 +1093,12 @@ public class TravelMapScreen : MonoBehaviour
         string next = path != null && path.Count > 0 ? path[0] : null;
         if (current != dest && next != null && TravelState.StopsLeft > 0 && TravelTutorial.RouteReady
             && TravelTutorial.CanMoveTo(next))
-            ShowAction(_stoppedOnRoute ? "CONTINUE" : "GO", StartDrive);
+            ShowAction(_stoppedOnRoute ? "Continue" : "Go", StartDrive);
 
         // Stranded? Tow covers the rest of the way, for a price. Never a softlock.
         if (current != dest && TravelState.StopsLeft <= 0)
         {
-            ShowAction($"TOW TO {dest.name.ToUpperInvariant()} ({PlayerWallet.Format(TowCost)})", () =>
+            ShowAction($"Tow to {dest.name} ({PlayerWallet.Format(TowCost)})", () =>
             {
                 PlayerWallet.Add(-TowCost); // clamped at $0 — the tow always runs
                 TravelState.CurrentNodeId = dest.id;

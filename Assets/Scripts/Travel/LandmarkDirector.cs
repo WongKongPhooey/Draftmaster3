@@ -20,7 +20,7 @@ public class LandmarkDirector : MonoBehaviour
         // Where you are is announced, not lettered: the same card the track name arrives on, and the same
         // one a venue uses when you walk up to it (LocationTitle).
         if (signLabel != null) signLabel.gameObject.SetActive(false);
-        SpawnIntroUI.Banner((node != null ? node.name : "Nowhere, USA").ToUpperInvariant(), TypeLabel(node));
+        SpawnIntroUI.Banner(node != null ? node.name : "Nowhere, USA", TypeLabel(node));
 
         GameObject prefab = null;
         if (node != null)

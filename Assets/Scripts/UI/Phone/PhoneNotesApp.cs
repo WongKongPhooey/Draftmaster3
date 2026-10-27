@@ -6,7 +6,7 @@ using UnityEngine;
 public class PhoneNotesApp : PhoneApp
 {
     public override string Id => "notes";
-    public override string TileName => "NOTES";
+    public override string TileName => "Notes";
     public override string TileSubtitle => "Who asked what";
     public override Color Accent => PixelGUI.Confirm;
     public override int Badge => PhoneNotes.Unread;
@@ -29,7 +29,7 @@ public class PhoneNotesApp : PhoneApp
             return Empty(x, y, w, "Nothing written down yet. Talk to people in the paddock — anything you " +
                                   "agree to ends up here.");
 
-        y += Section(x, y, w, $"OPEN · {open}");
+        y += Section(x, y, w, $"Open · {open}");
         if (open == 0) y += Empty(x, y, w, "All caught up.");
         for (int i = 0; i < notes.Count; i++)
             if (!notes[i].resolved) y += DrawNote(x, y, w, notes[i]);
@@ -37,7 +37,7 @@ public class PhoneNotesApp : PhoneApp
         if (done > 0)
         {
             y += PixelGUI.Px(6f);
-            y += Section(x, y, w, $"DONE · {done}");
+            y += Section(x, y, w, $"Done · {done}");
             for (int i = 0; i < notes.Count; i++)
                 if (notes[i].resolved) y += DrawNote(x, y, w, notes[i]);
         }
@@ -62,7 +62,7 @@ public class PhoneNotesApp : PhoneApp
         Plate(plate, note.resolved ? PixelGUI.PlateLight : PixelGUI.Confirm);
 
         float cx = x + pad, cy = y + pad;
-        cy += Row(cx, cy, inner, note.title, note.resolved ? "DONE" : "",
+        cy += Row(cx, cy, inner, note.title, note.resolved ? "Done" : "",
                   note.resolved ? PixelGUI.TextDim : PixelGUI.Text);
         cy += Row(cx, cy, inner, string.IsNullOrEmpty(note.from) ? note.stamp : note.from, note.stamp,
                   PixelGUI.TextDisabled, dim: true);

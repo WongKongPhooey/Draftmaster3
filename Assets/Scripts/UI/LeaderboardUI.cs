@@ -129,13 +129,13 @@ public class LeaderboardUI : MonoBehaviour
 
     string Header(bool broadcast, bool byLap, bool expanded, int n)
     {
-        if (broadcast) return "ORDER · CLICK = CAMERA";
+        if (broadcast) return "Order · Click = Camera";
         if (byLap)
         {
-            string session = RaceWeekend.IsQualifying ? "QUALIFYING" : "PRACTICE";
-            return expanded ? $"{session} · {n} CARS" : $"{session} · BEST LAP";
+            string session = RaceWeekend.IsQualifying ? "Qualifying" : "Practice";
+            return expanded ? $"{session} · {n} Cars" : $"{session} · Best Lap";
         }
-        return expanded ? $"ORDER · {n} CARS" : (InputGlyphs.UsingTouch ? "ORDER · TAP = FULL" : "ORDER · TAB = FULL");
+        return expanded ? $"Order · {n} Cars" : (InputGlyphs.UsingTouch ? "Order · Tap = Full" : "Order · Tab = Full");
     }
 
     // Practice/qualifying: rank on best lap, show the lap itself. False when timing isn't up yet, so the

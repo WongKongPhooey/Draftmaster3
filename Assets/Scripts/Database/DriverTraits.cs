@@ -22,9 +22,9 @@ public static class DriverTraits
 
     public static string Label(DriverTrait trait) => trait switch
     {
-        DriverTrait.Icon => "ICON",
-        DriverTrait.FanFavourite => "FAN FAVOURITE",
-        DriverTrait.Aggressive => "AGGRESSIVE",
-        _ => trait.ToString().ToUpperInvariant(),
+        DriverTrait.Icon => "Icon",
+        DriverTrait.FanFavourite => "Fan Favourite",
+        DriverTrait.Aggressive => "Aggressive",
+        _ => System.Text.RegularExpressions.Regex.Replace(trait.ToString(), "(?<=[a-z])(?=[A-Z])", " "),
     };
 }

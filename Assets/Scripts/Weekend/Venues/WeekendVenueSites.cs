@@ -355,7 +355,7 @@ public class WeekendVenueSites : MonoBehaviour
                 gate.destination = marker.teleportTo;
                 gate.marker = marker;
                 gate.venue = marker.venue;
-                gate.speakerName = marker.Label.ToUpperInvariant();
+                gate.speakerName = marker.Label;
                 gate.interactRange = Mathf.Max(3f, marker.Range);
             }
 
@@ -519,7 +519,7 @@ public class WeekendVenueSites : MonoBehaviour
 
             // The seat itself is the interaction: walk up, press the action button, sit down and watch.
             var seat = anchor.gameObject.AddComponent<GrandstandSeat>();
-            seat.speakerName = "GRANDSTAND";
+            seat.speakerName = "Grandstand";
             seat.interactRange = 3.2f;
             placed++;
         }
@@ -532,7 +532,7 @@ public class WeekendVenueSites : MonoBehaviour
             var gate = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, gatePoint, gatePoint,
                                            arriveRange: 4f, label: "the gate to the grandstands");
             var gateSeat = gate.gameObject.AddComponent<GrandstandSeat>();
-            gateSeat.speakerName = "GRANDSTAND";
+            gateSeat.speakerName = "Grandstand";
             gateSeat.interactRange = 3.2f;
             placed++;
             Debug.Log("WeekendVenues: the stands are outside the paddock — watching a session starts at the gate.");
@@ -591,7 +591,7 @@ public class WeekendVenueSites : MonoBehaviour
         // The top table the officials and the press sit behind, across the back of the room.
         PaddockProps.Quad(room.transform, "TopTable", new Vector2(0f, hy - TopTableInset),
                           new Vector2(TopTableWidth, TopTableDepth), PaddockProps.PropZ, tableMat);
-        LocationTitle.Attach(room, "DRIVERS' ROOM", RoomWidth * 0.7f, "Drivers' meeting and the press");
+        LocationTitle.Attach(room, "Drivers' Room", RoomWidth * 0.7f, "Drivers' meeting and the press");
 
         int seats = BuildSeats(room.transform, seatMat, hy);
         SeatTheDrivers(room.transform, hy, seats);
@@ -697,7 +697,7 @@ public class WeekendVenueSites : MonoBehaviour
             else if (i == 0)
             {
                 var host = PaddockPerson.SpawnTalker<WeekendVenueHost>(
-                    panel.transform, Vector3.zero, "Host_PressConference", 7690, "MEDIA MANAGER",
+                    panel.transform, Vector3.zero, "Host_PressConference", 7690, "Media Manager",
                     new[] { "Press conference is on the schedule. Your chair's the one in the middle." },
                     interactRange: 2.6f, heightM: PaddockPerson.SeatedHeightM);
                 host.transform.localPosition = local;
@@ -764,7 +764,7 @@ public class WeekendVenueSites : MonoBehaviour
                               PaddockProps.PropZ - 0.02f, postMat);
         }
 
-        LocationTitle.Attach(fence, "FAN ZONE", FenceLength * 0.5f, "Signing sessions");
+        LocationTitle.Attach(fence, "Fan Zone", FenceLength * 0.5f, "Signing sessions");
 
         // The crowd, on the public side of the rail. They are the reason the fence is there and the reason
         // signing is done stood at it — you are on the inside, they are on the outside, and the barrier is
@@ -867,7 +867,7 @@ public class WeekendVenueSites : MonoBehaviour
 
         SponsorBoardsArc(circle.transform);
 
-        LocationTitle.Attach(circle, "WINNER'S CIRCLE", BarrierRing, "Sponsor duty");
+        LocationTitle.Attach(circle, "Winner's Circle", BarrierRing, "Sponsor duty");
 
         // Somebody waiting on the way out of it: a rival brand's rep who has watched the driver work the
         // room and wants them off whoever is on the car. The gap in the front rail is the one doorway
@@ -934,7 +934,7 @@ public class WeekendVenueSites : MonoBehaviour
 
         if (art == null)
         {
-            PaddockProps.Sign(board.transform, "SPONSOR", Vector2.zero, size.x * 0.8f, new Color(0.16f, 0.16f, 0.18f));
+            PaddockProps.Sign(board.transform, "Sponsor", Vector2.zero, size.x * 0.8f, new Color(0.16f, 0.16f, 0.18f));
             return;
         }
 
@@ -1101,7 +1101,7 @@ public class WeekendVenueSites : MonoBehaviour
                           PaddockProps.FloorZ, Mat(new Color(0.24f, 0.25f, 0.29f)));
         PaddockProps.Quad(stage.transform, "Backdrop", new Vector2(0f, StageDepth * 0.5f - 0.5f),
                           new Vector2(StageWidth, 1.0f), PaddockProps.PropZ, Mat(new Color(0.13f, 0.35f, 0.58f)));
-        LocationTitle.Attach(stage, "DRIVER INTRODUCTIONS", StageWidth, "The stage at the end of pit road");
+        LocationTitle.Attach(stage, "Driver Introductions", StageWidth, "The stage at the end of pit road");
 
         // An authored marker registered its own anchor, where the track put it.
         if (authored) return;

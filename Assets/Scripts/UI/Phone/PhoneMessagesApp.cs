@@ -9,7 +9,7 @@ using UnityEngine;
 public class PhoneMessagesApp : PhoneApp
 {
     public override string Id => "messages";
-    public override string TileName => "MESSAGES";
+    public override string TileName => "Messages";
     public override string TileSubtitle => UnreadLabel(PhoneMessages.Unread);
     public override Color Accent => PixelGUI.Danger;
     public override int Badge => PhoneMessages.Unread;
@@ -58,7 +58,7 @@ public class PhoneMessagesApp : PhoneApp
         if (threads.Count == 0)
             return Empty(x, y, w, "No messages. People on the team text when they need you somewhere.");
 
-        y += Section(x, y, w, $"THREADS · {threads.Count}");
+        y += Section(x, y, w, $"Threads · {threads.Count}");
 
         float pad = PixelGUI.Px(4f);
         float inner = w - pad * 2f;
@@ -71,7 +71,7 @@ public class PhoneMessagesApp : PhoneApp
             if (Pressed(plate)) OpenThread(t);
 
             float cy = y + pad;
-            cy += Row(x + pad, cy, inner, Name(t), t.Unread > 0 ? t.Unread + " NEW" : (t.Last?.stamp ?? ""),
+            cy += Row(x + pad, cy, inner, Name(t), t.Unread > 0 ? t.Unread + " New" : (t.Last?.stamp ?? ""),
                       t.Unread > 0 ? PixelGUI.Text : PixelGUI.TextDim);
             Row(x + pad, cy, inner, Trim(t.Last?.text, 30), "", PixelGUI.TextDisabled, dim: true);
 
@@ -93,7 +93,7 @@ public class PhoneMessagesApp : PhoneApp
             y += PixelGUI.Px(3f);
         }
 
-        y += Section(x, y, w, Name(thread).ToUpperInvariant());
+        y += Section(x, y, w, Name(thread));
         if (!string.IsNullOrEmpty(thread.role)) y += Row(x, y, w, thread.role, "", PixelGUI.TextDim, dim: true);
         y += PixelGUI.Px(3f);
 
@@ -134,7 +134,7 @@ public class PhoneMessagesApp : PhoneApp
     float NewRule(float x, float y, float w)
     {
         float h = RowH;
-        const string label = "NEW";
+        const string label = "New";
         float labelW = Mathf.Ceil(PhoneStyles.Footer.CalcSize(new GUIContent(label)).x);
         PhoneStyles.Label(new Rect(x, y, labelW, h), label, PhoneStyles.Footer, Accent);
         float gap = PixelGUI.Px(3f);

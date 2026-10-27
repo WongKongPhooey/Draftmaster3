@@ -123,9 +123,9 @@ public static class SeriesRoster
     public static string Label(Draftmaster.Data.Series series)
     {
         if (series == null) return "";
-        if (!string.IsNullOrWhiteSpace(series.Name)) return series.Name.Trim().ToUpperInvariant();
-        if (!string.IsNullOrWhiteSpace(series.ShortName)) return series.ShortName.Trim().ToUpperInvariant();
-        return "SERIES " + series.Id;
+        if (!string.IsNullOrWhiteSpace(series.Name)) return series.Name.Trim();
+        if (!string.IsNullOrWhiteSpace(series.ShortName)) return series.ShortName.Trim();
+        return "Series " + series.Id;
     }
 
     // A driver reads as the car first, the way a timing tower does — the number is what the player is
@@ -136,7 +136,7 @@ public static class SeriesRoster
         string name = string.Join(" ", new[] { driver.FirstName, driver.LastName }
                                        .Where(part => !string.IsNullOrWhiteSpace(part)));
         if (string.IsNullOrWhiteSpace(name)) name = RosterLookup.LabelName(driver);
-        name = name.Trim().ToUpperInvariant();
+        name = name.Trim();
         return driver.CarNumber > 0 ? $"#{driver.CarNumber} {name}" : name;
     }
 

@@ -15,7 +15,7 @@ using UnityEngine;
 public class PhoneChampionshipApp : PhoneApp
 {
     public override string Id => "championship";
-    public override string TileName => "POINTS";
+    public override string TileName => "Points";
     public override string TileSubtitle => "Championships";
     public override Color Accent => PixelGUI.Info;
 
@@ -34,7 +34,7 @@ public class PhoneChampionshipApp : PhoneApp
             return Empty(x, y, w, "No rounds run yet. The season starts at the first track you turn up to.");
 
         // --- the three races of the weekend you are stood in ---
-        y += Section(x, y, w, "THIS WEEKEND");
+        y += Section(x, y, w, "This Weekend");
         if (live < 0 || SeasonChampionships.RoundNumber(live) == 0)
         {
             y += Empty(x, y, w, "Between weekends.");
@@ -43,7 +43,7 @@ public class PhoneChampionshipApp : PhoneApp
         {
             string track = SeasonChampionships.TrackNameOf(live);
             y += Row(x, y, w, string.IsNullOrEmpty(track) ? "The track" : track,
-                     "ROUND " + SeasonChampionships.RoundNumber(live), PixelGUI.Gold);
+                     "Round " + SeasonChampionships.RoundNumber(live), PixelGUI.Gold);
 
             foreach (var s in SeriesCatalog.All)
                 y += WeekendRaceRow(x, y, w, s, live, s == mine);
@@ -54,7 +54,7 @@ public class PhoneChampionshipApp : PhoneApp
         var feed = SeasonChampionships.Feed(5);
         if (feed.Count > 0)
         {
-            y += Section(x, y, w, "RESULTS");
+            y += Section(x, y, w, "Results");
             foreach (var line in feed)
                 y += Body(x, y, w, "· " + line.text, line.playerRaced ? PixelGUI.Gold : PixelGUI.TextDim);
             y += PixelGUI.Px(6f);
@@ -72,7 +72,7 @@ public class PhoneChampionshipApp : PhoneApp
     // One of this weekend's three races: the result if it has run, otherwise when it is due.
     static float WeekendRaceRow(float x, float y, float w, RacingSeries s, int round, bool mine)
     {
-        string label = SeriesCatalog.ShortCode(s) + " RACE";
+        string label = SeriesCatalog.ShortCode(s) + " Race";
 
         if (!SeasonChampionships.HasRun(s, round))
         {
@@ -83,7 +83,7 @@ public class PhoneChampionshipApp : PhoneApp
 
         var winner = SeasonChampionships.Result(s, round).Winner;
         string right = winner == null ? "-"
-                     : winner.isPlayer ? "YOU WON"
+                     : winner.isPlayer ? "You Won"
                      : "#" + winner.carNumber + " " + Trim(LastName(winner.driverName), 12);
         return Row(x, y, w, label, right, winner != null && winner.isPlayer ? PixelGUI.Gold : PixelGUI.Confirm);
     }
@@ -94,7 +94,7 @@ public class PhoneChampionshipApp : PhoneApp
         float y0 = y;
         var table = SeasonChampionships.Standings(s);
 
-        y += Section(x, y, w, SeriesCatalog.Name(s).ToUpperInvariant() + (mine ? " - YOURS" : ""));
+        y += Section(x, y, w, SeriesCatalog.Name(s) + (mine ? " - Yours" : ""));
         if (table.Count == 0)
         {
             y += Empty(x, y, w, "Not run yet.");

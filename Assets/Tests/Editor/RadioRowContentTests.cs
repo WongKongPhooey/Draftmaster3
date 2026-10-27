@@ -22,7 +22,7 @@ public class RadioRowContentTests
     public void OnlyTheRadioRowMediaHitIsRadioRow()
     {
         Assert.IsTrue(RadioRowContent.Is(RadioRow()));
-        Assert.IsFalse(RadioRowContent.Is(new WeekendActivity { kind = ActivityKind.MediaHit, title = "PODCAST TAPING" }));
+        Assert.IsFalse(RadioRowContent.Is(new WeekendActivity { kind = ActivityKind.MediaHit, title = "Podcast Taping" }));
         Assert.IsFalse(RadioRowContent.Is(new WeekendActivity { kind = ActivityKind.PressConference, title = RadioRowContent.Title }));
         Assert.IsFalse(RadioRowContent.Is(null));
     }
@@ -37,7 +37,7 @@ public class RadioRowContentTests
         Assert.AreEqual(1, c.beats.Count);
         var beat = c.beats[0];
         Assert.AreEqual(RadioRowContent.Choices, beat.choices.Count);
-        StringAssert.DoesNotContain("CREW CHIEF", beat.speaker);
+        StringAssert.DoesNotContain("Crew Chief", beat.speaker);
         Assert.IsFalse(string.IsNullOrEmpty(beat.speaker), "the reporter is named");
 
         var keys = new HashSet<string>();

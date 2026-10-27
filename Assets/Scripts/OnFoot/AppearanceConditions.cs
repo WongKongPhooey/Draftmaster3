@@ -159,7 +159,7 @@ public class AppearanceConditions
     public string Summarise()
     {
         var bits = new List<string>();
-        if (!enabled) bits.Add("DISABLED");
+        if (!enabled) bits.Add("Disabled");
         if (!(inPractice && inQualifying && inRace))
         {
             var s = new List<string>();
@@ -171,12 +171,12 @@ public class AppearanceConditions
         if (!(fridayAM && fridayPM && saturdayAM && saturdayPM && sundayAM && sundayPM))
         {
             var half = new List<string>();
-            if (fridayAM) half.Add("FRI AM");
-            if (fridayPM) half.Add("FRI PM");
-            if (saturdayAM) half.Add("SAT AM");
-            if (saturdayPM) half.Add("SAT PM");
-            if (sundayAM) half.Add("SUN AM");
-            if (sundayPM) half.Add("SUN PM");
+            if (fridayAM) half.Add("Fri AM");
+            if (fridayPM) half.Add("Fri PM");
+            if (saturdayAM) half.Add("Sat AM");
+            if (saturdayPM) half.Add("Sat PM");
+            if (sundayAM) half.Add("Sun AM");
+            if (sundayPM) half.Add("Sun PM");
             bits.Add(half.Count == 0 ? "no half-day" : string.Join("/", half));
         }
         if (tracks != null && tracks.Length > 0) bits.Add(Join(tracks));

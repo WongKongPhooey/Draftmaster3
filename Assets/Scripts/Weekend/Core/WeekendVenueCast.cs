@@ -26,7 +26,7 @@ namespace Draftmaster.Weekend
         {
             new Host
             {
-                venue = WeekendVenue.PitBox, speaker = "CREW CHIEF", offsetAlong = 0.4f,
+                venue = WeekendVenue.PitBox, speaker = "Crew Chief", offsetAlong = 0.4f,
                 idleLine = "Car's on the setup pad, {playerfirst}. Shout if you want anything changed.",
             },
             // The one host who is not stood at his venue all weekend. The motorhome is the driver's own
@@ -36,27 +36,27 @@ namespace Draftmaster.Weekend
             // man who has just sat down rather than one who lives there.
             new Host
             {
-                venue = WeekendVenue.Motorhome, speaker = "ENGINEER", offsetAlong = 0f,
+                venue = WeekendVenue.Motorhome, speaker = "Engineer", offsetAlong = 0f,
                 idleLine = "Give me a minute, {playerfirst}, the run's still loading.",
             },
             new Host
             {
-                venue = WeekendVenue.MeetingRoom, speaker = "SERIES OFFICIAL", offsetAlong = 1.2f,
+                venue = WeekendVenue.MeetingRoom, speaker = "Series Official", offsetAlong = 1.2f,
                 idleLine = "Room's open. We start when the schedule says we start.",
             },
             new Host
             {
-                venue = WeekendVenue.SponsorSuite, speaker = "SPONSOR REP", offsetAlong = 1f,
+                venue = WeekendVenue.SponsorSuite, speaker = "Sponsor Rep", offsetAlong = 1f,
                 idleLine = "Come back when you're down for an appearance and I'll walk you in.",
             },
             new Host
             {
-                venue = WeekendVenue.SigningFence, speaker = "FAN LIAISON", offsetAlong = -1f,
+                venue = WeekendVenue.SigningFence, speaker = "Fan Liaison", offsetAlong = -1f,
                 idleLine = "Queue builds up about ten minutes before you're due. Don't be late for them.",
             },
             new Host
             {
-                venue = WeekendVenue.IntroStage, speaker = "STAGE MANAGER", offsetAlong = -1.4f,
+                venue = WeekendVenue.IntroStage, speaker = "Stage Manager", offsetAlong = -1.4f,
                 idleLine = "You're on after the 24 car. Not before.",
             },
         };

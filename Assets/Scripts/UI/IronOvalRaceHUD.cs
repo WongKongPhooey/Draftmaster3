@@ -191,7 +191,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         float rowW = Mathf.Min(c.width, PixelGUI.CellsWidth(10));
 
         label.normal.textColor = PixelGUI.Danger;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "TIRE", label);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Tire", label);
         cy += PixelGUI.LineH;
         float life = _tires != null ? 1f - Mathf.Clamp01(Mathf.Max(_tires.FrontWear, _tires.RearWear)) : 1f;
         PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), Mathf.RoundToInt(life * 10f), 10,
@@ -199,7 +199,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
         label.normal.textColor = PixelGUI.Info;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "DRAFT", label);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Draft", label);
         cy += PixelGUI.LineH;
         PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight),
                        Mathf.RoundToInt(Draft01() * 10f), 10, PixelGUI.Info);
@@ -241,8 +241,8 @@ public class IronOvalRaceHUD : MonoBehaviour
 
         var director = RaceDirector.Instance;
         int total = director != null ? director.raceLaps : 0;
-        if (RaceWeekend.IsPracticeLike || total <= 0) return $"LAP {lap}";
-        return $"LAP {Mathf.Min(lap, total)}/{total}";
+        if (RaceWeekend.IsPracticeLike || total <= 0) return $"Lap {lap}";
+        return $"Lap {Mathf.Min(lap, total)}/{total}";
     }
 
     // How much tow the player is getting, 0..1 — the same TowFactor the car's physics runs on. That is

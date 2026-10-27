@@ -203,8 +203,8 @@ public class TouchDriveControls : MonoBehaviour
                 DrawPedal(_layout.steerRight, ">", _state.SteerRightHeld, PixelGUI.Gold);
             }
             else DrawSteering();
-            DrawPedal(_layout.brake, "BRAKE", _state.Brake > 0f, PixelGUI.Danger);
-            DrawPedal(_layout.throttle, "GAS", _state.Throttle > 0f, PixelGUI.Confirm);
+            DrawPedal(_layout.brake, "Brake", _state.Brake > 0f, PixelGUI.Danger);
+            DrawPedal(_layout.throttle, "Gas", _state.Throttle > 0f, PixelGUI.Confirm);
         }
         DrawPause();
 
@@ -213,7 +213,7 @@ public class TouchDriveControls : MonoBehaviour
             var limiter = Limiter;
             DrawTopButton(_layout.limiter, "LIMIT", limiter != null && limiter.Armed, PixelGUI.Gold);
         }
-        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "DRIVE" : "TV", false, PixelGUI.Confirm);
+        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "Drive" : "TV", false, PixelGUI.Confirm);
     }
 
     void DrawTopButton(TouchRect r, string text, bool on, Color tint)
@@ -249,7 +249,7 @@ public class TouchDriveControls : MonoBehaviour
         GUI.matrix = saved;
 
         if (!_state.Steering)
-            Label(new Rect(wheel.x, wheel.y - PixelGUI.LineH, wheel.width, PixelGUI.LineH), "STEER", 0.7f);
+            Label(new Rect(wheel.x, wheel.y - PixelGUI.LineH, wheel.width, PixelGUI.LineH), "Steer", 0.7f);
     }
 
     void DrawPedal(TouchRect r, string text, bool pressed, Color tint)

@@ -29,7 +29,7 @@ public class TimingScreenUI : MonoBehaviour
 
     // Longest name drawn before it is cut. "B. Kowalczykowski" is the kind of thing a generated roster makes.
     const int NameChars = 16;
-    const string Title = "LIVE TIMING";
+    const string Title = "Live Timing";
 
     // One line of the table, whichever session it came from.
     struct Row
@@ -78,7 +78,7 @@ public class TimingScreenUI : MonoBehaviour
             if (lt == null) return;
             FillFromBestLaps(lt);
         }
-        string valueHead = raceOrder ? "GAP" : "BEST";
+        string valueHead = raceOrder ? "Gap" : "Best";
 
         var head = PixelGUI.Heading;
         var dim = PixelGUI.LabelDim;
@@ -90,14 +90,14 @@ public class TimingScreenUI : MonoBehaviour
         float gap = PixelGUI.Px(8f);
 
         // Columns as wide as the widest thing that goes in them, header included.
-        float posW = Mathf.Max(Width(data, "P" + Mathf.Max(10, _rows.Count)), Width(dim, "POS"));
-        float nameW = Mathf.Max(Width(data, new string('M', NameChars)), Width(dim, "DRIVER"));
+        float posW = Mathf.Max(Width(data, "P" + Mathf.Max(10, _rows.Count)), Width(dim, "Pos"));
+        float nameW = Mathf.Max(Width(data, new string('M', NameChars)), Width(dim, "Driver"));
         float bestW = Mathf.Max(Width(data, LapTimingManager.Format(-1f)), Width(dim, valueHead));
         float tableW = posW + gap + nameW + gap + bestW;
 
         string session = !string.IsNullOrEmpty(sessionLabel)
             ? sessionLabel
-            : RaceWeekend.IsQualifying ? "QUALIFYING" : (RaceWeekend.IsPractice ? "PRACTICE" : "RACE");
+            : RaceWeekend.IsQualifying ? "Qualifying" : (RaceWeekend.IsPractice ? "Practice" : "Race");
         float sessionW = Width(dim, session) + (string.IsNullOrEmpty(statusLine) ? 0f : gap + Width(dim, statusLine));
 
         float innerW = Mathf.Max(tableW, Mathf.Max(Width(head, Title), sessionW));
@@ -139,8 +139,8 @@ public class TimingScreenUI : MonoBehaviour
         cy += dimH;
 
         float nameX = cx + posW + gap;
-        Draw(new Rect(cx, cy, posW, dimH), "POS", dim, null, TextAnchor.MiddleLeft);
-        Draw(new Rect(nameX, cy, nameW, dimH), "DRIVER", dim, null, TextAnchor.MiddleLeft);
+        Draw(new Rect(cx, cy, posW, dimH), "Pos", dim, null, TextAnchor.MiddleLeft);
+        Draw(new Rect(nameX, cy, nameW, dimH), "Driver", dim, null, TextAnchor.MiddleLeft);
         Draw(new Rect(cx, cy, cw, dimH), valueHead, dim, null, TextAnchor.MiddleRight);
         cy += dimH;
         PixelGUI.Rule(cx, cy + PixelGUI.Px(1f), cw);

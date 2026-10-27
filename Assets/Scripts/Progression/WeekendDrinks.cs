@@ -53,18 +53,18 @@ namespace Draftmaster.Progression
         // machine never becomes a lookup table the player memorises.
         static readonly string[,] Catalogue =
         {
-            { "HOT LAP COLA",        "Warm from the top of the stack, and somehow better for it." },
-            { "DRAFT ENERGY",        "Tastes like a fire extinguisher. You feel it behind your eyes." },
-            { "PIT ROAD ICED TEA",   "Sweet enough to stand a spanner up in." },
-            { "VICTORY LANE SODA",   "Confetti on the label. Nobody has won anything yet." },
-            { "GASOLINE ALLEY ROOT", "Root beer, allegedly. It foams for a worryingly long time." },
-            { "TORQUE WRENCH COLD",  "Black coffee out of a can. It does not pretend to be nice." },
-            { "BACKMARKER BLUE",     "Turns your tongue blue for the rest of the day. Worth it." },
-            { "CHEQUERS CHERRY",     "Cherry, mostly. The bubbles go straight up your nose." },
-            { "GRID WALK GINGER",    "Hot and sharp. Settles a stomach that has been doing laps." },
-            { "TWO-STOP TONIC",      "Bitter. The crew swear by it and none of them will say why." },
-            { "PADDOCK SPRING",      "Just water. The machine hands it over slightly grudgingly." },
-            { "LOOSE LUGNUT LIME",   "So sour your jaw aches. You are suddenly wide awake." },
+            { "Hot Lap Cola",        "Warm from the top of the stack, and somehow better for it." },
+            { "Draft Energy",        "Tastes like a fire extinguisher. You feel it behind your eyes." },
+            { "Pit Road Iced Tea",   "Sweet enough to stand a spanner up in." },
+            { "Victory Lane Soda",   "Confetti on the label. Nobody has won anything yet." },
+            { "Gasoline Alley Root", "Root beer, allegedly. It foams for a worryingly long time." },
+            { "Torque Wrench Cold",  "Black coffee out of a can. It does not pretend to be nice." },
+            { "Backmarker Blue",     "Turns your tongue blue for the rest of the day. Worth it." },
+            { "Chequers Cherry",     "Cherry, mostly. The bubbles go straight up your nose." },
+            { "Grid Walk Ginger",    "Hot and sharp. Settles a stomach that has been doing laps." },
+            { "Two-Stop Tonic",      "Bitter. The crew swear by it and none of them will say why." },
+            { "Paddock Spring",      "Just water. The machine hands it over slightly grudgingly." },
+            { "Loose Lugnut Lime",   "So sour your jaw aches. You are suddenly wide awake." },
         };
 
         public static int CatalogueSize => Catalogue.GetLength(0);

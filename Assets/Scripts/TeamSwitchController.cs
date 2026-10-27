@@ -315,7 +315,7 @@ public class TeamSwitchController : MonoBehaviour
         var fitter = contentGO.GetComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        var title = IronOvalUI.Label(_panel, "Title", "TEAM", IronOvalUI.Role.HeaderSmall);
+        var title = IronOvalUI.Label(_panel, "Title", "Team", IronOvalUI.Role.HeaderSmall);
         title.alignment = TextAlignmentOptions.Left;
         var tle = title.gameObject.AddComponent<LayoutElement>();
         tle.preferredWidth = 108f;
@@ -398,7 +398,7 @@ public class TeamSwitchController : MonoBehaviour
                     if (rt.Order[e].tf == car.transform) { pos = rt.Order[e].position; break; }
 
             bool mine = car == _current;
-            text.text = $"#{number} {name.ToUpperInvariant()}{(pos > 0 ? $"  P{pos}" : "")}";
+            text.text = $"#{number} {name}{(pos > 0 ? $"  P{pos}" : "")}";
             // The car you are in takes the accent; the rest are ordinary rows you can click.
             text.color = mine ? PixelGUI.Gold : PixelGUI.Text;
             if (btn != null) btn.interactable = !mine;

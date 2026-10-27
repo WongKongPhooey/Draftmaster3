@@ -19,7 +19,7 @@ public class WeekendTimetableTests
         Assert.AreEqual("Saturday", WeekendSlots.DaySpoken(WeekendSlot.SaturdayPM));
         Assert.AreEqual("Sunday", WeekendSlots.DaySpoken(WeekendSlot.SundayAM));
         foreach (var slot in WeekendSlots.All)
-            Assert.AreEqual(WeekendSlots.Day(slot), WeekendSlots.DaySpoken(slot).ToUpperInvariant());
+            Assert.AreEqual(WeekendSlots.Day(slot), WeekendSlots.DaySpoken(slot));
     }
 
     // ------------------------------------------------------------------ determinism
@@ -300,7 +300,7 @@ public class WeekendTimetableTests
         var walk = WeekendTimetable.Build(RacingSeries.Cup, 3, "Daytona").FirstOfKind(ActivityKind.GridWalk);
         Assert.IsNotNull(walk);
         Assert.AreEqual(WeekendSlot.SundayAM, walk.slot);
-        Assert.AreEqual("VIP GRID WALK", walk.title);
+        Assert.AreEqual("VIP Grid Walk", walk.title);
     }
 
     // The winner's circle used to be the destination of nearly every half-day. A handful of distinct sponsor

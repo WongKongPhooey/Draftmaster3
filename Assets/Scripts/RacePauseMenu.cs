@@ -117,7 +117,7 @@ public class RacePauseMenu : MonoBehaviour
         _padRows.Add(PadRow.MiniMap);
         _padRows.Add(PadRow.SwingCamera);
         _padRows.Add(PadRow.DebugStats);
-        if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
+        if (EndSessionLabel != null) _padRows.Add(PadRow.EndSession);
         if (SaveAnytime.CanSave) _padRows.Add(PadRow.SaveGame);
         var launcher = NetworkLauncher.Instance;
         var coop = CoopRowState(launcher != null && launcher.Busy, Coop.Active, Coop.IsGuest, Coop.GuestPresent,
@@ -149,16 +149,25 @@ public class RacePauseMenu : MonoBehaviour
             case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
             case PadRow.SwingCamera: CameraViewMode.Swinging = !CameraViewMode.Swinging; break;
             case PadRow.DebugStats: DebugStatsOverlay.Visible = !DebugStatsOverlay.Visible; break;
-            case PadRow.EndSession:
-                var director = PracticeDirector.Instance;
-                Resume();
-                if (director != null) director.StartRace();
-                break;
+            case PadRow.EndSession: EndSession(); break;
             case PadRow.SaveGame: SaveGame(); break;
             case PadRow.Coop: HostCoop(); break;
             case PadRow.QuitToTitle: QuitToTitle(); break;
             case PadRow.Resume: Resume(); break;
         }
+    }
+
+    // Practice and qualifying end through their own director; a race ends through the race director, which
+    // classifies the field where it stands.
+    static string EndSessionLabel => PracticeDirector.PauseMenuExitLabel ?? RaceDirector.PauseMenuExitLabel;
+
+    void EndSession()
+    {
+        var practice = PracticeDirector.PauseMenuExitLabel != null ? PracticeDirector.Instance : null;
+        var race = practice == null ? RaceDirector.Instance : null;
+        Resume();
+        if (practice != null) practice.StartRace();
+        else if (race != null) race.EndRaceNow();
     }
 
     // The pad's cursor, just left of the row it would press.
@@ -246,7 +255,7 @@ public class RacePauseMenu : MonoBehaviour
         // Wide enough for the longest tab label — which only bites on a phone, where buttons are set in the
         // bigger dialogue face.
         float w = Mathf.Max(PixelGUI.Px(200f), PixelGUI.SnapUp(
-            PixelGUI.TabStyle.CalcSize(new GUIContent("COULDN'T OPEN — RETRY")).x + PixelGUI.Px(8f) + inset * 2f));
+            PixelGUI.TabStyle.CalcSize(new GUIContent("Couldn't Open — Retry")).x + PixelGUI.Px(8f) + inset * 2f));
         float gap = PixelGUI.Px(4f);
         float headingH = PixelGUI.Heading.fontSize;
         float toggleH = Mathf.Max(PixelGUI.LineH,
@@ -258,7 +267,7 @@ public class RacePauseMenu : MonoBehaviour
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
         // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
         int toggles = TouchDriveControls.TouchPlatform ? 5 : 4;
-        int tabs = (PracticeDirector.PauseMenuExitLabel != null ? 2 : 1)   // [end], co-op
+        int tabs = (EndSessionLabel != null ? 2 : 1)   // [end], co-op
                    + (SaveAnytime.CanSave ? 1 : 0);                        // [save]
         float contentH = headingH + gap * 3f                                // title, rule
                          + toggles * toggleH + gap * 2f                     // toggles, then a breather
@@ -275,7 +284,7 @@ public class RacePauseMenu : MonoBehaviour
         float row = tabH;
         float cy = content.y;
 
-        GUI.Label(new Rect(content.x, cy, content.width, headingH), "PAUSED", _title);
+        GUI.Label(new Rect(content.x, cy, content.width, headingH), "Paused", _title);
         cy += headingH + gap;
         PixelGUI.Rule(content.x, cy, content.width);
         cy += gap * 2f;
@@ -325,16 +334,11 @@ public class RacePauseMenu : MonoBehaviour
         // Handing a booked practice or qualifying session back to the timetable. This used to be a red
         // button parked over the corner of the windscreen for the whole session; here it is out of the
         // way until the player actually wants it, and it is the only exit a routed session has.
-        string endLabel = PracticeDirector.PauseMenuExitLabel;
+        string endLabel = EndSessionLabel;
         if (endLabel != null)
         {
             PadCursor(PadRow.EndSession, new Rect(content.x, cy, content.width, row));
-            if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), endLabel, false))
-            {
-                var director = PracticeDirector.Instance;
-                Resume();
-                if (director != null) director.StartRace();
-            }
+            if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), endLabel, false)) EndSession();
             cy += row + gap;
         }
 
@@ -349,12 +353,12 @@ public class RacePauseMenu : MonoBehaviour
                 var was = GUI.color;
                 GUI.color = PixelGUI.Gold;
                 // Named only when it fits: a label too wide for its rect is dropped whole, not clipped.
-                string saved = string.IsNullOrEmpty(_savedWhat) ? "  SAVED" : "  SAVED · " + _savedWhat;
-                if (PixelGUI.Label.CalcSize(new GUIContent(saved)).x > saveRect.width) saved = "  SAVED";
+                string saved = string.IsNullOrEmpty(_savedWhat) ? "  Saved" : "  Saved · " + _savedWhat;
+                if (PixelGUI.Label.CalcSize(new GUIContent(saved)).x > saveRect.width) saved = "  Saved";
                 GUI.Label(saveRect, saved, PixelGUI.Label);
                 GUI.color = was;
             }
-            else if (PixelGUI.Tab(saveRect, "SAVE GAME", false)) SaveGame();
+            else if (PixelGUI.Tab(saveRect, "Save Game", false)) SaveGame();
             cy += row + gap;
         }
 
@@ -370,11 +374,11 @@ public class RacePauseMenu : MonoBehaviour
         // from the demo is stopping play mode.
         PadCursor(PadRow.QuitToTitle, new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH));
         PadCursor(PadRow.Resume, new Rect(content.x, resumeY, content.width, buttonH));
-        if (PixelGUI.Button(new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH), "QUIT TO TITLE"))
+        if (PixelGUI.Button(new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH), "Quit to Title"))
             QuitToTitle();
-        if (PixelGUI.Button(new Rect(content.x, resumeY, content.width, buttonH), "RESUME")) Resume();
+        if (PixelGUI.Button(new Rect(content.x, resumeY, content.width, buttonH), "Resume")) Resume();
         GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer),
-                  InputGlyphs.Label(toggleKey.ToString().ToUpperInvariant(), PadBindings.Back) + " TO RESUME",
+                  InputGlyphs.Label(toggleKey.ToString().ToUpperInvariant(), PadBindings.Back) + " to Resume",
                   PixelGUI.Footer);
     }
 
@@ -421,13 +425,13 @@ public class RacePauseMenu : MonoBehaviour
                              !string.IsNullOrEmpty(code), Time.unscaledTime < _coopFailedUntil))
         {
             case CoopRow.Offer:
-                if (PixelGUI.Tab(r, "PLAY WITH A FRIEND", false)) HostCoop();
+                if (PixelGUI.Tab(r, "Play with a Friend", false)) HostCoop();
                 break;
 
             case CoopRow.Retry:
                 // Still a tab, still clickable: the player's next move after a failed open is to try it
                 // again, and a label they cannot press is a dead end.
-                if (PixelGUI.Tab(r, "COULDN'T OPEN — RETRY", false)) HostCoop();
+                if (PixelGUI.Tab(r, "Couldn't Open — Retry", false)) HostCoop();
                 break;
 
             case CoopRow.Opening:
@@ -446,7 +450,7 @@ public class RacePauseMenu : MonoBehaviour
                 // Gold, because this is the one thing on the panel the player has to read out loud.
                 var was = GUI.color;
                 GUI.color = PixelGUI.Gold;
-                GUI.Label(r, $"  CODE  {code}", PixelGUI.Label);
+                GUI.Label(r, $"  Code  {code}", PixelGUI.Label);
                 GUI.color = was;
                 break;
         }

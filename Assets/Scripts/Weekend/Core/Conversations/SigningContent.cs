@@ -43,29 +43,29 @@ namespace Draftmaster.Weekend
 
         static readonly Fan[] Queue =
         {
-            new("KID IN A TEAM SHIRT", "a die-cast car",
+            new("Kid in a Team Shirt", "a die-cast car",
                 "It's your one! Mum said you probably wouldn't stop but I said you would."),
-            new("MAN WITH A PROGRAMME", "this year's programme",
+            new("Man with a Programme", "this year's programme",
                 "Page eleven, that's you. Been coming here since before you were born, son."),
-            new("WOMAN IN A CAP", "a phone, already filming",
+            new("Woman in a Cap", "a phone, already filming",
                 "My daughter races karts. Would you say something to her? She's at home watching."),
-            new("TEENAGER", "a torn piece of paper",
+            new("Teenager", "a torn piece of paper",
                 "Sorry — this is all I've got. Queue's been two hours."),
-            new("OLD BOY IN A FOLDING CHAIR", "a photo from a decade ago",
+            new("Old boy in a folding chair", "a photo from a decade ago",
                 "That's your car at this track the year it rained. I was stood right there."),
-            new("BLOKE WITH A HAULER PASS", "a die-cast still in the box",
+            new("Bloke with a Hauler Pass", "a die-cast still in the box",
                 "Don't open it. It's an investment, that."),
-            new("TWO KIDS PUSHED TO THE FRONT", "a hat each",
+            new("Two kids pushed to the front", "a hat each",
                 "Say thank you. THANK YOU. See? Told you he'd do it."),
-            new("SOMEBODY IN A RIVAL'S SHIRT", "a marker, no paper",
+            new("Somebody in a Rival's Shirt", "a marker, no paper",
                 "I'm not even a fan of yours. But you drove the wheels off it last week."),
-            new("WOMAN IN LAST YEAR'S SHIRT", "a sponsor decal off an old car",
+            new("Woman in Last Year's Shirt", "a sponsor decal off an old car",
                 "Peeled this off the show car in ninety-nine. Reckoned you'd know what it was."),
-            new("MAN HOLDING A BABY", "a tiny pair of ear defenders",
+            new("Man Holding a Baby", "a tiny pair of ear defenders",
                 "First race. She'll not remember it. I will."),
-            new("BLOKE WHO CAME ALONE", "a helmet, not yours",
+            new("Bloke Who Came Alone", "a helmet, not yours",
                 "I race Saturdays. Nothing like this. But I race."),
-            new("GIRL AT THE BACK OF THE QUEUE", "a notebook full of lap times",
+            new("Girl at the back of the queue", "a notebook full of lap times",
                 "I write every one of your races down. Ask me about Bristol. Go on."),
         };
 
@@ -73,36 +73,36 @@ namespace Draftmaster.Weekend
         // proper fans who paid for one and the guests the sponsor handed them out to.
         static readonly Fan[] VipQueue =
         {
-            new("SPONSOR GUEST IN A LANYARD", "a hero card with the brand on it",
+            new("Sponsor Guest in a Lanyard", "a hero card with the brand on it",
                 "Our regional manager says you're the reason we got the passes. No pressure."),
-            new("KID ON A PARENT'S SHOULDERS", "a die-cast of this exact car",
+            new("Kid on a Parent's Shoulders", "a die-cast of this exact car",
                 "It's the same! It's the SAME ONE. Can I touch the real one?"),
-            new("COUPLE IN MATCHING SHIRTS", "a phone held out at arm's length",
+            new("Couple in Matching Shirts", "a phone held out at arm's length",
                 "Could you get in the middle? With the car behind? We've been married twenty years at this track."),
-            new("MAN WHO WON THE PASSES ON THE RADIO", "a printed-out email",
+            new("Man who won the passes on the radio", "a printed-out email",
                 "I've never won anything in my life. Caller nine. Caller NINE."),
-            new("DEALERSHIP OWNER", "a business card and a pen",
+            new("Dealership Owner", "a business card and a pen",
                 "Sign the back of this for my service manager. He thinks I'm making it up."),
-            new("GRANDAD IN A VINTAGE JACKET", "a programme from the year this track opened",
+            new("Grandad in a Vintage Jacket", "a programme from the year this track opened",
                 "Drove down for the first race here. Wanted one more signature in it before the end."),
-            new("TEENAGER IN A KART SUIT", "a visor off their own helmet",
+            new("Teenager in a Kart Suit", "a visor off their own helmet",
                 "I race juniors. Sign the visor and I'll wear it Saturday."),
-            new("SPONSOR'S MARKETING INTERN", "a camera on a gimbal",
+            new("Sponsor's Marketing Intern", "a camera on a gimbal",
                 "Could you say the brand name and point at the hood? Just once. Sorry. Just once."),
-            new("WOMAN WHO DROVE OVERNIGHT", "a scrapbook of your results",
+            new("Woman Who Drove Overnight", "a scrapbook of your results",
                 "Eleven hours in the car. Every race you've started is in here."),
-            new("TWO MECHANICS FROM A LOCAL SHOP", "a shop rag each",
+            new("Two mechanics from a local shop", "a shop rag each",
                 "We fix the cars the fans drive here in. Thought you'd sign a rag."),
-            new("VETERAN WITH A SERVICE CAP", "a challenge coin to sign the card of",
+            new("Veteran with a Service Cap", "a challenge coin to sign the card of",
                 "The coin's for you. Carry it today. Just sign the card so I know you got it."),
-            new("KID WHO GOT LOST FROM THEIR GROUP", "a crumpled ticket stub",
+            new("Kid who got lost from their group", "a crumpled ticket stub",
                 "I'm meant to be with my class. Can you sign this before they find me?"),
         };
 
         // Who is at the front of the queue, as the bubble over them names them. Everyone in the line is just
         // a fan: what they are holding and what they say is who they are.
-        public const string FanSpeaker = "A FAN";
-        public const string VipSpeaker = "VIP GUEST";
+        public const string FanSpeaker = "A Fan";
+        public const string VipSpeaker = "VIP Guest";
 
         // The bubble over a fan in this booking's queue.
         public static string SpeakerFor(ActivityKind kind) => kind == ActivityKind.GridWalk ? VipSpeaker : FanSpeaker;

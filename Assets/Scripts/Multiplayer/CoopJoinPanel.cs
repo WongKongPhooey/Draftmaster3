@@ -174,7 +174,7 @@ public class CoopJoinPanel : MonoBehaviour
 
         // Named for the row the player just pressed, not for what the panel does — a heading that does not
         // echo the thing you clicked reads as a different screen than the one you asked for.
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Heading.fontSize), "MULTIPLAYER", PixelGUI.Heading);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Heading.fontSize), "Multiplayer", PixelGUI.Heading);
         cy += PixelGUI.Heading.fontSize + gap;
         PixelGUI.Rule(c.x, cy, c.width);
         cy += gap * 2f;
@@ -203,14 +203,14 @@ public class CoopJoinPanel : MonoBehaviour
         }
         cy += row + gap;
 
-        if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), _joining ? "JOINING…" : "JOIN") && !_joining)
+        if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), _joining ? "Joining…" : "Join") && !_joining)
             Join();
         cy += buttonH + gap;
 
-        if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), "BACK")) Destroy(gameObject);
+        if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), "Back")) Destroy(gameObject);
 
         GUI.Label(new Rect(c.x, c.yMax - PixelGUI.LineH, c.width, PixelGUI.LineH),
-                  InputGlyphs.UsingTouch ? "TAP THE BOX TO TYPE THE CODE"
-                                         : $"TYPE THE CODE  ·  ENTER JOIN  ·  {InputGlyphs.Back} BACK", PixelGUI.Footer);
+                  InputGlyphs.UsingTouch ? "Tap the box to type the code"
+                                         : $"Type the Code  ·  Enter Join  ·  {InputGlyphs.Back} Back", PixelGUI.Footer);
     }
 }

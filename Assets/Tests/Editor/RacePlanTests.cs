@@ -61,7 +61,7 @@ public class RacePlanTests
             var t = WeekendTimetable.Build(s, 7);
             Assert.AreEqual(1, t.Activities.Count(a => a.kind == ActivityKind.TeamBriefing),
                             $"{s}: only the Friday strategy briefing should be a TeamBriefing now.");
-            Assert.IsFalse(t.Activities.Any(a => a.title == "RACE PLAN MEETING"), $"{s}: the old race plan meeting is back.");
+            Assert.IsFalse(t.Activities.Any(a => string.Equals(a.title, "Race Plan Meeting", System.StringComparison.OrdinalIgnoreCase)), $"{s}: the old race plan meeting is back.");
         }
     }
 
@@ -71,7 +71,7 @@ public class RacePlanTests
         var a = WeekendTimetable.Build(RacingSeries.Cup, 3).FirstOfKind(ActivityKind.RacePlan);
         var script = TeamMeetingContent.Build(a);
         Assert.IsNotEmpty(script.beats);
-        Assert.AreEqual("ENGINEER", script.beats[0].speaker, "The motorhome host is the engineer.");
+        Assert.AreEqual("Engineer", script.beats[0].speaker, "The motorhome host is the engineer.");
         Assert.IsNotNull(script.headline);
     }
 

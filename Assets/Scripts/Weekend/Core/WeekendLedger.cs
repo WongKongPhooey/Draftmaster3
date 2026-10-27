@@ -348,7 +348,7 @@ namespace Draftmaster.Weekend
                 else if (ActivityKinds.IsTeam(a.kind)) d.teamMorale = Clamp100(d.teamMorale - 12f);
 
                 if (!string.IsNullOrEmpty(a.skipReason))
-                    Note("NO-SHOW: " + a.title + " - " + a.skipReason);
+                    Note("No-Show: " + a.title + " - " + a.skipReason);
             }
 
             if (save) Save();

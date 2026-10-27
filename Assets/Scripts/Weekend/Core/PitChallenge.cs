@@ -55,11 +55,11 @@ namespace Draftmaster.Weekend
 
         public static string Label(Grade g) => g switch
         {
-            Grade.Brilliant => "BRILLIANT",
-            Grade.Quick => "QUICK",
-            Grade.Decent => "DECENT",
-            Grade.Slow => "SLOW",
-            _ => "NO TIME",
+            Grade.Brilliant => "Brilliant",
+            Grade.Quick => "Quick",
+            Grade.Decent => "Decent",
+            Grade.Slow => "Slow",
+            _ => "No Time",
         };
 
         // What the run did for the weekend. A good time is the fans and the sponsor both cheering; a slow one
@@ -117,7 +117,7 @@ namespace Draftmaster.Weekend
             };
             c.Add(new WeekendBeat
             {
-                speaker = "CREW CHIEF",
+                speaker = "Crew Chief",
                 line = "Ready when you are.",
                 choices = { WeekendConversation.Say("Strap me in.", "That's what I like to hear.", score: 1f) },
             });

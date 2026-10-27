@@ -12,13 +12,13 @@ using UnityEngine.InputSystem;
 public class PhoneStatsApp : PhoneApp
 {
     public override string Id => "stats";
-    public override string TileName => "STATS";
+    public override string TileName => "Stats";
     public override string TileSubtitle => "Points & drivers";
     public override Color Accent => PixelGUI.Info;
     public override int Badge => _pages[0].Badge;
 
     readonly PhoneApp[] _pages = { new PhoneChampionshipApp(), new PhoneDrivRApp() };
-    static readonly string[] TabNames = { "POINTS", "DRIVERS" };
+    static readonly string[] TabNames = { "Points", "Drivers" };
     int _tab;
 
     // Which page is up. Public so a caller can open the phone straight onto the form guide.

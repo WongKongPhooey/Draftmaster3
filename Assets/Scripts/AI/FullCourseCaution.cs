@@ -259,7 +259,7 @@ public class FullCourseCaution : MonoBehaviour
             PixelGUI.Kerb(new Rect(0f, y - kerb, Screen.width, kerb));
             PixelGUI.Kerb(new Rect(0f, y + h, Screen.width, kerb));
             style.normal.textColor = new Color(yellow.r, yellow.g, yellow.b, alpha);
-            GUI.Label(new Rect(0f, y, Screen.width, h), "CAUTION · SAFETY CAR", style);
+            GUI.Label(new Rect(0f, y, Screen.width, h), "Caution · Safety Car", style);
             GUI.color = prevGui;
         }
         else
@@ -267,7 +267,7 @@ public class FullCourseCaution : MonoBehaviour
             var sc = _director != null ? _director.SafetyCarInstance : null;
             string text = sc != null && (sc.ClosingUp || sc.Pitted) ? "CAUTION · GREEN AT THE LINE"
                         : sc != null && sc.HoldOut && LapsRun >= minCautionLaps ? "CAUTION · TRACK NOT CLEAR"
-                        : "CAUTION · PIT ROAD OPEN";
+                        : "Caution · Pit Road Open";
             float h = PixelGUI.Px(22f);
             float y = Mathf.Round(Screen.height * 0.72f);   // where the pace lap's throttle prompt sits
             PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);

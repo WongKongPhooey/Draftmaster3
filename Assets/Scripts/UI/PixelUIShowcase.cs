@@ -55,7 +55,7 @@ public class PixelUIShowcase : MonoBehaviour
         }
 
         float cy = y + 16f;
-        GUI.Label(new Rect(x + 20f, cy, w - 40f, 24f), "PIXEL UI KIT", PixelGUI.Heading);
+        GUI.Label(new Rect(x + 20f, cy, w - 40f, 24f), "Pixel UI Kit", PixelGUI.Heading);
         cy += 26f;
         GUI.Label(new Rect(x + 20f, cy, w - 40f, 20f),
                   $"body: {(theme.imguiFont != null ? theme.imguiFont.name : "MISSING")}   " +

@@ -146,7 +146,7 @@ public class DriverFight : MonoBehaviour
     {
         bool shown = TutorialPopup.ShowOnce(
             TutorialId,
-            "YOU'RE IN A FIGHT",
+            "You're in a Fight",
             "Press {KEY} to push your opponent.\n\n" +
             "Stay close enough to reach them and keep your feet — nobody gets knocked out, and the crews " +
             "will be over to pull you apart soon enough.",

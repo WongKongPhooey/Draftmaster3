@@ -60,7 +60,7 @@ public class LandmarkShopPanel : MonoBehaviour
         var loc = TravelGraph.Get(TravelState.CurrentNodeId);
         if (loc == null) { _title.text = "NOWHERE"; return; }
 
-        _title.text = loc.name.ToUpperInvariant();
+        _title.text = loc.name;
         _cash.text = PlayerWallet.CashText;
         _flavor.text = loc.flavor ?? "";
 
@@ -69,7 +69,7 @@ public class LandmarkShopPanel : MonoBehaviour
         float y = 0f;
         if (loc.locationType == TravelLocationType.Junkyard)
         {
-            y = AddHeading("SALVAGE THIS WEEK", y);
+            y = AddHeading("Salvage This Week", y);
             bool any = false;
             foreach (var (part, price) in PartCatalog.JunkyardStock(loc.id, TravelState.Week))
             {
@@ -83,7 +83,7 @@ public class LandmarkShopPanel : MonoBehaviour
         {
             // Your own shop's rack: whatever the fabricators have finished since you last called in.
             // Free, and gone for good once taken (TravelState.WasCollected, not the weekly bought key).
-            y = AddHeading("ON THE RACK - YOURS TO TAKE", y);
+            y = AddHeading("On the rack - yours to take", y);
             bool any = false;
             foreach (var (part, _) in PartCatalog.FactoryStock(TravelState.Week))
             {
@@ -95,7 +95,7 @@ public class LandmarkShopPanel : MonoBehaviour
         }
         else if (loc.locationType == TravelLocationType.EngineShop)
         {
-            y = AddHeading("FOR SALE", y);
+            y = AddHeading("For Sale", y);
             if (loc.shopStock != null)
                 foreach (var id in loc.shopStock)
                 {
@@ -155,7 +155,7 @@ public class LandmarkShopPanel : MonoBehaviour
 
             var label = MakeText("Label", btnGo.transform, 24, FontStyle.Normal, TextAnchor.MiddleCenter, Color.white);
             IronOvalUI.ButtonCaption(label, Color.white);
-            label.text = free ? "COLLECT" : PlayerWallet.Format(price);
+            label.text = free ? "Collect" : PlayerWallet.Format(price);
             var lrt = label.rectTransform;
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
             lrt.offsetMin = lrt.offsetMax = Vector2.zero;

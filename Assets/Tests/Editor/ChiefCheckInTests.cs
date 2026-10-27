@@ -213,8 +213,8 @@ public class ChiefCheckInTests
         Assert.AreEqual(5, ids.IndexOf("stats"), "STATS belongs in the bay POINTS used to have. Tiles: " + string.Join(", ", ids));
         CollectionAssert.DoesNotContain(ids, "drivr", "DrivR is a tab under STATS now, not a tile.");
         CollectionAssert.DoesNotContain(ids, "championship", "POINTS is a tab under STATS now, not a tile.");
-        Assert.AreEqual("MESSAGES", names[4]);
-        Assert.AreEqual("STATS", names[5]);
+        Assert.AreEqual("Messages", names[4]);
+        Assert.AreEqual("Stats", names[5]);
     }
 
     [Test]

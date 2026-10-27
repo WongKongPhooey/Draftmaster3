@@ -29,7 +29,7 @@ public class VendingMachineSpawner : MonoBehaviour
 
     [Header("Who it is")]
     [Tooltip("Name over the machine's own speech bubble.")]
-    public string speakerName = "DRINKS MACHINE";
+    public string speakerName = "Drinks Machine";
     [Tooltip("How close the player has to be to use it, metres.")]
     public float interactRange = 2.2f;
 
@@ -246,7 +246,7 @@ public class VendingMachineSpawner : MonoBehaviour
                               PaddockProps.PropZ - 0.04f, PaddockProps.Unlit(canColours[i]));
         }
 
-        PaddockProps.Sign(root.transform, "DRINKS", new Vector2(0f, -bodySize.y * 0.28f), bodySize.x * 0.8f,
+        PaddockProps.Sign(root.transform, "Drinks", new Vector2(0f, -bodySize.y * 0.28f), bodySize.x * 0.8f,
                           new Color(0.95f, 0.95f, 0.9f));
 
         var machine = root.AddComponent<VendingMachine>();

@@ -54,7 +54,7 @@ public static class PaintShop
     }
 
     public static string PatternLabel(string pattern) =>
-        string.IsNullOrEmpty(pattern) ? "PLAIN" : pattern.Replace('-', ' ').Replace('_', ' ').ToUpperInvariant();
+        string.IsNullOrEmpty(pattern) ? "Plain" : Draftmaster.Controls.UIText.TitleCase(pattern.Replace('-', ' ').Replace('_', ' ').ToUpperInvariant());
 
     // The livery the player's car wears in this career, e.g. cup26livery89.
     public static string PlayerLiveryName => $"cup26livery{PlayerDriver.CarNumber}";

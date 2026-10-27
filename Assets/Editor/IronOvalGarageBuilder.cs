@@ -13,8 +13,8 @@ using UnityEngine.UI;
 //
 //   Draftmaster > Art > Build Garage Screen Scene
 //
-// The sheet is 844x390; this is the project's 640x360 canvas at the same proportions — left column 208
-// becomes 158, right 212 becomes 161, and the middle takes the rest. The canvas matches height, so a
+// The sheet is 844x390; this is the project's 640x360 canvas at roughly the same proportions — left column 208
+// becomes 158, right 212 becomes 145 (narrowed so the stats fit at the Data size), and the middle takes the rest. The canvas matches height, so a
 // screen wider than 16:9 (a phone) is more than 640 wide: the left column holds the left edge, the right
 // column the right edge, and the middle stretches between them so the whole width is used. Driver-stat cells are gold, car-stat
 // cells telemetry blue, exactly as the sheet separates the two.
@@ -36,15 +36,19 @@ public static class IronOvalGarageBuilder
 {
     const string kScenePath = "Assets/Scenes/GarageScreen.unity";
 
-    // Row metrics follow the label FACE. This screen was authored against Silkscreen, which is drawn on
-    // an 8px cell: a label box was 10px and rows sat 12-24px apart. VT323 is drawn on a 16px cell and
-    // cannot be rendered below it without going soft, so its label box is 18px and every pitch grows to
-    // match. Expressed as metrics rather than literals so the screen re-flows if the face changes again.
-    static float LabelH => IronOvalUI.Snap(PixelUITheme.Instance != null ? PixelUITheme.Instance.display : null, 8) + 2f;
+    // Row metrics follow the row FACE. The sheet's text is the type scale's Data role (Fixedsys, a 16px
+    // cell) rather than the 8px Silkscreen captions it was first authored in, so it reads at twice the
+    // size and fills the screen it has: a row box is 18px and every pitch follows it. Expressed as
+    // metrics rather than literals so the screen re-flows if the face changes again.
+    const IronOvalUI.Role Text = IronOvalUI.Role.Data;
+    static float LabelH => IronOvalUI.Snap(PixelUITheme.Instance != null ? PixelUITheme.Instance.data : null,
+                                           UIType.KitPx(TypeRole.Data)) + 2f;
     // One text row to the next, in a list of plain text rows.
-    static float TextPitch => LabelH + 1f;
+    static float TextPitch => LabelH;
     // A heading to the first row under it.
     static float HeadPitch => LabelH + 2f;
+    // The stats block's side margins: as narrow as reads cleanly, since its rows are the tightest fit.
+    const float Inset = 6f;
 
     [MenuItem("Draftmaster/Art/Build Garage Screen Scene", priority = 126)]
     public static void Build()
@@ -80,11 +84,9 @@ public static class IronOvalGarageBuilder
         var ui = canvasGo.AddComponent<GarageScreenUI>();
 
         // --- header band ------------------------------------------------------------------------------
-        // A picker is a label box plus a couple of pixels, and the band is a picker plus air either side
-        // — so the bar grows with the label face instead of being a number that only suited one of them.
-        // On the face this was authored against that lands on the 16px band it has always been, which is
-        // why nothing below the bar moves.
-        float pickerH = LabelH + 2f;
+        // The pickers are the standard button's height (UIButton, every screen's), and the band is a picker
+        // plus 2px of air either side.
+        float pickerH = UIButton.KitPx;
         var band = Plate(root, "HeaderBand", theme.plateLight);
         band.anchorMin = new Vector2(0f, 1f);
         band.anchorMax = new Vector2(1f, 1f);
@@ -92,9 +94,9 @@ public static class IronOvalGarageBuilder
         band.sizeDelta = new Vector2(0f, pickerH + 4f);
         band.anchoredPosition = Vector2.zero;
 
-        var title = IronOvalUI.Label(band, "Title", "GARAGE", IronOvalUI.Role.Header, theme.text);
-        Place(title.rectTransform, 8f, -3f, 88f, 14f);
-        // The word is one word: let it run past its box rather than break "GARAGE" into "GARAG" + "E".
+        var title = IronOvalUI.Label(band, "Title", "Garage", IronOvalUI.Role.Header, theme.text);
+        Place(title.rectTransform, 8f, -(band.sizeDelta.y - 14f) / 2f, 88f, 14f);
+        // The word is one word: let it run past its box rather than break "Garage" into "Garag" + "e".
         title.textWrappingMode = TextWrappingModes.NoWrap;
 
         // The two pickers: which championship, and which of its entries the sheet is drawn for. The
@@ -109,18 +111,18 @@ public static class IronOvalGarageBuilder
         Place((RectTransform)driverPicker.transform, 276f, pickerY, 200f, pickerH);
         ui.driverDropdown = driverPicker;
 
-        float top = -22f;
+        float top = -(band.sizeDelta.y + 4f);
         // Band above, weekend strip below. The strip is one button tall (UIButton, every screen's) with 2px
         // above and below, so the columns get back the height a taller label face would otherwise eat.
         float stripH = Mathf.Max(LabelH + 8f, UIButton.KitPx + 4f);
-        float colH = H - 22f - (stripH + 8f);
+        float colH = H + top - (stripH + 8f);
 
         // --- left: the car, then who is driving it -----------------------------------------------------
         float leftW = 158f;
         // Tall enough for a 64x32 car at 2x with 4px of plate round it, so the car fills the box.
         const float carSlotH = 72f;
         var carSlot = IronOvalUI.ArtSlot(root, "CarSlot", new Vector2(leftW, carSlotH),
-                                         "[ no car ]", keyline: true);
+                                         "[ No car ]", keyline: true);
         Place(carSlot, 8f, top, leftW, carSlotH);
         // A real car sits in it now, so the inside is a plain deep plate rather than the placeholder hatch.
         var hatch = carSlot.Find("Hatch");
@@ -150,49 +152,54 @@ public static class IronOvalGarageBuilder
 
         // The block runs off one cursor so a taller label face pushes everything below it down
         // instead of landing on top of the next line.
-        float iy = -6f;
+        float iy = -4f;
 
-        var name = IronOvalUI.Label(identity, "Name", "YOU", IronOvalUI.Role.Body, theme.text);
+        var name = IronOvalUI.Label(identity, "Name", "You", IronOvalUI.Role.Body, theme.text);
+        // Pixelify draws its 16 on a 20px grid, so the name's row is 20 tall rather than a Data row's 18.
         Place(name.rectTransform, 8f, iy, leftW - 16f, 20f);
+        name.textWrappingMode = TextWrappingModes.NoWrap;
         ui.driverName = name;
-        iy -= 22f;
+        iy -= 20f;
 
-        var number = IronOvalUI.Label(identity, "Number", "#8", IronOvalUI.Role.HeaderSmall, theme.danger);
+        var number = IronOvalUI.Label(identity, "Number", "#8", Text, theme.danger);
         Place(number.rectTransform, 8f, iy, 40f, LabelH);
         ui.driverNumber = number;
 
-        var level = IronOvalUI.Label(identity, "Level", "LV 1", IronOvalUI.Role.HeaderSmall, theme.textDim);
-        Place(level.rectTransform, 50f, iy, 60f, LabelH);
+        var level = IronOvalUI.Label(identity, "Level", "Level 1", Text, theme.textDim);
+        Place(level.rectTransform, 50f, iy, 90f, LabelH);
         ui.driverLevel = level;
         iy -= TextPitch;
 
         // The rest of the driver's database row: team, then age / manufacturer / nickname on one line.
-        var team = IronOvalUI.Label(identity, "Team", "NO TEAM", IronOvalUI.Role.HeaderSmall, theme.text);
+        var team = IronOvalUI.Label(identity, "Team", "No team", Text, theme.text);
         Place(team.rectTransform, 8f, iy, leftW - 16f, LabelH);
         team.textWrappingMode = TextWrappingModes.NoWrap;
+        team.overflowMode = TextOverflowModes.Ellipsis;   // a long team or nickname ends in "..." inside the panel
         ui.driverTeam = team;
         iy -= TextPitch;
 
-        var bio = IronOvalUI.Label(identity, "Bio", "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+        var bio = IronOvalUI.Label(identity, "Bio", "", Text, theme.textDim);
         Place(bio.rectTransform, 8f, iy, leftW - 16f, LabelH);
         bio.textWrappingMode = TextWrappingModes.NoWrap;
+        bio.overflowMode = TextOverflowModes.Ellipsis;   // a long team or nickname ends in "..." inside the panel
         ui.driverBio = bio;
-        iy -= LabelH + 4f;
+        iy -= LabelH + 2f;
 
         Place(Plate(identity, "Rule0", theme.plateLight), 8f, iy, leftW - 16f, 1f);
-        iy -= 6f;
+        iy -= 4f;
 
-        var careerHead = IronOvalUI.Label(identity, "CareerHead", "CAREER", IronOvalUI.Role.HeaderSmall, theme.gold);
+        var careerHead = IronOvalUI.Label(identity, "CareerHead", "Career", Text, theme.gold);
         Place(careerHead.rectTransform, 8f, iy, 100f, LabelH);
         iy -= HeadPitch;
 
         for (int i = 0; i < 3; i++)
         {
-            var label = IronOvalUI.Label(identity, "CareerLabel_" + i, "-", IronOvalUI.Role.HeaderSmall, theme.textDim);
-            Place(label.rectTransform, 8f, iy, 90f, LabelH);
+            var label = IronOvalUI.Label(identity, "CareerLabel_" + i, "-", Text, theme.textDim);
+            Place(label.rectTransform, 8f, iy, 112f, LabelH);
+            label.textWrappingMode = TextWrappingModes.NoWrap;
 
-            var value = IronOvalUI.Label(identity, "CareerValue_" + i, "0", IronOvalUI.Role.HeaderSmall, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, iy), new Vector2(60f, LabelH));
+            var value = IronOvalUI.Label(identity, "CareerValue_" + i, "0", Text, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, iy), new Vector2(40f, LabelH));
             value.alignment = TextAlignmentOptions.Right;
 
             ui.careerRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
@@ -201,29 +208,41 @@ public static class IronOvalGarageBuilder
 
         iy -= 2f;
         Place(Plate(identity, "Rule1", theme.plateLight), 8f, iy, leftW - 16f, 1f);
-        iy -= 6f;
+        iy -= 4f;
 
-        var accHead = IronOvalUI.Label(identity, "AccoladesHead", "ACCOLADES", IronOvalUI.Role.HeaderSmall, theme.gold);
+        var accHead = IronOvalUI.Label(identity, "AccoladesHead", "Accolades", Text, theme.gold);
         Place(accHead.rectTransform, 8f, iy, 120f, LabelH);
         iy -= HeadPitch;
 
-        for (int i = 0; i < 3; i++)
+        // As many lines as the block has room for under the heading, up to three.
+        float identityH = colH - carSlotH - 4f;
+        int accolades = Mathf.Clamp(Mathf.FloorToInt((identityH + iy - 2f) / TextPitch), 1, 3);
+        for (int i = 0; i < accolades; i++)
         {
-            var line = IronOvalUI.Label(identity, "Accolade_" + i, "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+            var line = IronOvalUI.Label(identity, "Accolade_" + i, "", Text, theme.textDim);
             Place(line.rectTransform, 8f, iy, leftW - 16f, LabelH);
+            line.textWrappingMode = TextWrappingModes.NoWrap;
             ui.accoladeLines.Add(line);
             iy -= TextPitch;
         }
 
         // --- middle: the driver ------------------------------------------------------------------------
-        float rightW = 161f;
+        float rightW = 145f;   // traits and relationship read in one short column; the stats need the width more
         float midX = 8f + leftW + 8f;
         float midRight = rightW + 16f;
         var middle = Plate(root, "DriverStats", theme.plate);
         Stretch(middle, midX, midRight, top, colH);
 
-        var statsHead = IronOvalUI.Label(middle, "Head", "DRIVER STATS", IronOvalUI.Role.HeaderSmall, theme.gold);
-        Place(statsHead.rectTransform, 10f, -6f, 200f, LabelH);
+        var statsHead = IronOvalUI.Label(middle, "Head", "Driver Stats", Text, theme.gold);
+        Place(statsHead.rectTransform, Inset, -6f, 120f, LabelH);
+        statsHead.textWrappingMode = TextWrappingModes.NoWrap;
+
+        // How much of a rival's sheet is known, on the heading's line, right-aligned.
+        var scouted = IronOvalUI.Label(middle, "Scouted", "", Text, theme.textDim);
+        Stretch(scouted.rectTransform, 130f, Inset, -6f, LabelH);
+        scouted.alignment = TextAlignmentOptions.Right;
+        scouted.textWrappingMode = TextWrappingModes.NoWrap;
+        ui.scoutingLabel = scouted;
 
         // Rows are added in DriverAttributeSheet.All order — ability across the top, then the left column
         // (track types, standing) and the right column (craft) — because GarageScreenUI fills them by
@@ -231,19 +250,18 @@ public static class IronOvalGarageBuilder
         float sy = -(6f + HeadPitch);
         foreach (var attribute in DriverAttributeSheet.Ability)
         {
-            var rowRt = Row(middle, "Ability_" + ui.driverStats.Count, 10f, sy, 0f, LabelH);
-            Stretch(rowRt, 10f, 10f, sy, LabelH);
+            var rowRt = Row(middle, "Ability_" + ui.driverStats.Count, Inset, sy, 0f, LabelH);
+            Stretch(rowRt, Inset, Inset, sy, LabelH);
 
-            var label = IronOvalUI.Label(rowRt, "Label", attribute.Label, IronOvalUI.Role.HeaderSmall, theme.textDim);
+            var label = IronOvalUI.Label(rowRt, "Label", attribute.Name, Text, theme.textDim);
             Place(label.rectTransform, 0f, 0f, 90f, LabelH);
             label.textWrappingMode = TextWrappingModes.NoWrap;
 
-            // The bar sits on the text's baseline half of the row, not its full height, so a taller
-            // label face does not drag the cells out of line with the number on the right.
+            // The bar is centred on the row, so it lines up with the text either side of it.
             var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10);   // gold: the driver's own numbers
-            Place(cells, 94f, -(LabelH - 14f), 110f, 10f);
+            Place(cells, 94f, -(LabelH - 10f) / 2f, 110f, 10f);
 
-            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
+            var value = IronOvalUI.Label(rowRt, "Value", "-", Text, theme.text);
             Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(40f, LabelH));
             value.alignment = TextAlignmentOptions.Right;
 
@@ -251,13 +269,15 @@ public static class IronOvalGarageBuilder
             sy -= TextPitch;
         }
 
-        Stretch(Plate(middle, "StatsRule", theme.plateLight), 10f, 10f, sy - 2f, 1f);
+        Stretch(Plate(middle, "StatsRule", theme.plateLight), Inset, Inset, sy - 2f, 1f);
 
-        // The sixteen 0-20 skills, two columns of grouped rows, each column half the block's width so a
-        // wider screen widens both.
-        float colTop = sy - 8f;
-        var colA = Column(middle, "ColumnA", 0f, 0.5f, 10f, 3f, colTop, colH);
-        var colB = Column(middle, "ColumnB", 0.5f, 1f, 3f, 10f, colTop, colH);
+        // The sixteen 0-20 skills, two columns of grouped rows, splitting the block's width so a wider
+        // screen widens both. The left column's longest names ("Sponsor Appeal", "Superspeedway") are a
+        // character or two longer than the right's ("Adaptability"), so it takes a little more than half.
+        float colTop = sy - 6f;
+        const float split = 0.53f;
+        var colA = Column(middle, "ColumnA", 0f, split, Inset, 5f, colTop, colH);
+        var colB = Column(middle, "ColumnB", split, 1f, 5f, Inset, colTop, colH);
 
         float ay = SkillGroup(ui, colA, theme, "TRACK TYPES", DriverAttributeSheet.TrackTypes, 0f);
         SkillGroup(ui, colA, theme, "STANDING", DriverAttributeSheet.Standing, ay);
@@ -267,17 +287,18 @@ public static class IronOvalGarageBuilder
         // full now, so it can't float below the last one any more).
         float xpY = -(colH - LabelH - 6f);
 
-        var xpHead = IronOvalUI.Label(middle, "XPHead", "FAN APPEAL", IronOvalUI.Role.HeaderSmall, theme.gold);
-        Place(xpHead.rectTransform, 10f, xpY, 90f, LabelH);
+        var xpHead = IronOvalUI.Label(middle, "XPHead", "Fan Appeal", Text, theme.gold);
+        Place(xpHead.rectTransform, Inset, xpY, 96f, LabelH);
+        xpHead.textWrappingMode = TextWrappingModes.NoWrap;
 
         var xpTrack = Plate(middle, "XPTrack", theme.plateLight);
-        Stretch(xpTrack, 94f, 56f, xpY - (LabelH - 14f), 9f);
+        Stretch(xpTrack, Inset + 100f, 72f, xpY - (LabelH - 9f) / 2f, 9f);
         var xpFill = Plate(xpTrack, "XPFill", theme.confirm);
         Place(xpFill, 0f, 0f, 0f, 9f);
         ui.xpBar = xpFill;
 
-        var xpValue = IronOvalUI.Label(middle, "XPValue", "0/100", IronOvalUI.Role.HeaderSmall, theme.textDim);
-        Anchor(xpValue.rectTransform, new Vector2(1f, 1f), new Vector2(-10f, xpY), new Vector2(46f, LabelH));
+        var xpValue = IronOvalUI.Label(middle, "XPValue", "0/100", Text, theme.textDim);
+        Anchor(xpValue.rectTransform, new Vector2(1f, 1f), new Vector2(-Inset, xpY), new Vector2(60f, LabelH));
         xpValue.alignment = TextAlignmentOptions.Right;
         ui.xpLabel = xpValue;
 
@@ -287,12 +308,12 @@ public static class IronOvalGarageBuilder
         Anchor(traits, new Vector2(1f, 1f), new Vector2(-8f, top), new Vector2(rightW, halfH));
 
         float ty = -6f;
-        var traitsHead = IronOvalUI.Label(traits, "TraitsHead", "TRAITS", IronOvalUI.Role.HeaderSmall, theme.gold);
+        var traitsHead = IronOvalUI.Label(traits, "TraitsHead", "Traits", Text, theme.gold);
         Place(traitsHead.rectTransform, 8f, ty, 140f, LabelH);
         ty -= HeadPitch;
         for (int i = 0; i < 6; i++)
         {
-            var line = IronOvalUI.Label(traits, "Trait_" + i, "", IronOvalUI.Role.HeaderSmall, theme.text);
+            var line = IronOvalUI.Label(traits, "Trait_" + i, "", Text, theme.text);
             Place(line.rectTransform, 8f, ty, rightW - 16f, LabelH);
             line.textWrappingMode = TextWrappingModes.NoWrap;
             ui.traitLines.Add(line);
@@ -304,21 +325,21 @@ public static class IronOvalGarageBuilder
                new Vector2(rightW, colH - halfH - 4f));
 
         float ly = -6f;
-        var relHead = IronOvalUI.Label(relationship, "RelationshipHead", "RELATIONSHIP", IronOvalUI.Role.HeaderSmall, theme.gold);
+        var relHead = IronOvalUI.Label(relationship, "RelationshipHead", "Relationship", Text, theme.gold);
         Place(relHead.rectTransform, 8f, ly, 140f, LabelH);
         ly -= HeadPitch;
         for (int i = 0; i < 2; i++)
         {
-            var label = IronOvalUI.Label(relationship, "RelLabel_" + i, "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+            var label = IronOvalUI.Label(relationship, "RelLabel_" + i, "", Text, theme.textDim);
             Place(label.rectTransform, 8f, ly, 70f, LabelH);
-            var value = IronOvalUI.Label(relationship, "RelValue_" + i, "", IronOvalUI.Role.HeaderSmall, theme.text);
+            var value = IronOvalUI.Label(relationship, "RelValue_" + i, "", Text, theme.text);
             Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, ly), new Vector2(80f, LabelH));
             value.alignment = TextAlignmentOptions.Right;
             ui.relationshipRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
             ly -= TextPitch;
         }
         ly -= 4f;
-        var relNote = IronOvalUI.Label(relationship, "RelNote", "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+        var relNote = IronOvalUI.Label(relationship, "RelNote", "", Text, theme.textDim);
         Place(relNote.rectTransform, 8f, ly, rightW - 16f, LabelH * 4f);
         relNote.textWrappingMode = TextWrappingModes.Normal;
         relNote.alignment = TextAlignmentOptions.TopLeft;
@@ -332,26 +353,26 @@ public static class IronOvalGarageBuilder
         strip.sizeDelta = new Vector2(-16f, stripH);
         strip.anchoredPosition = new Vector2(0f, 4f);
 
-        var weekend = IronOvalUI.Label(strip, "Weekend", "NO TRACK SELECTED", IronOvalUI.Role.HeaderSmall, theme.text);
-        Place(weekend.rectTransform, 8f, -4f, 300f, LabelH);
+        var weekend = IronOvalUI.Label(strip, "Weekend", "No track selected", Text, theme.text);
+        Place(weekend.rectTransform, 8f, -(stripH - LabelH) / 2f, 300f, LabelH);
         weekend.textWrappingMode = TextWrappingModes.NoWrap;
         ui.weekendLabel = weekend;
 
-        var status = IronOvalUI.Label(strip, "Status", "", IronOvalUI.Role.HeaderSmall, theme.caution);
-        Anchor(status.rectTransform, new Vector2(1f, 1f), new Vector2(-152f, -4f), new Vector2(180f, LabelH),
+        var status = IronOvalUI.Label(strip, "Status", "", Text, theme.caution);
+        Anchor(status.rectTransform, new Vector2(1f, 1f), new Vector2(-152f, -(stripH - LabelH) / 2f), new Vector2(180f, LabelH),
                pivot: new Vector2(1f, 1f));
         status.alignment = TextAlignmentOptions.Right;
         status.textWrappingMode = TextWrappingModes.NoWrap;
         ui.statusLabel = status;
 
-        var race = IronOvalUI.Button(strip, "Race", "RACE", new Vector2(72f, 18f));
+        var race = IronOvalUI.Button(strip, "Race", "Race", new Vector2(72f, 18f));
         Anchor((RectTransform)race.transform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(72f, UIButton.KitPx),
                pivot: new Vector2(1f, 0.5f));
         race.onClick.AddListener(ui.Race);
 
         // TabButton returns the FACE, stretched inside its shadow parent — position the parent, or the
         // face detaches from its plate and the label wraps a letter per line.
-        var back = IronOvalUI.TabButton(strip, "Back", "BACK", new Vector2(56f, 18f));
+        var back = IronOvalUI.TabButton(strip, "Back", "Back", new Vector2(56f, 18f));
         Anchor((RectTransform)back.transform.parent, new Vector2(1f, 0.5f), new Vector2(-88f, 0f),
                new Vector2(56f, UIButton.KitPx), pivot: new Vector2(1f, 0.5f));
         back.onClick.AddListener(ui.Back);
@@ -381,8 +402,8 @@ public static class IronOvalGarageBuilder
         // bars stay where there is room for them: the two ability rows above and the car's stats.
         float rowPitch = LabelH;
 
-        var head = IronOvalUI.Label(parent, heading.Replace(' ', '_') + "Head", heading,
-                                    IronOvalUI.Role.HeaderSmall, theme.gold);
+        var head = IronOvalUI.Label(parent, heading.Replace(' ', '_') + "Head", UIText.TitleCase(heading),
+                                    Text, theme.gold);
         Stretch(head.rectTransform, 0f, 0f, y, LabelH);
         y -= HeadPitch;
 
@@ -391,12 +412,13 @@ public static class IronOvalGarageBuilder
             var rowRt = Row(parent, "Stat_" + ui.driverStats.Count, 0f, y, 0f, LabelH);
             Stretch(rowRt, 0f, 0f, y, LabelH);
 
-            var label = IronOvalUI.Label(rowRt, "Label", attribute.Label, IronOvalUI.Role.HeaderSmall, theme.textDim);
-            Stretch(label.rectTransform, 0f, 30f, 0f, LabelH);
+            var label = IronOvalUI.Label(rowRt, "Label", attribute.Name, Text, theme.textDim);
+            Stretch(label.rectTransform, 0f, 18f, 0f, LabelH);
             label.textWrappingMode = TextWrappingModes.NoWrap;
 
-            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(28f, LabelH));
+            // Two digits ("20", "??") and nothing more, so the name gets every pixel left.
+            var value = IronOvalUI.Label(rowRt, "Value", "-", Text, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(18f, LabelH));
             value.alignment = TextAlignmentOptions.Right;
 
             ui.driverStats.Add(new GarageScreenUI.StatRow { label = label, cells = null, value = value });

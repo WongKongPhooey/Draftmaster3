@@ -749,7 +749,7 @@ public static class IronOvalUI
         nrt.offsetMin = new Vector2(0f, -10f);
         nrt.offsetMax = Vector2.zero;
 
-        d.speaker = Label(nrt, "Speaker", "RAY — CREW CHIEF", Role.HeaderSmall);
+        d.speaker = Label(nrt, "Speaker", "Ray — Crew Chief", Role.HeaderSmall);
         var srt = d.speaker.rectTransform;
         srt.anchorMin = new Vector2(0f, 0f);
         srt.anchorMax = new Vector2(0.7f, 1f);

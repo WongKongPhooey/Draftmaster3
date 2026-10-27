@@ -315,7 +315,7 @@ public class TouchWalkControls : MonoBehaviour
         // Always up, held or not: the second half of a double tap is a held thumb, and the gait it just
         // flipped to should read the moment it flips.
         Label(new Rect(ringRect.x, ringRect.y - PixelGUI.LineH, ringRect.width, PixelGUI.LineH),
-                  _gait.Running ? "RUN" : "WALK", 0.7f);
+                  _gait.Running ? "Run" : "Walk", 0.7f);
     }
 
     void Label(Rect r, string text, float alpha)

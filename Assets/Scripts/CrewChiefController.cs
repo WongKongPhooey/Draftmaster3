@@ -417,7 +417,7 @@ public class CrewChiefController : MonoBehaviour
 
         // "Timing" sits above the headset — only while acting as crew chief. Opens the full-field timing
         // screen (lap times from LapTimingManager).
-        var timing = IronOvalUI.TabButton(canvas.transform, "TimingButton", "TIMING", new Vector2(56f, Draftmaster.Controls.UIButton.KitPx));
+        var timing = IronOvalUI.TabButton(canvas.transform, "TimingButton", "Timing", new Vector2(56f, Draftmaster.Controls.UIButton.KitPx));
         var timingRoot = (RectTransform)timing.transform.parent;
         Corner(timingRoot, new Vector2(buttonCorner.x, buttonCorner.y + buttonSize + 6f));
         timing.onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
@@ -425,8 +425,8 @@ public class CrewChiefController : MonoBehaviour
         _timingBtn.SetActive(false);
 
         // PREV / NEXT CAR above TIMING: the , and . keys for a phone, which has neither. Same visibility.
-        _nextCarBtn = WatchButton(canvas, "NextCarButton", "NEXT CAR", +1);
-        _prevCarBtn = WatchButton(canvas, "PrevCarButton", "PREV CAR", -1);
+        _nextCarBtn = WatchButton(canvas, "NextCarButton", "Next Car", +1);
+        _prevCarBtn = WatchButton(canvas, "PrevCarButton", "Prev Car", -1);
         PlaceTimingStack(buttonCorner);
     }
 

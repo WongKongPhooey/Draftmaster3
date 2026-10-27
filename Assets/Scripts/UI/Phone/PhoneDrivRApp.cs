@@ -16,7 +16,7 @@ using Draftmaster.Data;
 public class PhoneDrivRApp : PhoneApp
 {
     public override string Id => "drivr";
-    public override string TileName => "DRIVERS";
+    public override string TileName => "Drivers";
     public override string TileSubtitle => "The form guide";
     public override Color Accent => PixelGUI.Danger;
 
@@ -110,14 +110,14 @@ public class PhoneDrivRApp : PhoneApp
     float DrawList(float x, float y, float w)
     {
         float y0 = y;
-        y += Section(x, y, w, $"FIELD · {_rows.Count}");
+        y += Section(x, y, w, $"Field · {_rows.Count}");
 
         // The number on the right is the driver's ability rating out of 100 — the same one the profile
         // opens with. Unlabelled it reads like points, which it is not.
         float head = RowH;
-        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "DRIVER",
+        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "Driver",
                           PhoneStyles.Footer);
-        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "ABILITY",
+        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "Ability",
                           PhoneStyles.Footer, null, TextAnchor.MiddleRight);
         y += head;
 
@@ -153,18 +153,18 @@ public class PhoneDrivRApp : PhoneApp
         y += Row(x, y, w, "< all drivers", "", PixelGUI.Info);
         y += PixelGUI.Px(3f);
 
-        y += Section(x, y, w, $"#{d.CarNumber} {Name(d).ToUpperInvariant()}");
+        y += Section(x, y, w, $"#{d.CarNumber} {Name(d)}");
         y += Row(x, y, w, d.TeamName ?? "Unattached", d.Manufacturer ?? "", PixelGUI.TextDim);
         y += Row(x, y, w, $"Age {d.Age}", $"Debut {d.DebutSeason}", PixelGUI.TextDim);
         if (!string.IsNullOrEmpty(d.Nickname)) y += Body(x, y, w, "\"" + d.Nickname + "\"", PixelGUI.TextDisabled);
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "ABILITY / 100");
+        y += Section(x, y, w, "Ability / 100");
         y += Meter(x, y, w, "Now", d.CurrentAbility / (float)Driver.AbilityMax, d.CurrentAbility.ToString(), PixelGUI.Gold);
         y += Meter(x, y, w, "Ceiling", d.PotentialAbility / (float)Driver.AbilityMax, d.PotentialAbility.ToString(), PixelGUI.Info);
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "SEASON");
+        y += Section(x, y, w, "Season");
         LoadResults(row);
         if (row.starts == 0)
         {
@@ -180,7 +180,7 @@ public class PhoneDrivRApp : PhoneApp
         }
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "CRAFT");
+        y += Section(x, y, w, "Craft");
         y += Stat(x, y, w, "Qualifying", d.Qualifying);
         y += Stat(x, y, w, "Consistency", d.Consistency);
         y += Stat(x, y, w, "Aggression", d.Aggression);
@@ -190,7 +190,7 @@ public class PhoneDrivRApp : PhoneApp
         y += Stat(x, y, w, "Tyre saving", d.TyreManagement);
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "TRACK TYPES");
+        y += Section(x, y, w, "Track Types");
         y += Stat(x, y, w, "Short tracks", d.ShortTracks);
         y += Stat(x, y, w, "Speedways", d.Speedways);
         y += Stat(x, y, w, "Superspeedways", d.Superspeedways);
@@ -198,7 +198,7 @@ public class PhoneDrivRApp : PhoneApp
         y += Stat(x, y, w, "Dirt", d.DirtCourses);
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "OFF TRACK");
+        y += Section(x, y, w, "Off Track");
         y += Meter(x, y, w, "Prestige", d.Prestige / 100f, d.Prestige.ToString(), PixelGUI.Info);
         y += Meter(x, y, w, "Fan support", d.FanSupport / 100f, d.FanSupport.ToString(), PixelGUI.Confirm);
         y += Meter(x, y, w, "Sponsor appeal", d.SponsorAppeal / 100f, d.SponsorAppeal.ToString(), PixelGUI.Gold);

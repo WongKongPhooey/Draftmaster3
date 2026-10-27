@@ -12,7 +12,7 @@ using Draftmaster.Sponsors;
 public class PhoneTasksApp : PhoneApp
 {
     public override string Id => "tasks";
-    public override string TileName => "TASKS";
+    public override string TileName => "Tasks";
     // The tile says what the player is due at right now, so a glance at the home screen answers "where am I
     // meant to be?" without opening anything.
     public override string TileSubtitle
@@ -131,9 +131,9 @@ public class PhoneTasksApp : PhoneApp
             float h = RowH + PixelGUI.Px(4f);
             var button = new Rect(x, y, w, h);
             PixelGUI.Fill(button, PixelGUI.Gold);
-            string prompt = InputGlyphs.UsingTouch ? "FAST TRAVEL"
-                          : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm) + "  FAST TRAVEL"
-                          : "ENTER  FAST TRAVEL";
+            string prompt = InputGlyphs.UsingTouch ? "Fast Travel"
+                          : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm) + "  Fast Travel"
+                          : "Enter  Fast Travel";
             PhoneStyles.Label(button, prompt, PhoneStyles.Heading, PixelGUI.Ink, TextAnchor.MiddleCenter);
             if (Pressed(button)) TravelToCurrent();
             y += h;
@@ -209,7 +209,7 @@ public class PhoneTasksApp : PhoneApp
         BuildOptional(optional);
         if (optional.Count > 0)
         {
-            y += Section(x, y, w, "OPTIONAL");
+            y += Section(x, y, w, "Optional");
             y += DrawTasks(x, y, w, optional);
             y += PixelGUI.Px(6f);
         }
@@ -222,7 +222,7 @@ public class PhoneTasksApp : PhoneApp
         var career = new List<Task>();
         BuildCareer(career);
         y += PixelGUI.Px(6f);
-        y += Section(x, y, w, "CAREER");
+        y += Section(x, y, w, "Career");
         y += DrawTasks(x, y, w, career);
 
         var pushed = new List<Task>();
@@ -234,7 +234,7 @@ public class PhoneTasksApp : PhoneApp
         if (pushed.Count > 0)
         {
             y += PixelGUI.Px(6f);
-            y += Section(x, y, w, "REMINDERS");
+            y += Section(x, y, w, "Reminders");
             y += DrawTasks(x, y, w, pushed);
         }
 
@@ -256,7 +256,7 @@ public class PhoneTasksApp : PhoneApp
     }
 
     static string SessionHeading() =>
-        RaceWeekend.IsQualifying ? "QUALIFYING" : RaceWeekend.IsPractice ? "PRACTICE" : "RACE";
+        RaceWeekend.IsQualifying ? "Qualifying" : RaceWeekend.IsPractice ? "Practice" : "Race";
 
     void BuildWeekend(List<Task> list)
     {

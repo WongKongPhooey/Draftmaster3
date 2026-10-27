@@ -24,7 +24,7 @@ public static class SaveAnytime
         CareerSave.Stamp();   // flushes PlayerPrefs
 
         if (pending != null) return pending.title;
-        return WeekendLedger.WeekendOver || WeekendObjectiveHUD.RoadCalled ? "HIT THE ROAD" : "";
+        return WeekendLedger.WeekendOver || WeekendObjectiveHUD.RoadCalled ? "Hit the Road" : "";
     }
 
     // CONTINUE: put the saved marker back if nothing is booked. Guarded so the timetable is only built when

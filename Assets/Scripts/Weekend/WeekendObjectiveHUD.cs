@@ -602,7 +602,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
-    const string TravelLabel = "FAST TRAVEL";
+    const string TravelLabel = "Fast Travel";
 
     // Once the strip has gone back up it leaves a small tab at the top centre, where it went, that pulls it
     // back down. It says how on the device in hand: a down arrow on a phone (tap it — a phone has no key, and

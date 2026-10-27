@@ -11,13 +11,16 @@ using Draftmaster.Data;
 // `All` is the row order the garage builds in: the two ability ratings full width across the top, then
 // the left column (track types, then standing) and the right column (craft). Nothing else may reorder it.
 //
-// Labels are sized for the 8px Silkscreen the garage's narrow blocks use — about 6.3px a character with
-// the kit's tracking — so 14 characters is the most the sheet's 90px label box takes without wrapping.
+// Labels are sized for the garage's 16px Fixedsys rows — 8px a character — so 13 characters is the most a
+// skill column takes on a 16:9 screen without running into its number.
 public static class DriverAttributeSheet
 {
     public readonly struct Attribute
     {
+        // The sheet's key for the stat — what scouting reveals by and stores against. Never shown as is.
         public readonly string Label;
+        // How the stat is written on screen: the key in Title Case ("SHORT TRACKS" -> "Short Tracks").
+        public readonly string Name;
         public readonly Func<Driver, int> Read;
         // The top of this attribute's scale: 20 for a skill, 100 for an overall ability rating.
         public readonly int Max;
@@ -25,6 +28,7 @@ public static class DriverAttributeSheet
         public Attribute(string label, Func<Driver, int> read, int max)
         {
             Label = label;
+            Name = Draftmaster.Controls.UIText.TitleCase(label);
             Read = read;
             Max = max;
         }

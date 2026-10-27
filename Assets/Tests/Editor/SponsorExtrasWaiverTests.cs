@@ -56,7 +56,7 @@ public class SponsorExtrasWaiverTests
     {
         var briefing = WeekendLedger.Timetable.FirstOfKind(ActivityKind.TeamBriefing);
         var talk = TeamMeetingContent.Build(briefing);
-        var beat = talk.beats.Single(b => b.speaker == "TEAM MANAGER");
+        var beat = talk.beats.Single(b => b.speaker == "Team Manager");
         return beat.choices.Single(c => c.text.StartsWith(text));
     }
 
@@ -78,26 +78,26 @@ public class SponsorExtrasWaiverTests
     public void TheExtras_AreThePhotoShootsAndTheSuite()
     {
         var extras = WeekendLedger.Timetable.Activities.Where(a => a.sponsorExtra).ToList();
-        Assert.IsTrue(extras.Any(a => a.title == "SPONSOR PHOTO SHOOT"));
-        Assert.IsTrue(extras.Any(a => a.title == "SUITE MEET & GREET"));
+        Assert.IsTrue(extras.Any(a => a.title == "Sponsor Photo Shoot"));
+        Assert.IsTrue(extras.Any(a => a.title == "Suite Meet & Greet"));
         Assert.IsTrue(extras.All(a => ActivityKinds.IsSponsorDuty(a.kind)), "only sponsor bookings are extras");
-        Assert.IsFalse(extras.Any(a => a.title == "PIT-STOP CHALLENGE"), "contracted appearances are not extras");
+        Assert.IsFalse(extras.Any(a => a.title == "Pit-Stop Challenge"), "contracted appearances are not extras");
     }
 
     [Test]
     public void AvoidingTheSponsor_TakesTheExtrasOffTheSheet()
     {
-        Assert.IsTrue(OnSheet("SPONSOR PHOTO SHOOT"));
-        Assert.IsTrue(OnSheet("SUITE MEET & GREET"));
+        Assert.IsTrue(OnSheet("Sponsor Photo Shoot"));
+        Assert.IsTrue(OnSheet("Suite Meet & Greet"));
         int before = WeekendLedger.Timetable.Activities.Count;
         int extras = WeekendLedger.Timetable.Activities.Count(a => a.sponsorExtra);
 
         SitBriefing("All of it.");
 
         Assert.IsTrue(WeekendLedger.SponsorExtrasWaived);
-        Assert.IsFalse(OnSheet("SPONSOR PHOTO SHOOT"));
-        Assert.IsFalse(OnSheet("SUITE MEET & GREET"));
-        Assert.IsTrue(OnSheet("PIT-STOP CHALLENGE"), "the pit-stop challenge is not a sponsor extra");
+        Assert.IsFalse(OnSheet("Sponsor Photo Shoot"));
+        Assert.IsFalse(OnSheet("Suite Meet & Greet"));
+        Assert.IsTrue(OnSheet("Pit-Stop Challenge"), "the pit-stop challenge is not a sponsor extra");
         Assert.AreEqual(before - extras, WeekendLedger.Timetable.Activities.Count, "nothing else came off");
     }
 
@@ -123,7 +123,7 @@ public class SponsorExtrasWaiverTests
 
         Assert.IsFalse(WeekendLedger.SponsorExtrasWaived);
         Assert.AreEqual(before, WeekendLedger.Timetable.Activities.Count);
-        Assert.IsTrue(OnSheet("SUITE MEET & GREET"));
+        Assert.IsTrue(OnSheet("Suite Meet & Greet"));
     }
 
     [Test]
@@ -133,7 +133,7 @@ public class SponsorExtrasWaiverTests
 
         // The scene reloads between sessions and the sheet is built afresh; the runtime re-applies the waiver.
         var rebuilt = WeekendTimetable.Build(Series, TestWeekend, Track);
-        Assert.IsTrue(rebuilt.Activities.Any(a => a.title == "SUITE MEET & GREET"), "the build itself is pure");
+        Assert.IsTrue(rebuilt.Activities.Any(a => a.title == "Suite Meet & Greet"), "the build itself is pure");
         rebuilt.WaiveSponsorExtras();
         Assert.IsFalse(rebuilt.Activities.Any(a => a.sponsorExtra));
 
@@ -144,7 +144,7 @@ public class SponsorExtrasWaiverTests
     [Test]
     public void AnExtraAlreadyAttended_StaysOnTheSheet()
     {
-        var shoot = WeekendLedger.Timetable.Activities.First(a => a.title == "SPONSOR PHOTO SHOOT");
+        var shoot = WeekendLedger.Timetable.Activities.First(a => a.title == "Sponsor Photo Shoot");
         WeekendLedger.SkipTo(shoot.startMinute);
         Assert.IsTrue(WeekendLedger.Complete(shoot, WeekendOutcome.Nothing));
 
@@ -152,6 +152,6 @@ public class SponsorExtrasWaiverTests
 
         Assert.IsTrue(WeekendLedger.Timetable.Activities.Contains(shoot),
             "a photo shoot that already happened is not cancelled after the fact");
-        Assert.IsFalse(OnSheet("SUITE MEET & GREET"), "the ones still to come do go");
+        Assert.IsFalse(OnSheet("Suite Meet & Greet"), "the ones still to come do go");
     }
 }

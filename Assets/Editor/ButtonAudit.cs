@@ -23,7 +23,7 @@ public static class ButtonAudit
     const string ReportPath = "Docs/ButtonAudit.md";
     const float ScreenH = 1080f;
 
-    static readonly string[] DemoScenes =
+    internal static readonly string[] DemoScenes =
     {
         "Assets/Scenes/TitleScreen.unity",
         "Assets/Scenes/SingleRace.unity",
@@ -124,7 +124,7 @@ public static class ButtonAudit
 
     // What the game can reach: everything the build's scenes pull in, plus anything under a Resources folder
     // (loaded by name at runtime). The DM2-era prefabs no live scene uses fall outside it.
-    static HashSet<string> Shipped()
+    internal static HashSet<string> Shipped()
     {
         var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
         var set = new HashSet<string>(AssetDatabase.GetDependencies(scenes, true));

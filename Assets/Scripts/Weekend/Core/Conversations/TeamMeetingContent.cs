@@ -42,7 +42,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "ENGINEER",
+                speaker = "Engineer",
                 line = ran
                     ? "Tyre data says we fall off hard after fifteen laps. Long run or one lap — what do you want out of this car?"
                     : "Tell me what you think you want and I'll build to it.",
@@ -87,7 +87,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "ENGINEER",
+                speaker = "Engineer",
                 line = "Once they fire engines nobody touches the setup, so we settle it now. What's the race about today?",
                 question = "What's the race about today?",
                 choices =
@@ -124,7 +124,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "CREW CHIEF",
+                speaker = "Crew Chief",
                 line = "Sim says this place is all about tyre management. How are we running it, {playerfirst}?",
                 question = "How are we running the weekend?",
                 choices =
@@ -146,7 +146,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "TEAM MANAGER",
+                speaker = "Team Manager",
                 preamble = new[] { "One more thing before you go." },
                 line = "The sponsor's people are all over you this weekend. How much of it do you want me to take off your plate?",
                 question = "How much of the sponsor's weekend do you want?",

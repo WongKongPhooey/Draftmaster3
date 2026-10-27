@@ -35,7 +35,7 @@ public class TitleScreenUI : MonoBehaviour
     [Serializable]
     public class Row
     {
-        public string label = "CAREER";
+        public string label = "Career";
         public Command command = Command.NotWired;
         [Tooltip("Scene loaded by the LoadScene command. Must be in the build settings.")]
         public string sceneName = "";
@@ -468,7 +468,6 @@ public class TitleScreenUI : MonoBehaviour
     {
         string venue = TrackCatalog.Nicify(TrackSelection.CurrentId);
         if (string.IsNullOrEmpty(venue)) return "";
-        venue = venue.ToUpperInvariant();
 
         if (!CareerSave.Exists) return venue;
         return $"{venue} - {Draftmaster.Weekend.WeekendSlots.ShortLabel(ResumeSlot())}";

@@ -30,8 +30,8 @@ public class CoopNameTag : MonoBehaviour
 
     // What a peer who has never named themselves is called. Better than an empty tag, and it still says
     // which of the two of you it is.
-    public const string HostFallback = "PLAYER 1";
-    public const string GuestFallback = "PLAYER 2";
+    public const string HostFallback = "Player 1";
+    public const string GuestFallback = "Player 2";
 
     Transform _body;
     TextMeshPro _label;

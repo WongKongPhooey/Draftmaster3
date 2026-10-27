@@ -64,7 +64,7 @@ namespace Draftmaster.Weekend
         // Timing-tower label, and the ShortName on the matching Series table row.
         public static string ShortCode(RacingSeries s) => s switch
         {
-            RacingSeries.Cup => "CUP",
+            RacingSeries.Cup => "Cup",
             RacingSeries.National => "NSS",
             _ => "TRK",
         };

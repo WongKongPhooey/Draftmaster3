@@ -112,7 +112,7 @@ public class HandlingTuner : MonoBehaviour
         // The key comes off the field rather than the string: the title said F1 long after the toggle
         // had moved to F9, which is worse than not saying at all.
         _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow,
-                                "HANDLING TUNER · " + toggleKey.ToString().ToUpperInvariant(), _window);
+                                "Handling Tuner · " + toggleKey.ToString().ToUpperInvariant(), _window);
     }
 
     void DrawWindow(int id)

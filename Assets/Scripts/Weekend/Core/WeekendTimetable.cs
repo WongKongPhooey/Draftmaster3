@@ -185,19 +185,19 @@ namespace Draftmaster.Weekend
                 string nick = SeriesCatalog.Nickname(s);
 
                 Add(PracticeTime(s), mine ? ActivityKind.Practice : ActivityKind.SpectatePractice, s,
-                    code + " PRACTICE",
+                    code + " Practice",
                     mine ? "Run the R&D list: long runs, tyre falloff, and a mock qualifying lap at the end."
                          : "Optional. Watch the " + nick + " field from the wall and scout their drivers.",
                     mine ? "Your pit box" : "Pit wall");
 
                 Add(QualifyingTime(s), mine ? ActivityKind.Qualifying : ActivityKind.SpectateQualifying, s,
-                    code + " QUALIFYING",
+                    code + " Qualifying",
                     mine ? "One lap that decides where you start. Miss it and you go to the back."
                          : "Optional. Watch the " + nick + " grid get set and scout their drivers.",
                     mine ? "Your pit box" : "Timing stand");
 
                 Add(RaceTime(s), mine ? ActivityKind.Race : ActivityKind.SpectateRace, s,
-                    code + " RACE",
+                    code + " Race",
                     mine ? SeriesCatalog.RaceLaps(s) + " laps. This is what the other two days were for."
                          : "The " + nick + " race. Watching the leaders here is free homework.",
                     mine ? "Your pit box" : "Grandstand");
@@ -210,7 +210,7 @@ namespace Draftmaster.Weekend
         void BuildTeamMeetings()
         {
             var briefing = Add(new SessionTime(WeekendSlot.FridayAM, 8 * 60, 60), ActivityKind.TeamBriefing, playerSeries,
-                "TEAM STRATEGY BRIEFING",
+                "Team Strategy Briefing",
                 "The crew chief walks the weekend: what the sim says, what the tyre does here, who to race and who to leave alone.",
                 "Hauler lounge");
             briefing.mandatory = true;
@@ -223,7 +223,7 @@ namespace Draftmaster.Weekend
             const int debriefMinutes = 45;
             var debrief = FitAfter(p.slot, p.startMinute + p.minutes + 15, debriefMinutes);
             var debriefActivity = Add(debrief, ActivityKind.Debrief, playerSeries,
-                "PRACTICE DEBRIEF",
+                "Practice Debrief",
                 "Engineers, tyre data, and your own read on the car. Pick what to change before qualifying.",
                 "Engineering truck");
 
@@ -237,7 +237,7 @@ namespace Draftmaster.Weekend
             // is where fuel, tyres and balance for the race are set; once the race session starts the car runs
             // what was agreed here and the pit-box setup panel stays shut.
             var plan = Add(RacePlanTime(playerSeries), ActivityKind.RacePlan, playerSeries,
-                "RACE PLAN",
+                "Race Plan",
                 "Race morning in the motorhome: fuel, tyres and balance. Once the engines fire, the plan is locked.",
                 "Motorhome");
             plan.skipReason = "The crew set the race plan without you.";
@@ -264,34 +264,34 @@ namespace Draftmaster.Weekend
         void BuildObligations(ref WeekendRandom rng)
         {
             // ---- Friday morning: gates open, haulers roll in ----
-            Fan(WeekendSlot.FridayAM, 9 * 60, 30, ActivityKind.HaulerParade, "HAULER PARADE",
+            Fan(WeekendSlot.FridayAM, 9 * 60, 30, ActivityKind.HaulerParade, "Hauler Parade",
                 "Walk the transporters in past the fence with the crew. Cheap goodwill, and the fans remember it.",
                 "Main gate", 0);
-            Sponsor(WeekendSlot.FridayAM, 9 * 60 + 45, 60, ActivityKind.PhotoShoot, "SPONSOR PHOTO SHOOT",
+            Sponsor(WeekendSlot.FridayAM, 9 * 60 + 45, 60, ActivityKind.PhotoShoot, "Sponsor Photo Shoot",
                 "Stills for the season's marketing: firesuit on, same three poses, an hour of standing still.",
                 "Sponsor hospitality", 1200, "The photographer flew in for that hour and shot an empty backdrop.");
 
             // ---- Friday afternoon ----
-            Media(WeekendSlot.FridayPM, 14 * 60 + 15, 45, ActivityKind.PressConference, "MEDIA AVAILABILITY",
+            Media(WeekendSlot.FridayPM, 14 * 60 + 15, 45, ActivityKind.PressConference, "Media Availability",
                 "The written press get their twenty minutes. Whatever you say here is the quote of the weekend.",
                 "Media centre");
-            Fan(WeekendSlot.FridayPM, 16 * 60 + 30, 60, ActivityKind.Autographs, "SIGNING SESSION",
+            Fan(WeekendSlot.FridayPM, 16 * 60 + 30, 60, ActivityKind.Autographs, "Signing Session",
                 "A queue down the midway with hero cards and sharpies. Sign as many as the hour allows.",
                 "Souvenir midway", 750);
             BuildPitChallenge();
 
             // ---- Saturday afternoon ----
-            Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "PRESS CONFERENCE",
+            Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "Press Conference",
                 "Top table, three microphones, and the story they already decided to write.", "Media centre");
-            Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "SUITE MEET & GREET",
+            Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "Suite Meet & Greet",
                 "The people who pay for the hood want an hour of your evening, and the race is on the TV behind them.",
                 "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.")
                 .sponsorExtra = true;
 
             // ---- Sunday ----
-            Media(WeekendSlot.SundayAM, 11 * 60 + 30, 20, ActivityKind.MediaHit, "BROADCAST HIT",
+            Media(WeekendSlot.SundayAM, 11 * 60 + 30, 20, ActivityKind.MediaHit, "Broadcast Hit",
                 "Ninety seconds live on the pre-race show. One question, no second take.", "TV compound");
-            Media(WeekendSlot.SundayPM, 13 * 60 + 30, 20, ActivityKind.MediaHit, "GRID WALK INTERVIEW",
+            Media(WeekendSlot.SundayPM, 13 * 60 + 30, 20, ActivityKind.MediaHit, "Grid Walk Interview",
                 "Handed a microphone on the grid with the cars firing up behind you.", "Starting grid");
 
             BuildGridWalk();
@@ -306,7 +306,7 @@ namespace Draftmaster.Weekend
 
         void BuildPitChallenge()
         {
-            var a = Add(PitChallengeTime, ActivityKind.PitChallenge, playerSeries, "PIT-STOP CHALLENGE",
+            var a = Add(PitChallengeTime, ActivityKind.PitChallenge, playerSeries, "Pit-Stop Challenge",
                 "One shot on the clock: flat out down pit road, four tyres in the box, and back out.",
                 "Pit road");
             a.appearanceFee = 500;
@@ -329,7 +329,7 @@ namespace Draftmaster.Weekend
         void BuildGridWalk()
         {
             var when = GridWalkTime(playerSeries);
-            var a = Fan(when.slot, when.startMinute, when.minutes, ActivityKind.GridWalk, "VIP GRID WALK",
+            var a = Fan(when.slot, when.startMinute, when.minutes, ActivityKind.GridWalk, "VIP Grid Walk",
                 "Stand with the car. Pit-pass holders are walked over for a signature and a photo before the race.",
                 "Your car", 1200);
             a.skipReason = "The VIP guests were walked down to a car with nobody stood next to it.";
@@ -341,15 +341,15 @@ namespace Draftmaster.Weekend
             switch (rng.Range(0, 5))
             {
                 case 0:
-                    Media(WeekendSlot.FridayAM, 11 * 60, 45, ActivityKind.PressConference, "SEASON MEDIA DAY",
+                    Media(WeekendSlot.FridayAM, 11 * 60, 45, ActivityKind.PressConference, "Season Media Day",
                         "Every outlet at the track in one room, and a season's worth of narrative to set.", "Media centre");
                     break;
                 case 1:
-                    Fan(WeekendSlot.SaturdayAM, 8 * 60 + 30, 45, ActivityKind.HaulerParade, "CHARITY FUN RUN",
+                    Fan(WeekendSlot.SaturdayAM, 8 * 60 + 30, 45, ActivityKind.HaulerParade, "Charity Fun Run",
                         "A lap of the infield with two hundred fans in branded t-shirts before it gets hot.", "Infield road", 0);
                     break;
                 case 2:
-                    Sponsor(WeekendSlot.SaturdayPM, 12 * 60 + 15, 40, ActivityKind.PhotoShoot, "NEW LIVERY REVEAL",
+                    Sponsor(WeekendSlot.SaturdayPM, 12 * 60 + 15, 40, ActivityKind.PhotoShoot, "New Livery Reveal",
                         "Pull the sheet off the car for the cameras and say the sponsor's name four times.",
                         "Display stage", 2500, "The car got unveiled by a marketing manager instead.");
                     break;
@@ -359,7 +359,7 @@ namespace Draftmaster.Weekend
                         "Radio row");
                     break;
                 default:
-                    Media(WeekendSlot.FridayPM, 12 * 60 + 15, 30, ActivityKind.MediaHit, "PODCAST TAPING",
+                    Media(WeekendSlot.FridayPM, 12 * 60 + 15, 30, ActivityKind.MediaHit, "Podcast Taping",
                         "An hour of questions cut down to twenty minutes people will actually quote.", "Media centre");
                     break;
             }
@@ -376,7 +376,7 @@ namespace Draftmaster.Weekend
             if (meetingStart >= WeekendSlots.OpensAt(meetingSlot))
             {
                 var meeting = Add(new SessionTime(meetingSlot, meetingStart, 30), ActivityKind.DriversMeeting, playerSeries,
-                    "DRIVERS MEETING",
+                    "Drivers Meeting",
                     "Mandatory. Officials read the rules for this track, then the room empties.",
                     "Drivers meeting room");
                 meeting.mandatory = true;
@@ -387,7 +387,7 @@ namespace Draftmaster.Weekend
             int introStart = race.startMinute - 30;
             var introSlot = introStart < 12 * 60 ? WeekendSlots.MorningOf(race.slot) : race.slot;
             var intros = Add(new SessionTime(introSlot, introStart, 25), ActivityKind.DriverIntros, playerSeries,
-                "DRIVER INTRODUCTIONS",
+                "Driver Introductions",
                 "Your name over the PA and a walk down the stage in front of the grandstand.",
                 "Front stretch stage");
             intros.mandatory = true;

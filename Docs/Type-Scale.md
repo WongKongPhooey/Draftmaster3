@@ -82,3 +82,27 @@ Not buttons, and left to their own sizes: menu list rows with a cursor (title me
 OPTIONS rows, dialogue choices), on-screen interact prompts (`PixelGUI.ActionButton` / `PromptButton`),
 icon and swatch buttons, a window's corner close glyph (X), the satnav's map pins, and the F-key debug
 panels.
+
+## Letter case
+
+One rule for the whole game. Code: `Assets/Scripts/Controls/UIText.cs`. Tests:
+`Assets/Tests/Editor/UITextTests.cs`.
+
+| Text | Case | Example |
+|---|---|---|
+| Labels, headings, buttons, tabs, menu rows, stat names, names of things | **Title Case** | `Driver Stats`, `End Session`, `Short Tracks` |
+| Sentences: notices, notes, hints, dialogue, status lines | **Sentence case** | `Out for payback. Watch your mirrors.` |
+| Acronyms | capitals, wherever they sit | `DNF`, `XP`, `NASCAR` |
+
+Small words (`of`, `the`, `to`, `and`...) stay lower case inside a title. Nothing is set in all caps for
+emphasis — the colour does that (`Danger`, `Gold`).
+
+Write the text in its case in the source. `UIText.TitleCase(key)` is for text that arrives in capitals
+as a key or an enum name (a stat's sheet key, a `Standing`) and has to be shown; it leaves anything already
+in mixed case alone. Never `ToUpperInvariant()` text on its way to the screen.
+
+The fonts carry both cases (`Draftmaster > Art > Bake Pixel Fonts` bakes printable ASCII + Latin-1).
+
+`Draftmaster > UI > Audit Letter Case` lists text still authored in all caps in the prefabs the build
+reaches and the demo scenes (`Docs/LetterCaseAudit.md`), with its Title Case form beside it. Text written in
+code is cased in the source; scenes are fixed through their builders.

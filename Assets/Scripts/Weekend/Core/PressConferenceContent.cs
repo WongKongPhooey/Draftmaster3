@@ -277,11 +277,11 @@ namespace Draftmaster.Weekend
 
         public static string ToneLabel(PressTone t) => t switch
         {
-            PressTone.TeamFirst => "TEAM",
-            PressTone.Confident => "BOLD",
-            PressTone.Fiery => "FIRED UP",
-            PressTone.Corporate => "ON MESSAGE",
-            _ => "CANDID",
+            PressTone.TeamFirst => "Team",
+            PressTone.Confident => "Bold",
+            PressTone.Fiery => "Fired Up",
+            PressTone.Corporate => "On Message",
+            _ => "Candid",
         };
     }
 }

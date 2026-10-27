@@ -309,7 +309,7 @@ public class LapTimingManager : MonoBehaviour
         string cur = _player.lapStarted
             ? Format(_player.CurrentLapTime(Time.time)) + (_player.valid ? "" : " ✕")
             : "--:--.---";
-        string strip = $"LAP {cur}   LAST {Format(_player.lastLap)}   BEST {Format(_player.bestLap)}";
+        string strip = $"Lap {cur}   Last {Format(_player.lastLap)}   Best {Format(_player.bestLap)}";
 
         // The plate's frame is 9-sliced at the kit's own scale whatever size the text inside is set at,
         // so the inset that clears it is measured there; only the margin inside it follows the strip.
@@ -340,7 +340,7 @@ public class LapTimingManager : MonoBehaviour
         {
             var prev = style.normal.textColor;
             style.normal.textColor = PixelGUI.Danger;
-            GUI.Label(new Rect(x + pad, y + pad + line, w - pad * 2f, line), "LAP INVALIDATED", style);
+            GUI.Label(new Rect(x + pad, y + pad + line, w - pad * 2f, line), "Lap Invalidated", style);
             style.normal.textColor = prev;
         }
     }

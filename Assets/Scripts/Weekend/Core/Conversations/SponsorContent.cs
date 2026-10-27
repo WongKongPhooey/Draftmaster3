@@ -35,7 +35,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "GUEST",
+                speaker = "Guest",
                 line = "So what's it actually like out there? Is it as fast as it looks on the telly?",
                 question = "What's it like out there?",
                 choices =
@@ -57,7 +57,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "REGIONAL MANAGER",
+                speaker = "Regional Manager",
                 preamble = new[] { "One of them has a question they have clearly been saving." },
                 line = "Go on then — are you going to win one this year?",
                 question = "Are you going to win one this year?",
@@ -80,7 +80,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "HOSPITALITY HOST",
+                speaker = "Hospitality Host",
                 line = "Last one — will you do the photo with the whole table? They have all got the cap on.",
                 question = "Do the photo?",
                 choices =
@@ -123,7 +123,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "PHOTOGRAPHER",
+                speaker = "Photographer",
                 line = "First set: helmet under the arm, hand on the roof. What are you giving me — hero, or human?",
                 question = "How are you playing it?",
                 choices =
@@ -142,7 +142,7 @@ namespace Draftmaster.Weekend
 
             c.Add(new WeekendBeat
             {
-                speaker = "BRAND REP",
+                speaker = "Brand Rep",
                 preamble = new[] { $"{brand}'s marketing lead has walked over holding a cap." },
                 line = "Can we get the logo cleanly in every frame? It is the whole reason we are stood here.",
                 question = "Do you wear the cap?",

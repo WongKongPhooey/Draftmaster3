@@ -423,7 +423,7 @@ public class FormationDirector : MonoBehaviour
         var prevColour = style.normal.textColor;
         style.alignment = TextAnchor.MiddleCenter;
         style.normal.textColor = new Color(PixelGUI.Confirm.r, PixelGUI.Confirm.g, PixelGUI.Confirm.b, alpha);
-        GUI.Label(new Rect(0f, y, Screen.width, h), "GREEN · GO!", style);
+        GUI.Label(new Rect(0f, y, Screen.width, h), "Green · go!", style);
         style.alignment = prevAlign;
         style.normal.textColor = prevColour;
         GUI.color = prevGui;
@@ -441,7 +441,7 @@ public class FormationDirector : MonoBehaviour
         var prevColour = style.normal.textColor;
         style.alignment = TextAnchor.MiddleCenter;
         style.normal.textColor = PixelGUI.Confirm;
-        GUI.Label(new Rect(0f, y, Screen.width, h), "ACCELERATE TO START THE PACE LAP", style);
+        GUI.Label(new Rect(0f, y, Screen.width, h), "Accelerate to start the pace lap", style);
         style.alignment = prevAlign;
         style.normal.textColor = prevColour;
     }

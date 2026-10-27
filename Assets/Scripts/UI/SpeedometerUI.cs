@@ -104,17 +104,17 @@ public class SpeedometerUI : MonoBehaviour
 
         if (_limiter.Speeding)
         {
-            limiterText.text = $"SPEEDING — LIMIT {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.text = $"Speeding — Limit {Mathf.RoundToInt(_limiter.LimitMph)}";
             limiterText.color = limiterSpeedingColor;
         }
         else if (_limiter.Armed)
         {
-            limiterText.text = $"PIT LIMITER  {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.text = $"Pit Limiter  {Mathf.RoundToInt(_limiter.LimitMph)}";
             limiterText.color = limiterArmedColor;
         }
         else
         {
-            limiterText.text = $"LIMITER OFF — LIMIT {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.text = $"Limiter Off — Limit {Mathf.RoundToInt(_limiter.LimitMph)}";
             limiterText.color = limiterOffColor;
         }
     }

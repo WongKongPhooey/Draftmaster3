@@ -300,8 +300,8 @@ public class GrandstandVisit : MonoBehaviour
         // only the glyph changes (key, pad button, or a picture on a touch screen).
         string leaveKey = LeaveKey.ToString().ToUpperInvariant();
         string timingKey = TimingKey.ToString();
-        const string LeaveLabel = "RETURN TO THE PITS";
-        const string TimingLabel = "LIVE TIMING";
+        const string LeaveLabel = "Return to the Pits";
+        const string TimingLabel = "Live Timing";
 
         Vector2 a = PixelGUI.ActionButtonSize(leaveKey, LeaveLabel);
         Vector2 b = PixelGUI.ActionButtonSize(timingKey, TimingLabel);
@@ -366,8 +366,8 @@ public class GrandstandVisit : MonoBehaviour
 
         if (timing == null) return;
         timing.statusLine = _sessionOver
-            ? "SESSION OVER"
-            : $"{GrandstandWatch.SessionMinuteAt(elapsed, _sessionMinutes)}/{_sessionMinutes} MIN";
+            ? "Session Over"
+            : $"{GrandstandWatch.SessionMinuteAt(elapsed, _sessionMinutes)}/{_sessionMinutes} Min";
     }
 
     // The race in front of the stand. The chequered-flag line goes up as the winner crosses the line; the
@@ -467,11 +467,11 @@ public class GrandstandVisit : MonoBehaviour
         var kind = WeekendTrackSessions.SessionKind(_activity.kind);
         string what = kind switch
         {
-            ActivityKind.Qualifying => "QUALIFYING",
-            ActivityKind.Race => "RACE",
-            _ => "PRACTICE",
+            ActivityKind.Qualifying => "Qualifying",
+            ActivityKind.Race => "Race",
+            _ => "Practice",
         };
-        return SeriesCatalog.Name(_activity.series).ToUpperInvariant() + " · " + what;
+        return SeriesCatalog.Name(_activity.series) + " · " + what;
     }
 
     string ChequeredLine()

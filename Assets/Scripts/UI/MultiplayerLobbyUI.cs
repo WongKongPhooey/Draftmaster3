@@ -51,7 +51,7 @@ public class MultiplayerLobbyUI : MonoBehaviour
         float y = Screen.height * 0.18f;
 
         Fill(new Rect(x - 12f, y - 12f, w + 24f, h + 24f), new Color(0f, 0f, 0f, 0.78f));
-        GUI.Label(new Rect(x, y, w, 28f), "MULTIPLAYER LOBBY", _title);
+        GUI.Label(new Rect(x, y, w, 28f), "Multiplayer Lobby", _title);
         y += 34f;
         GUI.Label(new Rect(x, y, w, 22f), $"Waiting for players — {ready}/{count} ready", _row);
         y += 26f;
@@ -63,7 +63,7 @@ public class MultiplayerLobbyUI : MonoBehaviour
 
             string num = p.Number > 0 ? $"#{p.Number}" : "";
             string label = string.IsNullOrEmpty(p.DisplayLabel) ? "Player" : p.DisplayLabel;
-            string status = p.IsReadyFlag ? "READY" : "waiting";
+            string status = p.IsReadyFlag ? "Ready" : "Waiting";
             var prevCol = GUI.color;
             GUI.color = p.IsReadyFlag ? new Color(0.4f, 1f, 0.4f) : new Color(1f, 1f, 1f, 0.7f);
             GUI.Label(new Rect(x, y, w - 120f, rowH), $"{num,-4} {label}", _row);
@@ -71,7 +71,7 @@ public class MultiplayerLobbyUI : MonoBehaviour
 
             if (p.IsLocalPlayer)
             {
-                if (TouchTaps.Button(new Rect(x + w - 116f, y + 2f, 110f, rowH - 4f), p.IsReadyFlag ? "Unready" : "READY", _btn))
+                if (TouchTaps.Button(new Rect(x + w - 116f, y + 2f, 110f, rowH - 4f), p.IsReadyFlag ? "Unready" : "Ready", _btn))
                     p.ToggleReadyLocal();
             }
             else

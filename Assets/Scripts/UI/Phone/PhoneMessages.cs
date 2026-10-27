@@ -17,7 +17,7 @@ public static class PhoneMessages
     {
         public string id;            // unique within the thread; resending the same id is a no-op
         public string text;
-        public string stamp;         // "FRI 7:52 AM"
+        public string stamp;         // "Fri 7:52 AM"
         public bool fromPlayer;
     }
 

@@ -53,12 +53,12 @@ public class PlayerTelemetryHUD : MonoBehaviour
         float cy = c.y;
         float line = PixelGUI.DataLineH;
 
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "TELEMETRY", PixelGUI.HeadingSmall);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Telemetry", PixelGUI.HeadingSmall);
         cy += PixelGUI.LineH;
         PixelGUI.Rule(c.x, cy, c.width);
         cy += PixelGUI.Px(3f);
 
-        Line(c.x, ref cy, c.width, line, $"SPD  {target.SpeedMph,5:F0} MPH", PixelGUI.Text);
+        Line(c.x, ref cy, c.width, line, $"Spd  {target.SpeedMph,5:F0} MPH", PixelGUI.Text);
         Line(c.x, ref cy, c.width, line, $"YAW  {target.YawRateDeg,5:F0} d/s", PixelGUI.Text);
         Line(c.x, ref cy, c.width, line, $"SLIP {target.SlipAngleDeg,5:F1} d", SlipColour(target.SlipAngleDeg));
         Line(c.x, ref cy, c.width, line, $"FRNT {target.SlipFrontDeg,5:F1} d", SlipColour(target.SlipFrontDeg));
@@ -67,13 +67,13 @@ public class PlayerTelemetryHUD : MonoBehaviour
         // Balance verdict. Understeer is the accent, oversteer the alarm: one is a lap time, the other is
         // about to be a wall.
         float bal = target.HandlingBalanceDeg;
-        string verdict = Mathf.Abs(bal) < 0.8f ? "NEUTRAL" : (bal > 0f ? "UNDERSTEER" : "OVERSTEER");
+        string verdict = Mathf.Abs(bal) < 0.8f ? "Neutral" : (bal > 0f ? "Understeer" : "Oversteer");
         Color bc = Mathf.Abs(bal) < 0.8f ? PixelGUI.Confirm : (bal > 0f ? PixelGUI.Gold : PixelGUI.Danger);
-        Line(c.x, ref cy, c.width, line, $"BAL  {verdict}", bc);
+        Line(c.x, ref cy, c.width, line, $"Bal  {verdict}", bc);
         cy += PixelGUI.Px(2f);
 
-        Wear(c.x, ref cy, "FRONT TYRE", target.wearFront);
-        Wear(c.x, ref cy, "REAR TYRE", target.wearRear);
+        Wear(c.x, ref cy, "Front Tyre", target.wearFront);
+        Wear(c.x, ref cy, "Rear Tyre", target.wearRear);
     }
 
     void Line(float x, ref float y, float w, float h, string text, Color colour)

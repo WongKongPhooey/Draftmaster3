@@ -65,17 +65,17 @@ namespace Draftmaster.Weekend
 
         public static string Label(CareerMode mode) => mode switch
         {
-            CareerMode.Minimal => "MINIMAL",
-            CareerMode.DrivingOnly => "DRIVING ONLY",
-            _ => "FULL",
+            CareerMode.Minimal => "Minimal",
+            CareerMode.DrivingOnly => "Driving Only",
+            _ => "Full",
         };
 
         // One line for the options screen, saying what the weekend will have in it.
         public static string Describe(CareerMode mode) => mode switch
         {
-            CareerMode.Minimal => "YOUR SESSIONS, PLUS THE TEAM MEETINGS THAT SHAPE THE CAR.",
-            CareerMode.DrivingOnly => "PRACTICE, QUALIFYING AND THE RACE. NOTHING ELSE ON THE SHEET.",
-            _ => "THE WHOLE WEEKEND: MEDIA, FANS, SPONSORS, OFFICIALS AND THE TEAM.",
+            CareerMode.Minimal => "Your sessions, plus the team meetings that shape the car.",
+            CareerMode.DrivingOnly => "Practice, qualifying and the race. Nothing else on the sheet.",
+            _ => "The whole weekend: media, fans, sponsors, officials and the team.",
         };
     }
 }

@@ -11,7 +11,7 @@ namespace Draftmaster.Weekend
     // point of putting the player on the radio.
     public static class RadioRowContent
     {
-        public const string Title = "RADIO ROW";
+        public const string Title = "Radio Row";
 
         // How many drivers the reporter's question offers to choose between.
         public const int Choices = 4;
@@ -89,7 +89,7 @@ namespace Draftmaster.Weekend
 
         // Is this booking radio row (rather than one of the other media hits)?
         public static bool Is(WeekendActivity a) =>
-            a != null && a.kind == ActivityKind.MediaHit && a.title == Title;
+            a != null && a.kind == ActivityKind.MediaHit && string.Equals(a.title, Title, System.StringComparison.OrdinalIgnoreCase);
 
         // The conversation, or null when there is nobody in the field to name — the caller falls back to an
         // ordinary media hit rather than asking a question with no answers.

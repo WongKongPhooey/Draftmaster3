@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Draftmaster.Controls;
 using Draftmaster.Data;
 using Draftmaster.Fans;
 using Draftmaster.Sponsors;
@@ -71,6 +72,8 @@ public class GarageScreenUI : MonoBehaviour
     [Tooltip("Age, manufacturer and nickname off the same row, on one line.")]
     public TextMeshProUGUI driverBio;
     public TextMeshProUGUI statusLabel;
+    [Tooltip("On the Driver Stats heading's line: how much of a rival's sheet has been scouted.")]
+    public TextMeshProUGUI scoutingLabel;
     public TextMeshProUGUI weekendLabel;
 
     [Tooltip("One row per DriverAttributeSheet.All entry, in that order: label, cells, value.")]
@@ -289,7 +292,7 @@ public class GarageScreenUI : MonoBehaviour
         FillCar(mine, hasCar, number);
         // Only the player's own name is overridden by their career name; a rival keeps theirs.
         if (driverName != null)
-            driverName.text = (mine ? PlayerDriver.DisplayName(row) : FullName(row)).ToUpperInvariant();
+            driverName.text = mine ? PlayerDriver.DisplayName(row) : FullName(row);
         if (driverNumber != null) driverNumber.text = hasCar ? "#" + number : "#—";
         FillIdentity(theme, row);
 
@@ -302,7 +305,7 @@ public class GarageScreenUI : MonoBehaviour
         // and only the player has run any, so a rival's level is blank rather than borrowed.
         if (driverLevel != null)
         {
-            driverLevel.text = mine ? "LV " + (1 + starts / 5) : "LV —";
+            driverLevel.text = mine ? "Level " + (1 + starts / 5) : "Level —";
             if (theme != null) driverLevel.color = mine ? theme.textDim : theme.textDisabled;
         }
 
@@ -335,10 +338,10 @@ public class GarageScreenUI : MonoBehaviour
         if (weekendLabel != null)
         {
             string track = TrackSelection.CurrentDisplayName;
-            string session = RaceWeekend.IsQualifying ? "QUALIFYING" : RaceWeekend.IsPractice ? "PRACTICE" : "RACE";
+            string session = RaceWeekend.IsQualifying ? "Qualifying" : RaceWeekend.IsPractice ? "Practice" : "Race";
             weekendLabel.text = string.IsNullOrEmpty(track)
-                ? "NO TRACK SELECTED"
-                : $"NEXT: {track.ToUpperInvariant()} · {session}";
+                ? "No track selected"
+                : $"Next: {track} · {session}";
         }
     }
 
@@ -372,7 +375,7 @@ public class GarageScreenUI : MonoBehaviour
         if (carSlotCaption != null)
         {
             carSlotCaption.gameObject.SetActive(sprite == null);
-            carSlotCaption.text = hasCar ? $"[ no paint for #{number} ]" : "[ no car ]";
+            carSlotCaption.text = hasCar ? $"[ No paint for #{number} ]" : "[ No car ]";
         }
     }
 
@@ -397,38 +400,38 @@ public class GarageScreenUI : MonoBehaviour
 
     static string SeriesWord(Draftmaster.Weekend.RacingSeries series) => series switch
     {
-        Draftmaster.Weekend.RacingSeries.National => "XFINITY",
-        Draftmaster.Weekend.RacingSeries.Trucks => "TRUCK",
-        _ => "CUP",
+        Draftmaster.Weekend.RacingSeries.National => "Xfinity",
+        Draftmaster.Weekend.RacingSeries.Trucks => "Truck",
+        _ => "Cup",
     };
 
     // The ledger counts the player's races and nobody else's. A rival with no real Cup career on file reads
     // as unrecorded rather than being handed the player's numbers.
     void FillCareer(bool mine, int starts, int wins, int top10s)
     {
-        SetPair(careerRows, 0, "STARTS", mine ? starts.ToString() : "—");
-        SetPair(careerRows, 1, "WINS", mine ? wins.ToString() : "—");
-        SetPair(careerRows, 2, "TOP 10s", mine ? top10s.ToString() : "—");
+        SetPair(careerRows, 0, "Starts", mine ? starts.ToString() : "—");
+        SetPair(careerRows, 1, "Wins", mine ? wins.ToString() : "—");
+        SetPair(careerRows, 2, "Top 10s", mine ? top10s.ToString() : "—");
     }
 
     // A real driver's real career in this series, to the end of 2025.
     void FillCareer(Draftmaster.Weekend.RacingSeries series, Draftmaster.Weekend.SeriesCareers2025.Record record)
     {
-        SetPair(careerRows, 0, SeriesWord(series) + " STARTS", record.Starts.ToString());
-        SetPair(careerRows, 1, "WINS", record.Wins.ToString());
-        SetPair(careerRows, 2, "TOP 10s", record.Top10s.ToString());
+        SetPair(careerRows, 0, SeriesWord(series) + " Starts", record.Starts.ToString());
+        SetPair(careerRows, 1, "Wins", record.Wins.ToString());
+        SetPair(careerRows, 2, "Top 10s", record.Top10s.ToString());
     }
 
-    // The honours a real driver's record in this series carries; titles in gold.
+    // The honours a real driver's record in this series carries; titles in gold. Lines are kept to the 17
+    // characters the column takes; the series they were won in is the one the top bar is showing.
     void FillAccolades(PixelUITheme theme, Draftmaster.Weekend.RacingSeries series,
                        Draftmaster.Weekend.SeriesCareers2025.Record record)
     {
-        string word = SeriesWord(series);
         var lines = new List<(string text, bool gold)>();
-        if (record.Titles == 1) lines.Add(($"{word} CHAMPION {record.TitleYears[0]}", true));
-        else if (record.Titles > 1) lines.Add(($"{record.Titles}× {word} CHAMPION", true));
-        if (record.Poles > 0) lines.Add(($"{record.Poles} {word} POLE{(record.Poles == 1 ? "" : "S")}", false));
-        lines.Add((record.Starts > 0 ? "RECORD TO END OF 2025" : $"NO {word} STARTS BEFORE 2026", false));
+        if (record.Titles == 1) lines.Add(($"Champion {record.TitleYears[0]}", true));
+        else if (record.Titles > 1) lines.Add(($"{record.Titles}× Champion", true));
+        if (record.Poles > 0) lines.Add(($"{record.Poles} Pole{(record.Poles == 1 ? "" : "s")}", false));
+        lines.Add((record.Starts > 0 ? "Record to 2025" : "No starts yet", false));
         ShowAccolades(theme, lines);
     }
 
@@ -439,18 +442,18 @@ public class GarageScreenUI : MonoBehaviour
         if (!mine)
         {
             // Nothing in the ledger is about this driver, and the database keeps no honours roll yet.
-            lines.Add(("NO CAREER RECORD ON FILE", false));
+            lines.Add(("No record on file", false));
         }
         else
         {
-            if (wins > 0) lines.Add(($"{wins} RACE WIN{(wins == 1 ? "" : "S")}", true));
-            if (top5s > 0) lines.Add(($"{top5s} TOP FIVE{(top5s == 1 ? "" : "S")}", true));
+            if (wins > 0) lines.Add(($"{wins} Race Win{(wins == 1 ? "" : "s")}", true));
+            if (top5s > 0) lines.Add(($"{top5s} Top Five{(top5s == 1 ? "" : "s")}", true));
             if (PlayerStatsLedger.Get("fights.won") > 0)
-                lines.Add(($"{PlayerStatsLedger.Get("fights.won")}× WON A PADDOCK SCRAP", false));
+                lines.Add(($"{PlayerStatsLedger.Get("fights.won")}× Scraps Won", false));
             if (PlayerStatsLedger.Get("locations") > 0)
-                lines.Add(($"{PlayerStatsLedger.Get("locations")} PLACES VISITED", false));
+                lines.Add(($"{PlayerStatsLedger.Get("locations")} Places Seen", false));
             if (lines.Count == 0)
-                lines.Add((starts > 0 ? "NOTHING TO PUT ON THE WALL YET" : "NO STARTS YET", false));
+                lines.Add((starts > 0 ? "Nothing yet" : "No starts yet", false));
         }
 
         ShowAccolades(theme, lines);
@@ -478,7 +481,7 @@ public class GarageScreenUI : MonoBehaviour
         if (driverTeam != null)
         {
             string team = row != null ? PlayerDriver.ShortTeamName(row.TeamName) : "";
-            driverTeam.text = team.Length > 0 ? team.ToUpperInvariant() : "NO TEAM";
+            driverTeam.text = team.Length > 0 ? team : "No team";
             if (theme != null) driverTeam.color = team.Length > 0 ? theme.text : theme.textDisabled;
         }
 
@@ -486,27 +489,36 @@ public class GarageScreenUI : MonoBehaviour
 
         if (row == null)
         {
-            driverBio.text = "NO DRIVER RECORD";
+            driverBio.text = "No driver record";
             if (theme != null) driverBio.color = theme.textDisabled;
             return;
         }
 
         var parts = new List<string>(3);
-        if (row.Age > 0) parts.Add("AGE " + row.Age);
-        if (!string.IsNullOrWhiteSpace(row.Manufacturer)) parts.Add(row.Manufacturer.Trim().ToUpperInvariant());
-        if (!string.IsNullOrWhiteSpace(row.Nickname)) parts.Add("\"" + row.Nickname.Trim().ToUpperInvariant() + "\"");
+        if (row.Age > 0) parts.Add("Age " + row.Age);
+        if (!string.IsNullOrWhiteSpace(row.Manufacturer)) parts.Add(MakeName(row.Manufacturer.Trim()));
+        if (!string.IsNullOrWhiteSpace(row.Nickname)) parts.Add("\"" + row.Nickname.Trim() + "\"");
 
         driverBio.text = string.Join(" · ", parts);
         if (theme != null) driverBio.color = theme.textDim;
     }
+
+    // The rosters store the make as a three-letter code; the sheet spells it out.
+    static string MakeName(string code) => code.ToUpperInvariant() switch
+    {
+        "CHV" => "Chevy",
+        "FRD" => "Ford",
+        "TYT" => "Toyota",
+        _ => UIText.TitleCase(code),
+    };
 
     // Every attribute the Drivers table rates this driver on, in DriverAttributeSheet order — the same
     // order the builder laid the rows out in. A save with no row at all reads as unrated rather than
     // drawing eighteen empty bars.
     //
     // A rival's stats are only on show once scouted (ScoutingLedger): racing their series or watching it
-    // uncovers a few a session. The rest read "??" with an empty bar, and the status line says how far the
-    // scouting has got.
+    // uncovers a few a session. The rest read "??" with an empty bar, and the heading's line says how far
+    // the scouting has got.
     void FillDriverStats(PixelUITheme theme, Driver row, bool mine)
     {
         var sheet = DriverAttributeSheet.All;
@@ -515,22 +527,21 @@ public class GarageScreenUI : MonoBehaviour
             var attribute = sheet[i];
             bool known = row == null || ScoutingLedger.IsKnown(row, i, mine);
             int value = row != null && known ? attribute.Read(row) : -1;
-            SetStat(driverStats, i, attribute.Label,
+            SetStat(driverStats, i, attribute.Name,
                     value >= 0 ? value / (float)Mathf.Max(1, attribute.Max) : 0f,
                     value >= 0 ? value.ToString() : known ? "—" : "??");
             if (theme != null && driverStats[i].value != null)
                 driverStats[i].value.color = value >= 0 ? theme.text : theme.textDisabled;
         }
 
+        if (scoutingLabel == null) return;
         if (row != null && !mine)
         {
             int seen = ScoutingLedger.KnownCount(row, false);
             int total = ScoutingLedger.Total;
-            SetStatus(seen >= total
-                ? "FULLY SCOUTED."
-                : $"SCOUTED {seen} OF {total}. RACE THEIR SERIES OR WATCH IT TO LEARN MORE.", hold: true);
+            scoutingLabel.text = seen >= total ? "Fully scouted" : $"Scouted {seen} of {total}";
         }
-        else SetStatus("");
+        else scoutingLabel.text = "";
     }
 
     void FillTraits(PixelUITheme theme, string name)
@@ -547,7 +558,7 @@ public class GarageScreenUI : MonoBehaviour
             }
             else if (i == 0 && traits.Count == 0)
             {
-                line.text = "NONE KNOWN";
+                line.text = "None known";
                 if (theme != null) line.color = theme.textDisabled;
             }
             else line.text = "";
@@ -568,11 +579,11 @@ public class GarageScreenUI : MonoBehaviour
             // The player's own sheet: N/A straight under the heading, where the standing would be.
             if (pair.label != null)
             {
-                pair.label.text = mine ? (i == 0 ? "N/A" : "") : !known ? "" : i == 0 ? "STANDING" : "SCORE";
+                pair.label.text = mine ? (i == 0 ? "N/A" : "") : !known ? "" : i == 0 ? "Standing" : "Score";
                 if (theme != null) pair.label.color = mine ? theme.text : theme.textDim;
             }
             if (pair.value == null) continue;
-            pair.value.text = !known ? "" : i == 0 ? standing.ToString().ToUpperInvariant()
+            pair.value.text = !known ? "" : i == 0 ? standing.ToString()
                                                    : (score > 0f ? "+" : "") + Mathf.RoundToInt(score);
             if (theme != null && i == 0)
                 pair.value.color = standing == DriverRelationships.Standing.Ally ? theme.confirm
@@ -582,10 +593,10 @@ public class GarageScreenUI : MonoBehaviour
         if (relationshipNote == null) return;
         relationshipNote.text = !known ? "" : standing switch
         {
-            DriverRelationships.Standing.Ally => "FRIENDLY. WILL WORK WITH YOU IN THE DRAFT.",
-            DriverRelationships.Standing.Rival => "A DECLARED RIVALRY. EXPECT NO FAVOURS.",
-            DriverRelationships.Standing.Furious => "OUT FOR PAYBACK. WATCH YOUR MIRRORS.",
-            _ => score == 0f ? "NO HISTORY BETWEEN YOU YET." : "NOTHING EITHER WAY.",
+            DriverRelationships.Standing.Ally => "Friendly. Will work with you in the draft.",
+            DriverRelationships.Standing.Rival => "A declared rivalry. Expect no favours.",
+            DriverRelationships.Standing.Furious => "Out for payback. Watch your mirrors.",
+            _ => score == 0f ? "No history between you yet." : "Nothing either way.",
         };
         if (theme != null) relationshipNote.color = theme.textDim;
     }
@@ -596,11 +607,11 @@ public class GarageScreenUI : MonoBehaviour
     // everyone except the player, whose career name is allowed to sit over the seat they took.
     static string FullName(Driver row)
     {
-        if (row == null) return "no driver";
+        if (row == null) return "No driver";
         string full = ((row.FirstName ?? "") + " " + (row.LastName ?? "")).Trim();
         if (full.Length > 0) return full;
         string label = RosterLookup.LabelName(row);
-        return label.Length > 0 ? label : "no driver";
+        return label.Length > 0 ? label : "No driver";
     }
 
     void SetStat(List<StatRow> rows, int index, string label, float fill01, string value)

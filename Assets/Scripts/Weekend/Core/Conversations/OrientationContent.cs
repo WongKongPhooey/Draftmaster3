@@ -58,7 +58,7 @@ namespace Draftmaster.Weekend
             // ---- the key itself. Everything else is useless if this beat does not land. ----
             c.Add(new WeekendBeat
             {
-                speaker = "CREW CHIEF",
+                speaker = "Crew Chief",
                 preamble = new[]
                 {
                     $"Phone's in your pocket. {Key} brings it up, anywhere you're on foot.",
@@ -86,7 +86,7 @@ namespace Draftmaster.Weekend
             // ---- TASKS: the active job list, which is the thing this whole booking exists to point at ----
             c.Add(new WeekendBeat
             {
-                speaker = "CREW CHIEF",
+                speaker = "Crew Chief",
                 preamble = new[]
                 {
                     "The one marked TASKS is the one you actually want.",
@@ -114,7 +114,7 @@ namespace Draftmaster.Weekend
             // ---- NOTES: who asked, and for what. The paddock hands quests out in conversation. ----
             c.Add(new WeekendBeat
             {
-                speaker = "CREW CHIEF",
+                speaker = "Crew Chief",
                 preamble = new[]
                 {
                     "There's a NOTES tile as well. Every time you say yes to somebody in this paddock, it writes itself down in there.",

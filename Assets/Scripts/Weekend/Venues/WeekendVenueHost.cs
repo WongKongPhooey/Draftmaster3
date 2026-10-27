@@ -341,7 +341,7 @@ public class WeekendVenueHost : NPCInteractable
                 _planSheetOpen = false;
                 setup?.SaveAsRacePlan(RaceWeekend.WeekendId);
                 WeekendDirector.Finish(a, outcome, inWorld: true);
-            }, "RACE PLAN");
+            }, "Race Plan");
             return;
         }
 
