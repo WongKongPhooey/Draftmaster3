@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 using Draftmaster.Sim;
 
 // Gives the race camera some weight. Bolted onto the camera alongside CameraFollow, which ticks it and adds
@@ -18,6 +19,8 @@ using Draftmaster.Sim;
 //   Swing — only when the player has asked for the swing camera (CameraViewMode): the view rolls round until
 //           the car's nose points up the screen, on a spring that lags the heading and swings a little past
 //           it, so a corner feels like the camera being dragged round behind the car rather than a turntable.
+//           On a desktop the swing also opens the view out (CameraSwing.ViewAheadZoom), so the road ahead —
+//           now up the short side of the screen — reaches as far as the fixed camera's does across the long one.
 //
 // Only cars get the treatment: an on-foot target (the pit walk, the paddock) has none of these components and
 // is followed dead straight, as before.
@@ -89,6 +92,9 @@ public class DrivingCameraFeel : MonoBehaviour
     [Tooltip("Speed (mph) below which the swing holds the angle it already has. A crawling or parked car's "
            + "heading is noise, and the view chasing it would spin on the spot.")]
     public float swingHoldBelowMph = 8f;
+    [Tooltip("How fast the desktop swing camera opens out to see the road ahead, and closes back in when the "
+           + "swing goes off or the player gets out, in e-folds per second.")]
+    public float swingZoomResponse = 2f;
 
     // What CameraFollow adds on top of its follow position / rotation this frame.
     public Vector3 PositionOffset { get; private set; }
@@ -96,6 +102,9 @@ public class DrivingCameraFeel : MonoBehaviour
     // Degrees the whole view is rolled to sit behind the car. Zero in fixed-camera mode, and eased rather
     // than snapped back to zero when the player switches the swing off mid-race.
     public float SwingDegrees { get; private set; }
+    // What the swing has the camera's orthographic size multiplied by while it renders: 1 with no swing, and
+    // CameraSwing.ViewAheadZoom on a desktop swinging behind a car, eased between the two.
+    public float ViewZoom => _zoom;
     // 0..1 shake budget, exposed for debug readouts.
     public float Trauma => _trauma;
 
@@ -118,6 +127,11 @@ public class DrivingCameraFeel : MonoBehaviour
     float _viewTurn;        // the screen's turn last frame (DriveOrientationController.ViewTurnDegrees)
     bool _hasViewTurn;
     bool _swingWasOn;       // whether last frame swung, so a screen turn is only carried across a live swing
+    float _zoom = 1f;       // eased view zoom (ViewZoom)
+
+    Camera _camera;         // the camera this sits on, opened out by _zoom while it renders
+    float _zoomedFrom;      // its size before the render in progress widened it
+    bool _zoomed;           // and whether it did
 
     // Kinematic-target fallback: differentiate the transform when there is no controller to ask.
     Vector2 _prevPos;
@@ -129,14 +143,21 @@ public class DrivingCameraFeel : MonoBehaviour
     void OnEnable()
     {
         if (_collision != null) { _collision.Contacted -= OnContact; _collision.Contacted += OnContact; }
+        RenderPipelineManager.beginCameraRendering += BeginCamera;
+        RenderPipelineManager.endCameraRendering += EndCamera;
     }
 
     void OnDisable()
     {
         if (_collision != null) _collision.Contacted -= OnContact;
+        RenderPipelineManager.beginCameraRendering -= BeginCamera;
+        RenderPipelineManager.endCameraRendering -= EndCamera;
+        if (_zoomed && _camera != null) _camera.orthographicSize = _zoomedFrom;
+        _zoomed = false;
         PositionOffset = Vector3.zero;
         RollDegrees = 0f;
         SwingDegrees = 0f;
+        _zoom = 1f;
         ResetState();
     }
 
@@ -156,6 +177,7 @@ public class DrivingCameraFeel : MonoBehaviour
             // Nothing on foot ever swings, but a swing left over from the car it was following unwinds back
             // to square rather than snapping there the frame the player gets out.
             TickSwing(false, 0f, 0f, dt);
+            TickZoom(false, dt);
             return;
         }
 
@@ -216,6 +238,44 @@ public class DrivingCameraFeel : MonoBehaviour
         if (swinging && PitLaneStart.SeatedBeforeDriving)
             swinging = PitLaneStart.InSetup && PixelGUI.Handheld;
         TickSwing(swinging, speedMph, headingDeg, dt);
+        TickZoom(swinging, dt);
+    }
+
+    // Ease the view's zoom toward what the swing wants. Eased rather than switched, because it changes the
+    // moment the player is handed the car, gets out, or flips the camera from the pause menu, and a 1.8x jump
+    // in the size of everything on screen at any of those would be jarring.
+    void TickZoom(bool swinging, float dt)
+    {
+        float target = swinging ? CameraSwing.ViewAheadZoom(PixelGUI.Handheld) : 1f;
+        _zoom = CameraFeel.Approach(_zoom, target, swingZoomResponse, dt);
+        if (Mathf.Abs(_zoom - target) < 0.001f) _zoom = target;
+    }
+
+    // ------------------------------------------------------------------ zoom at render time
+    //
+    // The zoom is put on the camera only while it renders and taken straight back off, the way
+    // DriveOrientationController opens out a portrait phone: half a dozen scripts own the orthographic size
+    // (the pit-lane zoom, the grandstand, co-op) and would fight a change to it, and this way none of them
+    // ever sees it.
+
+    void BeginCamera(ScriptableRenderContext context, Camera cam)
+    {
+        _zoomed = false;
+        // An upright phone is opened out by DriveOrientationController; never stack the two.
+        if (_zoom <= 1.0001f || DriveOrientationController.Portrait) return;
+        if (_camera == null) _camera = GetComponent<Camera>();
+        if (cam == null || cam != _camera || !cam.orthographic) return;
+
+        _zoomedFrom = cam.orthographicSize;
+        cam.orthographicSize = _zoomedFrom * _zoom;
+        _zoomed = true;
+    }
+
+    void EndCamera(ScriptableRenderContext context, Camera cam)
+    {
+        if (!_zoomed || cam != _camera) return;
+        _camera.orthographicSize = _zoomedFrom;
+        _zoomed = false;
     }
 
     // Drag the hinge toward the car's heading, or back to square when the swing is off. Separate from the

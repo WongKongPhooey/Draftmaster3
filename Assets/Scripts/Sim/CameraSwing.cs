@@ -20,6 +20,17 @@ namespace Draftmaster.Sim
         public const float MaxSubstep = 1f / 90f;
         public const int MaxSubsteps = 8;
 
+        // The screen the fixed camera's view is judged on: a 1920x1080 desktop.
+        public const float ReferenceAspect = 1920f / 1080f;
+
+        // What the swing camera's orthographic size is multiplied by so it sees as far up the road as the fixed
+        // camera does on that screen. The fixed camera's longest look ahead is along a straight running across
+        // the screen: half the screen's width, the ortho size times the aspect. The swing points the nose up the
+        // screen, where the look ahead is only half the height, the ortho size itself — so a desktop opens it
+        // out by the aspect. A handheld turns upright instead (DriveOrientationController), which already puts
+        // the long side ahead of the car, so it is left alone.
+        public static float ViewAheadZoom(bool handheld) => handheld ? 1f : ReferenceAspect;
+
         // Fold an angle into -180..180, which is the range every comparison here expects.
         public static float Normalise(float angleDeg) => Mathf.Repeat(angleDeg + 180f, 360f) - 180f;
 

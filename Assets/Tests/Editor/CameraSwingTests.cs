@@ -178,4 +178,17 @@ public class CameraSwingTests
         Assert.IsFalse(CameraSwing.Settled(20f, 0f, 0f), "still pointing the wrong way");
         Assert.IsFalse(CameraSwing.Settled(0f, 40f, 0f), "on target but still turning");
     }
+
+    // On a desktop the swing points the nose up the short side of the screen, so it is opened out until the
+    // road visible ahead (half the view's height) matches the fixed camera's longest look ahead on a 1920x1080
+    // screen (half its width). A handheld goes upright instead and is left alone.
+    [Test]
+    public void DesktopSwingSeesAsFarAheadAsTheFixedCameraAt1080p()
+    {
+        const float orthoSize = 20f;   // PitLaneStart.drivingOrthoSize
+        float fixedAhead = orthoSize * 1920f / 1080f;
+        float swingAhead = orthoSize * CameraSwing.ViewAheadZoom(handheld: false);
+        Assert.AreEqual(fixedAhead, swingAhead, 1e-4f);
+        Assert.AreEqual(1f, CameraSwing.ViewAheadZoom(handheld: true));
+    }
 }
