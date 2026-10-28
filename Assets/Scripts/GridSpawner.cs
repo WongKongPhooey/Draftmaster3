@@ -1031,7 +1031,7 @@ public class GridSpawner : MonoBehaviour
             binding.Apply();   // adds AIRacingBehaviour/TireState, rebuilds the spline
 
             var racing = watchedRace ? go.GetComponent<AIRacingBehaviour>() : null;
-            if (racing != null) racing.RaceAsWatchedField();
+            if (racing != null) racing.RaceAsWatchedField(dynamicRace);
 
             if (dynamicRace) DriveWithDynamicModel(go, splineDriver, sr, live.series);
 

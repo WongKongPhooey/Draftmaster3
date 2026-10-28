@@ -180,6 +180,20 @@ public class AIRacingBehaviour : MonoBehaviour
              "away the run. Off: measured only together with roadChaseHeadwayShare (Docs/AI-NR2003.md, 2026-10-22).")]
     public bool roadPassKeepSide = false;
     SplineDriver _roadPassCar;   // the car a road-course pass is on
+    [Tooltip("Off the lanes, a pass that has not got its nose alongside the car it is on (inside alongsideLength) by the " +
+             "braking zone of a real corner is given up, and the car takes the line through it behind them. Without it a car " +
+             "still a few lengths back held its pass offset the whole way round, so a road-course field ran 3-5 m wide " +
+             "of the apex in a queue (Watkins Glen Turn 1, GrandstandRaceSimTests.TurnOneApex_Dynamic_WatkinsGlen). " +
+             "On for the watched grandstand race (RaceAsWatchedField); the player's own field is unchanged.")]
+    public bool cornerPassNeedsOverlap = false;
+    [Tooltip("A corner, for cornerPassNeedsOverlap: the driven line tighter than this radius (m) within cornerPassScan " +
+             "metres plus cornerPassLeadSeconds of the car's speed ahead. Fast sweepers stay open to a pass carried round them.")]
+    public float cornerPassRadius = 120f;
+    public float cornerPassScan = 15f;
+    [Tooltip("How long before the corner (s at the current speed) a pass that is not alongside is given up. It has to be " +
+             "before the brakes go on: sideways moves under heavy braking run at brakingLateralShare, and a pass dropped at " +
+             "the turn-in was still 3 m off the line at the apex.")]
+    public float cornerPassLeadSeconds = 4f;
     [Tooltip("Off the lanes (road courses), a driver quicker than the car ahead of it follows it this much closer: the " +
              "time-headway part of the follow gap is scaled by this share. The braking term and hardFollowGap still " +
              "apply. At the full headway the quickest car at Watkins Glen sat 13-20 m behind cars 0.3-0.5 s a lap " +
@@ -346,8 +360,15 @@ public class AIRacingBehaviour : MonoBehaviour
     // commits to passes harder than the player's own field. Stock, a road-course field ran single file: a chaser
     // stepped 3 m off line, still sat inside the 3.4 m it needed to be clear of the car ahead, and was held to its
     // speed until the move timed out (GrandstandRaceSimTests: 3 places changed hands in 100 s at Watkins Glen).
-    public void RaceAsWatchedField()
+    //
+    // Since the watched race went onto the dynamic model (GridSpawner.DriveWithDynamicModel) nearly every car was on a
+    // pass at any moment, and a 5 m pass step held all the way round put half the field up to 4.7 m wide of Watkins
+    // Glen's Turn 1 apex. A dynamic field keeps the knobs (on the player's field's racecraft, with the rule below, it
+    // hardly passed: 1 place in 150 s) but gives up a pass that is not alongside by the braking zone
+    // (cornerPassNeedsOverlap), so the queue behind takes the line (GrandstandRaceSimTests.TurnOneApex_Dynamic_WatkinsGlen).
+    public void RaceAsWatchedField(bool dynamicModel)
     {
+        cornerPassNeedsOverlap = dynamicModel;
         corridorClearWidthNoLanes = 2.4f;                 // clear by a lane's width, as on an oval
         overtakeLineOffset = 5f;                          // a full car width and more out of the tow
         commitHoldSeconds = 3f;                           // stay with the move until it is alongside
@@ -696,6 +717,19 @@ public class AIRacingBehaviour : MonoBehaviour
                 wantOvertake = true;
                 overtakeDir = _commitDir;
             }
+        }
+
+        // Not alongside by the braking zone, no corner: a road-course pass still a length or more behind the car it is on
+        // drops in behind it and takes the line, rather than going round the whole corner on its pass offset off the
+        // apex. Checked every step through the corner, so a move re-picked there is dropped again; one already
+        // alongside keeps its side. Stopped cars and the human (no _roadPassCar) are still driven round.
+        if (cornerPassNeedsOverlap && wantOvertake && !lanePass && !Lanes && !underYellow && !_passAroundStopped
+            && _roadPassCar != null && LongitudinalGap(_spline, _roadPassCar) > alongsideLength
+            && _spline.CurvatureRadiusAhead(cornerPassScan + myMpsNow * cornerPassLeadSeconds) < cornerPassRadius)
+        {
+            wantOvertake = false;
+            overtakeDir = 0f;
+            _commitTimer = 0f;
         }
 
         if (!wantOvertake) _passAroundStopped = false;

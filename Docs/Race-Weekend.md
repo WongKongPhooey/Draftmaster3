@@ -184,6 +184,17 @@ all live in the dynamic car; on the kinematic brain a Daytona truck field strung
 green. The whole grid rolls off the last corner at one speed (the slowest slot's race pace), not each car
 at its own pace, which had the front row pulling away from rows still in the corner.
 
+It keeps the watched field's racecraft (`AIRacingBehaviour.RaceAsWatchedField`: 5 m pass step, close
+headway, 3 s commitment) so it still races, but on the dynamic model that put nearly every car on a pass
+at all times, and the ones on the outside held the 5 m step round the whole corner — at Watkins Glen the
+field missed Turn 1's apex by up to 4.7 m (2026-10-28). So the dynamic watched field also turns on
+`cornerPassNeedsOverlap`: on a road course, a pass not alongside the car it is on by the braking zone of a
+real corner (line radius under `cornerPassRadius`, `cornerPassLeadSeconds` ahead) is given up and the car
+takes the line behind. Widest at the apex 3.9 m outside the line → 1.0 m; places changed in 150 s 41 → 15
+(the player's own field: 10–19). Ovals race in lanes and are untouched; the player's own field has the
+switch off. Measured by `GrandstandRaceSimTests.TurnOneApex_Dynamic_WatkinsGlen` (diagnostic) and locked by
+`TheDynamicWatchedField_TakesTurnOneApex_AtWatkinsGlen`.
+
 **The handover happens behind a blackout.** Giving pit road from one championship to the next is a lot of
 things moving at once — a field cleared off the lap, another one stood up around it, the box ladder
 refitted, and a crew and a pit stand rebuilt in the new colours on every box — and watched from the paddock
