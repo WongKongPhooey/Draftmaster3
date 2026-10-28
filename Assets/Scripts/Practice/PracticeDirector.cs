@@ -226,11 +226,29 @@ public class PracticeDirector : MonoBehaviour
         if (WeekendRouted)
         {
             WeekendDirector.FinishRoutedSession(BuildSessionOutcome());
+            PutPlayerCarAway();
             return;
         }
 
         RaceWeekend.Current = _isQualifying ? RaceWeekend.Session.Race : RaceWeekend.Session.Qualifying;
         ReloadScene();
+    }
+
+    // A routed session ends in the scene it was driven in, so nothing reloads the car off the player: ended
+    // from the pause menu while they are still out on track (or while the AI is bringing them in under the
+    // flag), the car is put away in its box and the driver stood beside it, the way END RACE puts a race away
+    // (PitLaneStart.EndRaceInBox). A driver already out of the car — the clock's wrap-up got them out in the
+    // box — is left where they are.
+    void PutPlayerCarAway()
+    {
+        var start = FindFirstObjectByType<PitLaneStart>();
+        if (start == null || !start.BoxKnown) return;
+
+        bool aiBringingIn = _wrapUp != null && _wrapUp.AIDriving;
+        if (!start.IsDriving && !aiBringingIn) return;
+
+        if (_wrapUp != null) _wrapUp.Abandon();
+        start.EndRaceInBox();
     }
 
     // A phone turned upright for the swing camera turns back to landscape before the scene goes.

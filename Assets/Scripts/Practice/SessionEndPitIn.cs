@@ -59,6 +59,16 @@ public class SessionEndPitIn : MonoBehaviour
         if (!AIDriving) enabled = false;
     }
 
+    // The session is over and the car is being put straight into its box (PracticeDirector ending a routed
+    // session from the pause menu): any in-lap the AI is driving stops here, with the spline brain given back
+    // the way it was found, and nothing more is done with the car.
+    public void Abandon()
+    {
+        if (AIDriving) Release();
+        _closed = true;
+        enabled = false;
+    }
+
     void Init()
     {
         _start = FindFirstObjectByType<PitLaneStart>();
