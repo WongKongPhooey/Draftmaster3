@@ -629,6 +629,10 @@ The rest is `GrandstandVisit`:
   centreline and picks a zoom off the distance, which is a workable view of the road at every venue.
   Get out of the seat and walk more than 3.5 m and the camera hands itself back to the ordinary on-foot
   follow — a fixed wide frame with the player walking out of the bottom of it is worse than no shot.
+- **The track map is up in the stand.** `TrackMiniMap` shows while `GrandstandVisit.Watching`, bottom right
+  at `standMapSize` (no speedometer to clear), so the cars out of the vantage's shot are still somewhere on
+  screen. No pip for the player's parked car; in a watched race the leader
+  (`GrandstandRaceDirector.Leader`) gets the gold one. Same pause-menu toggle as in the car.
 - **`F11` is the timing screen** for whatever is on track: the same `TimingScreenUI` the crew chief opens,
   timing the real ambient field off `LapTimingManager`. Three columns — position, driver, best lap — under
   a `LIVE TIMING` heading and a line with the championship and session on the left and the session clock on

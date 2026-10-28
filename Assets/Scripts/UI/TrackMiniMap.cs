@@ -21,6 +21,9 @@ public class TrackMiniMap : MonoBehaviour
     [Header("Layout (UI pixels, before PixelGUI.Scale)")]
     [Tooltip("Mini-map square size.")]
     public float mapSize = 104f;
+    [Tooltip("Map size in a grandstand. Bigger than in the car: there is no speedometer to clear, and the map " +
+             "is most of what the screen has to say about the cars out of shot.")]
+    public float standMapSize = 140f;
     [Tooltip("Distance from the screen's bottom-right corner.")]
     public Vector2 cornerMargin = new Vector2(8f, 8f);
     [Tooltip("Height (in the HUD's 1920x1080 reference units) to keep clear at the bottom right for the " +
@@ -191,26 +194,36 @@ public class TrackMiniMap : MonoBehaviour
     //
     // The paddock is walkable for three days and the map has nothing to say about most of it: no field is
     // circulating, the player's car is parked, and a corner of the screen was being spent on a picture of an
-    // empty circuit. Watching another championship from the stand is the same — that is somebody else's
-    // session, read from a seat, and the timing screen (F11) is what belongs to it.
+    // empty circuit.
     //
     // RaceWeekend.SessionLive is the same gate the crew chief's headset uses. It covers a single race and a
     // lobby race too, neither of which has a weekend around it to ask.
     static bool DuringPlayersSession => RaceWeekend.SessionLive;
 
+    // Sat in a grandstand watching another championship. The vantage only shows one length of circuit, so
+    // without the map there is no telling where the rest of the field is — who is about to come past, who
+    // has dropped off the back. The player's own car is parked, so there is no gold pip for it; in a race
+    // the gold goes to the leader instead.
+    static bool WatchingFromStand => GrandstandVisit.Watching;
+
     void OnGUI()
     {
         // `_builder == null` too: the road it was drawn from has gone (scene change) and the next poll has not
         // rebaked yet — no flash of the last track's map over the new one.
-        if (!Visible || _mapTex == null || _builder == null || RacePauseMenu.IsPaused || !DuringPlayersSession) return;
+        bool stand = WatchingFromStand;
+        if (!Visible || _mapTex == null || _builder == null || RacePauseMenu.IsPaused) return;
+        if (!stand && !DuringPlayersSession) return;
 
         // Sat above the speedometer rather than on top of it. This is IMGUI in raw screen pixels while the
         // dial is on a scaled canvas, so the clearance is converted with the same factor CanvasScaler uses
-        // (Scale With Screen Size, 1920x1080, match 0.5 — the geometric mean of the two ratios).
-        float size = PixelGUI.Px(mapSize);
+        // (Scale With Screen Size, 1920x1080, match 0.5 — the geometric mean of the two ratios). On foot in a
+        // stand there is no dial, so the map takes the corner; the leave/timing prompts are bottom-centre and
+        // the timing screen is down the left, so neither is in the way.
+        float size = PixelGUI.Px(stand ? standMapSize : mapSize);
+        size = Mathf.Min(size, Screen.width * 0.4f, Screen.height * 0.4f);
         var rect = new Rect(
             Screen.width - size - PixelGUI.Px(cornerMargin.x),
-            Screen.height - size - PixelGUI.Px(cornerMargin.y) - speedoClearance * HudScale(),
+            Screen.height - size - PixelGUI.Px(cornerMargin.y) - (stand ? 0f : speedoClearance * HudScale()),
             size, size);
 
         // No plate and no frame behind it: the map is a line drawing laid straight over the race, which
@@ -220,15 +233,19 @@ public class TrackMiniMap : MonoBehaviour
         GUI.color = Color.white;
         GUI.DrawTexture(rect, _mapTex);
 
+        var leader = stand && GrandstandRaceDirector.Current != null ? GrandstandRaceDirector.Current.Leader : null;
         for (int i = 0; i < _aiCars.Count; i++)
         {
             var car = _aiCars[i];
-            if (car == null || !car.isActiveAndEnabled) continue;
+            if (car == null || !car.isActiveAndEnabled || car == leader) continue;
             // The player's car also carries a SplineDriver (AI hand-off) — skip it here, it gets the green dot.
             if (_playerCar != null && car.transform == _playerCar.transform) continue;
             DrawDot(rect, car.transform.position, Resolve(aiDotColor, PixelGUI.TextDim), aiDotSize);
         }
-        if (_playerCar != null)
+        // Drawn last so it sits on top of anybody it is racing with.
+        if (leader != null && leader.isActiveAndEnabled)
+            DrawDot(rect, leader.transform.position, Resolve(playerDotColor, PixelGUI.Gold), playerDotSize);
+        if (_playerCar != null && !stand)
             DrawDot(rect, _playerCar.transform.position, Resolve(playerDotColor, PixelGUI.Gold), playerDotSize);
         GUI.color = Color.white;
     }

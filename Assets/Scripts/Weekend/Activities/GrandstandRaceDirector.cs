@@ -29,6 +29,9 @@ public class GrandstandRaceDirector : MonoBehaviour
     public IReadOnlyList<int> Order => _order;
     public string NameOf(int car) => car >= 0 && car < _names.Count ? _names[car] : "";
 
+    // The car at the head of the order, for the track map's leader pip.
+    public SplineDriver Leader => _order.Count > 0 && _order[0] >= 0 && _order[0] < _cars.Count ? _cars[_order[0]] : null;
+
     // Who won it, once somebody has.
     public string Winner => _race != null && _race.WinnerIn && _order.Count > 0 ? NameOf(_order[0]) : "";
 
