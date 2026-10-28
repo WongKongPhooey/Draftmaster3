@@ -57,6 +57,8 @@ public class AIRacingBehaviour : MonoBehaviour
     public float corridorClearWidth = 2.4f;
     [Tooltip("The clear width where the AI is NOT racing in lanes (road courses): a pass there runs on an out-in-out line through corners, and 0.4 m to spare touched - Watkins Glen's pack sim went from 4 contacts to 20 at 2.4 m.")]
     public float corridorClearWidthNoLanes = 3.4f;
+    [Tooltip("Off the lanes (road courses), a car ahead is in our corridor by whichever is closer - where the two brains plan to be, or where the two cars actually are. Out of Watkins Glen's Turn 1 the outside car runs out to the edge behind its plan and the inside car's brain saw 3.6 m between them while the cars were touching; without the narrow authored bounds that used to file them in, the inside car drove into the back of it.")]
+    public bool roadFollowUsesCarPosition = true;
 
     [Header("Local Yellows")]
     [Tooltip("Lift through the yellow zone before a car stopped on the road (CautionWatch), and don't pass anyone there but the stopped car.")]
@@ -129,6 +131,12 @@ public class AIRacingBehaviour : MonoBehaviour
     public float startSideHoldMaxSeconds = 30f;
     [Tooltip("Hold sides all the way through the first corner (true) or only to its braking zone (false), where the field files in.")]
     public bool startSideHoldThroughCorner = false;
+    [Tooltip("Holding its side off the green, a car held up by the one ahead of it steps out into clear road beside its column and holds that line instead - a third lane, or a fourth, wherever the road is empty. Without it the field ran down to Watkins Glen's Turn 1 neatly two-wide in the left half of the road and the player drove past ten cars in the empty right half.")]
+    public bool startSideStepOut = true;
+    [Tooltip("Round a stopped car (a wreck, a pile-up), go wherever there is a gap a car fits through - past the other stopped cars on that side, onto the paved run-off where the track records one (SplineDriver.runOffEscapeMetres) - instead of only the side of the road away from the first car, stopping behind it when another car was there.")]
+    public bool runOffToAvoid = true;
+    [Tooltip("The run-off stays open this long (s) after the avoidance ends, and for as long as the car is still out on it, so it comes back to the road at its own pace.")]
+    public float runOffHoldSeconds = 1.5f;
     [Tooltip("A car alongside is a wall: whatever the brain wants (a pass, a defence, back to the line, out of a lapper's way), it never aims closer to a car beside it than alongsideWallGap - and a car already closer holds where it is. Without it a car turned across into the one beside it whenever its plan said to.")]
     public bool alongsideIsWall = true;
     [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing. " +
@@ -309,6 +317,7 @@ public class AIRacingBehaviour : MonoBehaviour
     float _startSideShare = float.NaN;   // 0 = AI left bound, 1 = right; NaN = not holding a side
     SplineDriver.CornerPhase _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
     int _startSideStage;   // 0 = not yet on a straight since the green, 1 = on one, 2 = into the first corner
+    float _runOffHold;     // seconds the run-off stays open after an avoidance round a stopped car
     readonly System.Collections.Generic.List<FieldCar> _fieldCars = new System.Collections.Generic.List<FieldCar>(24);
     float _fieldTarget = float.NaN;
     readonly System.Collections.Generic.List<float> _fieldLanes = new System.Collections.Generic.List<float>(6);
@@ -392,7 +401,7 @@ public class AIRacingBehaviour : MonoBehaviour
         if (_spline == null || _spline.TrackLength <= 0f) return;
         // Racing tactics stay off until the green flag. During PreGrid/Formation, FormationController
         // owns the AI's speed cap and line so the field forms up behind the safety car.
-        if (!RaceStart.IsGreen) { _wasGreen = false; return; }
+        if (!RaceStart.IsGreen) { _wasGreen = false; _spline.allowRunOff = false; _runOffHold = 0f; return; }
 
         float dt = Time.fixedDeltaTime;
         // This car's own clock since the green (a start or a restart), counted in physics steps so it runs the same
@@ -517,7 +526,8 @@ public class AIRacingBehaviour : MonoBehaviour
                 bool stoppedCar = aheadSpeed < yellowPassBelowMph;
                 // A stopped car is driven round on the wide side of the road — the side away from where it sits —
                 // not on whichever side the next corner favours.
-                overtakeDir = stoppedCar ? AroundSide(aheadLat) : ChooseOvertakeSide(aheadLat);
+                float aroundAt = aheadLat;
+                overtakeDir = stoppedCar ? AroundSide(aheadLat, aheadGap, ref aroundAt) : ChooseOvertakeSide(aheadLat);
                 if (roadPassKeepSide && !stoppedCar && !Lanes && _commitTimer > 0f && ahead == _roadPassCar
                     && _commitDir != 0f && !SideOccupied(_commitDir))
                     overtakeDir = _commitDir;
@@ -530,7 +540,7 @@ public class AIRacingBehaviour : MonoBehaviour
                     if (lane >= 0) { _passCar = ahead; _passLane = lane; _passTimer = 0f; }
                 }
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
-                if (wantOvertake) SetPassTarget(stoppedCar, aheadLat);
+                if (wantOvertake) SetPassTarget(stoppedCar, aroundAt);
                 if (wantOvertake) _passPaceDelta = _spline.DesiredMph - ahead.DesiredMph;
                 if (wantOvertake && !Lanes) _roadPassCar = stoppedCar ? null : ahead;
             }
@@ -571,7 +581,9 @@ public class AIRacingBehaviour : MonoBehaviour
                 if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
                 float lg = LongitudinalGap(_spline, other);
                 if (lg <= 0f || lg > scanDist) continue;
-                float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
+                float sep = Mathf.Abs(other.LateralOnTrack - myLat);
+                if (roadFollowUsesCarPosition && !Lanes) sep = Mathf.Min(sep, Mathf.Abs(other.CarLateral - _spline.CarLateral));
+                float ov = CorridorOverlap01(sep);
                 if (ov <= 0f) continue;
                 speedCap = Mathf.Min(speedCap, FollowCap(other.CurrentMph, lg, ov, headway * ChaseHeadwayShare(other),
                                                          followMargin, launchCapBlend, underYellow));
@@ -626,11 +638,12 @@ public class AIRacingBehaviour : MonoBehaviour
                 && (!underYellow || pSpeedMph < yellowPassBelowMph))
             {
                 bool stoppedCar = pSpeedMph < yellowPassBelowMph;
-                float side = stoppedCar ? AroundSide(p.TrackLateral)
+                float aroundAt = p.TrackLateral;
+                float side = stoppedCar ? AroundSide(p.TrackLateral, pg, ref aroundAt)
                                         : (p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f);
                 if (side != 0f && !SideOccupied(side)) { overtakeDir = side; wantOvertake = true; }
                 else if (!stoppedCar && !SideOccupied(-side)) { overtakeDir = -side; wantOvertake = true; }
-                if (wantOvertake) SetPassTarget(stoppedCar, p.TrackLateral);
+                if (wantOvertake) SetPassTarget(stoppedCar, aroundAt);
             }
         }
 
@@ -660,9 +673,15 @@ public class AIRacingBehaviour : MonoBehaviour
             && TryIncidentLateral(incidentCar, out float incidentLat))
         {
             float side = incidentLat < 0f ? 1f : -1f;
+            float aroundAt = incidentLat;
+            if (runOffToAvoid)
+            {
+                float gapSide = EscapeSide(incidentLat, incidentGap, out float edgeLat);
+                if (gapSide != 0f) { side = gapSide; aroundAt = edgeLat; }
+            }
             wantOvertake = true;
             overtakeDir = side;
-            SetPassTarget(true, incidentLat);
+            SetPassTarget(true, aroundAt);
 
             float clear = Mathf.Abs(_spline.LateralOnTrack - incidentLat);
             if (clear < stoppedPassClearance - 0.8f)
@@ -810,7 +829,19 @@ public class AIRacingBehaviour : MonoBehaviour
                 _startSideShare = float.NaN;
             else
             {
-                desiredTactical = Mathf.Lerp(hLo, hHi, _startSideShare) - _spline.UntacticalLateral;
+                float holdLat = Mathf.Lerp(hLo, hHi, _startSideShare);
+                // Held up by the car ahead: out into clear road beside the column, and that is the side held from
+                // here. Only across empty road - never across the other column - and only a real step, not a nudge.
+                if (startSideStepOut && wantOvertake && !_passAroundStopped && _roadPassCar != null && overtakeDir != 0f)
+                {
+                    float to = _roadPassCar.LateralOnTrack + overtakeDir * (corridorClearWidthNoLanes + 0.3f);
+                    if ((to - holdLat) * overtakeDir > 1f && to >= hLo && to <= hHi && StartLaneClear(holdLat, to))
+                    {
+                        _startSideShare = Mathf.InverseLerp(hLo, hHi, to);
+                        holdLat = to;
+                    }
+                }
+                desiredTactical = holdLat - _spline.UntacticalLateral;
                 holdingStartSide = true;
                 _commitTimer = 0f;
                 _passCar = null; _passLane = -1;
@@ -928,7 +959,13 @@ public class AIRacingBehaviour : MonoBehaviour
                 _recoveryDir = stoppedAhead
                     ? (stallBlocker.LateralOnTrack < 0f ? 1f : -1f)
                     : (stallBlocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f);
-                SetPassTarget(stoppedAhead, stallBlocker.LateralOnTrack);
+                float aroundAt = stallBlocker.LateralOnTrack;
+                if (stoppedAhead && runOffToAvoid)
+                {
+                    float gapSide = EscapeSide(stallBlocker.LateralOnTrack, LongitudinalGap(_spline, stallBlocker), out float edgeLat);
+                    if (gapSide != 0f) { _recoveryDir = gapSide; aroundAt = edgeLat; }
+                }
+                SetPassTarget(stoppedAhead, aroundAt);
             }
             else
                 _recoveryDir = _spline.LateralOnTrack >= 0f ? -1f : 1f;
@@ -968,6 +1005,15 @@ public class AIRacingBehaviour : MonoBehaviour
                 _paybackRivalObstacle = null;
             }
         }
+
+        // The run-off is open while driving round a stopped car, a moment after, and for as long as the car is still out
+        // on it - so it drives back onto the road rather than having the road edge snap in under it.
+        bool avoiding = _passAroundStopped && (wantOvertake || _recoveryTimer > 0f);
+        if (avoiding) _runOffHold = runOffHoldSeconds;
+        else if (_runOffHold > 0f) _runOffHold -= dt;
+        bool offRoad = _spline.allowRunOff && _spline.GetRoadBounds(out float roadLo, out float roadHi)
+                       && (_spline.LateralOnTrack < roadLo - 0.2f || _spline.LateralOnTrack > roadHi + 0.2f);
+        _spline.allowRunOff = runOffToAvoid && !_spline.IsOnPit && (avoiding || _runOffHold > 0f || offRoad);
 
         // Converge on the desired offset like a driver turning the wheel: accelerate into the move, carry no more
         // than maxLateralSpeed, and slow so as to arrive on the target rather than at full rate. Dead-zone
@@ -1430,10 +1476,105 @@ public class AIRacingBehaviour : MonoBehaviour
 
     // Which side to drive round a stopped car: the wide side of the road, away from where it sits. 0 when a car
     // is already there — wait behind rather than squeeze through the narrow side.
-    float AroundSide(float obstacleLat)
+    // With runOffToAvoid the side is wherever a car fits (EscapeSide), and aroundAt becomes the edge of whatever it is
+    // going round - the last stopped car on that side, not only the first.
+    float AroundSide(float obstacleLat, float obstacleGap, ref float aroundAt)
     {
+        if (runOffToAvoid)
+        {
+            float gapSide = EscapeSide(obstacleLat, obstacleGap, out float edgeLat);
+            if (gapSide != 0f) { aroundAt = edgeLat; return gapSide; }
+        }
         float pick = obstacleLat < 0f ? 1f : -1f;
         return SideOccupied(pick) ? 0f : pick;
+    }
+
+    // Which way round a stopped car at obstacleLat, obstacleGap (m) up the road: on each side, step out past it and past
+    // any other stopped or crawling car beside it until there is a car's clearance, and keep that side if the lateral it
+    // ends on is still inside the bounds there - the run-off included. A side with a moving car alongside us is shut, as
+    // before. Of the two, the nearer to where we are (a little further for one out on the run-off, a little nearer for
+    // the side already committed to). 0 when neither has a gap; edgeLat is the lateral of the last car gone round.
+    float EscapeSide(float obstacleLat, float obstacleGap, out float edgeLat)
+    {
+        edgeLat = obstacleLat;
+        float myLat = _spline.LateralOnTrack;
+        float slowMph = Mathf.Max(yellowPassBelowMph, _spline.CurrentMph * 0.5f);
+        float ahead = Mathf.Max(0f, obstacleGap);
+        if (!_spline.GetBoundsAhead(ahead, true, out float lo, out float hi)) return 0f;
+        _spline.GetBoundsAhead(ahead, false, out float roadLo, out float roadHi);
+        float best = float.PositiveInfinity, pick = 0f;
+        var drivers = RaceField.Drivers;
+        var obstacles = RaceObstacles.All;
+        for (int k = 0; k < 2; k++)
+        {
+            float dir = k == 0 ? 1f : -1f;
+            if (SideOccupied(dir)) continue;
+            float edge = obstacleLat;
+            // Walk out across the wreck: every slow car within a car's clearance of where we would go pushes it on.
+            for (int pass = 0; pass < 8; pass++)
+            {
+                bool moved = false;
+                float target = edge + dir * stoppedPassClearance;
+                for (int i = 0; i < drivers.Count; i++)
+                {
+                    var o = drivers[i];
+                    if (o == null || o == _spline || o.IsOnPit) continue;
+                    if (System.Math.Abs(o.TrackLength - _spline.TrackLength) > 0.5f) continue;
+                    if (o.CurrentMph >= slowMph) continue;
+                    float g = LongitudinalGap(_spline, o);
+                    if (g < 0f || g > ahead + 30f) continue;
+                    float oLat = o.LateralOnTrack;
+                    if ((oLat - edge) * dir > 0f && Mathf.Abs(oLat - target) < stoppedPassClearance) { edge = oLat; moved = true; }
+                }
+                for (int i = 0; i < obstacles.Count; i++)
+                {
+                    var p = obstacles[i];
+                    if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track || p.SpeedMph >= slowMph) continue;
+                    float g = SignedGapTo(p.TrackDistance);
+                    if (g < 0f || g > ahead + 30f) continue;
+                    if ((p.TrackLateral - edge) * dir > 0f && Mathf.Abs(p.TrackLateral - target) < stoppedPassClearance)
+                    { edge = p.TrackLateral; moved = true; }
+                }
+                if (!moved) break;
+            }
+            float to = edge + dir * stoppedPassClearance;
+            if (to < lo || to > hi) continue;
+            float cost = Mathf.Abs(to - myLat);
+            if (to < roadLo || to > roadHi) cost += 4f;
+            if (_passAroundStopped && _commitDir == dir) cost -= 2f;
+            if (cost < best) { best = cost; pick = dir; edgeLat = edge; }
+        }
+        return pick;
+    }
+
+    // Nothing in the road between our column (from) and where a start step-out would put us (to), from a few lengths
+    // behind to a few ahead: the AI cars, and the human.
+    bool StartLaneClear(float from, float to)
+    {
+        float dir = Mathf.Sign(to - from);
+        float a = from + dir * 1.2f, b = to + dir * alongsideWallGap;
+        float lo = Mathf.Min(a, b), hi = Mathf.Max(a, b);
+        float behind = -(alongsideLength + 8f), ahead = overtakeClosingRange;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var o = drivers[i];
+            if (o == null || o == _spline || o.IsOnPit) continue;
+            if (System.Math.Abs(o.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float g = LongitudinalGap(_spline, o);
+            if (g < behind || g > ahead) continue;
+            if (o.LateralOnTrack > lo && o.LateralOnTrack < hi) return false;
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float g = SignedGapTo(p.TrackDistance);
+            if (g < behind || g > ahead) continue;
+            if (p.TrackLateral > lo && p.TrackLateral < hi) return false;
+        }
+        return true;
     }
 
     // Where a stopped car sits across the road: an AI car's brain, or the human car's own projection.

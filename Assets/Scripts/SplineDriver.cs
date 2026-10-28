@@ -61,6 +61,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public int trainedLineSmoothingPasses = 30;
     [Tooltip("A racing line copied from a player's lap carries the legal corridor it was driven in (road, kerb, tarmac run-off). On: the car follows that line onto the run-off. Off: the line is kept on the road. Before this switch the line used the run-off but the car was held on the road, so wherever the two parted (Watkins Glen's Turn 1 exit, 11 m) every car was pinned to the road edge at the speed of the wider line, slid and ran into the one ahead.")]
     public bool lineUsesRunOff = false;
+    [Tooltip("Where the AI does not race in lanes (road courses), the car may use the whole road, edge to edge less RoadEdgeMargin, and not only the band between the authored leftmost and rightmost lines. Those lines are where lineFactor spreads the field's lines, not the road: at Watkins Glen they held every car to the left 5 m of the 14 m front straight - nobody used the inside into Turn 1 but the player - and to 3.6 m of Turn 1's 10 m exit, where a field coming out two-wide was squeezed single file.")]
+    public bool roadCourseFullWidth = true;
+    [Tooltip("How far (m) past the road edge a car avoiding a wreck may go onto the paved run-off, where the track's player-lap line records it (TrainedRacingLine corridor). Only while AIRacingBehaviour sets allowRunOff.")]
+    public float runOffEscapeMetres = 8f;
+    // Set each step by AIRacingBehaviour while it is driving round a stopped car: the bounds take in the run-off.
+    [System.NonSerialized] public bool allowRunOff;
     [Tooltip("Per-pass relaxation factor. 0 = no movement, 1 = full averaging. ~0.3 is stable.")]
     [Range(0f, 1f)]
     public float smoothingRelaxation = 0.3f;
@@ -478,6 +484,26 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return true;
     }
 
+    // The bounds aheadMetres up the road, with or without the run-off - where a car avoiding a wreck there could go.
+    public bool GetBoundsAhead(float aheadMetres, bool runOff, out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
+        BoundsAt(_distance + aheadMetres, out lo, out hi, runOff);
+        return true;
+    }
+
+    // The bounds here without the run-off (allowRunOff), so a car out on it can tell when it is back on the road.
+    public bool GetRoadBounds(out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
+        BoundsAt(_distance, out lo, out hi, false);
+        return true;
+    }
+
     // World heading (deg, 0 = +X) of the main spline at a distance — lets a free car's yaw be read against the road.
     public float MainTangentWorldDeg(float distance)
     {
@@ -533,6 +559,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float TargetMph { get; private set; }
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
     public float LateralOnTrack => _prevLateral;
+    // Where the car itself is across the road (m, + right), driven by an external motion controller: projected each
+    // step in ResyncToCar. The brain's plan (LateralOnTrack) leads it, and through a corner exit they part by metres.
+    public float CarLateral => externalMotionController && _hasCarLateral && !_onPit ? _carLateral : _prevLateral;
+    float _carLateral;
+    bool _hasCarLateral;
     /// Sideways speed across the track (m/s, + = toward + lateral), from the last two steps.
     public float LateralRate { get; private set; }
     public float TrackLength => _mainLength;
@@ -604,6 +635,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _bakedALatMaxMps2;    // lateral-accel ceiling (m/s²) the profile was baked against
     float[] _lateralProfile;
     float[] _lineLo, _lineHi;   // where the smoothed line may go: the road, or a player line's legal corridor
+    float[] _roadLo, _roadHi;   // the road edge to edge (less RoadEdgeMargin)
+    float[] _escapeLo, _escapeHi;   // the road plus the paved run-off a wreck can be avoided on
     float[] _leftBoundProfile;
     float[] _rightBoundProfile;
     float _mainLength;
@@ -816,6 +849,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _lateralProfile = null;
             _leftBoundProfile = null;
             _rightBoundProfile = null;
+            _roadLo = _roadHi = _escapeLo = _escapeHi = null;
             return;
         }
 
@@ -823,6 +857,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _lateralProfile = new float[n];
         _leftBoundProfile = new float[n];
         _rightBoundProfile = new float[n];
+        _roadLo = new float[n];
+        _roadHi = new float[n];
+        _escapeLo = new float[n];
+        _escapeHi = new float[n];
 
         // A trained line, if this track has one, stands in for the authored ideal. It was found by driving
         // the lap a few hundred times and keeping whatever was quicker (RacingLineTrainer), so it already
@@ -839,6 +877,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // it, as they did. The bound profiles themselves stay on the road: they are what lineFactor spread and
         // tactical moves read, and a car swerving onto the run-off to pass someone is not the idea.
         bool corridor = trained != null && trained.HasCorridor && lineUsesRunOff;
+        bool runOff = trained != null && trained.HasCorridor;
         _lineLo = new float[n];
         _lineHi = new float[n];
 
@@ -849,6 +888,23 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _rightBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), _mainSamples[i].width);
             _lineLo[i] = Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]);
             _lineHi[i] = Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]);
+            _roadLo[i] = Mathf.Min(_lineLo[i], ClampToRoad(float.NegativeInfinity, _mainSamples[i].width));
+            _roadHi[i] = Mathf.Max(_lineHi[i], ClampToRoad(float.PositiveInfinity, _mainSamples[i].width));
+            if (float.IsInfinity(_roadLo[i]) || float.IsInfinity(_roadHi[i]))
+            {
+                _roadLo[i] = _lineLo[i];   // no usable width data: the authored lines are all there is
+                _roadHi[i] = _lineHi[i];
+            }
+            _escapeLo[i] = _roadLo[i];
+            _escapeHi[i] = _roadHi[i];
+            if (runOff)
+            {
+                // The corridor is where the player's car centre went; half a car in from it, and no further from
+                // the road than runOffEscapeMetres - it was probed for surface, not for barriers.
+                Vector2 c = trained.CorridorAt(d);
+                _escapeLo[i] = Mathf.Min(_roadLo[i], Mathf.Max(c.x + 1f, _roadLo[i] - runOffEscapeMetres));
+                _escapeHi[i] = Mathf.Max(_roadHi[i], Mathf.Min(c.y - 1f, _roadHi[i] + runOffEscapeMetres));
+            }
             if (corridor)
             {
                 Vector2 c = trained.CorridorAt(d);
@@ -955,7 +1011,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return lo;
     }
 
-    void BoundsAt(float distance, out float lo, out float hi)
+    void BoundsAt(float distance, out float lo, out float hi) => BoundsAt(distance, out lo, out hi, allowRunOff);
+
+    void BoundsAt(float distance, out float lo, out float hi, bool runOff)
     {
         lo = -100f; hi = 100f;
         if (_leftBoundProfile == null || _rightBoundProfile == null || _mainSamples == null) return;
@@ -972,6 +1030,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float right = Mathf.Lerp(_rightBoundProfile[idxLo], _rightBoundProfile[idxHi], t);
         lo = Mathf.Min(left, right);
         hi = Mathf.Max(left, right);
+        float[] wideLo = runOff ? _escapeLo : roadCourseFullWidth && !TrackConditions.AiLanes ? _roadLo : null;
+        float[] wideHi = runOff ? _escapeHi : _roadHi;
+        if (wideLo != null && wideHi != null && wideLo.Length == n && wideHi.Length == n)
+        {
+            lo = Mathf.Min(lo, Mathf.Lerp(wideLo[idxLo], wideLo[idxHi], t));
+            hi = Mathf.Max(hi, Mathf.Lerp(wideHi[idxLo], wideHi[idxHi], t));
+        }
     }
 
     float LateralAt(float distance)
@@ -1816,6 +1881,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // _distance indexes the point PathPointAheadOfCentre in front of the car's centre.
         float guess = _distance + _collisionLongitudinal - PathPointAheadOfCentre;
         if (!ProjectOntoMainNear(local, guess, resyncWindow, out float centre)) return;
+        var cs = track.SampleAt(centre, _mainSamples);
+        _carLateral = Vector2.Dot(local - cs.position, new Vector2(cs.tangent.y, -cs.tangent.x));
+        _hasCarLateral = true;
         float err = centre - guess;
         if (loop)
         {
