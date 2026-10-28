@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The pace/safety car. Leads the field around one formation lap at a fixed cruise pace, then dives
+// The pace/safety car. Waits at the pit exit until the field comes out behind it, leads it round one
+// formation lap at a fixed cruise pace, then dives
 // into the pit lane and parks. Rides a kinematic SplineDriver on the main spline; this component only
 // caps its pace, counts the lap, triggers the pit-in, blinks its roof light and despawns afterwards.
 //
@@ -67,6 +68,16 @@ public class SafetyCar : MonoBehaviour
              "field behind them breaks up.")]
     public float waitFollowerBrakeMphPerSec = 8f;
 
+    [Header("Leading the field out")]
+    [Tooltip("At the start of the formation lap the pace car waits at the pit exit until the first car of the field " +
+             "is rolling within this distance (m, straight line) of it, then leads them away. Without it the pace car " +
+             "ran off at cruise the moment the player touched the throttle, while the field was still filing down pit road.")]
+    public float leadOffGapM = 60f;
+    [Tooltip("Speed (mph) a car must be doing to count as coming out — a car parked in a box near the exit doesn't.")]
+    public float leadOffRollingMph = 3f;
+    [Tooltip("Backstop (s): set off this long after the formation lap begins whatever the field is doing.")]
+    public float leadOffTimeoutSeconds = 30f;
+
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
     public float blinkInterval = 0.35f;
@@ -98,6 +109,8 @@ public class SafetyCar : MonoBehaviour
     float _pitEntryDistance;
     float _despawnTimer;
     float _paceMph = -1f; // cruise, eased down while the field is strung out
+    bool _ledOff;         // the field has come out to it at the start of the formation lap
+    float _leadOffWait;
     static readonly List<float> s_behind = new List<float>();
 
     SpriteRenderer _light;
@@ -221,6 +234,40 @@ public class SafetyCar : MonoBehaviour
 
         // Under caution the cars in the pit lane are making stops, not filing out behind it: don't wait for them.
         if (!_pitting) { YieldToTraffic(); if (!_caution) HoldForPitExit(lap, cur); }
+        if (!_pitting && !_caution && !_ledOff) HoldUntilTheFieldComesOut();
+    }
+
+    // The start of the formation lap: sit at the pit exit until the field is coming out behind, then lead it away.
+    void HoldUntilTheFieldComesOut()
+    {
+        _leadOffWait += Time.fixedDeltaTime;
+        if (_leadOffWait >= leadOffTimeoutSeconds || FieldCarComingOut())
+        {
+            _ledOff = true;
+            return;
+        }
+        _spline.aiMaxSpeedMph = 0f;
+    }
+
+    bool FieldCarComingOut()
+    {
+        Vector2 me = transform.position;
+        float gapSq = leadOffGapM * leadOffGapM;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.isActiveAndEnabled) continue;
+            if (d.CurrentMph >= leadOffRollingMph && ((Vector2)d.transform.position - me).sqrMagnitude <= gapSq) return true;
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            if (p.SpeedMph >= leadOffRollingMph && ((Vector2)p.transform.position - me).sqrMagnitude <= gapSq) return true;
+        }
+        return false;
     }
 
     // Round again before the field is all out of the pit lane: stop short of the pit exit until it is.
