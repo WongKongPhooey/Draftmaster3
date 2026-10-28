@@ -49,9 +49,10 @@ public static class DaytonaPackageAuthoring
         public bool infieldWall;      // Martinsville has a pit wall along its inside edge; Daytona runs onto grass
         public bool apron;            // Daytona's 3.5 m paved strip below the yellow line
         public bool infieldLayout;    // too small for Watkins' paddock: lay the lots out in the clear infield
+        public bool joinedFrontStand; // one long stand bent round the front stretch, as at Daytona's tri-oval
     }
 
-    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = false, apron = true, infieldLayout = false };
+    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = false, apron = true, infieldLayout = false, joinedFrontStand = true };
     static readonly Venue Martinsville = new Venue { id = "Martinsville", infieldWall = true, apron = false, infieldLayout = true };
 
     // How far the infield paddock stays from the edge of the racing surface, and its bands' depths.
@@ -93,6 +94,113 @@ public static class DaytonaPackageAuthoring
     }
 
     public static string AuthorDaytona() => AuthorVenue(Daytona);
+
+    // Only the grandstands, for when they are all that has changed: re-running Author regenerates the geometry and
+    // re-lays the whole paddock, which is far more than a stand needs. Re-lays the generated stands (the front
+    // stretch as one stand bent round the tri-oval), keeps the grandstand gate's seat inside a stand, and takes out
+    // any unlocked scattered scenery the new stand now stands on. Writes Temp/daytona_grandstands_result.txt.
+    [MenuItem("Draftmaster/Tracks/Daytona/Rebuild Grandstands Only (one stand round the tri-oval)")]
+    public static void RebuildDaytonaGrandstands()
+    {
+        string summary = RebuildGrandstandsOnly(Daytona);
+        Debug.Log($"[PackageAuthoring] {summary}");
+        File.WriteAllText($"Temp/{Daytona.id.ToLowerInvariant()}_grandstands_result.txt", summary);
+    }
+
+    static float FrontStandAt(Venue venue, TrackBuilder builder) =>
+        venue.joinedFrontStand ? StartFinishDistance(builder) : -1f;
+
+    static string RebuildGrandstandsOnly(Venue venue)
+    {
+        string path = $"{PackageDir}/{venue.id}.prefab";
+        if (!File.Exists(path)) return $"{venue.id}: no package at {path}.";
+
+        var contents = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            var package = contents.GetComponent<TrackPackage>();
+            var builder = package != null ? package.Builder : null;
+            if (builder == null || builder.track == null) return $"{venue.id} package has no TrackBuilder/geometry.";
+
+            var notes = new List<string>();
+            int built = TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder));
+            notes.Add($"{built} grandstands");
+            var stands = contents.GetComponentsInChildren<Grandstand>(true);
+            foreach (var stand in stands)
+                notes.Add($"{stand.name} {stand.length:0.0} m bent {stand.bendDegrees:0.00} deg at " +
+                          $"{(Vector2)stand.transform.position} texture from {stand.textureOffset:0.0} m");
+
+            var paddockRoot = package.paddockRoot != null ? package.paddockRoot : contents.transform.Find("Paddock");
+            if (paddockRoot != null) KeepSeatInStand(contents, paddockRoot, builder, stands, notes);
+            ClearSceneryUnderStands(contents, stands, notes);
+
+            // Scattered pieces drew themselves on load; their art is DontSave, but strip it as the scatter does.
+            foreach (var piece in contents.GetComponentsInChildren<SceneryPiece>(true)) piece.ClearArt();
+            PrefabUtility.SaveAsPrefabAsset(contents, path);
+            return $"{venue.id} grandstands rebuilt:\n  {string.Join("\n  ", notes)}";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+    }
+
+    // The grandstand gate drops the player on its Seat. Left alone while it is still inside a stand - it may have
+    // been placed by hand - and otherwise moved into the stand nearest the start/finish line, its View (the camera
+    // vantage, if there is one) carried along by the same amount.
+    static void KeepSeatInStand(GameObject contents, Transform paddockRoot, TrackBuilder builder, Grandstand[] stands,
+                                List<string> notes)
+    {
+        var gate = paddockRoot.Find("Grandstand_Marker");
+        var seat = gate != null ? gate.Find("Seat") : null;
+        if (seat == null) return;
+        foreach (var stand in stands)
+        {
+            if (InFootprint(stand, seat.position, 0f))
+            {
+                notes.Add($"grandstand seat kept at {(Vector2)seat.position} (in {stand.name})");
+                return;
+            }
+        }
+        if (!TrySeatInStand(contents, builder, out Vector2 seatPos)) return;
+        Vector3 shift = new Vector3(seatPos.x, seatPos.y, seat.position.z) - seat.position;
+        seat.position += shift;
+        var view = gate.Find("View");
+        if (view != null) view.position += shift;
+        notes.Add($"grandstand seat moved to {seatPos}{(view != null ? ", View moved with it" : "")}");
+    }
+
+    // A bent stand covers ground a straight row of blocks with gaps did not, and the scenery scatter planted round
+    // the old blocks. Unlocked pieces now under a stand go; a locked piece was kept on purpose, so it stays and is
+    // reported. (Re-scattering would move every piece round the track, not just these.)
+    static void ClearSceneryUnderStands(GameObject contents, Grandstand[] stands, List<string> notes)
+    {
+        const float Clearance = 4f;
+        int removed = 0;
+        var lockedUnder = new List<string>();
+        // The scatter's own pieces only - direct children of its Scenery root, as its re-scatter clears them.
+        var pieces = new List<SceneryPiece>();
+        foreach (var scenery in contents.GetComponentsInChildren<TrackScenery>(true))
+            foreach (Transform child in scenery.transform)
+                if (child.TryGetComponent(out SceneryPiece p)) pieces.Add(p);
+        foreach (var piece in pieces)
+        {
+            bool under = false;
+            foreach (var stand in stands)
+                if (InFootprint(stand, piece.transform.position, Clearance)) { under = true; break; }
+            if (!under) continue;
+            if (piece.locked) { lockedUnder.Add(piece.name); continue; }
+            Object.DestroyImmediate(piece.gameObject);
+            removed++;
+        }
+        notes.Add($"{removed} scenery pieces under the stands removed");
+        if (lockedUnder.Count > 0) notes.Add($"LOCKED scenery under a stand, kept: {string.Join(", ", lockedUnder)}");
+    }
+
+    static bool InFootprint(Grandstand stand, Vector3 world, float pad)
+    {
+        return stand.Covers(stand.transform.InverseTransformPoint(world), pad);
+    }
 
     static string AuthorVenue(Venue venue)
     {
@@ -176,7 +284,7 @@ public static class DaytonaPackageAuthoring
 
             // Grandstands: laid along the road as it is now, so the shape changing (a traced import) doesn't leave
             // them standing where the old front stretch was. Before the paddock, whose seat is picked from them.
-            notes.Add($"{TrackDressingFactory.RebuildGrandstands(contents, builder)} grandstands");
+            notes.Add($"{TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder))} grandstands");
 
             // 3. The paddock.
             LayPaddock(contents, paddockRoot, builder, frame, blueprint, map, infield, notes);
@@ -764,7 +872,12 @@ public static class DaytonaPackageAuthoring
             notes.Add($"{src.kind} lot box {w:0} x {d:0} m at {(Vector2)copy.transform.position}{fit}");
         }
 
-        // The grandstand gate's seat is across the track: in the front-stretch stand nearest the start/finish.
+        SeatGrandstandGate(contents, paddockRoot, builder, notes);
+    }
+
+    // The grandstand gate's seat is across the track: in the front-stretch stand nearest the start/finish.
+    static void SeatGrandstandGate(GameObject contents, Transform paddockRoot, TrackBuilder builder, List<string> notes)
+    {
         var gate = paddockRoot.Find("Grandstand_Marker");
         var marker = gate != null ? gate.GetComponent<WeekendMarker>() : null;
         if (marker != null)
@@ -787,22 +900,26 @@ public static class DaytonaPackageAuthoring
         }
     }
 
+    // The start/finish line: the middle of the formula's "Tri-Oval" piece, or startFinishDistance on a traced
+    // lap, which has no such piece and puts the line there itself.
+    static float StartFinishDistance(TrackBuilder builder)
+    {
+        var segs = builder.track.segments;
+        float triOval = 0f;
+        for (int i = 0; i < segs.Length; i++)
+        {
+            if (segs[i].label == "Tri-Oval") return triOval + segs[i].length * 0.5f;
+            triOval += segs[i].length;
+        }
+        return builder.track.startFinishDistance;
+    }
+
     // A seat in the stand closest to the start/finish line (the middle of the tri-oval), a quarter of its depth
     // back from the middle toward the track.
     static bool TrySeatInStand(GameObject contents, TrackBuilder builder, out Vector2 seat)
     {
         seat = default;
-        // The start/finish line: the middle of the formula's "Tri-Oval" piece, or startFinishDistance on a traced
-        // lap, which has no such piece and puts the line there itself.
-        var segs = builder.track.segments;
-        float triOval = 0f;
-        bool labelled = false;
-        for (int i = 0; i < segs.Length; i++)
-        {
-            if (segs[i].label == "Tri-Oval") { triOval += segs[i].length * 0.5f; labelled = true; break; }
-            triOval += segs[i].length;
-        }
-        var line = builder.SampleAt(labelled ? triOval : builder.track.startFinishDistance);
+        var line = builder.SampleAt(StartFinishDistance(builder));
 
         Grandstand best = null;
         float bestDist = float.MaxValue;

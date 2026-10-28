@@ -118,14 +118,17 @@ public static class TrackDressingFactory
     // Throw away the generated grandstands and lay them again along the road as it is now - for a track whose
     // shape has changed under them (DaytonaPackageAuthoring, after a traced import). Hand-placed stands, anywhere
     // but the generated Grandstands root, are left alone. Returns how many were built.
-    public static int RebuildGrandstands(GameObject contents, TrackBuilder builder)
+    //
+    // joinRunAt >= 0 names a lap distance whose run gets one continuous stand instead of separate blocks: see
+    // BuildJoinedRun.
+    public static int RebuildGrandstands(GameObject contents, TrackBuilder builder, float joinRunAt = -1f)
     {
         var environmentRoot = EnsureChild(contents.transform, "Environment");
         var owned = environmentRoot.Find(GrandstandsName);
         if (owned != null) Object.DestroyImmediate(owned.gameObject);
         var samples = builder.SampleCenterline();
         if (samples.Count < 2) return 0;
-        return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples));
+        return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples), joinRunAt);
     }
 
     // ---------------------------------------------------------------- pieces
@@ -319,7 +322,7 @@ public static class TrackDressingFactory
     // Stands along every straight long enough to carry one, on the side facing away from the middle of the
     // circuit — that's where a real crowd sits, and on an oval it keeps them out of the infield.
     static int BuildGrandstands(Transform root, TrackBuilder builder, List<TrackBuilder.Sample> samples,
-                                Vector2 centroid)
+                                Vector2 centroid, float joinRunAt = -1f)
     {
         var track = builder.track;
         if (track == null || track.segments == null) return 0;
@@ -359,6 +362,13 @@ public static class TrackDressingFactory
 
             // Leave the ends of the run clear so stands don't run into the corner.
             float usable = runLength - 40f;
+
+            if (joinRunAt >= 0f && Mathf.Repeat(joinRunAt - segStart[first], lap) <= runLength)
+            {
+                built += BuildJoinedRun(standsRoot.transform, builder, samples, centroid, segStart[first] + 20f,
+                                        usable, crowd, $"Grandstand_{first}");
+                continue;
+            }
             int count = Mathf.Max(1, Mathf.FloorToInt((usable + StandGap) / (StandLength + StandGap)));
             float block = count * StandLength + (count - 1) * StandGap;
             float cursor = segStart[first] + 20f + (usable - block) * 0.5f;
@@ -401,6 +411,102 @@ public static class TrackDressingFactory
         stand.depth = StandDepth;
         stand.flipFacing = outward > 0f;
         stand.Build();
+    }
+
+    // One long grandstand down a whole run, the way Daytona's front-stretch stand spans the tri-oval: stands laid
+    // end to end with no gaps, each bent into a gentle arc so the run follows the curve of the road instead of
+    // being a row of straight blocks set at angles to it. The crowd texture carries on across every joint.
+    //
+    // The stand's middle line is the road edge pushed out by the setback and half the depth. That line is cut
+    // into equal pieces of about StandLength, and each piece is the circular arc through its two ends and its
+    // middle - so neighbouring pieces meet exactly, and a piece on a straight comes out straight.
+    static int BuildJoinedRun(Transform root, TrackBuilder builder, List<TrackBuilder.Sample> samples,
+                              Vector2 centroid, float from, float runLength, Texture2D crowd, string prefix)
+    {
+        float lap = builder.track.TotalLength();
+        float Wrap(float d) => lap > 1f ? Mathf.Repeat(d, lap) : d;
+
+        // The outside at the middle of the run, held for the whole run so one stand can't change sides.
+        var middle = builder.SampleAt(Wrap(from + runLength * 0.5f), samples);
+        float outward = Vector2.Dot(middle.position - centroid, middle.normal) >= 0f ? 1f : -1f;
+
+        int count = Mathf.Max(2, Mathf.CeilToInt(runLength / 2f) + 1);
+        var line = new List<Vector2>(count);
+        var along = new List<float>(count);
+        float total = 0f;
+        for (int i = 0; i < count; i++)
+        {
+            var s = builder.SampleAt(Wrap(from + runLength * i / (count - 1)), samples);
+            Vector2 p = s.position + s.normal * outward * (s.width * 0.5f + StandSetback + StandDepth * 0.5f);
+            if (i > 0) total += Vector2.Distance(line[i - 1], p);
+            line.Add(p);
+            along.Add(total);
+        }
+        if (total < 1f) return 0;
+
+        Vector2 At(float a)
+        {
+            int j = along.BinarySearch(a);
+            if (j >= 0) return line[j];
+            j = ~j;
+            if (j <= 0) return line[0];
+            if (j >= line.Count) return line[line.Count - 1];
+            float t = Mathf.InverseLerp(along[j - 1], along[j], a);
+            return Vector2.Lerp(line[j - 1], line[j], t);
+        }
+
+        int pieces = Mathf.Max(1, Mathf.RoundToInt(total / StandLength));
+        float span = total / pieces;
+        var stands = new Grandstand[pieces];
+        for (int k = 0; k < pieces; k++)
+        {
+            Vector2 a = At(k * span), b = At((k + 1) * span), m = At((k + 0.5f) * span);
+            Vector2 chord = b - a;
+            float c = chord.magnitude;
+            if (c < 0.01f) continue;
+
+            // Local +X along the stand, local +Y its depth; a stand on the normal side is turned to face back at
+            // the road, as in BuildStand.
+            Vector2 x = chord / c;
+            if (outward > 0f) x = -x;
+            Vector2 y = new Vector2(-x.y, x.x);
+
+            // The arc through a, m and b: the ends sit h toward +Y of the middle, and for a circle
+            // tan(bend / 4) = 2h / chord. Its length round the bend is what the stand is laid out by.
+            Vector2 mid = (a + b) * 0.5f;
+            float h = Vector2.Dot(mid - m, y);
+            float bend = 4f * Mathf.Atan(2f * h / c);
+            float length = Mathf.Abs(bend) < 1e-4f ? c : bend * c / (2f * Mathf.Sin(bend * 0.5f));
+            Vector2 pos = mid - y * h;
+
+            var go = new GameObject($"{prefix}_{k}");
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(pos.x, pos.y, 0f);
+            go.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(x.y, x.x) * Mathf.Rad2Deg);
+
+            var stand = go.AddComponent<Grandstand>();
+            stand.crowdTexture = crowd;
+            stand.length = length;
+            stand.depth = StandDepth;
+            stand.flipFacing = outward > 0f;
+            stand.bendDegrees = bend * Mathf.Rad2Deg;
+            stands[k] = stand;
+        }
+
+        // One crowd down the whole run: each piece starts the texture where the piece before it (in its own
+        // local +X order, which runs against travel for a flipped run) left off.
+        float offset = 0f;
+        int built = 0;
+        for (int i = 0; i < pieces; i++)
+        {
+            var stand = stands[outward > 0f ? pieces - 1 - i : i];
+            if (stand == null) continue;
+            stand.textureOffset = offset;
+            offset += stand.length;
+            stand.Build();
+            built++;
+        }
+        return built;
     }
 
     // A walkable pocket beside the pit lane with the player's motorhome in it, so a generated track opens the

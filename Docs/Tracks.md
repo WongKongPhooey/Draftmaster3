@@ -253,7 +253,12 @@ fits off the racing line onto it and another back. Daytona: way 352067003, 731 m
 Without a mapped lane, a track whose row has `pitChordInsetMetres` gets a chord guessed by `PitChordFit.TryFit`
 (straight held that far from the racing line) - which at Daytona came out 240 m deep in the infield, where no
 pit road is. Grandstands are laid along runs of straight or gently curved road, not only Straight
-segments, so a tri-oval front stretch gets its main grandstand.
+segments, so a tri-oval front stretch gets its main grandstand. At Daytona the run holding the start/finish
+line is one continuous stand, as at the real track: pieces of ~110 m laid end to end with no gaps, each bent
+into an arc (`Grandstand.bendDegrees`) so the stand follows the tri-oval, with `textureOffset` carrying one
+crowd across every joint. Other runs, and every other venue, keep separate straight blocks.
+`Draftmaster > Tracks > Daytona > Rebuild Grandstands Only` re-lays just the stands (keeps the gate's seat in
+one, removes unlocked scenery the stand now covers) without re-running the whole Author step.
 
 Daytona is the first: 11 m wall to yellow line plus a 3.5 m apron strip (`Apron`, registered as tarmac
 run-off). `Author Daytona` imports the trace after generating and rebuilds its grandstands, so re-running it
