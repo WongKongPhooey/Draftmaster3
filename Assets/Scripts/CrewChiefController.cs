@@ -93,7 +93,7 @@ public class CrewChiefController : MonoBehaviour
     // Captured the moment the headset is tapped, because taking the job changes both answers: the crew
     // chief avatar is itself a walking body, so "was the player on foot" cannot be asked again afterwards.
     bool _wasInCar;          // they were sat in the car rather than walking the paddock
-    bool _wasDriving;        // ...and had the controls, rather than watching their own car on the TV cycle
+    bool _wasDriving;        // ...and had the controls, rather than having handed them to the AI on Auto
     GameObject _parkedBody;  // their walking body, hidden for the duration when they were already on foot
     GameObject _standIn;     // the pit-box chief NPC, stood aside while the player is him
 
@@ -238,13 +238,13 @@ public class CrewChiefController : MonoBehaviour
         // in the car; PitLaneStart deactivates it when they climb in and hands it back after a tow.
         var body = OnFootController.Current;
         _wasInCar = body == null;
-        // Driving is not the same as being in the car: the TV cycle (V) already gave the AI the wheel, and
+        // Driving is not the same as being in the car: Auto (V) already gave the AI the wheel, and
         // exiting must not hand it back to a player who chose to watch.
         _wasDriving = _wasInCar && driveMode != null && driveMode.IsDriving;
 
         if (driveMode != null)
         {
-            // Tell broadcast mode not to fight us for the camera either way.
+            // Tell the Auto hand-off not to fight us for the camera either way.
             driveMode.suppressBroadcastCamera = true;
             // The car only changes hands if there was a driver in it to get out. A player still walking up
             // pit road never started it, so handing their parked car to the AI would drive it away from

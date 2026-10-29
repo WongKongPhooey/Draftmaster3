@@ -1,16 +1,15 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Draftmaster.Controls;
 
-// Driving vs Broadcast, the hand-off itself.
+// Driving vs Auto, the hand-off itself.
 // - Driving ON  : the player drives their car normally (PlayerVehicleController).
-// - Driving OFF : the car is handed to the AI (kinematic SplineDriver) and the camera cycles through the AI
-//                 field TV-style, switching featured car every few seconds. Flip back to resume control.
+// - Driving OFF : Auto. The car is handed to the AI (kinematic SplineDriver) and the camera stays on it. Watching
+//                 the rest of the field is the crew chief's job (CrewChiefController). Flip back to resume control.
 //
 // This has no button of its own. Handing the car over is what happens when the player steps out of it, so it
 // is driven by whoever they step into — the crew chief's headset in the HUD corner (CrewChiefController), the
-// TEAM panel, co-op possession — plus the keyboard shortcut below for testing.
+// TEAM panel, co-op possession, the touch controls' AUTO button — plus the keyboard shortcut below.
 public class DriveModeController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -20,12 +19,8 @@ public class DriveModeController : MonoBehaviour
     [Tooltip("CameraFollow to retarget. Auto-found on Camera.main.")]
     public CameraFollow cameraFollow;
 
-    [Header("Broadcast")]
-    [Tooltip("Seconds each AI car is featured before cutting to the next.")]
-    public float broadcastCycleSeconds = 5f;
-    [Tooltip("Seconds a car picked from the leaderboard stays featured before the TV cycle resumes.")]
-    public float clickHoldSeconds = 15f;
-    [Tooltip("Start the scene in broadcast (spectator) mode rather than driving.")]
+    [Header("Auto")]
+    [Tooltip("Start the scene with the AI driving the player's car rather than the player.")]
     public bool startInBroadcast = false;
 
     [Header("Input")]
@@ -33,38 +28,20 @@ public class DriveModeController : MonoBehaviour
              "since the DRIVING tab was folded into the crew chief's headset button.")]
     public Key toggleKey = Key.V;
 
-    [Tooltip("When true, another system (e.g. CrewChiefController) owns the camera, so broadcast mode won't retarget it.")]
+    [Tooltip("When true, another system (e.g. CrewChiefController) owns the camera, so handing the car over won't retarget it.")]
     public bool suppressBroadcastCamera = false;
 
     public bool IsDriving => _driving;
     public GameObject PlayerCar => playerCar;
-    // The car the broadcast camera is on right now (null while driving). Leaderboard highlights this row.
-    public Transform FeaturedTransform => _driving ? null : (_pinned != null ? _pinned : (_featured != null ? _featured.transform : null));
-
-    // Leaderboard click: cut to this car and hold it for clickHoldSeconds, then resume the TV cycle.
-    // Works for any car with a transform (incl. the player's own AI-driven car and client puppets).
-    public void FeatureCar(Transform car)
-    {
-        if (_driving || car == null || suppressBroadcastCamera) return;
-        _pinned = car;
-        _pinnedTimer = clickHoldSeconds;
-        if (cameraFollow != null && !suppressBroadcastCamera) cameraFollow.target = car;
-    }
 
     PlayerVehicleController _pvc;
     SplineDriver _spline;
     PitLaneStart _zoom;      // owns the camera ortho lerp; null on scenes without the pit-start flow
     bool _driving = true;
-    float _cycleTimer;
-    int _featuredIndex = -1;
-    SplineDriver _featured;
-    Transform _pinned;       // leaderboard-clicked car; overrides the cycle while its hold timer runs
-    float _pinnedTimer;
-    readonly List<SplineDriver> _candidates = new();
 
     bool _keyPrev;
 
-    // The scene's one broadcast switch, for the touch controls' TV button (a phone has no V).
+    // The scene's one auto-drive switch, for the touch controls' AUTO button (a phone has no V).
     public static DriveModeController Current { get; private set; }
     void OnEnable() => Current = this;
     void OnDisable() { if (Current == this) Current = null; }
@@ -95,8 +72,6 @@ public class DriveModeController : MonoBehaviour
         // On a pad it is a face button that means "back" everywhere else, so only from the seat and only
         // with nothing open over the race.
         if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
-
-        if (!_driving) UpdateBroadcastCamera();
     }
 
     public void Toggle()
@@ -106,7 +81,7 @@ public class DriveModeController : MonoBehaviour
         SetDriving(!_driving);
     }
 
-    // Team switching moved the human into a different chassis: broadcast/resume must now operate on THAT
+    // Team switching moved the human into a different chassis: auto/resume must now operate on THAT
     // car, or toggling V would disable the AI-driven old car and leave the new one uncontrolled.
     public void RetargetPlayerCar(GameObject car)
     {
@@ -121,10 +96,10 @@ public class DriveModeController : MonoBehaviour
         if (driving == _driving) return;
         _driving = driving;
         if (_driving) ResumeDriving();
-        else EnterBroadcast();
+        else EnterAuto();
     }
 
-    void EnterBroadcast()
+    void EnterAuto()
     {
         if (_pvc != null && _spline != null)
         {
@@ -142,13 +117,11 @@ public class DriveModeController : MonoBehaviour
             // it. No-op once racing.
             FormationController.TakeOver(_spline, _pvc.GridPosition);
         }
-        _cycleTimer = 0f;
-        _featured = null;
-        _pinned = null;
-        // Broadcast watches cars, so zoom out to driving level — the on-foot flow may have left the
-        // camera at walking zoom if the player never climbed into the car this session.
-        if (_zoom != null && !suppressBroadcastCamera) _zoom.SetZoomTarget(_zoom.DrivingZoom);
-        PickNextCar();
+        // The camera stays on the player's car, at driving zoom — the on-foot flow may have left the camera at
+        // walking zoom if the player never climbed into the car this session.
+        if (suppressBroadcastCamera) return;
+        if (_zoom != null) _zoom.SetZoomTarget(_zoom.DrivingZoom);
+        if (cameraFollow != null && playerCar != null) cameraFollow.target = playerCar.transform;
     }
 
     void ResumeDriving()
@@ -164,43 +137,5 @@ public class DriveModeController : MonoBehaviour
             _pvc.SeedPose(pos, heading, mph / 2.237f);
         }
         if (cameraFollow != null && playerCar != null) cameraFollow.target = playerCar.transform;
-        _pinned = null;
-    }
-
-    void UpdateBroadcastCamera()
-    {
-        if (suppressBroadcastCamera) return;     // crew chief (or similar) owns the camera
-        if (_pinned != null)
-        {
-            _pinnedTimer -= Time.deltaTime;
-            if (_pinnedTimer > 0f)
-            {
-                if (cameraFollow != null) cameraFollow.target = _pinned;
-                return;
-            }
-            _pinned = null;
-            _cycleTimer = 0f;   // hold expired (or car despawned): cut to the next cycle car now
-        }
-        _cycleTimer -= Time.deltaTime;
-        if (_cycleTimer <= 0f || _featured == null) PickNextCar();
-        if (_featured != null && cameraFollow != null) cameraFollow.target = _featured.transform;
-    }
-
-    // Advance to the next AI car in the field (skipping the player's own spline driver).
-    void PickNextCar()
-    {
-        var drivers = RaceField.Drivers;
-        _candidates.Clear();
-        for (int i = 0; i < drivers.Count; i++)
-        {
-            var d = drivers[i];
-            if (d == null || d == _spline || !d.isActiveAndEnabled) continue;
-            _candidates.Add(d);
-        }
-        if (_candidates.Count == 0) { _featured = null; return; }
-        _featuredIndex = (_featuredIndex + 1) % _candidates.Count;
-        _featured = _candidates[_featuredIndex];
-        _cycleTimer = broadcastCycleSeconds;
-        if (cameraFollow != null && !suppressBroadcastCamera) cameraFollow.target = _featured.transform;
     }
 }

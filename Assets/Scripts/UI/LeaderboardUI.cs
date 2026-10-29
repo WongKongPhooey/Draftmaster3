@@ -30,8 +30,6 @@ public class LeaderboardUI : MonoBehaviour
     [Tooltip("Top-left corner in UI pixels, before PixelGUI.Scale.")]
     public Vector2 origin = new Vector2(8f, 36f);
 
-    DriveModeController _drive;
-    bool _driveSearched;
     bool _visible = true;
 
     // One drawn line, built either from the running order or from the timing rows.
@@ -42,7 +40,6 @@ public class LeaderboardUI : MonoBehaviour
         public string name;
         public string right;      // gap to leader, or best lap in a practice-like session
         public bool isPlayer;
-        public Transform tf;
     }
 
     readonly List<Row> _rows = new();
@@ -76,11 +73,6 @@ public class LeaderboardUI : MonoBehaviour
         bool byLap = RaceWeekend.IsPracticeLike && BuildFromLapTimes();
         if (!byLap && !BuildFromRunningOrder()) return;
 
-        // In broadcast mode the rows become camera buttons: click a driver to cut to their car.
-        if (_drive == null && !_driveSearched) { _drive = FindFirstObjectByType<DriveModeController>(); _driveSearched = true; }
-        bool broadcast = _drive != null && !_drive.IsDriving;
-        Transform featured = broadcast ? _drive.FeaturedTransform : null;
-
         // Held, so it can't clash with anything that acts on a press; a fight has the same button for a hook.
         bool expanded = _expandedByTap || LegacyKeys.Held(expandKey) ||
                         (!DriverFight.IsActive && PadInput.IsHeld(PadBindings.LeaderboardExpand));
@@ -108,14 +100,14 @@ public class LeaderboardUI : MonoBehaviour
 
         float rx = x + pad, ry = y + pad;
         var headerRect = new Rect(rx, ry, w, row);
-        GUI.Label(headerRect, Header(broadcast, byLap, expanded, n), PixelGUI.HeadingSmall);
+        GUI.Label(headerRect, Header(byLap, expanded, n), PixelGUI.HeadingSmall);
         // A phone has no Tab to hold: a tap (or click) on the header opens the full field, another folds it.
         if (TouchTaps.Button(headerRect, GUIContent.none, GUIStyle.none)) _expandedByTap = !_expandedByTap;
         ry += row;
 
         for (int i = 0; i < show; i++)
         {
-            DrawRow(rx, ry, w, row, _rows[i], broadcast, featured);
+            DrawRow(rx, ry, w, row, _rows[i]);
             ry += row;
         }
 
@@ -123,13 +115,12 @@ public class LeaderboardUI : MonoBehaviour
         if (playerOutsideWindow)
         {
             PixelGUI.Rule(rx, ry + PixelGUI.Px(2f), w);
-            DrawRow(rx, ry + pad, w, row, _rows[playerRow], broadcast, featured);
+            DrawRow(rx, ry + pad, w, row, _rows[playerRow]);
         }
     }
 
-    string Header(bool broadcast, bool byLap, bool expanded, int n)
+    string Header(bool byLap, bool expanded, int n)
     {
-        if (broadcast) return "Order · Click = Camera";
         if (byLap)
         {
             string session = RaceWeekend.IsQualifying ? "Qualifying" : "Practice";
@@ -158,7 +149,6 @@ public class LeaderboardUI : MonoBehaviour
                 name = c.name,
                 right = LapTimingManager.Format(c.bestLap),
                 isPlayer = c.isPlayer,
-                tf = c.tf,
             });
         }
         return true;
@@ -181,7 +171,6 @@ public class LeaderboardUI : MonoBehaviour
                 name = e.name,
                 right = e.position == 1 ? "LEADER" : $"+{e.gapToLeaderSec:0.0}",
                 isPlayer = e.isPlayer,
-                tf = e.tf,
             });
         }
         return true;
@@ -193,18 +182,12 @@ public class LeaderboardUI : MonoBehaviour
         return -1;
     }
 
-    void DrawRow(float x, float y, float w, float h, Row e, bool broadcast, Transform featured)
+    void DrawRow(float x, float y, float w, float h, Row e)
     {
         var rowRect = new Rect(x, y, w, h);
-        // The kit keeps red for alarm, so the player's own row is marked with the accent and the camera's
-        // current car with telemetry blue — both as a low-alpha band rather than a recoloured label.
+        // The kit keeps red for alarm, so the player's own row is marked with the accent as a low-alpha band
+        // rather than a recoloured label.
         if (e.isPlayer) PixelGUI.Fill(rowRect, new Color(PixelGUI.Gold.r, PixelGUI.Gold.g, PixelGUI.Gold.b, 0.22f));
-        else if (broadcast && featured != null && e.tf == featured)
-            PixelGUI.Fill(rowRect, new Color(PixelGUI.Info.r, PixelGUI.Info.g, PixelGUI.Info.b, 0.30f));
-
-        // Invisible button under the label so the whole row is clickable without changing its look.
-        if (broadcast && e.tf != null && TouchTaps.Button(rowRect, GUIContent.none, GUIStyle.none))
-            _drive.FeatureCar(e.tf);
 
         string num = e.carNumber > 0 ? $"#{e.carNumber}" : "";
         GUI.Label(new Rect(x + PixelGUI.Px(2f), y, w, h),

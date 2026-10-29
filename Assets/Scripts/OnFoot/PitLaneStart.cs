@@ -936,7 +936,7 @@ public class PitLaneStart : MonoBehaviour
     // Walking through a doorway pulls the camera in; walking back out pushes it to walking distance again.
     //
     // Written on the TRANSITION, not asserted every frame. This component is the scene's zoom arbiter and
-    // several things borrow it for a moment — the broadcast cut pulling back to the field, the crew chief's
+    // several things borrow it for a moment — Auto pulling back to driving zoom, the crew chief's
     // pit wall, a fight in the paddock, a seat in the grandstand. Re-stating a zoom every frame would
     // overrule each of them the frame after they asked. Crossing a threshold is an event, so it is handled
     // like one, and whoever asks next still wins until the player walks through another door.

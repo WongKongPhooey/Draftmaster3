@@ -99,7 +99,7 @@ public class RaceEndPitIn : MonoBehaviour
         {
             // Through the broadcast switch when this is its car, so the crew chief's headset and END RACE see a
             // car the AI is driving rather than one that went quiet under them. Told to leave the camera alone
-            // first, or it would cut straight away to the TV cycle.
+            // first, or it would pull the camera straight back onto the car.
             var drive = DriveModeController.Current;
             if (drive != null && drive.PlayerCar == carTf.gameObject)
             {

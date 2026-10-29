@@ -424,7 +424,7 @@ public class TouchDriveTests
             var l = Layout(w, h);
             string at = $"{w}x{h}";
             float slop = TouchLayout.Slop * l.unit;
-            Assert.IsFalse(l.crewChief.Overlaps(l.broadcast), $"{at}: the headset sits on the TV button");
+            Assert.IsFalse(l.crewChief.Overlaps(l.broadcast), $"{at}: the headset sits on the Auto button");
             foreach (var (name, r) in new[] { ("limiter", l.limiter), ("broadcast", l.broadcast), ("crew chief", l.crewChief) })
             {
                 Assert.IsTrue(Inside(r, l.safe), $"{at}: {name} {r} runs off the screen");
@@ -468,6 +468,6 @@ public class TouchDriveTests
 
         s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY),
                          F(3, L.broadcast.centerX, L.broadcast.centerY)), L);
-        Assert.IsTrue(s.BroadcastTapped, "the TV button still answers while watching");
+        Assert.IsTrue(s.BroadcastTapped, "the Auto button still answers while the AI drives");
     }
 }

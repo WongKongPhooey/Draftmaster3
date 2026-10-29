@@ -98,7 +98,7 @@ namespace Draftmaster.Controls
             // The limiter only arms inside the pit lane, and a tow is never offered there.
             new Shortcut("Pit limiter", "L", PitLimiter, Context.Driving, "Tow"),
             new Shortcut("Tow", "P", Tow, Context.Driving, "Pit limiter"),
-            new Shortcut("Drive / broadcast", "V", DriveBroadcast, Context.Driving),
+            new Shortcut("Drive / auto", "V", DriveBroadcast, Context.Driving),
             new Shortcut("Team box", "F3", TeamBox, Context.Driving),
             new Shortcut("Leaderboard", "F2", Leaderboard, Context.Driving),
             new Shortcut("Lap timing", "F1", LapTiming, Context.Driving),

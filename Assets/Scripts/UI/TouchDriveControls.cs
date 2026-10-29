@@ -119,8 +119,8 @@ public class TouchDriveControls : MonoBehaviour
         !PadInput.ModalOpen &&
         (PlayerVehicleController.Human != null || Broadcasting);
 
-    // Watching the broadcast cut: the AI has the car, so there is no human car to steer, but the TV button has
-    // to stay up or a phone could never take the car back.
+    // On Auto: the AI has the car, so there is no human car to steer, but the AUTO button has to stay up (as
+    // DRIVE) or a phone could never take the car back.
     static bool Broadcasting => DriveModeController.Current != null && !DriveModeController.Current.IsDriving;
 
     // The limiter button only while there is something to toggle: in the pit lane, with a hand toggle allowed.
@@ -213,7 +213,7 @@ public class TouchDriveControls : MonoBehaviour
             var limiter = Limiter;
             DrawTopButton(_layout.limiter, "LIMIT", limiter != null && limiter.Armed, PixelGUI.Gold);
         }
-        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "Drive" : "TV", false, PixelGUI.Confirm);
+        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "Drive" : "Auto", false, PixelGUI.Confirm);
     }
 
     void DrawTopButton(TouchRect r, string text, bool on, Color tint)

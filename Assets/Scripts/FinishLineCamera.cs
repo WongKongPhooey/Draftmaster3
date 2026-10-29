@@ -47,12 +47,12 @@ public class FinishLineCamera : MonoBehaviour
         _follow = cam != null ? cam.GetComponent<CameraFollow>() : null;
         if (_follow == null || !_follow.isActiveAndEnabled) return false;
 
-        // On the car, or on the broadcast cut the player chose to watch the race from.
+        // On the car, or on the car the player handed to the AI (Auto).
         _drive = DriveModeController.Current;
         bool broadcast = _drive != null && !_drive.IsDriving;
         if (_follow.target != car && !broadcast) return false;
 
-        // The TV cycle would cut away to another car every few seconds.
+        // Handing the car over would pull the camera back onto it.
         if (_drive != null) _drive.suppressBroadcastCamera = true;
 
         _anchor = new GameObject("FinishLineCameraAnchor").transform;
@@ -74,7 +74,7 @@ public class FinishLineCamera : MonoBehaviour
         Destroy(_anchor.gameObject);
         _anchor = null;
 
-        // Back to the TV cycle's own say, once the player has the car again (END RACE puts it back in their
+        // Back to the Auto hand-off's own say, once the player has the car again (END RACE puts it back in their
         // hands before parking it). Still watching, it is left as it is: the crew chief may have set it.
         if (_drive != null && _drive.IsDriving) _drive.suppressBroadcastCamera = false;
 
