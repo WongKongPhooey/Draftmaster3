@@ -1427,6 +1427,82 @@ public class PitLaneStart : MonoBehaviour
         return true;
     }
 
+    // The race has been won and ended from the results screen (RaceDirector.EndRace → WinnerVictoryLap). Instead of
+    // the box, the car goes onto the start/finish line, stopped and square on the racing line's direction, and the
+    // driver is put back in it with the controls live. Every brain that might have had the car is switched off
+    // first, as EndRaceInBox does. A driver who had already climbed out is put back in the seat. False — and nothing
+    // touched — when there is no on-foot body to get out with, no start/finish to put the car on, or no box to bring
+    // it back to: EndRaceInBox is then the whole of END RACE, as before.
+    public bool StartVictoryLap()
+    {
+        if (car == null || _player == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return false;
+        if (_challengeDrive || _phase == EntryPhase.Setup || _phase == EntryPhase.Briefing) return false;
+        if (!TryStartFinishPose(out Vector3 linePos, out float lineHeadingDeg)) return false;
+        var rv = RVInterior.Current;
+        if (!IsDriving && rv != null && rv.IsInside) return false;
+
+        var drive = DriveModeController.Current;
+        if (drive != null && !drive.IsDriving) drive.SetDriving(true);
+
+        var pit = car.GetComponent<PitStopController>();
+        if (pit != null) pit.enabled = false;
+        car.enabled = false;
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null)
+        {
+            brain.parkedHold = false;
+            brain.pitStopHold = false;
+            brain.pitParkDistance = -1f;
+            brain.enabled = false;
+        }
+        var aiInput = car.GetComponent<SplineInputDriver>();
+        if (aiInput != null) aiInput.enabled = false;
+        car.externalInput = false;
+
+        ParkedCarPin.Release(car);
+        PlaceCar(linePos, lineHeadingDeg);
+        RacePositionTracker.NoteTeleport(car.transform);
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
+        _stoppedInBoxSince = -1f;
+
+        // Into the seat, the way EnterCar puts the body away — without the chief's briefing or the setup sheet.
+        ControlHints.Hide(ExitHintId);
+        _offeringExit = false;
+        if (!IsDriving)
+        {
+            ShowPrompt(false);
+            ControlHints.Hide("entercar");
+            _player.SetActive(false);
+        }
+        if (_intro != null) _intro.RemoveMarker(car.transform);
+        _entered = true;
+
+        // Pointing the camera at the car is also what makes FinishLineCamera let go of the line.
+        if (_camFollow != null) _camFollow.target = car.transform;
+        _orthoTarget = drivingOrthoSize;
+
+        SetPhase(EntryPhase.Driving);
+        car.enabled = true;
+        return true;
+    }
+
+    // The start/finish line's centre, facing the way the race ran, in world space.
+    bool TryStartFinishPose(out Vector3 pos, out float headingDeg)
+    {
+        pos = default;
+        headingDeg = 0f;
+        if (track == null || track.track == null) return false;
+
+        var s = track.SampleAt(track.track.startFinishDistance);
+        if (s.tangent.sqrMagnitude < 1e-6f) return false;
+        Vector3 world = track.transform.TransformPoint(new Vector3(s.position.x, s.position.y, 0f));
+        Vector3 tangent = track.transform.TransformDirection(new Vector3(s.tangent.x, s.tangent.y, 0f));
+
+        pos = new Vector3(world.x, world.y, _boxPosition.z);
+        headingDeg = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
+        return true;
+    }
+
     bool CanClimbOut()
     {
         if (!IsDriving || car == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return Idle();
@@ -1444,8 +1520,9 @@ public class PitLaneStart : MonoBehaviour
         if (stop != null && stop.IsPitting) return Idle();
         if (PitCrewRepair.Active != null) return Idle();
 
+        // A race winner with the circuit to themselves can get out wherever they stop (WinnerVictoryLap).
         CurrentBoxPose(out Vector3 boxPos, out _);
-        if (Vector2.Distance(car.transform.position, boxPos) > exitBoxRadius) return Idle();
+        if (!WinnerVictoryLap.Active && Vector2.Distance(car.transform.position, boxPos) > exitBoxRadius) return Idle();
         if (car.SpeedMph > exitBelowMph) return Idle();
 
         if (_stoppedInBoxSince < 0f) _stoppedInBoxSince = Time.time;

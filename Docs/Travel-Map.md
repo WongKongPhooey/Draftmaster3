@@ -8,7 +8,12 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
 
 1. Race results → **END RACE** (the screen's only button in a career) parks every car in its pit box, puts
    the player on foot beside their car in their own box (`RaceDirector.EndRace` → `PitStopController.ParkInBoxNow`,
-   `PitLaneStart.EndRaceInBox`), and makes **HIT THE ROAD** the objective (`WeekendObjectiveHUD.CallTheRoad`):
+   `PitLaneStart.EndRaceInBox`), and makes **HIT THE ROAD** the objective (`WeekendObjectiveHUD.CallTheRoad`).
+   A race the player **won** stops short of the box: the rest of the field is parked, but the player's car is put
+   on the start/finish line with the controls live (`WinnerVictoryLap` → `PitLaneStart.StartVictoryLap`) for
+   donuts, or to get out anywhere and walk about (the paddock boundary is lifted meanwhile). From the driving
+   seat the tow's prompt slot reads **Head back to the pits** (P / pad North); pressing it fades out and runs
+   `EndRaceInBox` as above. Then:
    walk to the motorhome, then the satnav in its cab opens the fullscreen map — an authored Canvas prefab
    (`Assets/Resources/UI/TravelMap.prefab`) with the `TravelMapScreen` binder on its root.
    The sheet's START NEXT WEEKEND jumps straight to the next round of the demo

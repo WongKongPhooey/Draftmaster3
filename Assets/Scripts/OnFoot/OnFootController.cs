@@ -212,7 +212,9 @@ public class OnFootController : MonoBehaviour
 
         // Keep the walker inside any authored PaddockBoundary: clamp the predicted next position
         // and re-derive velocity from it, which naturally slides along the polygon edge.
-        if (PaddockBoundary.AnyActive)
+        // Not while a race winner has the circuit (WinnerVictoryLap): they climbed out on the racing surface, which
+        // no boundary is drawn round, and would be pulled straight back into the paddock.
+        if (PaddockBoundary.AnyActive && !WinnerVictoryLap.Active)
         {
             if (!PaddockBoundary.IsInside(_rb.position))
                 _rb.position = PaddockBoundary.Constrain(_rb.position); // spawned/pushed outside — pull back in

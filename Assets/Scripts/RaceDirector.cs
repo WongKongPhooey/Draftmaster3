@@ -500,7 +500,9 @@ public class RaceDirector : MonoBehaviour
             pit.ParkInBoxNow();
         }
 
-        if (start != null) start.EndRaceInBox();
+        // A winner gets the empty circuit first: their car goes onto the start/finish line instead of the box,
+        // and the race is put away when they choose to head back (WinnerVictoryLap). The road is called either way.
+        if (start != null && !(PlayerWon && WinnerVictoryLap.Begin(gameObject, start))) start.EndRaceInBox();
         WeekendObjectiveHUD.CallTheRoad();
     }
 

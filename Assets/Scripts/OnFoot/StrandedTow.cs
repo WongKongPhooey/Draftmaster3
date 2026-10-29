@@ -101,7 +101,8 @@ public class StrandedTow : MonoBehaviour
     // Whether the car also has to be damaged depends on the session — see StrandedTowRule.
     bool Stranded()
     {
-        if (!_pits.IsDriving || RacePauseMenu.IsPaused) return false;
+        // A race winner's lap of the empty circuit offers its own way back on this key (WinnerVictoryLap).
+        if (!_pits.IsDriving || RacePauseMenu.IsPaused || WinnerVictoryLap.Active) return false;
 
         if (_pits.track != null && _pits.track.IsOnPitSurface(_car.transform.position)) { _stoppedSince = -1f; return false; }
 
