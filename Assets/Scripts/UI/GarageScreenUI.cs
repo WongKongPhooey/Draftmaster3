@@ -22,9 +22,9 @@ using SeriesInfo = Draftmaster.Data.Series;
 // The sheet is a JRPG character sheet, so the job here is binding each field to something the game really
 // keeps rather than inventing an RPG:
 //
-//   DRIVER INFO   the player's row in the Drivers table, found the way the rest of the game finds it —
-//                 by the number on the car (PlayerDriver). Name, number, team, manufacturer, age and
-//                 nickname come straight off that row.
+//   PERSONAL      the player's row in the Drivers table, found the way the rest of the game finds it —
+//                 by the number on the car (PlayerDriver). Name and age come straight off that row; the
+//                 number and the team are already on the car above it.
 //   DRIVER STATS  every attribute that row carries: both 0-100 ability ratings and all sixteen 0-20
 //                 skills, laid out by DriverAttributeSheet. No row at all = the block reads as unrated
 //                 rather than showing zeros.
@@ -46,8 +46,9 @@ using SeriesInfo = Draftmaster.Data.Series;
 // than showing the player's numbers under a rival's name: SeriesRoster answers who races where, and
 // nothing on this screen writes anything back.
 //
-// The sheet's bottom strip is a team-roster switcher; this game has one car, so that strip carries the
-// weekend and the way out to the track instead.
+// The sheet's bottom strip (a team-roster switcher in the design) is gone: this game has one car, and the
+// screen reads as a laptop window — the only way out is the red X in the top bar, back to wherever the
+// laptop was opened.
 //
 // How the player gets here: the laptop in the RV or the one in the team factory, not a row on the title
 // menu — see GarageScreenLoader, which also remembers which of those to send BACK to.
@@ -64,17 +65,12 @@ public class GarageScreenUI : MonoBehaviour
     public Image carImage;
     [Tooltip("Shown in the car slot when there is no paint to draw.")]
     public TextMeshProUGUI carSlotCaption;
+    [Tooltip("Personal: the Name value. Shortened to initial and surname, then surname, when the full name does not fit.")]
     public TextMeshProUGUI driverName;
-    public TextMeshProUGUI driverNumber;
-    public TextMeshProUGUI driverLevel;
-    [Tooltip("The team on the player's Drivers row, shortened to fit the column.")]
-    public TextMeshProUGUI driverTeam;
-    [Tooltip("Age, manufacturer and nickname off the same row, on one line.")]
-    public TextMeshProUGUI driverBio;
-    public TextMeshProUGUI statusLabel;
+    [Tooltip("Personal: the Age value, off the driver's Drivers row.")]
+    public TextMeshProUGUI driverAge;
     [Tooltip("On the Driver Stats heading's line: how much of a rival's sheet has been scouted.")]
     public TextMeshProUGUI scoutingLabel;
-    public TextMeshProUGUI weekendLabel;
 
     [Tooltip("One row per DriverAttributeSheet.All entry, in that order: label, cells, value.")]
     public List<StatRow> driverStats = new();
@@ -93,7 +89,6 @@ public class GarageScreenUI : MonoBehaviour
     public TextMeshProUGUI xpLabel;
 
     [Header("Flow")]
-    public string raceSceneName = "RaceScene";
     [Tooltip("Where BACK goes when the sheet was opened cold rather than from a laptop in the RV or the factory.")]
     public string titleSceneName = GarageScreenLoader.TitleSceneName;
 
@@ -114,7 +109,6 @@ public class GarageScreenUI : MonoBehaviour
         public TextMeshProUGUI value;
     }
 
-    float _statusUntil;
 
     // What the top bar is currently pointed at.
     List<SeriesInfo> _series = new();
@@ -138,18 +132,16 @@ public class GarageScreenUI : MonoBehaviour
         Refresh();
     }
 
-    // RACE and BACK, hooked up here for the same reason the pickers are: the builder that generates this
+    // The close X, hooked up here for the same reason the pickers are: the builder that generates this
     // scene calls onClick.AddListener at edit time, which adds a RUNTIME listener and is thrown away when
-    // the scene is saved. The buttons in the saved scene therefore have an empty onClick, and the only
+    // the scene is saved. The button in the saved scene therefore has an empty onClick, and the only
     // wiring that survives is the wiring done in code, on the way up.
     //
-    // Found by the names the builder gives them rather than by serialized references, so a rebuilt scene
-    // needs no re-dragging. RACE sits on its own object; BACK is a tab, whose Button is on the face inside
-    // the plate — GetComponentInChildren covers both shapes.
+    // Found by the name the builder gives it rather than by a serialized reference, so a rebuilt scene
+    // needs no re-dragging.
     void WireButtons()
     {
-        Wire("Race", Race);
-        Wire("Back", Back);
+        Wire("Close", Back);
     }
 
     void Wire(string objectName, UnityAction action)
@@ -272,7 +264,6 @@ public class GarageScreenUI : MonoBehaviour
         var kb = Keyboard.current;
         if ((kb != null && (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)) ||
             PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back)) Back();
-        if (_statusUntil > 0f && Time.unscaledTime >= _statusUntil) SetStatus("");
     }
 
     // ------------------------------------------------------------------ content
@@ -292,22 +283,13 @@ public class GarageScreenUI : MonoBehaviour
         FillCar(mine, hasCar, number);
         // Only the player's own name is overridden by their career name; a rival keeps theirs.
         if (driverName != null)
-            driverName.text = mine ? PlayerDriver.DisplayName(row) : FullName(row);
-        if (driverNumber != null) driverNumber.text = hasCar ? "#" + number : "#—";
-        FillIdentity(theme, row);
+            FitName(driverName, mine ? PlayerDriver.DisplayName(row) : FullName(row));
+        FillAge(theme, row);
 
         int starts = PlayerStatsLedger.Get("starts");
         int wins = PlayerStatsLedger.Get("wins");
         int top10s = PlayerStatsLedger.Get("top10s");
         int top5s = PlayerStatsLedger.Get("top5s");
-
-        // The sheet's LV. Seasons aren't levelled, so this reads the one ladder that exists: races run —
-        // and only the player has run any, so a rival's level is blank rather than borrowed.
-        if (driverLevel != null)
-        {
-            driverLevel.text = mine ? "Level " + (1 + starts / 5) : "Level —";
-            if (theme != null) driverLevel.color = mine ? theme.textDim : theme.textDisabled;
-        }
 
         var browsing = BrowsedSeries();
         var record = default(Draftmaster.Weekend.SeriesCareers2025.Record);
@@ -334,15 +316,6 @@ public class GarageScreenUI : MonoBehaviour
                             : (row != null ? row.FanSupport * 100f / Driver.StatMax : 0f);
         SetBar(xpBar, appeal / 100f);
         if (xpLabel != null) xpLabel.text = Mathf.RoundToInt(appeal) + "/100";
-
-        if (weekendLabel != null)
-        {
-            string track = TrackSelection.CurrentDisplayName;
-            string session = RaceWeekend.IsQualifying ? "Qualifying" : RaceWeekend.IsPractice ? "Practice" : "Race";
-            weekendLabel.text = string.IsNullOrEmpty(track)
-                ? "No track selected"
-                : $"Next: {track} · {session}";
-        }
     }
 
     // The car the viewed driver races. The player's is rendered from their saved scheme and placed sponsor
@@ -475,42 +448,29 @@ public class GarageScreenUI : MonoBehaviour
         }
     }
 
-    // The rest of the driver's database row: who they drive for, what they drive and how old they are.
-    void FillIdentity(PixelUITheme theme, Driver row)
+    // The Name value shares its line with a label in a column only as wide as the car, so a full name often
+    // will not fit: "Ace Emerson" becomes "A. Emerson", then "Emerson", and anything still too long is clipped
+    // by the box (the pixel faces have no ellipsis glyph).
+    static void FitName(TextMeshProUGUI box, string name)
     {
-        if (driverTeam != null)
-        {
-            string team = row != null ? PlayerDriver.ShortTeamName(row.TeamName) : "";
-            driverTeam.text = team.Length > 0 ? team : "No team";
-            if (theme != null) driverTeam.color = team.Length > 0 ? theme.text : theme.textDisabled;
-        }
+        box.text = name;
+        float room = box.rectTransform.rect.width;
+        if (room <= 0f || box.GetPreferredValues(name).x <= room) return;
 
-        if (driverBio == null) return;
-
-        if (row == null)
-        {
-            driverBio.text = "No driver record";
-            if (theme != null) driverBio.color = theme.textDisabled;
-            return;
-        }
-
-        var parts = new List<string>(3);
-        if (row.Age > 0) parts.Add("Age " + row.Age);
-        if (!string.IsNullOrWhiteSpace(row.Manufacturer)) parts.Add(MakeName(row.Manufacturer.Trim()));
-        if (!string.IsNullOrWhiteSpace(row.Nickname)) parts.Add("\"" + row.Nickname.Trim() + "\"");
-
-        driverBio.text = string.Join(" · ", parts);
-        if (theme != null) driverBio.color = theme.textDim;
+        int space = name.IndexOf(' ');
+        if (space <= 0 || space >= name.Length - 1) return;
+        string surname = name.Substring(space + 1);
+        string initialled = name[0] + ". " + surname;
+        box.text = box.GetPreferredValues(initialled).x <= room ? initialled : surname;
     }
 
-    // The rosters store the make as a three-letter code; the sheet spells it out.
-    static string MakeName(string code) => code.ToUpperInvariant() switch
+    void FillAge(PixelUITheme theme, Driver row)
     {
-        "CHV" => "Chevy",
-        "FRD" => "Ford",
-        "TYT" => "Toyota",
-        _ => UIText.TitleCase(code),
-    };
+        if (driverAge == null) return;
+        bool known = row != null && row.Age > 0;
+        driverAge.text = known ? row.Age.ToString() : "—";
+        if (theme != null) driverAge.color = known ? theme.text : theme.textDisabled;
+    }
 
     // Every attribute the Drivers table rates this driver on, in DriverAttributeSheet order — the same
     // order the builder laid the rows out in. A save with no row at all reads as unrated rather than
@@ -637,18 +597,7 @@ public class GarageScreenUI : MonoBehaviour
         fill.sizeDelta = new Vector2(Mathf.Round(track.rect.width * Mathf.Clamp01(amount01)), fill.sizeDelta.y);
     }
 
-    // ------------------------------------------------------------------ buttons (wired by the builder)
-
-    public void Race()
-    {
-        if (!Application.CanStreamedLevelBeLoaded(raceSceneName))
-        {
-            SetStatus(raceSceneName + " isn't in the build settings yet.");
-            return;
-        }
-        GarageScreenLoader.Clear();   // heading to the track ends the trip — BACK shouldn't return here later
-        SceneManager.LoadScene(raceSceneName);
-    }
+    // ------------------------------------------------------------------ the close button (wired by the builder)
 
     // Back to wherever the sheet was opened from — the RV or the factory when a laptop opened it, the
     // title when it was opened cold. GarageScreenLoader owns that memory; titleSceneName is the fallback
@@ -656,14 +605,6 @@ public class GarageScreenUI : MonoBehaviour
     public void Back()
     {
         if (!GarageScreenLoader.Leave(titleSceneName))
-            SetStatus(titleSceneName + " isn't in the build settings yet.");
-    }
-
-    // `hold` keeps the line up until something replaces it (what the sheet is showing, not a passing toast).
-    void SetStatus(string text, bool hold = false)
-    {
-        if (statusLabel == null) return;
-        statusLabel.text = text ?? "";
-        _statusUntil = string.IsNullOrEmpty(text) || hold ? 0f : Time.unscaledTime + 2.5f;
+            Debug.LogWarning($"GarageScreenUI: {titleSceneName} isn't in the build settings, so the X has nowhere to go.");
     }
 }

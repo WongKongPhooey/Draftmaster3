@@ -20,7 +20,6 @@ using UnityEngine.SceneManagement;
 public class TitleScreenWiringTests
 {
     const string TitleScenePath = "Assets/Scenes/TitleScreen.unity";
-    const string RaceScenePath = "Assets/Scenes/RaceScene.unity";
     const string GarageScenePath = "Assets/Scenes/GarageScreen.unity";
     const string FactoryScenePath = "Assets/Menus/TeamGarage.unity";
 
@@ -148,17 +147,16 @@ public class TitleScreenWiringTests
         }
     }
 
-    // BACK now goes wherever GarageScreenLoader remembers; titleSceneName is the fallback for a cold
-    // open, so it still has to name a real scene.
+    // BACK (the sheet's close X) goes wherever GarageScreenLoader remembers; titleSceneName is the
+    // fallback for a cold open, so it still has to name a real scene.
     [Test]
-    public void GarageScreenFallsBackToTheTitleAndLeadsOutToTheRace()
+    public void GarageScreenFallsBackToTheTitle()
     {
         var garage = EditorSceneManager.OpenScene(GarageScenePath, OpenSceneMode.Additive);
         try
         {
             var ui = Find(garage, "GarageScreenUI");
             Assert.AreEqual(SceneName(TitleScenePath), ui.FindProperty("titleSceneName").stringValue);
-            Assert.AreEqual(SceneName(RaceScenePath), ui.FindProperty("raceSceneName").stringValue);
         }
         finally
         {

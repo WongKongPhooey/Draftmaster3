@@ -249,18 +249,6 @@ public class NavigationFlowTests
         yield return WaitForScene(Factory, "BACK out of the garage");
     }
 
-    // RACE on the sheet is the other way out of it.
-    [UnityTest]
-    public IEnumerator RaceOnTheGarageSheetGoesRacing()
-    {
-        Go(Garage);
-        yield return WaitForScene(Garage);
-        for (int i = 0; i < 5; i++) yield return null;
-
-        Call("GarageScreenUI", "Race", "the garage screen has no RACE");
-        yield return WaitForScene(Race, "RACE off the garage sheet");
-    }
-
     // Opened cold — no laptop, nothing remembered — BACK still has to lead somewhere, or the sheet is a
     // room with the door bricked up.
     [UnityTest]
