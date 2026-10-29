@@ -188,7 +188,7 @@ public static class IronOvalTitleBuilder
             // No NEW SEASON row: CAREER is the door into the career, and a second row that also opens one
             // is a coin toss the player loses. Command.NewSeason stays in the enum — the values are stored
             // in the scene by number, so removing one would move every row onto the wrong command.
-            ("Career",       TitleScreenUI.Command.Continue,   ""),
+            ("CAREER",       TitleScreenUI.Command.Continue,   ""),
             // SINGLE RACE is the "race anything now" row: pick a track, a series and a driver, then go.
             // It is a plain LoadScene row because the choosing happens in SingleRace.unity, not here, and
             // it is the only route to the other 37 tracks.
@@ -197,10 +197,10 @@ public static class IronOvalTitleBuilder
             // with the choosing put back in — and no TEAM FACTORY row: the factory is reached from a
             // laptop, like the car sheet. Both commands stay in the enum for the same reason NewSeason
             // does.
-            ("Single Race",  TitleScreenUI.Command.LoadScene,  "SingleRace"),
+            ("SINGLE RACE",  TitleScreenUI.Command.LoadScene,  "SingleRace"),
             // OPTIONS opens a screen of its own (Options.unity / OptionsUI), which is where the player's
             // name is set — the one thing the whole game calls them by.
-            ("Options",      TitleScreenUI.Command.LoadScene,  "Options"),
+            ("OPTIONS",      TitleScreenUI.Command.LoadScene,  "Options"),
         };
 
         float rowY = 0f;

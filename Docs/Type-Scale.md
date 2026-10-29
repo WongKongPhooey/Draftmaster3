@@ -101,6 +101,14 @@ One rule for the whole game. Code: `Assets/Scripts/Controls/UIText.cs`. Tests:
 Small words (`of`, `the`, `to`, `and`...) stay lower case inside a title. Nothing is set in all caps for
 emphasis — the colour does that (`Danger`, `Gold`).
 
+One exception: the title screen's menu rows are capitals (`CAREER`, `SINGLE RACE`). They are written that
+way in the text — row label, TMP text and `Row_<LABEL>` object name together, via
+`Draftmaster > UI > All Caps The Title Menu Rows` — not cased by a style, so going back to mixed case is a
+rename. The letter-case audit lists them; that is expected. Being capitals, they are set in Silkscreen
+16 (tracking 2), and the `(C) Phooey 2026` footer under them in Fixedsys — swapped by
+`Draftmaster > UI > Title Menu In Silkscreen, Footer In Fixedsys`. A row going back to mixed case goes back
+to Fixedsys with it: Silkscreen has no lower case.
+
 Write the text in its case in the source. `UIText.TitleCase(key)` is for text that arrives in capitals
 as a key or an enum name (a stat's sheet key, a `Standing`) and has to be shown; it leaves anything already
 in mixed case alone. Never `ToUpperInvariant()` text on its way to the screen.

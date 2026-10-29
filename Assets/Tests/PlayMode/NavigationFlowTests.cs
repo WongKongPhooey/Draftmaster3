@@ -176,9 +176,9 @@ public class NavigationFlowTests
         yield return WaitForScene(Title);
         yield return null;
 
-        var row = RowWithLabel("Career");
+        var row = RowWithLabel("CAREER");
         Press(row.index);
-        yield return WaitForScene(Race, "Career");
+        yield return WaitForScene(Race, "CAREER");
 
         yield return WaitForObject("TrackBuilder", "the race scene never built a road");
         yield return WaitForObject("SplineInputDriver", "the race scene put no cars on the track");

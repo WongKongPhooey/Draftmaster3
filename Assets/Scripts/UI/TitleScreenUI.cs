@@ -35,7 +35,7 @@ public class TitleScreenUI : MonoBehaviour
     [Serializable]
     public class Row
     {
-        public string label = "Career";
+        public string label = "CAREER";
         public Command command = Command.NotWired;
         [Tooltip("Scene loaded by the LoadScene command. Must be in the build settings.")]
         public string sceneName = "";

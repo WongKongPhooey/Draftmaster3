@@ -24,7 +24,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Add SINGLE RACE Row To Title Screen")]
     public static void AddSingleRaceRow()
     {
-        Debug.Log(AddRow("Single Race", TitleScreenUI.Command.LoadScene, "SingleRace",
+        Debug.Log(AddRow("SINGLE RACE", TitleScreenUI.Command.LoadScene, "SingleRace",
                          after: TitleScreenUI.Command.Continue));
     }
 
@@ -39,7 +39,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Wire MULTIPLAYER Row To Co-op Join")]
     public static void WireMultiplayerRow()
     {
-        Debug.Log(AddRow("Multiplayer", TitleScreenUI.Command.JoinCoop, "",
+        Debug.Log(AddRow("MULTIPLAYER", TitleScreenUI.Command.JoinCoop, "",
                          after: TitleScreenUI.Command.LoadScene));
     }
 
@@ -51,7 +51,7 @@ public static class TitleScreenRowEditor
     [MenuItem("Draftmaster/UI/Rename CONTINUE Row To CAREER")]
     public static void RenameContinueRow()
     {
-        Debug.Log(RenameRow("CONTINUE", "Career"));
+        Debug.Log(RenameRow("CONTINUE", "CAREER"));
     }
 
     // NEW SEASON is gone: CAREER already opens the career, and two rows for one door is the kind of thing
@@ -81,51 +81,74 @@ public static class TitleScreenRowEditor
         Debug.Log(RemoveRow("TEAM FACTORY"));
     }
 
-    // The rows were authored in capitals; the game is Title Case now (Docs/Type-Scale.md, "Letter case").
-    // Each goes through RenameRow, so label, drawn text and Row_<Label> object name move together, and
-    // nothing else in the hand-edited scene is touched. Idempotent.
-    [MenuItem("Draftmaster/UI/Title Case The Title Menu Rows")]
-    public static void TitleCaseRows()
+    // The title menu is the one place the game sets its labels in capitals (Docs/Type-Scale.md, "Letter
+    // case"). The capitals are written into the text itself rather than put on by a TMP style, so a row can
+    // go back to mixed case by editing its text. Each goes through RenameRow, so label, drawn text and
+    // Row_<Label> object name move together, and nothing else in the hand-edited scene is touched.
+    // Idempotent.
+    [MenuItem("Draftmaster/UI/All Caps The Title Menu Rows")]
+    public static void AllCapsRows()
     {
         foreach (var (from, to) in new[]
                  {
-                     ("CAREER", "Career"), ("SINGLE RACE", "Single Race"), ("MULTIPLAYER", "Multiplayer"),
-                     ("OPTIONS", "Options"), ("RESTART DEMO", "Restart Demo"),
+                     ("Career", "CAREER"), ("Single Race", "SINGLE RACE"), ("Multiplayer", "MULTIPLAYER"),
+                     ("Options", "OPTIONS"), ("Restart Demo", "RESTART DEMO"),
                  })
             Debug.Log(RenameRow(from, to));
-        Debug.Log(SetRowFace());
     }
 
-    // The menu rows are the title screen's buttons, so they take the button face (Fixedsys, the theme's data
-    // face — Silkscreen has no lower case). Only each row's label text changes: its size is kept, moved onto
-    // Fixedsys's 16px cell, and Silkscreen's tracking is dropped as on every other button.
-    static string SetRowFace()
+    // The menu rows and the copyright footer under them trade faces. The rows are written in capitals now,
+    // so they go back to Silkscreen — the face the footer was in, at its size and tracking — and the footer
+    // takes the rows' Fixedsys with its text in mixed case. Silkscreen has no lower case: a row that goes back
+    // to mixed case has to go back to Fixedsys with it. Only those six texts change. Idempotent.
+    [MenuItem("Draftmaster/UI/Title Menu In Silkscreen, Footer In Fixedsys")]
+    public static void SwapRowAndFooterFaces()
     {
-        var face = PixelUITheme.Instance != null ? PixelUITheme.Instance.data : null;
-        if (face == null) return "No data face on the theme — rows left alone.";
+        var theme = PixelUITheme.Instance;
+        var display = theme != null ? theme.display : null;
+        var data = theme != null ? theme.data : null;
+        if (display == null || data == null) { Debug.Log("Theme is missing a face — title screen left alone."); return; }
 
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         var ui = Object.FindObjectsByType<TitleScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                        .FirstOrDefault();
-        if (ui == null) return $"No TitleScreenUI in {ScenePath}.";
+        if (ui == null) { Debug.Log($"No TitleScreenUI in {ScenePath}."); return; }
 
-        int changed = 0;
+        var footer = ui.GetComponentsInChildren<TextMeshProUGUI>(true).FirstOrDefault(t => t.name == "Footer");
+
+        // The footer's own look, read before it is changed, is what the rows take.
+        float size = footer != null && footer.font == display ? footer.fontSize : 16f;
+        float spacing = footer != null && footer.font == display ? footer.characterSpacing : 2f;
+
+        int rows = 0;
         foreach (var row in ui.rows)
         {
             var text = row != null ? row.labelText : null;
-            if (text == null || text.font == face) continue;
-            text.font = face;
-            if (face.material != null) text.fontSharedMaterial = face.material;
-            text.fontSize = Mathf.Max(16f, Mathf.Round(text.fontSize / 16f) * 16f);
-            text.characterSpacing = 0f;
-            EditorUtility.SetDirty(text);
-            changed++;
+            if (text == null) continue;
+            SetFace(text, display, size, spacing);
+            rows++;
         }
-        if (changed == 0) return "Title menu rows already in the button face — left alone.";
+
+        string footerNote = "no Footer text found";
+        if (footer != null)
+        {
+            SetFace(footer, data, 16f, 0f);
+            footer.text = "(C) Phooey 2026";
+            footerNote = $"footer \"{footer.text}\" in {data.name}";
+        }
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
-        return $"Title screen: {changed} menu row(s) set in {face.name}.";
+        Debug.Log($"Title screen: {rows} menu row(s) in {display.name} {size:0}/{spacing:0.#}; {footerNote}.");
+    }
+
+    static void SetFace(TextMeshProUGUI text, TMP_FontAsset face, float size, float spacing)
+    {
+        text.font = face;
+        if (face.material != null) text.fontSharedMaterial = face.material;
+        text.fontSize = size;
+        text.characterSpacing = spacing;
+        EditorUtility.SetDirty(text);
     }
 
     // Bring every row's drawn text back to its label. The label is the row's identity — the wiring tests
