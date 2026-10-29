@@ -13,8 +13,10 @@ namespace Draftmaster.Fans
 
         public const float Min = 0f;
         public const float Max = 100f;
-        // Where a fresh save sits before any results move it — enough that a couple of fans show up.
-        public const float Default = 40f;
+        // Where a fresh save sits before anything moves it. High for the demo: the player is Ace Emerson, a
+        // Cup veteran the crowd already knows (18/20 Fan Appeal on the laptop), so the paddock is busy with
+        // autograph-seekers from the first morning. Drop it when a career starts from nobody.
+        public const float Default = 90f;
 
         public static float Value
         {

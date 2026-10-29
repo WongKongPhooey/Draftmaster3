@@ -15,9 +15,10 @@ namespace Draftmaster.Sponsors
     // rules of their own, and the numbers are testable without standing a paddock up.
     public static class SponsorPoach
     {
-        // The reputation a brand has to see before it bothers. Deliberately LOW: a fresh save sits at
-        // FanAppeal.Default (40) and the beat has to be able to fire on the demo's first weekend, or
-        // nobody ever sees it. Raise it when the career's reputation curve is real.
+        // The reputation a brand has to see before it bothers. Deliberately LOW: the beat has to be able to
+        // fire on the demo's first weekend from a fresh save (FanAppeal.Default), or nobody ever sees it —
+        // and a career that starts from nobody will have a much lower default than the demo's. Raise it when
+        // the career's reputation curve is real.
         public const float AppealRequired = 15f;
 
         // What they want for the money: results, not exposure.
