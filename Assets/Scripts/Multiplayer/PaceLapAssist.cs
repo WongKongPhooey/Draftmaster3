@@ -154,6 +154,19 @@ public class PaceLapAssist : MonoBehaviour
     // Speed-capped to that car (no overtaking) with a prompt to line up behind it.
     void UpdateSpline()
     {
+        // Pit road is the limiter's business, on the formation lap as under caution. The field files out of the
+        // pit lane to start the formation lap, and nothing read on pit road is a gap: the player's distance is
+        // projected onto the main lap while an AI car on the lane reports a pit-lane distance, so the car ahead
+        // came out far "behind" and the hold backed the player off to 80% of its speed - stuck
+        // well under the limit (Daytona's 55) while the AI ran the lane at it.
+        var track = pvc.ObstacleTrack;
+        if (track != null && track.IsOnPitSurface(transform.position))
+        {
+            pvc.speedGovernorMps = Mathf.Infinity;
+            _showPrompt = false;
+            return;
+        }
+
         if (RaceStart.IsCaution) { UpdateCaution(); return; }
         var field = RaceField.Drivers;
         float trackLen = 0f;
@@ -166,6 +179,7 @@ public class PaceLapAssist : MonoBehaviour
         bool leaderSafety = false;
         SafetyCar leaderPaceCar = null;
         float leaderMph = 0f;
+        bool leaderOnPit = false;   // its distance is a pit-lane value, not comparable with the player's
         float gap = float.MaxValue; // signed in grid-order mode (+ ahead, - behind); positive-only in fallback
 
         // Preferred: the member directly ahead of the player in grid order.
@@ -181,6 +195,7 @@ public class PaceLapAssist : MonoBehaviour
             leaderPaceCar = sdMember.GetComponent<SafetyCar>();
             leaderSafety = leaderPaceCar != null;
             leaderMph = sdMember.CurrentMph;
+            leaderOnPit = sdMember.IsOnPit;
         }
         else
         {
@@ -190,7 +205,7 @@ public class PaceLapAssist : MonoBehaviour
             for (int i = 0; i < field.Count; i++)
             {
                 var d = field[i];
-                if (d == null) continue;
+                if (d == null || d.IsOnPit) continue;
                 float g = d.DistanceOnTrack - playerDist;
                 if (g <= 0f) g += trackLen;
                 if (g > 0f && g < best) { best = g; leader = d; }
@@ -210,9 +225,11 @@ public class PaceLapAssist : MonoBehaviour
         {
             float aheadMps = leaderMph * MphToMps;
             // A pace car down the pit lane is no longer on the road: its distance is a pit-lane value, not a gap.
+            // Nor is a car still filing out of the pit lane ahead of the player.
             bool scInPit = leaderPaceCar != null && leaderPaceCar.Pitted;
-            if (!scInPit && gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
-            else if (!scInPit && gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
+            bool noGap = scInPit || leaderOnPit;
+            if (!noGap && gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
+            else if (!noGap && gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
             // The pace car peeling off for the pit in the close-up is not a car to chase: the leader holds formation
             // pace to the line, as the AI does. Chasing it ran the human away from the field just before the green.
             // Once it has pitted the human on pole leads the field to the line at that pace until the green waves.
@@ -238,16 +255,9 @@ public class PaceLapAssist : MonoBehaviour
 
     // Caution: hold behind the nearest moving car in front on the road, whoever it is, capped at cautionMaxMph. The
     // leader of the train holds the director's close-up pace once the safety car peels off, as the AI front row does.
+    // Only reached off pit road: UpdateSpline hands pit road to the limiter first.
     void UpdateCaution()
     {
-        var track = pvc.ObstacleTrack;
-        if (track != null && track.IsOnPitSurface(transform.position))
-        {
-            pvc.speedGovernorMps = Mathf.Infinity;   // pit road: the limiter's business
-            _showPrompt = false;
-            return;
-        }
-
         var field = RaceField.Drivers;
         float playerDist = pvc.TrackDistance;
         float myLat = pvc.TrackLateral;
