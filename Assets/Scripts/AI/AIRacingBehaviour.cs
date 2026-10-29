@@ -566,9 +566,22 @@ public class AIRacingBehaviour : MonoBehaviour
         }
         else if (Pack)
         {
-            if (TryGetAheadInCorridor(scanDist, out var blocker, out float blockGap, out float overlap01))
-                speedCap = Mathf.Min(speedCap, FollowCap(blocker.CurrentMph, blockGap, overlap01, headway, followMargin,
+            // Every car in the corridor, as off the pack tracks. Keyed off the nearest one, a car diagonally ahead in the
+            // middle of a lane change (or only committed to one) hid the car square in front of us: at Daytona the
+            // field drove into the back of a slowing line at 5-10 m/s with the throttle open (PackRaceSimTests).
+            var field = RaceField.Drivers;
+            for (int i = 0; i < field.Count; i++)
+            {
+                var other = field[i];
+                if (other == null || other == _spline || other.IsOnPit) continue;
+                if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+                float lg = LongitudinalGap(_spline, other);
+                if (lg <= 0f || lg > scanDist) continue;
+                float ov = PackCorridorOverlap01(other);
+                if (ov <= 0f) continue;
+                speedCap = Mathf.Min(speedCap, FollowCap(other.CurrentMph, lg, ov, headway, followMargin,
                                                          launchCapBlend, underYellow));
+            }
         }
         else
         {
@@ -1832,39 +1845,20 @@ public class AIRacingBehaviour : MonoBehaviour
         return 1f - Mathf.Clamp01((lateralSeparation - overlap) / Mathf.Max(clear - overlap, 0.1f));
     }
 
-    // Nearest car ahead that overlaps MY lateral corridor — the one we'd actually hit. RaceField.TryGetAhead
-    // returns the nearest-ahead regardless of lateral, which is right for "who do I try to pass" but wrong
-    // for "who do I brake for": a wreck sitting offline would cap the whole field's speed until it stopped.
-    bool TryGetAheadInCorridor(float scanDist, out SplineDriver blocker, out float gap, out float overlap01)
+    // How squarely a car ahead sits in our path in a pack, 0..1. A car only counts by its lateral, and the wrong one
+    // gets hit, so it counts by the closest of: where its brain plans to be, where the car actually is (the body lags
+    // the plan through a lane change), and the lane it has committed to moving into - it will be there before we could
+    // shed the speed if we waited for it to arrive. And while we are moving lanes ourselves, a car in the lane we're
+    // moving into is followed already.
+    float PackCorridorOverlap01(SplineDriver other)
     {
-        blocker = null; gap = 0f; overlap01 = 0f;
-        float best = float.MaxValue;
         float myLat = _spline.LateralOnTrack;
-        var drivers = RaceField.Drivers;
-        for (int i = 0; i < drivers.Count; i++)
-        {
-            var other = drivers[i];
-            if (other == null || other == _spline || other.IsOnPit) continue;
-            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
-            float lg = LongitudinalGap(_spline, other);
-            if (lg <= 0f || lg > scanDist || lg >= best) continue;
-            float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
-            // In a pack, a car committed to moving into our lane is followed from the moment it commits - it will be
-            // there before we could shed the speed if we waited for it to arrive.
-            // And while we are moving lanes ourselves, the car ahead in the lane we're moving into is followed already.
-            if (Pack)
-            {
-                ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(HeadedLateral(other) - myLat)));
-                if (_packMoving && _packLane >= 0)
-                    ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - LaneLateral(_packLane))));
-            }
-            if (ov <= 0f) continue;
-            best = lg;
-            blocker = other;
-            gap = lg;
-            overlap01 = ov;
-        }
-        return blocker != null;
+        float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
+        ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(other.CarLateral - _spline.CarLateral)));
+        ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(HeadedLateral(other) - myLat)));
+        if (_packMoving && _packLane >= 0)
+            ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - LaneLateral(_packLane))));
+        return ov;
     }
 
     // ---- Race phase, pressure and blue flags ----
