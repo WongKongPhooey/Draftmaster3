@@ -206,6 +206,9 @@ public class GarageScreenUI : MonoBehaviour
             _browsing = true;
         }
 
+        KeepArrowsForStepping(seriesDropdown);
+        KeepArrowsForStepping(driverDropdown);
+
         ShowField(seriesIndex, PlayerDriver.CarNumber);
     }
 
@@ -263,7 +266,65 @@ public class GarageScreenUI : MonoBehaviour
     {
         var kb = Keyboard.current;
         if ((kb != null && (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)) ||
-            PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back)) Back();
+            PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back))
+        {
+            // With a picker's list open, Esc / Back closes the list, not the laptop. TMP keeps IsExpanded
+            // true through the list's fade-out, so this holds whether the UI module's own cancel ran first.
+            if (CloseOpenPicker()) return;
+            Back();
+        }
+        StepFocusedPicker(kb);
+    }
+
+    bool CloseOpenPicker()
+    {
+        bool closed = false;
+        foreach (var picker in new[] { seriesDropdown, driverDropdown })
+        {
+            if (picker == null || !picker.IsExpanded) continue;
+            picker.Hide();
+            closed = true;
+        }
+        return closed;
+    }
+
+    // Up / Down on a focused, closed picker steps it to the previous / next option, wrapping round, the way a
+    // select box does on a PC — held, it repeats. The pickers' navigation is horizontal only (see
+    // KeepArrowsForStepping), so the same keys don't also move focus off them. An open list is left to its
+    // own arrow handling: focus is on its items then, not on the picker.
+    const float StepRepeatDelay = 0.35f, StepRepeatInterval = 0.07f;
+    float _nextStep;
+
+    void StepFocusedPicker(Keyboard kb)
+    {
+        if (kb == null || EventSystem.current == null) return;
+        var focused = EventSystem.current.currentSelectedGameObject;
+        TMP_Dropdown picker = null;
+        if (seriesDropdown != null && focused == seriesDropdown.gameObject) picker = seriesDropdown;
+        else if (driverDropdown != null && focused == driverDropdown.gameObject) picker = driverDropdown;
+        if (picker == null || picker.IsExpanded || !picker.interactable || picker.options.Count < 2) return;
+
+        int dir = kb.downArrowKey.isPressed ? 1 : kb.upArrowKey.isPressed ? -1 : 0;
+        if (dir == 0) return;
+
+        bool fresh = kb.downArrowKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame;
+        if (fresh) _nextStep = Time.unscaledTime + StepRepeatDelay;
+        else if (Time.unscaledTime >= _nextStep) _nextStep = Time.unscaledTime + StepRepeatInterval;
+        else return;
+
+        int count = picker.options.Count;
+        picker.value = (picker.value + dir + count) % count;   // fires OnSeriesPicked / OnDriverPicked
+    }
+
+    // Automatic navigation would send Up / Down from a picker to whatever selectable lies above or below it;
+    // horizontal-only keeps Left / Right moving between the pickers and the close box and leaves Up / Down to
+    // StepFocusedPicker.
+    static void KeepArrowsForStepping(Selectable picker)
+    {
+        if (picker == null) return;
+        var nav = picker.navigation;
+        nav.mode = Navigation.Mode.Horizontal;
+        picker.navigation = nav;
     }
 
     // ------------------------------------------------------------------ content

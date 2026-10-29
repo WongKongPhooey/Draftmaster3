@@ -97,21 +97,25 @@ public static class IronOvalGarageBuilder
         band.sizeDelta = new Vector2(0f, pickerH + 2f);
         band.anchoredPosition = Vector2.zero;
 
-        var title = IronOvalUI.Label(band, "Title", "Garage", IronOvalUI.Role.Header, theme.text);
-        Place(title.rectTransform, 8f, -(band.sizeDelta.y - LabelH) / 2f, 88f, LabelH);
-        // The word is one word: let it run past its box rather than break "Garage" into "Garag" + "e".
+        // The window's title bar: the sheet is a driver-tracking program on the laptop, not a garage.
+        const string programName = "DriveScout v3.1";
+        var title = IronOvalUI.Label(band, "Title", programName, IronOvalUI.Role.Header, theme.text);
         title.textWrappingMode = TextWrappingModes.NoWrap;
+        float titleW = Mathf.Ceil(title.GetPreferredValues(programName).x);
+        Place(title.rectTransform, 8f, -(band.sizeDelta.y - LabelH) / 2f, titleW, LabelH);
 
         // The two pickers: which championship, and which of its entries the sheet is drawn for. The
         // driver list is the longer one — a stock-car field is 38 cars — so it gets the wider plate and
-        // the deeper list. GarageScreenUI fills both and redraws the sheet when either changes.
+        // the deeper list. GarageScreenUI fills both and redraws the sheet when either changes. They start
+        // where the title ends, so a longer program name pushes them along rather than under it.
         float pickerY = -(band.sizeDelta.y - pickerH) / 2f;
+        float seriesX = Mathf.Max(100f, 8f + titleW + 12f);
         var seriesPicker = IronOvalUI.Dropdown(band, "SeriesPicker", new Vector2(196f, pickerH), visibleItems: 7);
-        Place((RectTransform)seriesPicker.transform, 100f, pickerY, 196f, pickerH);
+        Place((RectTransform)seriesPicker.transform, seriesX, pickerY, 196f, pickerH);
         ui.seriesDropdown = seriesPicker;
 
         var driverPicker = IronOvalUI.Dropdown(band, "DriverPicker", new Vector2(220f, pickerH), visibleItems: 8);
-        Place((RectTransform)driverPicker.transform, 304f, pickerY, 220f, pickerH);
+        Place((RectTransform)driverPicker.transform, seriesX + 204f, pickerY, 220f, pickerH);
         ui.driverDropdown = driverPicker;
 
         // The way out is a window's close box: the standard red button, square, an X on it, in the band's
