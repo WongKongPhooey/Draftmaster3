@@ -449,6 +449,9 @@ public class CrewChiefController : MonoBehaviour
         // The speedometer dial owns the corner itself, so buttonCorner.x steps in far enough to clear it.
         var canvas = PixelUI.CreateCanvas("TeamControlsCanvas", 111);
         _canvas = canvas;
+        _scaler = canvas.GetComponent<CanvasScaler>();
+        if (_scaler != null) _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        FitCanvasToShortSide();
 
         var theme = PixelUITheme.Instance;
         Sprite icon = buttonIcon != null ? buttonIcon : (theme != null ? theme.iconHeadset : null);
@@ -513,13 +516,12 @@ public class CrewChiefController : MonoBehaviour
     // On a phone the on-screen pedals sit in this corner while the player drives; the headset (and TIMING
     // above it) step up to stand on top of them, and drop back when the pedals are put away.
     //
-    // Held upright for the swing camera, though, the canvas scales off the screen's long side, so a corner
-    // button turns into a slab stood a third of the way in from the edge. There the headset goes up into the
-    // touch controls' top row instead, beside the TV button and the same size as pause.
+    // Held upright for the swing camera, the headset goes up into the touch controls' top row instead,
+    // beside the Auto button and the same size as pause, since the pedals fill the bottom of a narrow screen.
     void KeepClearOfTouchPedals()
     {
         if (_buttonRoot == null || _canvas == null) return;
-        float scale = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
+        float scale = FitCanvasToShortSide();
         var root = (RectTransform)_buttonRoot.transform;
 
         if (TouchDriveControls.Active && UnityEngine.Device.Screen.height > UnityEngine.Device.Screen.width)
@@ -549,6 +551,22 @@ public class CrewChiefController : MonoBehaviour
         PlaceTimingStack(corner);
     }
 
+    // PixelUI's canvases match the screen's height, which is the long side once the phone is turned upright
+    // for the swing camera: every grid pixel here came out at the screen's aspect times its landscape size,
+    // and the headset whenever it was left in the corner (pedals put away, a pad picked up, the pause menu
+    // open, the beat before the screen turns back) was a slab. Scaled off the short side instead, as the
+    // kit's IMGUI half is — the same as the height match in landscape, the same size in the hand upright.
+    // Returns the factor, set here rather than read back off the canvas, which CanvasScaler only updates
+    // on its own Update.
+    float FitCanvasToShortSide()
+    {
+        float scale = DriveOrientation.CanvasScale(UnityEngine.Device.Screen.width, UnityEngine.Device.Screen.height,
+                                                   PixelUITheme.ReferenceHeight);
+        if (_scaler != null && !Mathf.Approximately(_scaler.scaleFactor, scale)) _scaler.scaleFactor = scale;
+        return scale;
+    }
+
+    CanvasScaler _scaler;
     bool _onTopRow;
     Rect _topSlot;
     float _topScale;

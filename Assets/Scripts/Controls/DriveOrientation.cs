@@ -31,6 +31,17 @@ namespace Draftmaster.Controls
             return s < 1 ? 1 : s;
         }
 
+        // The same rule for a uGUI canvas on the 640x360 grid: screen pixels per design pixel, off the short
+        // side and unrounded, which is exactly what PixelUI's height-matched CanvasScaler gives a landscape
+        // screen. Upright, a height match would scale off the long side and blow everything up by the
+        // screen's aspect; this keeps a canvas control the same size in the hand either way up.
+        public static float CanvasScale(float screenWidth, float screenHeight, float designHeight = 360f)
+        {
+            float shortSide = screenWidth < screenHeight ? screenWidth : screenHeight;
+            if (designHeight <= 0f || shortSide <= 0f) return 1f;
+            return shortSide / designHeight;
+        }
+
         // What to multiply an orthographic camera's size by on a screen this shape, so a metre of track covers
         // as many pixels upright as it did on the same phone held sideways. The size is half the screen's
         // height, so upright it grows by the height over the width; a landscape or square screen is left alone.

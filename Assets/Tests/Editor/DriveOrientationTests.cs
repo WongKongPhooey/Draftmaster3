@@ -107,6 +107,19 @@ public class DriveOrientationTests
         }
     }
 
+    [Test]
+    public void CanvasScaleMatchesTheLandscapeHeightAndHoldsUpright()
+    {
+        // Landscape: what the height-matched CanvasScaler always gave (height over 360, unrounded).
+        Assert.AreEqual(3f, DriveOrientation.CanvasScale(1920f, 1080f), 1e-4f);
+        Assert.AreEqual(1000f / 360f, DriveOrientation.CanvasScale(2000f, 1000f), 1e-4f);
+        // Upright, the same phone keeps the same scale instead of growing by its aspect (2400/360 = 6.67x).
+        Assert.AreEqual(DriveOrientation.CanvasScale(2400f, 1080f), DriveOrientation.CanvasScale(1080f, 2400f), 1e-4f);
+        Assert.AreEqual(3f, DriveOrientation.CanvasScale(1080f, 2400f), 1e-4f);
+        // No screen yet: a usable 1, not zero or infinity.
+        Assert.AreEqual(1f, DriveOrientation.CanvasScale(0f, 0f));
+    }
+
     // --- the swing camera's turn -------------------------------------------------------------------------
 
     [Test]
