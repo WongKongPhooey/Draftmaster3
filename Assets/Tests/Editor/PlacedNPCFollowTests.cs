@@ -28,4 +28,23 @@ public class PlacedNPCFollowTests
         Assert.IsFalse(KeepsUp(true, false), "The chief was moved mid-conversation.");
         Assert.IsFalse(KeepsUp(true, true), "The chief was moved mid-conversation.");
     }
+
+    static bool Driven(bool controllerOn, bool aiSplineOn)
+    {
+        Assert.IsNotNull(PlacedType, "PlacedNPC is gone from Assembly-CSharp; this test is out of date.");
+        var method = PlacedType.GetMethod("CarIsDriven");
+        Assert.IsNotNull(method, "PlacedNPC has no CarIsDriven rule.");
+        return (bool)method.Invoke(null, new object[] { controllerOn, aiSplineOn });
+    }
+
+    // The broadcast cut, the crew chief's headset and the end-of-session pit-in hand the car to the AI's
+    // SplineDriver with the controller switched OFF. Counting only the controller took that for a parked car,
+    // and the chief walked out of the pits beside it and stood wherever it was on the circuit.
+    [Test]
+    public void CarDrivenByTheAISpline_CountsAsDriven()
+    {
+        Assert.IsTrue(Driven(true, false), "A car the player is driving reads as parked.");
+        Assert.IsTrue(Driven(false, true), "A car the AI's spline is driving (headset / broadcast cut) reads as parked.");
+        Assert.IsFalse(Driven(false, false), "A car nobody is driving does not read as parked.");
+    }
 }

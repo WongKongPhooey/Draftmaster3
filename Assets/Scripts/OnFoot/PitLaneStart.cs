@@ -1589,6 +1589,17 @@ public class PitLaneStart : MonoBehaviour
     //
     // So the box is re-derived from the same published geometry every other pit system reads (PitLane), and
     // the opening pose is kept only for a session that fitted no boxes at all.
+    // The same box, asked from outside: where the player's car lives this session, wherever it is now. The
+    // crew chief's headset stands the player there when no pit-box chief was built to take the place of.
+    // False when the scene has no on-foot walk-up or never worked out where the box is.
+    public static bool TryPlayerBoxPosition(out Vector3 pos)
+    {
+        pos = default;
+        if (_current == null || !_current._boxKnown) return false;
+        _current.CurrentBoxPose(out pos, out _);
+        return true;
+    }
+
     void CurrentBoxPose(out Vector3 pos, out float headingDeg)
     {
         pos = _boxPosition;

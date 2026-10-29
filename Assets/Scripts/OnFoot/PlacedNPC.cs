@@ -549,15 +549,23 @@ public class PlacedNPC : MonoBehaviour
     public static bool KeepsUpWithCar(bool talking, bool carBeingDriven) => !talking && !carBeingDriven;
 
     PlayerVehicleController _carController;
+    SplineDriver _carSpline;
 
-    // The player's car is driven while its controller is on — by the player, or by the AI on a broadcast cut
-    // or the chief's headset, which drive it through the same controller. Off = parked.
+    // The player's car is driven while its controller is on (the player, or the dynamic AI steering it through
+    // the controller) OR while its SplineDriver is on: the broadcast cut (V), the chief's headset and the
+    // end-of-session pit-in all hand the car to the AI kinematically, with the controller switched OFF. Reading
+    // the controller alone took that for a parked car, so the chief walked out of the pits beside it and stood
+    // wherever it was on the circuit. Neither on = parked.
     bool CarBeingDriven()
     {
         if (_ctx.car == null) return false;
         if (_carController == null) _carController = _ctx.car.GetComponent<PlayerVehicleController>();
-        return _carController != null && _carController.enabled;
+        if (_carSpline == null) _carSpline = _ctx.car.GetComponent<SplineDriver>();
+        return CarIsDriven(_carController != null && _carController.enabled, _carSpline != null && _carSpline.enabled);
     }
+
+    // Pure, so the rule is testable without a scene.
+    public static bool CarIsDriven(bool controllerOn, bool aiSplineOn) => controllerOn || aiSplineOn;
 
     // ---------------------------------------------------------------- anchors
 

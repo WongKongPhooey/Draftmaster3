@@ -46,10 +46,15 @@ public class CrewChiefPresence : MonoBehaviour
     void Apply()
     {
         if (_host == null) _host = FindPitBoxHost();
-        if (_host == null) return;   // no venue host: the pit-box chief is the only one anyway
-
         var marker = PlacedNPC.Find(PlacedNPC.Role.CrewChief);
         if (_pitBox == null && marker != null) { _pitBox = marker.Interactable; _dressed = false; _kitted = false; }
+
+        // No venue host: the pit-box chief is the only one anyway — except while the player has his headset on.
+        if (_host == null)
+        {
+            if (_pitBox != null) SetActive(_pitBox.gameObject, !PlayerStandsIn());
+            return;
+        }
 
         if (_pitBox != null && !_dressed) _dressed = DressAlike(marker);
         if (!_kitted && (_pitBox == null || _dressed)) _kitted = WearTeamKit();
@@ -61,8 +66,12 @@ public class CrewChiefPresence : MonoBehaviour
         else if (_pitBox != null && _pitBox.gameObject.activeSelf && _pitBox.IsTalking) atPitBox = true;
 
         SetActive(_host.gameObject, !atPitBox);
-        if (_pitBox != null) SetActive(_pitBox.gameObject, atPitBox);
+        if (_pitBox != null) SetActive(_pitBox.gameObject, atPitBox && !PlayerStandsIn());
     }
+
+    // The player has put the chief's headset on (CrewChiefController) and is stood at the pit box as him, so
+    // the pit-box body steps out of the way rather than leave two of him side by side. Never mid-sentence.
+    bool PlayerStandsIn() => CrewChiefController.IsCrewChief && !(_pitBox != null && _pitBox.IsTalking);
 
     static void SetActive(GameObject go, bool on)
     {

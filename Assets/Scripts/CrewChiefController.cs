@@ -44,7 +44,8 @@ public class CrewChiefController : MonoBehaviour
     public NPCPartLibrary crewLibrary;
     [Tooltip("Fallback single sprite when no library is set.")]
     public Sprite crewChiefSprite;
-    [Tooltip("Where the crew chief stands. If null, spawns at the player car's position when first activated.")]
+    [Tooltip("Where the crew chief stands. If null, he stands where the pit-box chief NPC is (beside the player's " +
+             "pit box), or on the box itself when no such NPC was built — never wherever the car happens to be.")]
     public Transform spawnPoint;
     public float avatarScale = 1f;
 
@@ -94,6 +95,7 @@ public class CrewChiefController : MonoBehaviour
     bool _wasInCar;          // they were sat in the car rather than walking the paddock
     bool _wasDriving;        // ...and had the controls, rather than watching their own car on the TV cycle
     GameObject _parkedBody;  // their walking body, hidden for the duration when they were already on foot
+    GameObject _standIn;     // the pit-box chief NPC, stood aside while the player is him
 
     void Start()
     {
@@ -262,7 +264,16 @@ public class CrewChiefController : MonoBehaviour
         if (_playerCar != null && _playerCar.GetComponent<FuelTank>() == null)
             _playerCar.AddComponent<FuelTank>();
 
+        // He is stood at the pit box, every time the headset goes on — not wherever the car is on the circuit,
+        // and not wherever the player last walked him to. The pit-box chief NPC steps out of the way so there
+        // is only one of him (CrewChiefPresence keeps it that way until the headset comes off).
+        Vector3 stand = PitBoxStandPoint();
+        var chief = PitBoxChief();
+        _standIn = chief != null && chief.gameObject.activeSelf && !chief.IsTalking ? chief.gameObject : null;
+        if (_standIn != null) _standIn.SetActive(false);
+
         EnsureAvatar();
+        PlaceAvatar(stand);
         _avatar.SetActive(true);
         Watch(null);
         _prevHeld = _nextHeld = true;   // a key already down when the headset goes on is not a press
@@ -280,6 +291,11 @@ public class CrewChiefController : MonoBehaviour
     {
         Watch(null);
         if (_avatar != null) _avatar.SetActive(false);
+
+        // The pit-box chief back where he was. If the session has just ended, CrewChiefPresence sends him off
+        // to his venue on its next poll.
+        if (_standIn != null) _standIn.SetActive(true);
+        _standIn = null;
 
         // They come off the pit wall as whoever they were when they got on it.
         if (_parkedBody != null)
@@ -311,13 +327,45 @@ public class CrewChiefController : MonoBehaviour
         UpdateButton();
     }
 
+    // The pit-box chief NPC's body (PlacedNPC, role CrewChief), if one was built this session.
+    static NPCInteractable PitBoxChief()
+    {
+        var marker = PlacedNPC.Find(PlacedNPC.Role.CrewChief);
+        return marker != null ? marker.Interactable : null;
+    }
+
+    // Where the chief stands: beside the player's pit box. The pit-box chief NPC is already stood there (he
+    // stays put while the car is out — PlacedNPC.CarIsDriven), so the player takes his place; failing him, the
+    // box itself; the car only when the scene knows of no box at all.
+    Vector3 PitBoxStandPoint()
+    {
+        Vector3 pos;
+        var chief = PitBoxChief();
+        if (spawnPoint != null) pos = spawnPoint.position;
+        else if (chief != null) pos = chief.transform.position;
+        else if (!PitLaneStart.TryPlayerBoxPosition(out pos))
+            pos = _playerCar != null ? _playerCar.transform.position : transform.position;
+        pos.z = -0.1f;
+        return pos;
+    }
+
+    // Teleport through the body as well as the transform, or the physics pose drags him back.
+    void PlaceAvatar(Vector3 pos)
+    {
+        var rb = _avatar.GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.position = pos;
+            rb.linearVelocity = Vector2.zero;
+        }
+        _avatar.transform.position = pos;
+    }
+
     void EnsureAvatar()
     {
         if (_avatar != null) return;
 
-        Vector3 pos = spawnPoint != null ? spawnPoint.position
-                    : (_playerCar != null ? _playerCar.transform.position : transform.position);
-        pos.z = -0.1f;
+        Vector3 pos = PitBoxStandPoint();
 
         // Preferred look: the player's on-foot rig (TaylorEmerson) — animated pixel character whose
         // walk cycle OnFootController already drives via the Animator's Horizontal/Vertical/Speed
