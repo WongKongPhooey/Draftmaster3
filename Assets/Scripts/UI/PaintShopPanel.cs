@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using Draftmaster.Sponsors;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -175,7 +176,7 @@ public class PaintShopPanel : MonoBehaviour
                 if (other != slot && _assign[other] == pick)
                 {
                     _assign[other] = 0;
-                    _status.text = $"{SponsorBook.ById(pick)?.sponsorName} moved off the {SponsorSlots.DesignerName(other).ToLowerInvariant()} slot.";
+                    _status.text = $"{SponsorBook.ById(pick)?.sponsorName} moved off the {SlotName(other).ToLowerInvariant()} slot.";
                 }
         Refresh();
     }
@@ -224,7 +225,7 @@ public class PaintShopPanel : MonoBehaviour
             {
                 int pay = Mathf.RoundToInt(deal.perRace * SponsorSlots.PayMultiplier(slot));
                 income += pay;
-                text = $"{deal.sponsorName}  ${pay:N0}/race";
+                text = $"{deal.sponsorName} ${pay:N0}";   // per race, as the income line says
                 if (SponsorArt.Load(deal.logoKey, slot) == null) text += "  (no decal art)";
             }
             _slotText[slot].text = text;
@@ -242,8 +243,21 @@ public class PaintShopPanel : MonoBehaviour
 
     // ---------------------------------------------------------------- build
 
-    const float CardW = 1560f, CardH = 900f;
-    const float ColX = 820f;                 // right-hand column, from the card's left edge
+    // Sizes off the shared type scale, on this 1920x1080 canvas, as the laptop sheet sets them on its 640x360
+    // one: Fixedsys at the Data size for the title, rows and readouts, gold Silkscreen at the same size for
+    // section headings, Silkscreen at the Label floor for captions and footers.
+    const float RefH = 1080f;
+    static int DataPx => UIType.CanvasPx(TypeRole.Data, RefH, 16);
+    static int HeadingPx => UIType.CanvasPx(TypeRole.Data, RefH, 8);
+    static int LabelPx => UIType.CanvasPx(TypeRole.Label, RefH, 8);
+    static float LineH => DataPx + 8f;                 // one Fixedsys line: an 18px line per 16px cell
+
+    const float CardW = 1840f, CardH = 940f;
+    const float Margin = 44f;
+    const float LeftW = 700f;
+    const float ColX = Margin + LeftW + 40f;           // right-hand column, from the card's left edge
+    const float ColW = CardW - Margin - ColX;
+    const float TopY = 104f;                          // first row under the title
 
     void Build()
     {
@@ -268,16 +282,13 @@ public class PaintShopPanel : MonoBehaviour
         crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(0.5f, 0.5f);
         crt.sizeDelta = new Vector2(CardW, CardH);
 
-        var title = Label("Title", crt, BrandFonts.Display, 32, PixelGUI.Gold, TextAnchor.UpperLeft);
-        title.text = "Paint Scheme Designer";
-        At(title.rectTransform, 44, 32, 900, 48);
-        var sub = Label("Sub", crt, _font, 24, PixelGUI.TextDim, TextAnchor.UpperLeft);
-        sub.text = "Pick a base coat and a livery, then who goes where. Nothing changes until you save.";
-        At(sub.rectTransform, 44, 84, 1400, 36);
+        var title = Label("Title", crt, _font, DataPx, PixelGUI.Text, TextAnchor.UpperLeft);
+        title.text = "Paint Booth";
+        At(title.rectTransform, Margin, 32, 900, LineH);
 
         // --- car preview, left ---
         var plate = Box("PreviewPlate", crt, PixelGUI.PlateDeep);
-        At(plate.rectTransform, 44, 150, 720, 360);
+        At(plate.rectTransform, Margin, TopY, LeftW, 360);
         var pgo = new GameObject("Preview", typeof(RectTransform));
         pgo.transform.SetParent(plate.transform, false);
         _preview = pgo.AddComponent<RawImage>();
@@ -286,16 +297,16 @@ public class PaintShopPanel : MonoBehaviour
         prt.sizeDelta = new Vector2(640, 320);           // 64x32 livery at 10x
 
         // --- number colour, under the preview: one row of the whole palette ---
-        float ny = Heading(crt, "Number Colour", 516f, x: 44f);
-        ny = SwatchGrid(crt, ny, _numberSwatches, PickNumber, x0: 44f, perRow: 16, size: 40f, gap: 5f);
+        float ny = Heading(crt, "Number Colour", TopY + 368f, x: Margin);
+        ny = SwatchGrid(crt, ny, _numberSwatches, PickNumber, x0: Margin, size: 37f, gap: 6f);
 
-        _income = Label("Income", crt, _font, 28, PixelGUI.Confirm, TextAnchor.UpperLeft);
-        At(_income.rectTransform, 44, ny + 4f, 720, 40);
-        _paintNote = Label("PaintNote", crt, _font, 22, PixelGUI.TextDisabled, TextAnchor.UpperLeft);
-        At(_paintNote.rectTransform, 44, ny + 44f, 720, 30);
+        _income = Label("Income", crt, _font, DataPx, PixelGUI.Confirm, TextAnchor.UpperLeft);
+        At(_income.rectTransform, Margin, ny + 4f, LeftW, LineH);
+        _paintNote = Label("PaintNote", crt, BrandFonts.Display, LabelPx, PixelGUI.TextDisabled, TextAnchor.UpperLeft);
+        At(_paintNote.rectTransform, Margin, ny + 8f + LineH, LeftW, 2 * LabelPx + 8f);
 
         // --- right column ---
-        float y = 150f;
+        float y = TopY;
         y = Heading(crt, "Base Coat", y);
         y = SwatchGrid(crt, y, _baseSwatches, PickBase);
 
@@ -314,49 +325,56 @@ public class PaintShopPanel : MonoBehaviour
         y = SwatchGrid(art, ay, _accentSwatches, PickAccent) + 4f;
 
         y = Heading(crt, "Sponsors", y);
+        const float captionW = 320f;
         foreach (var slot in kSlots)
         {
-            var label = Label("Slot", crt, BrandFonts.Display, 16, PixelGUI.Gold, TextAnchor.MiddleLeft);
-            label.text = $"{SponsorSlots.DesignerName(slot)}  {PanelWord(slot)}  {SponsorSlots.PayMultiplier(slot):P0}";
-            At(label.rectTransform, ColX, y, 300, 52);
+            var label = Label("Slot", crt, _font, DataPx, PixelGUI.Text, TextAnchor.MiddleLeft);
+            label.text = SlotName(slot);
+            At(label.rectTransform, ColX, y, captionW, IronOvalUI.ButtonHeight());
             var captured = slot;
-            _slotText[slot] = Stepper(crt, y, step => CycleSponsor(captured, step), out _, x: ColX + 300f, width: 400f);
+            _slotText[slot] = Stepper(crt, y, step => CycleSponsor(captured, step), out _, x: ColX + captionW, width: ColW - captionW);
             y += RowPitch;
         }
 
         // --- footer ---
-        _status = Label("Status", crt, _font, 24, PixelGUI.TextDim, TextAnchor.UpperLeft);
-        At(_status.rectTransform, 44, ny + 76f, 720, 56);
+        float footY = CardH - 32f - IronOvalUI.ButtonHeight();
+        _status = Label("Status", crt, _font, DataPx, PixelGUI.TextDim, TextAnchor.UpperLeft);
+        float statusY = ny + 16f + LineH + 2 * LabelPx + 8f;
+        At(_status.rectTransform, Margin, statusY, LeftW, footY - statusY - 4f);
 
-        MakeButton("Factory Paint", crt, 44, CardH - 92, 260, FactoryPaint);
-        MakeButton("Cancel", crt, CardW - 44 - 220 - 20 - 260, CardH - 92, 260, () => Close(save: false));
-        MakeButton("Save", crt, CardW - 44 - 220, CardH - 92, 220, () => Close(save: true));
+        // Paint "1" is the factory paint — the first of a row of up to six saved paints to switch between.
+        float paintW = IronOvalUI.ButtonHeight();
+        const float exitW = 200f, saveW = 200f, gap = 20f;
+        MakeButton("1", crt, Margin, footY, paintW, FactoryPaint);
+        MakeButton("Exit", crt, CardW - Margin - saveW - gap - exitW, footY, exitW, () => Close(save: false));
+        MakeButton("Save", crt, CardW - Margin - saveW, footY, saveW, () => Close(save: true));
 
-        var hint = Label("Hint", crt, _font, 20, PixelGUI.TextDisabled, TextAnchor.MiddleLeft);
+        // Clear of where the full row of six paints will sit.
+        var hint = Label("Hint", crt, BrandFonts.Display, LabelPx, PixelGUI.TextDisabled, TextAnchor.MiddleLeft);
         hint.text = $"{InputGlyphs.Back} to leave without saving";
-        At(hint.rectTransform, 330, CardH - 92, 600, 60);
+        At(hint.rectTransform, Margin + 6f * (paintW + gap) + 4f, footY, 600, IronOvalUI.ButtonHeight());
     }
 
-    static string PanelWord(SponsorSlot slot) => slot switch
+    static string SlotName(SponsorSlot slot) => slot switch
     {
         SponsorSlot.Hood => "Hood",
-        SponsorSlot.Quarters => "Quarters",
-        SponsorSlot.Tail => "Decklid",
+        SponsorSlot.Quarters => "Rear Quarters",
+        SponsorSlot.Tail => "Trunk",
         _ => "",
     };
 
     float Heading(RectTransform parent, string text, float y, float x = ColX)
     {
-        var t = Label("Heading", parent, BrandFonts.Display, 20, PixelGUI.Gold, TextAnchor.LowerLeft);
+        var t = Label("Heading", parent, BrandFonts.Display, HeadingPx, PixelGUI.Gold, TextAnchor.LowerLeft);
         t.text = text;
-        At(t.rectTransform, x, y, 700, 32);
-        return y + 40f;
+        At(t.rectTransform, x, y, ColW, LineH);
+        return y + LineH + 4f;
     }
 
-    // The palette as rows of colour chips (two rows of eight by default). The ring behind a chip shows which
+    // The palette as rows of colour chips (one row of sixteen by default). The ring behind a chip shows which
     // is chosen.
     float SwatchGrid(RectTransform parent, float y, List<(Image, Color32)> into, Action<Color32> pick,
-                     float x0 = ColX, int perRow = 8, float size = 44f, float gap = 6f)
+                     float x0 = ColX, int perRow = 16, float size = 52f, float gap = 6f)
     {
         for (int i = 0; i < PaintShop.Palette.Length; i++)
         {
@@ -386,13 +404,14 @@ public class PaintShopPanel : MonoBehaviour
     // A stepper row: one button tall with 4px clear under it.
     static float RowPitch => IronOvalUI.ButtonHeight() + 4f;
 
-    // [<]  value  [>]
-    Text Stepper(RectTransform parent, float y, Action<int> step, out Button left, float x = ColX, float width = 700f)
+    // [<]  value  [>] — square arrow buttons, one button tall.
+    Text Stepper(RectTransform parent, float y, Action<int> step, out Button left, float x = ColX, float width = ColW)
     {
-        left = MakeButton("<", parent, x, y, 60, () => step(-1));
-        MakeButton(">", parent, x + width - 60, y, 60, () => step(+1));
-        var value = Label("Value", parent, _font, 26, PixelGUI.Text, TextAnchor.MiddleCenter);
-        At(value.rectTransform, x + 64, y, width - 128, IronOvalUI.ButtonHeight());
+        float bh = IronOvalUI.ButtonHeight();
+        left = MakeButton("<", parent, x, y, bh, () => step(-1));
+        MakeButton(">", parent, x + width - bh, y, bh, () => step(+1));
+        var value = Label("Value", parent, _font, DataPx, PixelGUI.Text, TextAnchor.MiddleCenter);
+        At(value.rectTransform, x + bh + 4f, y, width - 2f * bh - 8f, bh);
         return value;
     }
 
@@ -403,8 +422,8 @@ public class PaintShopPanel : MonoBehaviour
         var b = img.gameObject.AddComponent<Button>();
         b.targetGraphic = img;
         b.onClick.AddListener(onClick);
-        var t = Label("Text", img.rectTransform, BrandFonts.Display, 24, PixelGUI.Gold, TextAnchor.MiddleCenter);
-        IronOvalUI.ButtonCaption(t, PixelGUI.Gold);
+        var t = Label("Text", img.rectTransform, _font, DataPx, PixelGUI.Gold, TextAnchor.MiddleCenter);
+        IronOvalUI.ButtonCaption(t, PixelGUI.Gold, RefH);
         t.text = text;
         Stretch(t.rectTransform);
         return b;
