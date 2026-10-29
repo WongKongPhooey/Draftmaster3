@@ -69,11 +69,14 @@ public class SafetyCar : MonoBehaviour
     public float waitFollowerBrakeMphPerSec = 8f;
 
     [Header("Leading the field out")]
-    [Tooltip("At the start of the formation lap the pace car waits at the pit exit until the first car of the field " +
-             "is rolling within this distance (m, straight line) of it, then leads them away. Without it the pace car " +
-             "ran off at cruise the moment the player touched the throttle, while the field was still filing down pit road.")]
-    public float leadOffGapM = 60f;
-    [Tooltip("Speed (mph) a car must be doing to count as coming out — a car parked in a box near the exit doesn't.")]
+    [Tooltip("At the start of the formation lap the pace car waits at the pit exit and only pulls away as the first car " +
+             "of the field comes down pit road at it: never faster than keeps that car this far behind (m, along the " +
+             "road, centre to centre) once it is up to speed, and only as early as that car could not otherwise slow " +
+             "to the pace car's speed at waitFollowerBrakeMphPerSec. Once a car is out on the track the pace car eases " +
+             "up to cruise. It used to set off once a car was rolling within 60 m in a straight line, and was 100 m up " +
+             "the road by the time anybody left pit road.")]
+    public float leadOffStationM = 30f;
+    [Tooltip("Speed (mph) a car must be doing to count as coming out — a car parked in its box doesn't.")]
     public float leadOffRollingMph = 3f;
     [Tooltip("Backstop (s): set off this long after the formation lap begins whatever the field is doing.")]
     public float leadOffTimeoutSeconds = 30f;
@@ -237,37 +240,76 @@ public class SafetyCar : MonoBehaviour
         if (!_pitting && !_caution && !_ledOff) HoldUntilTheFieldComesOut();
     }
 
-    // The start of the formation lap: sit at the pit exit until the field is coming out behind, then lead it away.
+    // The start of the formation lap: sit at the pit exit until the field is coming out behind, then lead it away
+    // at the speed of the car coming out, and hand over to the normal pace once a car is out on the track.
     void HoldUntilTheFieldComesOut()
     {
         _leadOffWait += Time.fixedDeltaTime;
-        if (_leadOffWait >= leadOffTimeoutSeconds || FieldCarComingOut())
+        float want = LeadOffPace(out bool carOnTrack);
+        if (_leadOffWait >= leadOffTimeoutSeconds || carOnTrack)
         {
             _ledOff = true;
+            // Ease up to cruise from the speed it is leading the field out at, rather than jump to it and run off.
+            _paceMph = Mathf.Clamp(_spline.CurrentMph, Mathf.Min(waitMinMph, cruiseMph), cruiseMph);
             return;
         }
-        _spline.aiMaxSpeedMph = 0f;
+        _spline.aiMaxSpeedMph = Mathf.Min(_spline.aiMaxSpeedMph, want);
     }
 
-    bool FieldCarComingOut()
+    // The slowest the pace car may go and still stay ahead of every car rolling out of the pits at it: a car closing
+    // must be able to slow to the pace car's speed at waitFollowerBrakeMphPerSec before it is leadOffStationM behind.
+    // Gaps are along the road - down the rest of pit road, then up the track from where the lane rejoins it - since
+    // a straight line across from pit road says nothing about how soon a car gets here. carOnTrack: a field car is
+    // already out of the pits behind the pace car.
+    float LeadOffPace(out bool carOnTrack)
     {
-        Vector2 me = transform.position;
-        float gapSq = leadOffGapM * leadOffGapM;
+        carOnTrack = false;
+        bool anyOnTrack = false;
+        float lap = _spline.TrackLength;
+        if (lap <= 0f) return 0f;
+        float myC = _spline.CentreDistanceOnTrack;
+        bool hasExit = _spline.TryGetPitExit(out float exitMain, out _, out float exitPit);
+        // From a car about to leave pit road to the pace car: the rest of the lane, then the main track from the rejoin.
+        float exitToMe = hasExit ? Mathf.Repeat(myC - exitMain, lap) : 0f;
+        if (exitToMe > lap * 0.5f) exitToMe = 0f;
+        float brake = Mathf.Max(1f, waitFollowerBrakeMphPerSec) * PackAvoidance.MphToMps;
+        float want = 0f;
+
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
             var d = drivers[i];
             if (d == null || d == _spline || !d.isActiveAndEnabled) continue;
-            if (d.CurrentMph >= leadOffRollingMph && ((Vector2)d.transform.position - me).sqrMagnitude <= gapSq) return true;
+            if (Mathf.Abs(d.TrackLength - lap) > 0.5f) continue;
+            if (d.IsOnPit)
+            {
+                if (hasExit) Consider(Mathf.Max(0f, exitPit - d.CentreDistanceOnPit) + exitToMe, d.CurrentMph, false);
+            }
+            else Consider(Mathf.Repeat(myC - d.CentreDistanceOnTrack, lap), d.CurrentMph, true);
         }
         var humans = RaceObstacles.All;
+        var track = _spline.track;
         for (int i = 0; i < humans.Count; i++)
         {
             var p = humans[i];
-            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
-            if (p.SpeedMph >= leadOffRollingMph && ((Vector2)p.transform.position - me).sqrMagnitude <= gapSq) return true;
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != track) continue;
+            if (track.IsOnPitSurface(p.transform.position))
+            {
+                if (hasExit && _spline.ProjectOntoPit(p.transform.position, out float pd, out _))
+                    Consider(Mathf.Max(0f, exitPit - pd) + exitToMe, p.SpeedMph, false);
+            }
+            else Consider(Mathf.Repeat(myC - p.TrackDistance, lap), p.SpeedMph, true);
         }
-        return false;
+        carOnTrack = anyOnTrack;
+        return Mathf.Min(want * PackAvoidance.MpsToMph, cruiseMph);
+
+        void Consider(float back, float mph, bool onTrack)
+        {
+            if (mph < leadOffRollingMph || back <= 0f || back >= lap * 0.5f) return;
+            if (onTrack) anyOnTrack = true;
+            float v = mph * PackAvoidance.MphToMps - Mathf.Sqrt(2f * brake * Mathf.Max(0f, back - leadOffStationM));
+            if (v > want) want = v;
+        }
     }
 
     // Round again before the field is all out of the pit lane: stop short of the pit exit until it is.
