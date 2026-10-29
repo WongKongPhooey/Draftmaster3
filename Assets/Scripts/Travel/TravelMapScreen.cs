@@ -92,9 +92,9 @@ public class TravelMapScreen : MonoBehaviour
 
     [Header("Drive")]
     [Tooltip("How fast the RV crosses the board, in board pixels a second.")]
-    public float rvSpeed = 160f;
+    public float rvSpeed = 80f;
     [Tooltip("No hop is quicker than this, however short the road, so a two-towns-apart hop still reads.")]
-    public float rvMinHopSeconds = 0.5f;
+    public float rvMinHopSeconds = 1f;
     [Tooltip("The RV sprite's size on the board, in board pixels (the art is 2:1, nose to the left).")]
     public Vector2 rvSize = new Vector2(36f, 18f);
 
