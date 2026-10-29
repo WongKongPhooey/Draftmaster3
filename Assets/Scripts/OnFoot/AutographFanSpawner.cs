@@ -200,8 +200,10 @@ public class AutographFanSpawner : MonoBehaviour
 
     bool FanOnTrack(Vector3 pos) => AutographFan.OnTrack(track, pos);
 
-    void BuildAppearance(GameObject go, int seed)
+    // Also dresses the race winner's crowd (WinnerFanCrowd), so every fan in the pits comes off one wardrobe.
+    public void BuildAppearance(GameObject go, int seed)
     {
+        if (fanLibrary == null) fanLibrary = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
         var layered = go.AddComponent<NPCLayeredAppearance>();
         layered.library = fanLibrary;
         layered.layerMaterial = UnlitSprite();

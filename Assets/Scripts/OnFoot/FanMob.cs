@@ -405,13 +405,7 @@ public class FanMob : MonoBehaviour
         go.transform.position = at;
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = FlashSprite();
-        if (_flashMaterial == null)
-        {
-            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            if (sh == null) sh = Shader.Find("Sprites/Default");
-            _flashMaterial = new Material(sh);
-        }
-        sr.sharedMaterial = _flashMaterial;
+        sr.sharedMaterial = FlashMaterial();
         sr.sortingLayerName = "Vehicles";
         sr.sortingOrder = 40;
         _pops.Add(new Pop { sr = sr, born = Time.time });
@@ -430,7 +424,19 @@ public class FanMob : MonoBehaviour
         }
     }
 
-    static Sprite FlashSprite()
+    // Shared with WinnerFanCrowd, whose fans take the same pictures.
+    internal static Material FlashMaterial()
+    {
+        if (_flashMaterial == null)
+        {
+            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (sh == null) sh = Shader.Find("Sprites/Default");
+            _flashMaterial = new Material(sh);
+        }
+        return _flashMaterial;
+    }
+
+    internal static Sprite FlashSprite()
     {
         if (_flashSprite != null) return _flashSprite;
         const int s = 16;

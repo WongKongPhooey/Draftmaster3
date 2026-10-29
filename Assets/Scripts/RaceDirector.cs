@@ -35,6 +35,12 @@ public class RaceDirector : MonoBehaviour
     // for the swing camera turns back for it.
     public static bool InResults => Instance != null && Instance._phase == Phase.Results;
 
+    // The player is classified first: from the moment they take the chequer ahead of everybody (the table holds
+    // only finishers until the race is classified), or leading when the race is ended from the pause menu —
+    // the same P1 the results headline calls a win. WinnerFanCrowd keys the winner's fans off it.
+    public static bool PlayerWon =>
+        Instance != null && Instance._results.Count > 0 && Instance._results[0].isPlayer;
+
     // How far through the race the leader is, 0 at the green and 1 at the checkered, counted in whole
     // laps plus the leader's fraction of the current one. The AI reads this to settle in early and charge
     // over the closing laps (Draftmaster.Sim.RaceCraft).
@@ -98,6 +104,7 @@ public class RaceDirector : MonoBehaviour
     {
         LapTimingManager.Ensure();
         if (GetComponent<RaceEndPitIn>() == null) gameObject.AddComponent<RaceEndPitIn>();
+        if (GetComponent<WinnerFanCrowd>() == null) gameObject.AddComponent<WinnerFanCrowd>();
     }
 
     void Update()
