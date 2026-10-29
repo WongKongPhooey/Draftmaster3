@@ -8,8 +8,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Builds Assets/Scenes/GarageScreen.unity from the Iron Oval design file's GARAGE screen (the updated
-// pass: car slot + career + accolades left, driver stats over an XP meter in the middle, traits over the
-// driver's relationship with the player right).
+// pass: car slot + career + accolades left, driver stats in the middle, traits over the driver's
+// relationship with the player right). The design's XP meter is gone: fan appeal is a stat row now.
 //
 //   Draftmaster > Art > Build Garage Screen Scene
 //
@@ -290,25 +290,6 @@ public static class IronOvalGarageBuilder
         SkillGroup(ui, colA, theme, "STANDING", DriverAttributeSheet.Standing, ay);
         SkillGroup(ui, colB, theme, "CRAFT", DriverAttributeSheet.Craft, 0f);
 
-        // XP row, pinned to the foot of the block as the sheet has it (the columns above are near enough
-        // full now, so it can't float below the last one any more).
-        float xpY = -(colH - LabelH - 6f);
-
-        var xpHead = IronOvalUI.Label(middle, "XPHead", "Fan Appeal", Text, theme.gold);
-        Place(xpHead.rectTransform, Inset, xpY, 96f, LabelH);
-        xpHead.textWrappingMode = TextWrappingModes.NoWrap;
-
-        var xpTrack = Plate(middle, "XPTrack", theme.plateLight);
-        Stretch(xpTrack, Inset + 100f, 72f, xpY - (LabelH - 9f) / 2f, 9f);
-        var xpFill = Plate(xpTrack, "XPFill", theme.confirm);
-        Place(xpFill, 0f, 0f, 0f, 9f);
-        ui.xpBar = xpFill;
-
-        var xpValue = IronOvalUI.Label(middle, "XPValue", "0/100", Text, theme.textDim);
-        Anchor(xpValue.rectTransform, new Vector2(1f, 1f), new Vector2(-Inset, xpY), new Vector2(60f, LabelH));
-        xpValue.alignment = TextAlignmentOptions.Right;
-        ui.xpLabel = xpValue;
-
         // --- right: traits over the relationship, half the column each ----------------------------------
         float halfH = Mathf.Floor((colH - 4f) / 2f);
         var traits = Plate(root, "Traits", theme.plate);
@@ -409,23 +390,6 @@ public static class IronOvalGarageBuilder
             EditorUtility.SetDirty(text);
             changed++;
         }
-
-        // Silkscreen sets "Fan Appeal" wider than Fixedsys did, so the meter beside it starts where the
-        // heading actually ends rather than at the 100px it was laid out for.
-        var xpHead = FindText(root, "XPHead");
-        var xpTrack = FindRect(root, "XPTrack");
-        if (xpHead != null && xpTrack != null)
-        {
-            float left = Mathf.Ceil(xpHead.rectTransform.anchoredPosition.x
-                                    + xpHead.GetPreferredValues(xpHead.text).x) + 6f;
-            left = Mathf.Max(left, Inset + 100f);
-            if (!Mathf.Approximately(xpTrack.offsetMin.x, left))
-            {
-                xpTrack.offsetMin = new Vector2(left, xpTrack.offsetMin.y);
-                EditorUtility.SetDirty(xpTrack);
-                changed++;
-            }
-        }
         return changed;
     }
 
@@ -462,20 +426,6 @@ public static class IronOvalGarageBuilder
             return Mathf.Ceil(text.GetPreferredValues(heading).x);
         }
         finally { Object.DestroyImmediate(probe); }
-    }
-
-    static TextMeshProUGUI FindText(Transform root, string name)
-    {
-        foreach (var t in root.GetComponentsInChildren<TextMeshProUGUI>(true))
-            if (t.name == name) return t;
-        return null;
-    }
-
-    static RectTransform FindRect(Transform root, string name)
-    {
-        foreach (var t in root.GetComponentsInChildren<RectTransform>(true))
-            if (t.name == name) return t;
-        return null;
     }
 
     // RestyleSheetText on the saved scene, without rebuilding it. Idempotent.

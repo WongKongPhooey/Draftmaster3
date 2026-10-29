@@ -50,7 +50,11 @@ namespace Draftmaster.Data
         public int Adaptability { get; set; }
         // Commercial / standing
         public int SponsorAppeal { get; set; }
-        public int FanSupport { get; set; }
+        // Shown as Fan Appeal. The player's own rating is not this column but their live fan appeal (0-100,
+        // Draftmaster.Fans.FanAppeal) brought onto this scale — PlayerDriver.FanAppealStat. The column keeps its
+        // old name so a renamed property doesn't rebuild the table.
+        [Column("FanSupport")]
+        public int FanAppeal { get; set; }
         public int Prestige { get; set; }
 
         // --- Overall ability (0-100) ---

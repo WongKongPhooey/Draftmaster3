@@ -68,7 +68,8 @@ public static class DriverAttributeSheet
     public static readonly Attribute[] Standing =
     {
         new Attribute("SPONSOR APPEAL", d => d.SponsorAppeal, Driver.StatMax),
-        new Attribute("FAN SUPPORT",    d => d.FanSupport,    Driver.StatMax),
+        // The player's is their live fan appeal brought onto 0-20, not their row's rating.
+        new Attribute("FAN APPEAL",     PlayerDriver.FanAppealStat, Driver.StatMax),
         new Attribute("PRESTIGE",       d => d.Prestige,      Driver.StatMax),
     };
 

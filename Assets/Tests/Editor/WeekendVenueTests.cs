@@ -356,7 +356,7 @@ public class WeekendVenueTests
 
     // ...and what the two ways of spending it are worth. Fast is the sponsor's hour; slow is the fans'.
     [Test]
-    public void SpeedBuysSponsorMoodAndCostsFanSupport()
+    public void SpeedBuysSponsorMoodAndCostsFanAppeal()
     {
         var booking = SigningBooking(60);
 

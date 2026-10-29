@@ -16,8 +16,8 @@ using Draftmaster.Sponsors;
 using SeriesInfo = Draftmaster.Data.Series;
 
 // The garage screen, built to the Iron Oval design file's GARAGE pass: the car and driver identity down the
-// left with career and accolades under it, the driver's own stats in the middle over an XP meter, and their
-// traits over their relationship with the player on the right.
+// left with career and accolades under it, the driver's own stats in the middle, and their traits over their
+// relationship with the player on the right.
 //
 // The sheet is a JRPG character sheet, so the job here is binding each field to something the game really
 // keeps rather than inventing an RPG:
@@ -28,7 +28,8 @@ using SeriesInfo = Draftmaster.Data.Series;
 //   DRIVER STATS  every attribute that row carries: both 0-100 ability ratings and all sixteen 0-20
 //                 skills, laid out by DriverAttributeSheet. No row at all = the block reads as unrated
 //                 rather than showing zeros.
-//   XP            fan appeal 0-100, the progress meter this game actually has.
+//                 Fan Appeal is the player's live fan appeal on the 0-20 scale (PlayerDriver.FanAppealStat)
+//                 — the design's XP meter, folded into the stat it duplicated.
 //   CAR           the paint the viewed car races in: the player's own scheme and sponsor decals
 //                 (PaintShop.RenderPlayerCar), a rival's livery from their championship's carset.
 //   CAREER        the player's PlayerStatsLedger counters (starts / wins / top 10s); a real driver's real
@@ -85,8 +86,6 @@ public class GarageScreenUI : MonoBehaviour
     [Tooltip("What the relationship means, or N/A on the player's own sheet.")]
     public TextMeshProUGUI relationshipNote;
 
-    public RectTransform xpBar;
-    public TextMeshProUGUI xpLabel;
 
     [Header("Flow")]
     [Tooltip("Where BACK goes when the sheet was opened cold rather than from a laptop in the RV or the factory.")]
@@ -370,13 +369,6 @@ public class GarageScreenUI : MonoBehaviour
         string shownName = mine ? PlayerDriver.DisplayName(row) : FullName(row);
         FillTraits(theme, shownName);
         FillRelationship(theme, mine, row != null ? shownName : null);
-
-        // The player's fan appeal is the meter this game keeps; a rival's standing with the crowd is the
-        // Fan Support their row is rated on, put on the same 0-100 scale.
-        float appeal = mine ? FanAppeal.Value
-                            : (row != null ? row.FanSupport * 100f / Driver.StatMax : 0f);
-        SetBar(xpBar, appeal / 100f);
-        if (xpLabel != null) xpLabel.text = Mathf.RoundToInt(appeal) + "/100";
     }
 
     // The car the viewed driver races. The player's is rendered from their saved scheme and placed sponsor
@@ -650,12 +642,6 @@ public class GarageScreenUI : MonoBehaviour
         if (index < 0 || index >= rows.Count) return;
         if (rows[index].label != null) rows[index].label.text = label;
         if (rows[index].value != null) rows[index].value.text = value;
-    }
-
-    static void SetBar(RectTransform fill, float amount01)
-    {
-        if (fill == null || fill.parent is not RectTransform track) return;
-        fill.sizeDelta = new Vector2(Mathf.Round(track.rect.width * Mathf.Clamp01(amount01)), fill.sizeDelta.y);
     }
 
     // ------------------------------------------------------------------ the close button (wired by the builder)

@@ -164,7 +164,7 @@ namespace Draftmaster.Data
 
                 // Commercial standing tracks results, with a bonus for long-tenured names.
                 SponsorAppeal = FromAbility(e.Current, 1),
-                FanSupport = FromAbility(e.Current, 1),
+                FanAppeal = FromAbility(e.Current, 1),
                 Prestige = FromAbility(e.Current, e.Age >= 38 ? 2 : 0),
 
                 CurrentAbility = e.Current, PotentialAbility = e.Potential,

@@ -60,7 +60,7 @@ public static class SimulatedField
             d.Qualifying = Stat(); d.Consistency = Stat(); d.Aggression = Stat(); d.Awareness = Stat();
             d.Adaptability = Stat(); d.TyreManagement = Stat(); d.FuelManagement = Stat();
             d.SponsorAppeal = Clamp(Stat() - 3, 1, Driver.StatMax);
-            d.FanSupport = Clamp(Stat() - 3, 1, Driver.StatMax);
+            d.FanAppeal = Clamp(Stat() - 3, 1, Driver.StatMax);
             d.Prestige = Clamp(Stat() - 4, 1, Driver.StatMax);
             list.Add(d);
         }

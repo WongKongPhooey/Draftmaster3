@@ -162,7 +162,7 @@ public class DriverDatabaseWindow : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Standing (0-20)", EditorStyles.boldLabel);
         d.SponsorAppeal = Stat("Sponsor Appeal", d.SponsorAppeal);
-        d.FanSupport = Stat("Fan Support", d.FanSupport);
+        d.FanAppeal = Stat("Fan Appeal", d.FanAppeal);
         d.Prestige = Stat("Prestige", d.Prestige);
 
         EditorGUILayout.Space();

@@ -81,7 +81,7 @@ namespace Draftmaster.Data
 
             // Commercial stats start low for unknowns; stars build these over a career.
             d.SponsorAppeal = rng.Next(4, 11);
-            d.FanSupport = rng.Next(3, 10);
+            d.FanAppeal = rng.Next(3, 10);
             d.Prestige = rng.Next(2, 7);
 
             switch (arch)

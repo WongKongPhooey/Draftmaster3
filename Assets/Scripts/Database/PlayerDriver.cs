@@ -165,6 +165,28 @@ public static class PlayerDriver
         return null;
     }
 
+    // Whether a Drivers row is the one behind the player's ride (Row): the same database row, or — for a
+    // code-roster row read before the database opened, which has no Id — the same driver in the same car.
+    public static bool IsPlayer(Driver d)
+    {
+        if (d == null) return false;
+        var me = Row();
+        if (me == null) return false;
+        if (me.Id != 0 && d.Id != 0) return me.Id == d.Id;
+        return me.CarNumber == d.CarNumber && me.FirstName == d.FirstName && me.LastName == d.LastName;
+    }
+
+    // A driver's 0-20 Fan Appeal. Everyone else's is the rating on their row; the player's is their live fan
+    // appeal (0-100, the one autographs, obligations and results move) divided by 5 and rounded, so the stat
+    // and the meter can never disagree.
+    public static int FanAppealStat(Driver d)
+    {
+        if (d == null) return 0;
+        if (!IsPlayer(d)) return d.FanAppeal;
+        float scaled = Draftmaster.Fans.FanAppeal.Value * Driver.StatMax / Draftmaster.Fans.FanAppeal.Max;
+        return Mathf.Clamp(Mathf.FloorToInt(scaled + 0.5f), 0, Driver.StatMax);
+    }
+
     // What to call the player: their career name if they have one, otherwise the name of the driver whose
     // ride they're in, and only then the placeholder.
     public static string DisplayName(Driver row)

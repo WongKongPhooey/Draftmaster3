@@ -110,7 +110,7 @@ namespace Draftmaster.Data
             // once the sim is wired in — this is the passive drift.)
             int comChance = 25 + d.CurrentAbility / 3;
             if (rng.Next(100) < comChance) d.SponsorAppeal = Clamp(d.SponsorAppeal + 1, 0, Driver.StatMax);
-            if (rng.Next(100) < comChance) d.FanSupport = Clamp(d.FanSupport + 1, 0, Driver.StatMax);
+            if (rng.Next(100) < comChance) d.FanAppeal = Clamp(d.FanAppeal + 1, 0, Driver.StatMax);
             if (rng.Next(100) < comChance / 2) d.Prestige = Clamp(d.Prestige + 1, 0, Driver.StatMax);
         }
 

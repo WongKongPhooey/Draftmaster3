@@ -216,7 +216,7 @@ public class DriverInfoPanel : MonoBehaviour
             GUILayout.Space(4);
             GUILayout.Label("Standing", _label);
             StatBar("Sponsor appeal", d.SponsorAppeal, Driver.StatMax);
-            StatBar("Fan support", d.FanSupport, Driver.StatMax);
+            StatBar("Fan appeal", PlayerDriver.FanAppealStat(d), Driver.StatMax);
             StatBar("Prestige", d.Prestige, Driver.StatMax);
         }
 

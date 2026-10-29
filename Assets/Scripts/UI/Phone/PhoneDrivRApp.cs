@@ -200,7 +200,8 @@ public class PhoneDrivRApp : PhoneApp
         y += PixelGUI.Px(4f);
         y += Section(x, y, w, "Off Track");
         y += Meter(x, y, w, "Prestige", d.Prestige / 100f, d.Prestige.ToString(), PixelGUI.Info);
-        y += Meter(x, y, w, "Fan support", d.FanSupport / 100f, d.FanSupport.ToString(), PixelGUI.Confirm);
+        int fans = PlayerDriver.FanAppealStat(d);
+        y += Meter(x, y, w, "Fan appeal", fans / (float)Driver.StatMax, fans.ToString(), PixelGUI.Confirm);
         y += Meter(x, y, w, "Sponsor appeal", d.SponsorAppeal / 100f, d.SponsorAppeal.ToString(), PixelGUI.Gold);
 
         return y - y0 + PixelGUI.Px(6f);
