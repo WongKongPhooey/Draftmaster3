@@ -40,6 +40,8 @@ public class VehicleCollision : MonoBehaviour
     IDamageable _damage;
     VehicleDamage _bodywork;
     Vector2 _baseOffset;
+    // The box's offset before any crush shifted it. DuctTapePatches keeps tape inside the undamaged box.
+    public Vector2 BaseOffset => _baseOffset;
     readonly Collider2D[] _hits = new Collider2D[16];
 
     Vector2 _prevPos;

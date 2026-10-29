@@ -68,7 +68,7 @@ public class DuctTapePatches : MonoBehaviour
             spacing = spacing,
             maxPatches = maxPatches,
             pixel = pixel,
-            halfSize = halfSize,
+            area = TapeArea(halfSize),
             minLengthPx = Mathf.Max(1, lengthPx.x),
             maxLengthPx = Mathf.Max(lengthPx.x, lengthPx.y),
             widthPx = Mathf.Max(1, widthPx),
@@ -77,6 +77,36 @@ public class DuctTapePatches : MonoBehaviour
         int added = DuctTape.Place(_strips, _patches, _repaired, baseVerts, s, _rng, p => OnBody(p, halfSize), out int patches);
         _patches += patches;
         if (added > 0) Redraw();
+    }
+
+    // The rectangle tape has to stay wholly inside, in the bodywork's local space: the car's collision box,
+    // undamaged, cut down to the sprite. The sprite has clear margins round the car; the box is the car.
+    Rect TapeArea(Vector2 halfSize)
+    {
+        var sprite = new Rect(-halfSize, halfSize * 2f);
+        var box = GetComponentInParent<BoxCollider2D>();
+        if (box == null) return sprite;
+
+        Vector2 size = box.size, offset = box.offset;
+        var vc = box.GetComponent<VehicleCollision>();
+        if (vc != null)
+        {
+            // The box shortens as the ends crush; the tape goes on metal that has just been straightened.
+            size = new Vector2(vc.halfExtents.y * 2f, vc.halfExtents.x * 2f);
+            offset = vc.BaseOffset;
+        }
+
+        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity), max = -min;
+        for (int k = 0; k < 4; k++)
+        {
+            var corner = offset + new Vector2((k & 1) == 0 ? -0.5f : 0.5f, (k & 2) == 0 ? -0.5f : 0.5f) * size;
+            Vector2 local = transform.InverseTransformPoint(box.transform.TransformPoint(corner));
+            min = Vector2.Min(min, local);
+            max = Vector2.Max(max, local);
+        }
+        min = Vector2.Max(min, sprite.min);
+        max = Vector2.Min(max, sprite.max);
+        return max.x > min.x && max.y > min.y ? Rect.MinMaxRect(min.x, min.y, max.x, max.y) : sprite;
     }
 
     // Only stick tape on the car, not on the clear pixels round its outline.

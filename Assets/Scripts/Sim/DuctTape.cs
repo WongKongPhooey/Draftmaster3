@@ -44,13 +44,15 @@ namespace Draftmaster.Sim
             public float spacing;       // minimum distance between two patches
             public int maxPatches;
             public float pixel;         // local units per sprite pixel; strips are sized and snapped in pixels
-            public Vector2 halfSize;    // half the sprite's extent; strips stay inside it
+            public Rect area;           // the whole of every strip stays inside this: the car's collider, cut to the sprite
             public int minLengthPx, maxLengthPx, widthPx, maxStripsPerPatch;
         }
 
         // Turn accumulated repair into patches of tape, most-repaired spot first. Each patch is one to
         // `maxStripsPerPatch` parallel strips laid side by side. `onBody` (optional) rejects spots over
-        // empty sprite pixels, so tape never floats in the air off the car's outline. Returns strips added.
+        // empty sprite pixels: every pixel a strip covers has to be car, so tape never hangs off the outline.
+        // A strip that would is nudged in toward the middle of the car, and dropped if that doesn't land it.
+        // Returns strips added.
         public static int Place(List<Strip> strips, int patchCount, float[] repaired, Vector3[] baseVerts,
                                 in Settings s, System.Random rng, System.Func<Vector2, bool> onBody,
                                 out int patchesAdded)
@@ -75,8 +77,10 @@ namespace Draftmaster.Sim
                 }
                 if (best < 0) break;
 
-                added += AddPatch(strips, baseVerts, best, s, pixel, rng);
+                int got = AddPatch(strips, baseVerts, best, s, pixel, rng, onBody);
                 repaired[best] = 0f;
+                if (got == 0) continue;
+                added += got;
                 patchesAdded++;
             }
             return added;
@@ -90,7 +94,11 @@ namespace Draftmaster.Sim
             return false;
         }
 
-        static int AddPatch(List<Strip> strips, Vector3[] baseVerts, int vertex, in Settings s, float pixel, System.Random rng)
+        // How far (pixels) a strip that hangs off the outline may be slid in toward the middle of the car.
+        const int MaxNudgePx = 6;
+
+        static int AddPatch(List<Strip> strips, Vector3[] baseVerts, int vertex, in Settings s, float pixel,
+                            System.Random rng, System.Func<Vector2, bool> onBody)
         {
             // Mostly along the panel or straight across it, the odd one on the slant — the way tape actually
             // goes on in a hurry.
@@ -107,6 +115,7 @@ namespace Draftmaster.Sim
             var along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
             var across = new Vector2(-along.y, along.x);
             Vector2 center = baseVerts[vertex];
+            int placed = 0;
 
             for (int k = 0; k < count; k++)
             {
@@ -116,8 +125,19 @@ namespace Draftmaster.Sim
                 float stagger = (rng.Next(3) - 1) * pixel;
                 Vector2 c = center + across * offset + along * stagger;
                 c = Snap(c, pixel);
-                c = Clamp(c, along, across, length, width, s.halfSize);
+                c = Clamp(c, along, across, length, width, s.area);
 
+                bool fits = Covered(c, along, across, length, width, pixel, onBody);
+                for (int step = 0; !fits && step < MaxNudgePx; step++)
+                {
+                    Vector2 toward = s.area.center - c;
+                    if (toward.sqrMagnitude < pixel * pixel) break;
+                    c = Clamp(c + toward.normalized * pixel, along, across, length, width, s.area);
+                    fits = Covered(c, along, across, length, width, pixel, onBody);
+                }
+                if (!fits) continue;
+
+                placed++;
                 strips.Add(new Strip
                 {
                     center = c,
@@ -128,19 +148,42 @@ namespace Draftmaster.Sim
                     shade = (float)rng.NextDouble(),
                 });
             }
-            return count;
+            return placed;
         }
 
         static Vector2 Snap(Vector2 p, float pixel) =>
             new(Mathf.Round(p.x / pixel) * pixel, Mathf.Round(p.y / pixel) * pixel);
 
-        // Keep the whole strip inside the sprite's rectangle.
-        static Vector2 Clamp(Vector2 c, Vector2 along, Vector2 across, float length, float width, Vector2 halfSize)
+        // Keep the whole strip inside the area rectangle.
+        static Vector2 Clamp(Vector2 c, Vector2 along, Vector2 across, float length, float width, Rect area)
         {
             float ex = Mathf.Abs(along.x) * length * 0.5f + Mathf.Abs(across.x) * width * 0.5f;
             float ey = Mathf.Abs(along.y) * length * 0.5f + Mathf.Abs(across.y) * width * 0.5f;
-            float mx = Mathf.Max(0f, halfSize.x - ex), my = Mathf.Max(0f, halfSize.y - ey);
-            return new Vector2(Mathf.Clamp(c.x, -mx, mx), Mathf.Clamp(c.y, -my, my));
+            float mx = Mathf.Max(0f, area.width * 0.5f - ex), my = Mathf.Max(0f, area.height * 0.5f - ey);
+            Vector2 mid = area.center;
+            return new Vector2(Mathf.Clamp(c.x, mid.x - mx, mid.x + mx), Mathf.Clamp(c.y, mid.y - my, mid.y + my));
+        }
+
+        // Whether every pixel under a strip is car. Samples a half-pixel grid over it — fine enough that a
+        // slanted strip can't straddle a clear pixel between samples — a hair in from the edges, so an edge
+        // lying exactly on a pixel boundary isn't read as the clear pixel beyond it.
+        static bool Covered(Vector2 c, Vector2 along, Vector2 across, float length, float width, float pixel,
+                            System.Func<Vector2, bool> onBody)
+        {
+            if (onBody == null) return true;
+            float inset = pixel * 0.05f;
+            float hl = Mathf.Max(0f, length * 0.5f - inset), hw = Mathf.Max(0f, width * 0.5f - inset);
+            int nl = Mathf.Max(1, Mathf.CeilToInt(2f * length / pixel)), nw = Mathf.Max(1, Mathf.CeilToInt(2f * width / pixel));
+            for (int i = 0; i <= nl; i++)
+            {
+                float t = -hl + 2f * hl * i / nl;
+                for (int j = 0; j <= nw; j++)
+                {
+                    float u = -hw + 2f * hw * j / nw;
+                    if (!onBody(c + along * t + across * u)) return false;
+                }
+            }
+            return true;
         }
 
         public static int Nearest(Vector3[] verts, Vector2 p)

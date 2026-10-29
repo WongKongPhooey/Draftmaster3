@@ -26,7 +26,7 @@ public class DuctTapeTests
         spacing = 0.8f,
         maxPatches = maxPatches,
         pixel = Pixel,
-        halfSize = new Vector2(2.5f, 1.25f),
+        area = new Rect(-2.5f, -1.25f, 5f, 2.5f),
         minLengthPx = 5,
         maxLengthPx = 10,
         widthPx = 2,
@@ -121,6 +121,77 @@ public class DuctTapeTests
         int more = DuctTape.Place(strips, patches, RepairDent(b, Vector2.zero, 10f, 0.6f), b, s, new System.Random(8), null, out int morePatches);
         Assert.AreEqual(0, more);
         Assert.AreEqual(0, morePatches);
+    }
+
+    // Every point of a strip — corners, edges, middle — passes `inside`, sweeping the strip shrunk by
+    // `marginPx` all round. A hair (0.1 px) for straight boundaries; half a pixel where a clear notch's corner
+    // can poke into a slanted strip between the placer's half-pixel samples.
+    static void AssertWhollyInside(List<DuctTape.Strip> strips, System.Func<Vector2, bool> inside, string what,
+                                   float marginPx = 0.1f)
+    {
+        float m = marginPx * Pixel;
+        foreach (var strip in strips)
+        {
+            float rad = strip.angleDeg * Mathf.Deg2Rad;
+            var along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+            var across = new Vector2(-along.y, along.x);
+            float hl = strip.length * 0.5f - m, hw = strip.width * 0.5f - m;
+            for (int i = 0; i <= 20; i++)
+                for (int j = 0; j <= 8; j++)
+                {
+                    Vector2 p = strip.center + along * Mathf.Lerp(-hl, hl, i / 20f) + across * Mathf.Lerp(-hw, hw, j / 8f);
+                    Assert.IsTrue(inside(p), $"strip at {strip.center} (angle {strip.angleDeg:F0}) {what} at {p}");
+                }
+        }
+    }
+
+    [Test]
+    public void Tape_StaysInsideTheColliderArea_NotJustTheSprite()
+    {
+        var b = Body();
+        var repaired = RepairDent(b, Vector2.zero, 10f, 0.6f);   // every panel, edges included
+        var s = Settings(maxPatches: 7);
+        // The collision box: narrower and shorter than the sprite, a little off-centre.
+        s.area = new Rect(-2.3f, -0.95f, 4.5f, 1.9f);
+        for (int seed = 1; seed <= 20; seed++)
+        {
+            var strips = new List<DuctTape.Strip>();
+            DuctTape.Place(strips, 0, repaired, b, s, new System.Random(seed), null, out _);
+            Assert.IsNotEmpty(strips);
+            AssertWhollyInside(strips, p => s.area.Contains(p), "hangs outside the collider");
+        }
+    }
+
+    [Test]
+    public void Tape_NeverHangsOverClearPixels()
+    {
+        var b = Body();
+        // A car with clear notches cut out of its outline — wheel wells, say — and a round nose.
+        System.Func<Vector2, bool> body = p =>
+            !(Mathf.Abs(p.x) > 1.0f && Mathf.Abs(p.x) < 1.8f && Mathf.Abs(p.y) > 0.9f)
+            && !(Mathf.Abs(p.x) > 2.1f && Mathf.Abs(p.y) > 0.7f);
+        var repaired = RepairDent(b, Vector2.zero, 10f, 0.6f);
+        int total = 0;
+        for (int seed = 1; seed <= 20; seed++)
+        {
+            var strips = new List<DuctTape.Strip>();
+            total += DuctTape.Place(strips, 0, repaired, b, Settings(), new System.Random(seed), body, out _);
+            AssertWhollyInside(strips, body, "hangs over clear pixels", 0.5f);
+        }
+        Assert.Greater(total, 0, "the body still gets tape");
+    }
+
+    [Test]
+    public void StripOverTheEdge_IsNudgedOntoTheBody()
+    {
+        var b = Body();
+        // Repair right on the edge of the body, which ends at |y| = 1.0 inside a 1.25 m half-width sprite.
+        var repaired = RepairDent(b, new Vector2(0f, 1.0f), 0.2f, 0.5f);
+        System.Func<Vector2, bool> body = p => Mathf.Abs(p.y) < 1.0f;
+        var strips = new List<DuctTape.Strip>();
+        int added = DuctTape.Place(strips, 0, repaired, b, Settings(), new System.Random(3), body, out _);
+        Assert.Greater(added, 0, "slid in onto the metal rather than dropped");
+        AssertWhollyInside(strips, body, "hangs off the side");
     }
 
     [Test]
