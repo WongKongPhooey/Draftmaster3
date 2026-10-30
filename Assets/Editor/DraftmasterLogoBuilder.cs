@@ -1,9 +1,11 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // The game's title logo (design handoff option 4a, Assets/design_handoff_draftmaster3_logo/README.md), built as
@@ -14,6 +16,7 @@ using UnityEngine.UI;
 //   Draftmaster > Art > Put Draftmaster Logo On Title Screen
 //   Draftmaster > Art > Capture Title Screen (1280x720)    → Temp/title_capture.png, for checking by eye
 //   Draftmaster > Art > Capture Title Screen (Pixel 5 landscape) → Temp/title_capture_phone.png
+//   Draftmaster > Art > Export Draftmaster Logo PNGs       → App Store/Steam/Logo/, transparent, 1x 2x 4x
 //
 // Laid out at 1x in design pixels, top-left origin, from the handoff's reference render. The words are split
 // DRAF | T  /  M | ASTER so the T sits over the M. Each text piece is placed by its first glyph's INK, not by
@@ -221,6 +224,247 @@ public static class DraftmasterLogoBuilder
             Canvas.ForceUpdateCanvases();
         }
         return $"Captured {Path.GetFullPath(outPath)}";
+    }
+
+    const string ExportDir = "App Store/Steam/Logo";
+
+    [MenuItem("Draftmaster/Art/Export Draftmaster Logo PNGs", priority = 131)]
+    public static void ExportMenu() => Debug.Log(ExportLogoPngs(ExportDir, 1, 2, 4));
+
+    // The logo on its own for store pages and press kits: transparent, trimmed to its ink (shadows included),
+    // at whole-number scales of the design's 1x so every art pixel stays square.
+    //
+    // From the open scene's DraftmasterLogo when there is one, overrides and all (the title's redesigned 3 is a
+    // scene override, not in the prefab): drawn by its own canvas and camera, the way the title capture draws it,
+    // with everything else in the scene switched off for the render and back on after, so the PNG is exactly what
+    // the title draws. The prefab, in a preview scene, only when no scene has the logo.
+    //
+    // Alpha comes from rendering twice, over black and over white: how much of the background shows through a
+    // pixel is how transparent it is. That holds whatever the render pipeline does with the camera's own alpha.
+    public static string ExportLogoPngs(string dir, params int[] scales)
+    {
+        if (EditorApplication.isPlaying) return "Leave Play Mode first: the logo's intro has its pieces mid-slide.";
+        GameObject source = null;
+        foreach (var rt in Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (rt.name == "DraftmasterLogo") { source = rt.gameObject; break; }
+        Directory.CreateDirectory(dir);
+
+        var written = new List<string>();
+        string from;
+        if (source != null)
+        {
+            string error = ExportFromScene(source, dir, scales, written);
+            if (error != null) return error;
+            from = $"{source.scene.path}'s DraftmasterLogo";
+        }
+        else
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (prefab == null) return $"No DraftmasterLogo in the open scenes and no prefab at {PrefabPath}.";
+            ExportFromPrefab(prefab, dir, scales, written);
+            from = PrefabPath;
+        }
+        return $"Exported from {from}:\n" + string.Join("\n", written);
+    }
+
+    // The scene's logo through its own camera. The canvas matches height to the 360 px reference, so a render
+    // 360 x N tall draws the logo, at scale 1, N pixels to the design pixel.
+    static string ExportFromScene(GameObject logo, string dir, int[] scales, List<string> written)
+    {
+        var canvas = logo.GetComponentInParent<Canvas>(true);
+        var cam = canvas != null ? canvas.rootCanvas.worldCamera : null;
+        if (cam == null) return "The scene's DraftmasterLogo isn't on a camera canvas.";
+
+        var root = canvas.rootCanvas.transform;
+        var logoRt = (RectTransform)logo.transform;
+        var cap = logo.GetComponent<MaxScreenWidth>();
+        bool wasActive = logo.activeSelf, capWasOn = cap != null && cap.enabled;
+        Vector3 scaleWas = logoRt.localScale;
+        var clearWas = cam.clearFlags;
+        var backgroundWas = cam.backgroundColor;
+        var targetWas = cam.targetTexture;
+        int maskWas = cam.cullingMask, layerWas = root.gameObject.layer;
+        // The camera sees only a spare layer with the canvas on it: the track backdrop rebuilds itself for the
+        // render's new aspect, so switching its renderers off isn't enough.
+        int spare = 31;
+        while (spare > 8 && !string.IsNullOrEmpty(LayerMask.LayerToName(spare))) spare--;
+
+        // Everything drawn that isn't the logo: world renderers, other canvases, and this canvas's other graphics.
+        var hidden = new List<Behaviour>();
+        var hiddenRenderers = new List<Renderer>();
+        foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            if (r.enabled) { r.enabled = false; hiddenRenderers.Add(r); }
+        foreach (var g in root.GetComponentsInChildren<Graphic>())
+            if (g.enabled && !g.transform.IsChildOf(logo.transform)) { g.enabled = false; hidden.Add(g); }
+        foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            if (c.enabled && c.rootCanvas.transform != root) { c.enabled = false; hidden.Add(c); }
+
+        try
+        {
+            logo.SetActive(true);
+            if (cap != null) cap.enabled = false;
+            logoRt.localScale = Vector3.one;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            root.gameObject.layer = spare;
+            cam.cullingMask = 1 << spare;
+
+            foreach (int scale in scales)
+            {
+                int h = 360 * scale, w = 640 * scale;
+                var black = RenderLogo(cam, w, h, Color.black, targetWas);
+                var white = RenderLogo(cam, w, h, Color.white, targetWas);
+                WriteTrimmed(Matte(black, white), w, h, dir, scale, written);
+            }
+        }
+        finally
+        {
+            logoRt.localScale = scaleWas;
+            if (cap != null) cap.enabled = capWasOn;
+            logo.SetActive(wasActive);
+            cam.clearFlags = clearWas;
+            cam.backgroundColor = backgroundWas;
+            cam.cullingMask = maskWas;
+            root.gameObject.layer = layerWas;
+            foreach (var r in hiddenRenderers) if (r != null) r.enabled = true;
+            foreach (var b in hidden) if (b != null) b.enabled = true;
+            Canvas.ForceUpdateCanvases();
+        }
+        return null;
+    }
+
+    // The prefab on a world-space canvas in a preview scene. The 3 and its shadow hang past the prefab's rect, so
+    // the render has a margin round it; the trim takes it off.
+    static void ExportFromPrefab(GameObject prefab, string dir, int[] scales, List<string> written)
+    {
+        const float unitsPerPx = 0.01f;
+        const int pad = 64;
+        var view = new Vector2Int(Mathf.RoundToInt(Size.x) + pad * 2, Mathf.RoundToInt(Size.y) + pad * 2);
+        var scene = EditorSceneManager.NewPreviewScene();
+        try
+        {
+            var camGo = new GameObject("LogoExportCamera", typeof(Camera));
+            SceneManager.MoveGameObjectToScene(camGo, scene);
+            var cam = camGo.GetComponent<Camera>();
+            cam.scene = scene;
+            cam.enabled = false;
+            cam.orthographic = true;
+            cam.orthographicSize = view.y * unitsPerPx * 0.5f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.nearClipPlane = 0.01f;
+            cam.farClipPlane = 100f;
+            cam.transform.position = new Vector3(0f, 0f, -10f);
+
+            var canvasGo = new GameObject("LogoExportCanvas", typeof(RectTransform), typeof(Canvas));
+            SceneManager.MoveGameObjectToScene(canvasGo, scene);
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = cam;
+            var canvasRt = (RectTransform)canvasGo.transform;
+            canvasRt.sizeDelta = Size;
+            canvasRt.localScale = Vector3.one * unitsPerPx;
+            canvasRt.position = Vector3.zero;
+
+            var logo = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+            logo.transform.SetParent(canvasGo.transform, false);
+            if (logo.TryGetComponent(out MaxScreenWidth cap)) cap.enabled = false;
+            var logoRt = (RectTransform)logo.transform;
+            logoRt.anchorMin = logoRt.anchorMax = logoRt.pivot = new Vector2(0.5f, 0.5f);
+            logoRt.anchoredPosition = Vector2.zero;
+            logoRt.localScale = Vector3.one;
+
+            foreach (int scale in scales)
+            {
+                int w = view.x * scale, h = view.y * scale;
+                var black = RenderLogo(cam, w, h, Color.black, null);
+                var white = RenderLogo(cam, w, h, Color.white, null);
+                WriteTrimmed(Matte(black, white), w, h, dir, scale, written);
+            }
+        }
+        finally
+        {
+            EditorSceneManager.ClosePreviewScene(scene);
+        }
+    }
+
+    static void WriteTrimmed(Color32[] cut, int w, int h, string dir, int scale, List<string> written)
+    {
+        var trimmed = TrimToInk(cut, w, h, out int tw, out int th);
+        var tex = new Texture2D(tw, th, TextureFormat.RGBA32, false);
+        tex.SetPixels32(trimmed);
+        tex.Apply();
+        string path = Path.Combine(dir, $"DraftmasterLogo@{scale}x.png");
+        File.WriteAllBytes(path, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+        written.Add($"{Path.GetFullPath(path)} ({tw}x{th})");
+    }
+
+    // Rendered twice, like CaptureTitle: a camera canvas only takes the target's size on the first pass.
+    static Color32[] RenderLogo(Camera cam, int w, int h, Color background, RenderTexture restoreTarget)
+    {
+        var rtex = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+        var prevActive = RenderTexture.active;
+        try
+        {
+            cam.backgroundColor = background;
+            cam.targetTexture = rtex;
+            Canvas.ForceUpdateCanvases();
+            cam.Render();
+            Canvas.ForceUpdateCanvases();
+            cam.Render();
+            RenderTexture.active = rtex;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            var pixels = tex.GetPixels32();
+            Object.DestroyImmediate(tex);
+            return pixels;
+        }
+        finally
+        {
+            cam.targetTexture = restoreTarget;
+            RenderTexture.active = prevActive;
+            Object.DestroyImmediate(rtex);
+        }
+    }
+
+    // Over black a pixel reads c·a; over white, c·a + (1 − a). The difference is 1 − a, and c is black's over a.
+    static Color32[] Matte(Color32[] black, Color32[] white)
+    {
+        var cut = new Color32[black.Length];
+        for (int i = 0; i < black.Length; i++)
+        {
+            var b = black[i];
+            var wh = white[i];
+            int show = ((wh.r - b.r) + (wh.g - b.g) + (wh.b - b.b)) / 3;
+            int a = Mathf.Clamp(255 - show, 0, 255);
+            if (a == 0) { cut[i] = new Color32(0, 0, 0, 0); continue; }
+            cut[i] = new Color32((byte)Mathf.Min(255, b.r * 255 / a), (byte)Mathf.Min(255, b.g * 255 / a),
+                                 (byte)Mathf.Min(255, b.b * 255 / a), (byte)a);
+        }
+        return cut;
+    }
+
+    // Crops to the smallest box holding every pixel that isn't fully transparent.
+    static Color32[] TrimToInk(Color32[] px, int w, int h, out int tw, out int th)
+    {
+        int minX = w, minY = h, maxX = -1, maxY = -1;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                if (px[y * w + x].a > 0)
+                {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+        if (maxX < 0) { tw = w; th = h; return px; }
+
+        tw = maxX - minX + 1;
+        th = maxY - minY + 1;
+        var outPx = new Color32[tw * th];
+        for (int y = 0; y < th; y++)
+            System.Array.Copy(px, (y + minY) * w + minX, outPx, y * tw, tw);
+        return outPx;
     }
 
     // ------------------------------------------------------------------ pieces

@@ -53,7 +53,7 @@ public class TitleTrackBackdrop : MonoBehaviour
     public float fenceDepthZ = -0.5f;
 
     Camera _camera;
-    Vector3 _builtFor;              // (aspect, orthographic size, zoom) the quads were last laid out for
+    Vector4 _builtFor;              // (aspect, orthographic size, zoom, pan) the quads were last laid out for
     Transform _root;
     readonly Mesh[] _meshes = new Mesh[4];
 
@@ -92,7 +92,8 @@ public class TitleTrackBackdrop : MonoBehaviour
         if (_camera == null) _camera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
         if (_camera == null || !_camera.orthographic) return;
 
-        var key = new Vector3(_camera.aspect, _camera.orthographicSize, TitleCameraZoom.Factor(_camera));
+        var key = new Vector4(_camera.aspect, _camera.orthographicSize, TitleCameraZoom.Factor(_camera),
+                              TitleCameraZoom.PanPx(_camera));
         if (key == _builtFor && _root != null) return;
         _builtFor = key;
         Build();
@@ -127,6 +128,8 @@ public class TitleTrackBackdrop : MonoBehaviour
             float slotLeft = right - slotPx * (top - bottom) / viewPx;
             wallMid = slotLeft - wallW * 0.5f;
         }
+        // TitleCameraZoom.panPx slides the track left with the crash; the grass and asphalt still reach the edges.
+        wallMid -= TitleCameraZoom.PanPx(_camera) * (top - bottom) / viewPx;
         float wallL = wallMid - wallW * 0.5f, wallR = wallMid + wallW * 0.5f;   // wallR = the track-side face
         float finishMid = Mathf.Lerp(top, bottom, finishLineAt);
         float finishB = finishMid - finishLineMetres * 0.5f, finishT = finishMid + finishLineMetres * 0.5f;

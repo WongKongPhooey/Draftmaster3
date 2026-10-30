@@ -205,6 +205,7 @@ public class TitleCrashScene : MonoBehaviour
     Camera _camera;
     float _unit;                 // world units per reference pixel
     float _zoom = 1f;            // TitleCameraZoom's factor when the layout was resolved
+    float _panPx;                // TitleCameraZoom's pan when the layout was resolved
     bool _built;
     int _tries;
 
@@ -409,6 +410,7 @@ public class TitleCrashScene : MonoBehaviour
                 // A zoomed-out camera (TitleCameraZoom) grows the canvas in the world; divided back out, the
                 // cars stay their size and the camera sees more around them.
                 _zoom = TitleCameraZoom.Factor(layoutCanvas.rootCanvas.worldCamera);
+                _panPx = TitleCameraZoom.PanPx(layoutCanvas.rootCanvas.worldCamera);
                 float unit = (rt.rect.height / (TitleCrash.CanvasHeight * _zoom)) * rt.lossyScale.y;
                 if (unit > 0f) { _canvasRt = rt; _unit = unit; return true; }
             }
@@ -424,7 +426,8 @@ public class TitleCrashScene : MonoBehaviour
         _camera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
         if (_camera == null || !_camera.orthographic) return false;
         _zoom = TitleCameraZoom.Factor(_camera);
-        _unit = (_camera.orthographicSize * 2f) / (TitleCrash.CanvasHeight * _zoom);
+        _panPx = TitleCameraZoom.PanPx(_camera);
+        _unit =(_camera.orthographicSize * 2f) / (TitleCrash.CanvasHeight * _zoom);
         return _unit > 0f;
     }
 
@@ -439,7 +442,7 @@ public class TitleCrashScene : MonoBehaviour
         {
             var r = _canvasRt.rect;
             float perPx = r.height / (TitleCrash.CanvasHeight * _zoom);
-            var local = new Vector3(r.xMax - (TitleCrash.CanvasWidth - px.x) * perPx,
+            var local = new Vector3(r.xMax - (TitleCrash.CanvasWidth - px.x + _panPx) * perPx,
                                     r.center.y + (px.y - midY) * perPx, 0f);
             var world = _canvasRt.TransformPoint(local) - _shakeApplied;
             return new Vector3(world.x, world.y, depthZ);
@@ -449,7 +452,7 @@ public class TitleCrashScene : MonoBehaviour
         float halfW = _camera != null ? _camera.orthographicSize * _camera.aspect : TitleCrash.CanvasWidth * _unit * 0.5f;
         float halfH = _camera != null ? _camera.orthographicSize : TitleCrash.CanvasHeight * _unit * 0.5f;
         float perPxW = halfH * 2f / (TitleCrash.CanvasHeight * _zoom);
-        return new Vector3(centre.x + halfW - (TitleCrash.CanvasWidth - px.x) * perPxW,
+        return new Vector3(centre.x + halfW - (TitleCrash.CanvasWidth - px.x + _panPx) * perPxW,
                            centre.y + (px.y - midY) * perPxW, depthZ);
     }
 

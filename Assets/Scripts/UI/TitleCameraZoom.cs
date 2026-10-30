@@ -16,6 +16,10 @@ public class TitleCameraZoom : MonoBehaviour
     [Tooltip("The least width, in reference pixels (the layout is 640 x 360), the camera may show. A screen " +
              "narrower than this zooms out until it fits.")]
     public float minVisibleWidthPx = 600f;
+    [Tooltip("Slides the whole tableau (track, wall, crash) this many reference pixels left across the screen; " +
+             "negative slides it right. Both are laid out off the camera and hung off the screen's right edge, so " +
+             "moving the camera itself doesn't move the road on screen. This does.")]
+    public float panPx = 0f;
 
     Camera _camera;
 
@@ -46,5 +50,12 @@ public class TitleCameraZoom : MonoBehaviour
             zoom.baseOrthoSize <= 0f)
             return 1f;
         return Mathf.Max(1f, camera.orthographicSize / zoom.baseOrthoSize);
+    }
+
+    // How many reference pixels left the tableau is slid (panPx): 0 without the component.
+    public static float PanPx(Camera camera)
+    {
+        if (camera == null || !camera.TryGetComponent(out TitleCameraZoom zoom) || !zoom.enabled) return 0f;
+        return zoom.panPx;
     }
 }
