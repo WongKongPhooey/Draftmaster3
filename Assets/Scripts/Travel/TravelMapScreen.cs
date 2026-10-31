@@ -68,7 +68,9 @@ public class TravelMapScreen : MonoBehaviour
     const float EdgeWidth = 3f, EdgeWidthLive = 5f, EdgeWidthRoute = 7f;
 
     [Header("Header")]
-    public Text subLabel;             // the one header line: week, where you are, the route
+    public Text subLabel;             // the header line: the app's name, where you are, where you're going
+    public Text statsLabel;           // the same line's right end: stops on the route against stops left (optional;
+                                      // cloned from subLabel at Awake when the prefab has none)
     public Button closeButton;
 
     [Header("Map")]
@@ -174,6 +176,7 @@ public class TravelMapScreen : MonoBehaviour
 
         CacheMarkers();
         BuildEdges();
+        EnsureStatsLabel();
 
         closeButton.onClick.AddListener(Close);
         foreach (var m in _markers.Values)
@@ -434,7 +437,18 @@ public class TravelMapScreen : MonoBehaviour
         var scale = new Vector3(_zoom, _zoom, 1f);
         if (nodesRoot != null) { nodesRoot.localScale = scale; nodesRoot.anchoredPosition = offset; }
         if (edgesRoot != null) { edgesRoot.localScale = scale; edgesRoot.anchoredPosition = offset; }
-        if (Mathf.Abs(LabelScale - _labelScaleLaidOut) > 0.04f) DeclutterLabels();
+        if (Mathf.Abs(LabelScale - _labelScaleLaidOut) * openZoom > 0.04f) DeclutterLabels();
+    }
+
+    // The right-hand end of the header: a copy of the header line laid over the same rect, right-aligned,
+    // so the two share a face, size and baseline and the stop count stays clear of the place names.
+    void EnsureStatsLabel()
+    {
+        if (statsLabel != null) return;
+        statsLabel = Instantiate(subLabel, subLabel.transform.parent);
+        statsLabel.name = "StatsLabel";
+        statsLabel.alignment = TextAnchor.MiddleRight;
+        statsLabel.text = "";
     }
 
     // ---------------- place names ----------------
@@ -448,7 +462,16 @@ public class TravelMapScreen : MonoBehaviour
     //
     // Names grow with the map up to the zoom it opens at, then hold their size: zooming in past that
     // spreads the dots apart under names that no longer grow, so the ones left off come back.
-    float LabelScale => _zoom <= openZoom ? 1f : openZoom / Mathf.Max(_zoom, 0.01f);
+    //
+    // The sizes are what a name measures on the 1080 canvas at the opening zoom. A Text is rasterised at its
+    // fontSize times the canvas scale and knows nothing of its parents' localScale, so a name set small and
+    // zoomed up 2.4x by the board is a few-pixel bitmap stretched into mush. Instead the font is set at the
+    // size it is seen at and the label is scaled down by the zoom it sits under (see DeclutterLabels).
+    float LabelScale => (_zoom <= openZoom ? 1f : openZoom / Mathf.Max(_zoom, 0.01f)) / Mathf.Max(openZoom, 0.01f);
+
+    const int SilkscreenCell = 8;
+    static readonly int NamePx = UIType.CanvasPx(TypeRole.Label, 1080f, SilkscreenCell);   // 24, the floor
+    static readonly int ShoutPx = NamePx * 2;   // where you are, where you're going, your stops, your factory
 
     // 4 the names in play right now, 3 where the car can go next, 2 racetracks, 1 a place you have been, 0 "?".
     static int LabelRank(TravelNode n, bool shout, bool reachable)
@@ -876,12 +899,14 @@ public class TravelMapScreen : MonoBehaviour
         bool browsing = WeekendHoldsTheCar;
 
         var path = choosing || browsing ? null : TravelRoute.Path();
-        // The clock ticks half a day a stop, Mon AM to Fri AM (TravelDays), so it reads down with the stops.
-        subLabel.text = browsing
-            ? $"Race weekend · At {current.name}"
-            : choosing
-            ? $"{TravelState.DayLabel} · At {current.name} · Pick your next race"
-            : $"{TravelState.DayLabel} · At {current.name} · ROUTE: {path?.Count ?? 0} · STOPS LEFT: {TravelState.StopsLeft}";
+        // The satnav reads like a phone maps app: where you are (and where you're going) on the left, the stop
+        // count on the right — the route's stops against the stops you have left to spend on this leg.
+        subLabel.text = browsing || choosing
+            ? $"iDroid Maps · {current.name}"
+            : $"iDroid Maps · {current.name} -> {dest.name}";
+        statsLabel.text = browsing ? ""
+            : choosing ? "Pick your next race"
+            : $"Stops: {path?.Count ?? 0} · Max Stops: {TravelState.StopsLeft}";
 
         // The view rides along with the player as they hop, keeping whatever zoom they chose.
         FollowFocus(current);
@@ -940,7 +965,7 @@ public class TravelMapScreen : MonoBehaviour
             marker.dot.color = DotColor(n);
             marker.label.text = LabelFor(n);
             bool shout = isCurrent || n.locationType == TravelLocationType.TeamFactory;
-            marker.label.fontSize = shout ? 16 : 8;
+            marker.label.fontSize = shout ? ShoutPx : NamePx;
             marker.label.color = isCurrent ? CurrentHalo : LabelColor(n);
             _labelRank[marker] = LabelRank(n, shout, false);
         }
@@ -981,7 +1006,7 @@ public class TravelMapScreen : MonoBehaviour
             // The nodes that matter right now get the bigger type; the other fifty stay small so the
             // middle of the country does not turn into a wall of overlapping names.
             bool shout = isCurrent || isDest || waypoint || n.locationType == TravelLocationType.TeamFactory;
-            marker.label.fontSize = shout ? 16 : 8;
+            marker.label.fontSize = shout ? ShoutPx : NamePx;
             marker.label.color = isCurrent ? CurrentHalo : (isDest || waypoint ? DestHalo : LabelColor(n));
             _labelRank[marker] = LabelRank(n, shout, reachable || choosable);
         }
@@ -1029,11 +1054,13 @@ public class TravelMapScreen : MonoBehaviour
     static Color LabelColor(TravelNode n) =>
         n.locationType == TravelLocationType.TeamFactory ? FactoryLabel : DotColor(n);
 
+    // Capitals: the names are Silkscreen, which has no lower case — mixed case renders as mush.
+    // The one place map data is cased on its way to the screen (Docs/Type-Scale.md).
     static string LabelFor(TravelNode n)
     {
-        if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name;
+        if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name.ToUpperInvariant();
         if (!TravelState.IsVisited(n.id)) return "?";
-        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name;
+        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name.ToUpperInvariant();
     }
 
     // ---------------- footer buttons ----------------

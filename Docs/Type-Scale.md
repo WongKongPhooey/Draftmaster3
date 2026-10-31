@@ -109,6 +109,11 @@ rename. The letter-case audit lists them; that is expected. Being capitals, they
 `Draftmaster > UI > Title Menu In Silkscreen, Footer In Fixedsys`. A row going back to mixed case goes back
 to Fixedsys with it: Silkscreen has no lower case.
 
+Second exception: the satnav's place names (`TravelMapScreen.LabelFor`) are Silkscreen at Label size
+(24, headline names 48) on a crowded board where Fixedsys's 16px cell will not fit, so they are upper-cased
+on the way to the screen. The board is zoomed by transform scale, which a `Text` does not rasterise at, so
+the names' `fontSize` is their seen size and the label is scaled down by the zoom (2026-10-30).
+
 Write the text in its case in the source. `UIText.TitleCase(key)` is for text that arrives in capitals
 as a key or an enum name (a stat's sheet key, a `Standing`) and has to be shown; it leaves anything already
 in mixed case alone. Never `ToUpperInvariant()` text on its way to the screen.
