@@ -43,17 +43,17 @@ public static class TitleScreenRowEditor
                          after: TitleScreenUI.Command.LoadScene));
     }
 
-    // MASTER DRAFT sits between SINGLE RACE and MULTIPLAYER. There is no mode behind it yet, so it goes in
-    // as a NotWired placeholder — the house style for "the design has this and the game doesn't yet": it
-    // draws disabled and says "Not wired up yet." When the mode exists, re-run AddRow with its command and
-    // the placeholder is wired in place.
+    // MASTER DRAFT sits between SINGLE RACE and MULTIPLAYER. It went in as a NotWired placeholder before the
+    // mode existed; now it loads the mode's menu scene (Assets/Scenes/MasterDraft.unity). AddRow matches the
+    // placeholder by label and rewires it in place, moving nothing — running this on a scene that has no
+    // MASTER DRAFT row yet adds one after SINGLE RACE.
     //
     // Placed by label rather than by command: SINGLE RACE and OPTIONS are both LoadScene rows, so "after
     // the first LoadScene" depends on list order, which need not match the column.
     [MenuItem("Draftmaster/UI/Add MASTER DRAFT Row To Title Screen")]
     public static void AddMasterDraftRow()
     {
-        Debug.Log(AddRow("MASTER DRAFT", TitleScreenUI.Command.NotWired, "", afterLabel: "SINGLE RACE"));
+        Debug.Log(AddRow("MASTER DRAFT", TitleScreenUI.Command.LoadScene, "MasterDraft", afterLabel: "SINGLE RACE"));
     }
 
     // CONTINUE -> CAREER. The row resumes the career you are in the middle of, and "continue" describes the

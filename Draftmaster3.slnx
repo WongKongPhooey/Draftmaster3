@@ -17,6 +17,7 @@
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Controls.Input.csproj" />
+  <Project Path="Draftmaster.MasterDraft.csproj" />
   <Project Path="Draftmaster.Fights.csproj" />
   <Project Path="Draftmaster.Fans.csproj" />
   <Project Path="PlayFabSDKEditor.csproj" />

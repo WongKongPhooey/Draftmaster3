@@ -387,6 +387,45 @@ public class TitleScreenWiringTests
         install.Invoke(binder, null);
     }
 
+    // MASTER DRAFT was a NotWired placeholder until the mode existed; it now opens the mode's menu scene,
+    // sits between SINGLE RACE and MULTIPLAYER, and that scene's BACK leads home to the title screen.
+    [Test]
+    public void MasterDraftRowOpensTheMasterDraftMenu()
+    {
+        const string masterDraftScenePath = "Assets/Scenes/MasterDraft.unity";
+        var menu = Menu();
+        Assert.AreEqual(LoadScene, CommandOf(menu, "MASTER DRAFT"), "MASTER DRAFT is not wired to load a scene.");
+
+        var rows = menu.FindProperty("rows");
+        string scene = null;
+        for (int i = 0; i < rows.arraySize; i++)
+        {
+            var row = rows.GetArrayElementAtIndex(i);
+            if (row.FindPropertyRelative("label").stringValue == "MASTER DRAFT")
+                scene = row.FindPropertyRelative("sceneName").stringValue;
+        }
+        Assert.AreEqual(SceneName(masterDraftScenePath), scene, "MASTER DRAFT loads the wrong scene.");
+        Assert.IsTrue(InBuild(masterDraftScenePath), "MasterDraft.unity is not in the build settings, so the row draws disabled.");
+
+        var drawn = DrawnRowLabels();
+        int at = drawn.IndexOf("MASTER DRAFT");
+        Assert.Greater(at, 0, "MASTER DRAFT is not drawn on the menu.");
+        Assert.AreEqual("SINGLE RACE", drawn[at - 1], "MASTER DRAFT should sit directly under SINGLE RACE.");
+        if (at + 1 < drawn.Count) Assert.AreEqual("MULTIPLAYER", drawn[at + 1], "MASTER DRAFT should sit directly above MULTIPLAYER.");
+
+        var masterDraft = EditorSceneManager.OpenScene(masterDraftScenePath, OpenSceneMode.Additive);
+        try
+        {
+            var ui = Find(masterDraft, "MasterDraftUI");
+            Assert.AreEqual(SceneName(TitleScenePath), ui.FindProperty("titleSceneName").stringValue,
+                            "Backing out of Master Draft should lead to the title screen.");
+        }
+        finally
+        {
+            if (masterDraft.IsValid() && masterDraft.isLoaded) EditorSceneManager.CloseScene(masterDraft, true);
+        }
+    }
+
     // ------------------------------------------------------------------ helpers
 
     const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
