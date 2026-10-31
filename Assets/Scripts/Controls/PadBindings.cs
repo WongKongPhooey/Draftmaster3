@@ -38,6 +38,9 @@ namespace Draftmaster.Controls
         public const PadButton LapTiming = PadButton.DpadDown;       // F1
         public const PadButton Tyres = PadButton.DpadLeft;           // F6
         public const PadButton Rivalries = PadButton.DpadRight;      // F4
+        // Master Draft races only: the action-card hand.
+        public const PadButton PlayCard = PadButton.South;           // 1-5 play a card outright
+        public const PadButton NextCard = PadButton.Select;          // (the keys pick the card themselves)
 
         // ---- on foot
         public const PadButton Interact = PadButton.South;           // E
@@ -104,6 +107,9 @@ namespace Draftmaster.Controls
             new Shortcut("Lap timing", "F1", LapTiming, Context.Driving),
             new Shortcut("Tyres", "F6", Tyres, Context.Driving),
             new Shortcut("Rivalries", "F4", Rivalries, Context.Driving),
+            // Only read in a Master Draft race, where nothing else is on these two in the car.
+            new Shortcut("Play card", "1-5", PlayCard, Context.Driving),
+            new Shortcut("Next card", "1-5", NextCard, Context.Driving),
 
             new Shortcut("Interact", "E", Interact, Context.OnFoot),
             // Fights hold the player still, so the hook never has a run to clash with.

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Draftmaster.MasterDraft;
 using NUnit.Framework;
+using UnityEngine;
 
 // Master Draft's pure rules (Assets/Scripts/MasterDraft/Core): packs, team legality, the in-race hand,
 // coin rewards and the saved profile. The catalogue is built from generated stand-ins, the same path the
@@ -374,5 +375,77 @@ public class MasterDraftRulesTests
         p.team.activeDriver = right.uid;
         Assert.IsFalse(TradeRules.Accept(p, offer.id, right.uid).ok, "traded away a card in the team");
         Assert.IsNotNull(p.Find(right.uid));
+    }
+
+    // ------------------------------------------------------------------ race effects
+
+    [Test]
+    public void CarAndChiefEffectsStayModest()
+    {
+        foreach (var car in CardFactory.Cars())
+        {
+            foreach (float f in new[] { TeamEffects.PowerScale(car), TeamEffects.GripScale(car), TeamEffects.DraftScale(car) })
+            {
+                Assert.LessOrEqual(Mathf.Abs(f - 1f), TeamEffects.CarSwing + 1e-5f, car.name);
+            }
+        }
+        var best = new CardDefinition { type = CardType.CrewChief, pitSpeed = 99, strategy = 99, setup = 99 };
+        var worst = new CardDefinition { type = CardType.CrewChief, pitSpeed = 1, strategy = 1, setup = 1 };
+        Assert.Less(TeamEffects.PitTimeScale(best), 1f);
+        Assert.Greater(TeamEffects.PitTimeScale(worst), 1f);
+        Assert.GreaterOrEqual(TeamEffects.PitTimeScale(best), 1f - TeamEffects.PitSwing - 1e-5f);
+        Assert.Less(TeamEffects.FuelBurnScale(best), 1f);
+        Assert.Less(TeamEffects.TyreWearScale(best), 1f);
+        Assert.AreEqual(1f, TeamEffects.PowerScale(null));
+        Assert.AreEqual(1f, TeamEffects.PitTimeScale(null));
+
+        // A better car is stronger: the Champion trim out-powers the Club trim of the same make.
+        var cars = CardFactory.Cars().Where(c => c.manufacturer == "CHV").OrderBy(c => c.rarity).ToList();
+        Assert.Greater(TeamEffects.PowerScale(cars.Last()), TeamEffects.PowerScale(cars.First()));
+    }
+
+    [Test]
+    public void TimedActionsRunForTheirSecondsAndDoNotStack()
+    {
+        var fx = new ActiveEffects();
+        var push = ActionCatalog.Get(ActionEffect.PushToPass);
+        Assert.IsTrue(fx.Start(push, 10f));
+        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(10f), 1e-5f);
+        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(10f + push.Seconds - 0.01f), 1e-5f);
+        Assert.AreEqual(1f, fx.PowerScale(10f + push.Seconds + 0.01f), 1e-5f);
+
+        // Played again while running: the clock restarts, the boost doesn't double.
+        fx.Start(push, 20f);
+        fx.Start(push, 21f);
+        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(22f), 1e-5f);
+        Assert.AreEqual(push.Seconds - 1f, fx.Remaining(ActionEffect.PushToPass, 22f), 1e-4f);
+
+        var slip = ActionCatalog.Get(ActionEffect.Slipstream);
+        fx.Start(slip, 0f);
+        Assert.AreEqual(slip.Magnitude, fx.DraftScale(1f), 1e-5f);
+        Assert.AreEqual(1f, fx.DraftScale(slip.Seconds + 1f), 1e-5f);
+
+        var fuel = ActionCatalog.Get(ActionEffect.FuelSaver);
+        fx.Start(fuel, 0f);
+        Assert.AreEqual(1f - fuel.Magnitude, fx.FuelBurnScale(1f), 1e-5f);
+
+        // Instant cards start nothing.
+        Assert.IsFalse(fx.Start(ActionCatalog.Get(ActionEffect.FreshRubber), 0f));
+        Assert.IsFalse(fx.Start(ActionCatalog.Get(ActionEffect.QuickRepair), 0f));
+    }
+
+    [Test]
+    public void PerfectPitStopWaitsForTheNextStop()
+    {
+        var fx = new ActiveEffects();
+        Assert.AreEqual(1f, fx.PitTimeScale);
+        var spec = ActionCatalog.Get(ActionEffect.PerfectPitStop);
+        fx.Start(spec, 0f);
+        Assert.IsTrue(fx.PerfectPitPending);
+        Assert.AreEqual(spec.Magnitude, fx.PitTimeScale, 1e-5f);
+        Assert.AreEqual(spec.Magnitude, fx.PitTimeScale, 1e-5f, "it lasts until a stop, not a clock");
+        fx.PitStopUsed();
+        Assert.IsFalse(fx.PerfectPitPending);
+        Assert.AreEqual(1f, fx.PitTimeScale);
     }
 }

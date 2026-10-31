@@ -10,6 +10,9 @@
 //   SingleRace   — one race, picked off SINGLE RACE or EXHIBITION. No network and no career either: no
 //                  paddock, no weekend, no money, no on-foot. The player starts in the car and that is
 //                  the whole event.
+//   MasterDraft  — a Quick Race out of the MASTER DRAFT card mode. A one-off race exactly like SingleRace
+//                  (IsOneOffRace), plus the action-card hand and team effects (MasterDraftRaceHost), and
+//                  its results screen leads back to the Master Draft menu.
 //   Multiplayer  — the competitive lobby race. A network session INSTEAD of the career: the paddock,
 //                  the weekend clock, the race director and the session flow are all switched off.
 //   CoopCareer   — a second player dropped into the host's career. A network session INSIDE the career:
@@ -36,6 +39,13 @@ public static class GameSession
     // One race on its own, with nothing of the career around it.
     public static bool IsSingleRace => CurrentMode == Mode.SingleRace;
 
+    // A Master Draft race: one race like SINGLE RACE, plus the action-card hand (MasterDraftRaceHost).
+    public static bool IsMasterDraft => CurrentMode == Mode.MasterDraft;
+
+    // Either kind of one-off race — driven start to finish, no paddock, no on-foot, no career writes. Shared
+    // scene code that used to ask IsSingleRace asks this, so Master Draft races behave the same.
+    public static bool IsOneOffRace => CurrentMode == Mode.SingleRace || CurrentMode == Mode.MasterDraft;
+
     // Some network session is up (either flavour) — for transport/NetworkManager-level questions.
     public static bool IsNetworked => CurrentMode == Mode.Multiplayer || CurrentMode == Mode.CoopCareer;
 
@@ -47,5 +57,5 @@ public static class GameSession
     // crowd, the motorhome lot and the pit-wall avatar all hang off this. A single race is driven from
     // the green flag to the chequer and never puts a body on the ground; the career and the lobby race
     // both do (the lobby race spawns straight onto the grid, but its own code decides that).
-    public static bool OnFootAllowed => CurrentMode != Mode.SingleRace;
+    public static bool OnFootAllowed => !IsOneOffRace;
 }

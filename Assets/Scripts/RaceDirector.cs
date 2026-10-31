@@ -41,6 +41,20 @@ public class RaceDirector : MonoBehaviour
     public static bool PlayerWon =>
         Instance != null && Instance._results.Count > 0 && Instance._results[0].isPlayer;
 
+    // The player's place in the classification (1 = won), 0 before the results are up or when the player is
+    // not in them. Read by MasterDraftRaceHost to pay out coins.
+    public static int PlayerFinishPosition
+    {
+        get
+        {
+            if (Instance == null || Instance._phase < Phase.Results) return 0;
+            for (int i = 0; i < Instance._results.Count; i++) if (Instance._results[i].isPlayer) return i + 1;
+            return 0;
+        }
+    }
+
+    public static int ClassifiedCount => Instance != null && Instance._phase >= Phase.Results ? Instance._results.Count : 0;
+
     // How far through the race the leader is, 0 at the green and 1 at the checkered, counted in whole
     // laps plus the leader's fraction of the current one. The AI reads this to settle in early and charge
     // over the closing laps (Draftmaster.Sim.RaceCraft).
@@ -726,6 +740,22 @@ public class RaceDirector : MonoBehaviour
             GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), "You finished P" + playerPos, pos);
             pos.normal.textColor = posPrev;
             ry += PixelGUI.Px(18f);
+        }
+
+        // A Master Draft race pays coins into the card collection and leads back to the Master Draft menu.
+        if (GameSession.IsMasterDraft)
+        {
+            var coins = PixelGUI.Data;
+            var coinsPrev = coins.normal.textColor;
+            coins.normal.textColor = PixelGUI.Gold;
+            GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), MasterDraftRaceHost.ResultLine, coins);
+            coins.normal.textColor = coinsPrev;
+            ry += PixelGUI.Px(18f);
+            if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "Back to Master Draft"))
+                MasterDraftRaceHost.ReturnToMenu();
+            ry += bh + PixelGUI.Px(4f);
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "Close", false)) _panelHidden = true;
+            return;
         }
 
         // A single race pays nothing and leads nowhere, so the rewards column and the weekend buttons come

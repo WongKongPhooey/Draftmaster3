@@ -22,7 +22,7 @@ public static class PlayerCarLivery
 
     static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!GameSession.IsSingleRace) return;
+        if (!GameSession.IsOneOffRace) return;
 
         int number = PlayerPrefs.GetInt(PlayerDriver.NumberKey, 0);
         if (number <= 0) return;

@@ -219,6 +219,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
     public VehicleInfo vehicleInfo;
 
+    // Master Draft card effects on this car: the car card's small power/handling/draft trims and timed action
+    // cards (Push To Pass, Slipstream). 1 = stock. Only MasterDraftRaceHost writes them, so every other mode
+    // drives the car exactly as before.
+    [System.NonSerialized] public float cardPowerScale = 1f;   // engine accel and the top-speed ceiling
+    [System.NonSerialized] public float cardGripScale = 1f;    // tyre grip, both axles
+    [System.NonSerialized] public float cardDraftScale = 1f;   // slipstream tow strength
+
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
     // What ApplyCarImpact's spin actually turns against: the yaw inertia, divided by spinSensitivity. Before
     // RecomputeGeometry has run, a wheelbase-sized box stands in.
@@ -667,11 +674,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (push > 0f) topMps *= 1f + RestrictorPlate.PushTopSpeedGain * push * TrackConditions.PushScale;
         // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
-        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
-        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * throttleIn;
+        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow * cardDraftScale * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
+        topMps *= cardPowerScale;
+        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * cardPowerScale * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
-        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * TrackConditions.DraftScale * throttleIn;
+        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * cardDraftScale * TrackConditions.DraftScale * throttleIn;
         if (push > 0f) accel += RestrictorPlate.PushAccel * push * TrackConditions.PushScale * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
@@ -707,8 +715,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
         float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;
-        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * DirtyAirGrip * (1f - understeerBias);
-        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * DirtyAirGrip * (1f + understeerBias);
+        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * DirtyAirGrip * cardGripScale * (1f - understeerBias);
+        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * DirtyAirGrip * cardGripScale * (1f + understeerBias);
 
         // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
         muF *= surfGrip;

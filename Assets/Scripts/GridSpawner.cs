@@ -334,7 +334,7 @@ public class GridSpawner : MonoBehaviour
         // still sat in memory belongs to a career weekend this race has nothing to do with — reading it
         // here would pin the field's identities to somebody else's session and hand the player a rank they
         // earned at another track.
-        bool qualifyingCounts = !practice && !GameSession.IsSingleRace;
+        bool qualifyingCounts = !practice && !GameSession.IsOneOffRace;
 
         // Race after qualifying: the captured grid fixes each car's identity and slot. GridOrder[g] is
         // grid slot g (pole = 0); the player's rank becomes their reserved pit box, and the AI keep the
@@ -398,7 +398,7 @@ public class GridSpawner : MonoBehaviour
             // default pit parking spot to the front.
             else if (!practice)
                 reservedBox = Draftmaster.Sim.StartingGrid.UnqualifiedSlot(totalBoxes,
-                                                                           GameSession.IsSingleRace);
+                                                                           GameSession.IsOneOffRace);
             // Tell the player car its reserved grid slot so the formation order holds the place open for it.
             if (pls.car != null) pls.car.SetFormationGrid(reservedBox);
             // Publish it so the player-facing pit systems (box marker, pit service) know which box is theirs.
