@@ -19,7 +19,8 @@
 // code that used to ask IsSinglePlayer asks CareerActive instead.
 public static class GameSession
 {
-    public enum Mode { SinglePlayer, Multiplayer, CoopCareer, SingleRace }
+    // Appended only: serialised by number.
+    public enum Mode { SinglePlayer, Multiplayer, CoopCareer, SingleRace, MasterDraft }
 
     public static Mode CurrentMode = Mode.SinglePlayer;
 
