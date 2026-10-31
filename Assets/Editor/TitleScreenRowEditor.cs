@@ -43,6 +43,19 @@ public static class TitleScreenRowEditor
                          after: TitleScreenUI.Command.LoadScene));
     }
 
+    // MASTER DRAFT sits between SINGLE RACE and MULTIPLAYER. There is no mode behind it yet, so it goes in
+    // as a NotWired placeholder — the house style for "the design has this and the game doesn't yet": it
+    // draws disabled and says "Not wired up yet." When the mode exists, re-run AddRow with its command and
+    // the placeholder is wired in place.
+    //
+    // Placed by label rather than by command: SINGLE RACE and OPTIONS are both LoadScene rows, so "after
+    // the first LoadScene" depends on list order, which need not match the column.
+    [MenuItem("Draftmaster/UI/Add MASTER DRAFT Row To Title Screen")]
+    public static void AddMasterDraftRow()
+    {
+        Debug.Log(AddRow("MASTER DRAFT", TitleScreenUI.Command.NotWired, "", afterLabel: "SINGLE RACE"));
+    }
+
     // CONTINUE -> CAREER. The row resumes the career you are in the middle of, and "continue" describes the
     // button rather than the thing behind it — every other row on the menu names a mode.
     //
@@ -298,6 +311,14 @@ public static class TitleScreenRowEditor
     // Insert a row directly after the first row carrying `after`. Returns what happened.
     public static string AddRow(string label, TitleScreenUI.Command command, string sceneName,
                                 TitleScreenUI.Command after)
+        => AddRow(label, command, sceneName, rows => rows.FindIndex(r => r != null && r.command == after));
+
+    // Insert a row directly after the row labelled `afterLabel`. Returns what happened.
+    public static string AddRow(string label, TitleScreenUI.Command command, string sceneName, string afterLabel)
+        => AddRow(label, command, sceneName, rows => rows.FindIndex(r => r != null && r.label == afterLabel));
+
+    static string AddRow(string label, TitleScreenUI.Command command, string sceneName,
+                         System.Func<System.Collections.Generic.List<TitleScreenUI.Row>, int> findAnchor)
     {
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
@@ -349,7 +370,7 @@ public static class TitleScreenRowEditor
                    "Nothing was moved — the row was already in the design.";
         }
 
-        int at = ui.rows.FindIndex(r => r != null && r.command == after);
+        int at = findAnchor(ui.rows);
         int insertAt = at >= 0 ? at + 1 : ui.rows.Count;
 
         // Clone a real row rather than building one: it carries the kit's font, spacing, colour and the
@@ -379,10 +400,12 @@ public static class TitleScreenRowEditor
         cloneRect.anchoredPosition = template.rect.anchoredPosition + Vector2.down * spacing;
 
         // Everything below the insertion point moves down by one row, so the block stays evenly spaced
-        // wherever the designer put it.
-        for (int i = insertAt; i < ui.rows.Count; i++)
-            if (ui.rows[i]?.rect != null)
-                ui.rows[i].rect.anchoredPosition += Vector2.down * spacing;
+        // wherever the designer put it. Measured by position rather than by list index, as RemoveRow does:
+        // the list is the wiring and the column is the layout, and the two need not agree.
+        float anchorY = template.rect.anchoredPosition.y;
+        foreach (var other in ui.rows)
+            if (other?.rect != null && other.rect.anchoredPosition.y < anchorY)
+                other.rect.anchoredPosition += Vector2.down * spacing;
 
         if (ui.statusLabel != null &&
             ui.statusLabel.rectTransform.anchoredPosition.y < cloneRect.anchoredPosition.y)
