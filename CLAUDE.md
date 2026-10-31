@@ -7,7 +7,8 @@ Editor — it is not built from the CLI. There is no CI; testing is Play Mode pl
 full Draftmaster menu reference, the play-mode key map, and the standing gotchas. Start there.
 It links the rest: `Docs/Tracks.md` (track pipeline), `Docs/Race-Weekend.md`,
 `Docs/NPCs-and-Quests.md` (paper-doll characters, dialogue, quests),
-`Docs/Rivalry-and-TeamSwitch.md`, `Docs/Sponsorship.md`, `Docs/AI-NR2003.md` (AI roadmap from NR2003).
+`Docs/Rivalry-and-TeamSwitch.md`, `Docs/Sponsorship.md`, `Docs/AI-NR2003.md` (AI roadmap from NR2003),
+`Docs/Master-Draft.md` (the card mode).
 
 ## Hazards
 
@@ -87,10 +88,20 @@ ledger, support-race sim, season championships, press bank, venue map, conversat
 `Assets/Scripts/Weekend/` holds the runtime (director, schedule screen, `Venues/` builder + hosts).
 Full guide: `Docs/Race-Weekend.md`.
 
+## Master Draft (card mode)
+
+The title's **MASTER DRAFT** row opens `Assets/Scenes/MasterDraft.unity`: a collectible-card mode (packs,
+a team of driver / car / crew chief / action cards, trades) whose Quick Race runs `RaceScene` in
+`GameSession.Mode.MasterDraft` — a one-off race (`GameSession.IsOneOffRace`) where each start/finish
+crossing draws an action card into a hand the player plays during the race (`MasterDraftRaceHost`). Pure
+rules in `Assets/Scripts/MasterDraft/Core/` (asmdef `Draftmaster.MasterDraft`), runtime in
+`Assets/Scripts/MasterDraft/Runtime/`. Online is built but off (`MasterDraftOnline.Enabled`); offline the
+profile is `persistentDataPath/masterdraft.json`, never the career DB. Full guide: `Docs/Master-Draft.md`.
+
 ## Scenes
 
 - **`Assets/Scenes/`** — the live scenes, and what is in the build: `TitleScreen` (boot),
-  `RaceScene` (the shared race scene), `GarageScreen`, `SingleRace`, `DemoMenu`, `IronOvalShowcase`.
+  `RaceScene` (the shared race scene), `GarageScreen`, `SingleRace`, `MasterDraft`, `DemoMenu`, `IronOvalShowcase`.
 - **`Assets/Menus/TeamGarage.unity`** — the on-foot team factory hub (in the build).
 - **`Assets/Tracks/`** — the pre-spline prototype scenes on the legacy scrolling system (Phoenix,
   Phoenix2D, PhoenixInfield, an old WatkinsGlen). Not in the build, not part of the spline system.

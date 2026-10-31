@@ -48,6 +48,13 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   `SoundVolumes`. There is no AudioMixer: MASTER is `AudioListener.volume`, and each voice multiplies its
   own level by its channel (`SoundVolumes.Engines` etc.). A new sound must do the same, or only MASTER
   reaches it.
+* **MASTER DRAFT** opens `Assets/Scenes/MasterDraft.unity` (`MasterDraftUI`) — the collectible-card mode:
+  Home, Go Race, My Team, Packs, Trades. A free Starter Pack builds a first team; Go Race hands a Quick
+  Race to `RaceScene` in `GameSession.Mode.MasterDraft` (a one-off race like SINGLE RACE, plus a hand of
+  action cards drawn at each start/finish crossing), and the results screen leads back. Offline in v1
+  (`MasterDraftOnline.Enabled = false`, profile in `masterdraft.json`, never the career DB). Rebuild the
+  scene with `Draftmaster > Master Draft > Build Master Draft Scene`; the title row is wired by
+  `Draftmaster > UI > Add MASTER DRAFT Row To Title Screen`. Full guide: `Docs/Master-Draft.md`.
 * **The garage sheet is not on the menu.** It is opened from a `LaptopInteractable` — one on the dinette
   table in the RV, one on the desk in the team factory. `GarageScreenLoader` remembers which scene
   opened it so BACK returns there; opened cold it falls back to the title.
@@ -71,7 +78,7 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   subsystem adds one. Settings, HUD toggles and the signed-in account survive; a new subsystem's keys are
   cleared without anyone remembering to add them.
 * Build list order is load-bearing: `TitleScreen`, `RaceScene`, `GarageScreen`, `TeamGarage`, `DemoMenu`
-  (multiplayer lobby), `SingleRace`, `Options`. A destination missing from that list makes its title row
+  (multiplayer lobby), `SingleRace`, `Options`, `MasterDraft`. A destination missing from that list makes its title row
   draw disabled.
   `Assets/Tests/Editor/TitleScreenWiringTests.cs` checks the whole chain.
 * **`DemoMenu` is currently unreachable** — nothing routes to the multiplayer lobby since the title screen
@@ -633,6 +640,7 @@ and `PadBindingsTests` fails if two shortcuts land on one button in the same con
 | `,` / `.` | D-pad left / right | Crew chief only: point the camera at the previous / next car in the running order; past either end it comes back to the chief. The chief stands still while the camera is away |
 | `V` | B | Drive / Auto toggle — AI drives your car, camera stays on it; watch other cars as crew chief (pad: from the seat only) |
 | `L` | Y | Pit limiter (car) |
+| `1`-`5` | View steps, A plays | Master Draft race only: play an action card from the hand strip (tap it on a phone) |
 
 Prompts follow the device touched last, not the one plugged in: world-space keycaps (`InputPromptGlyph`),
 the bottom-of-screen hint plate and every panel's key tab swap to the pad's button icon
@@ -737,10 +745,15 @@ Rebuild Track Generators · Retarget World Sprites to Pixel Standard · Audit Pi
 Report Sprite Scale Compensation · Report Surface Material Usage · Dump Pixel Font Atlas ·
 Preview / Clear Dialogue Bubble.
 
+### `Draftmaster > Master Draft`
+Build Master Draft Scene (safe to re-run — nothing hand-authored in it) · Reveal Offline Profile File ·
+Delete Offline Profile (next visit starts from a fresh Starter Pack). `Docs/Master-Draft.md`.
+
 ### `Draftmaster > UI`
 Build Demo UI Prefabs · Build Car Setup Panel Prefab · Build Control Hint Prefab ·
 Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild) ·
 Build Single Race Scene · Build Options Scene · Add SINGLE RACE Row To Title Screen ·
+Add MASTER DRAFT Row To Title Screen (wires it to the Master Draft scene) ·
 Wire MULTIPLAYER Row To Co-op Join · Wire OPTIONS Row To Options Screen ·
 Rename CONTINUE Row To CAREER · Set Up Demo Rows On Title Screen.
 
