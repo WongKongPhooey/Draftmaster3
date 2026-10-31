@@ -314,7 +314,10 @@ public class PhoneScheduleApp : PhoneApp
 
         // SKIP TO HERE, or why not.
         float bh = RowH + PixelGUI.Px(4f);
-        if (WeekendSkip.CanSkipTo(a, out string why))
+        // A co-op guest reads the host's weekend; moving its clock is the host's call.
+        string why = "";
+        if (Coop.IsGuest) { if (StillAhead(a)) y += Body(x, y, w, "The host runs the clock.", PixelGUI.TextDisabled); }
+        else if (WeekendSkip.CanSkipTo(a, out why))
         {
             int leaving = LeftBehind(a);
             if (leaving > 0)

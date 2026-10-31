@@ -674,6 +674,7 @@ public class WeekendDirector : MonoBehaviour
     // false, with the reason, when the skip is not allowed.
     public static bool SkipTo(WeekendActivity target, out string reason)
     {
+        if (Coop.IsGuest) { reason = "The host runs the clock."; return false; }
         if (!WeekendSkip.CanSkipTo(target, out reason)) return false;
         MarkBriefed();
 

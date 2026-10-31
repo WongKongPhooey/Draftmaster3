@@ -45,6 +45,7 @@ public class CareerMirror : MonoBehaviour
     bool _lastLive;
     string _lastTrack;
     int _lastPhase = -1;
+    string _lastAppointment;
     bool _pushedOnce;
 
     [Tooltip("Metres moved by the host in a SINGLE frame that count as a jump rather than a walk, and pull the guest along. Walking flat out covers a fraction of a metre per frame, so anything near this is a teleport.")]
@@ -236,6 +237,7 @@ public class CareerMirror : MonoBehaviour
         bool live = RaceWeekend.SessionLive;
         string track = TrackSelection.CurrentId ?? "";
         int phase = (int)RaceStart.Current;
+        string appointment = WeekendAppointment.PendingId;
 
         if (_pushedOnce
             && ledger == _lastLedger
@@ -243,7 +245,8 @@ public class CareerMirror : MonoBehaviour
             && session == _lastSession
             && live == _lastLive
             && track == _lastTrack
-            && phase == _lastPhase) return;
+            && phase == _lastPhase
+            && appointment == _lastAppointment) return;
 
         _lastLedger = ledger;
         _lastWeekendId = weekendId;
@@ -251,6 +254,7 @@ public class CareerMirror : MonoBehaviour
         _lastLive = live;
         _lastTrack = track;
         _lastPhase = phase;
+        _lastAppointment = appointment;
         _pushedOnce = true;
 
         SendState(nm, Coop.NoGuest);   // NoGuest = broadcast to every connected client
@@ -265,9 +269,10 @@ public class CareerMirror : MonoBehaviour
 
         string ledger = WeekendLedger.ExportJson() ?? "";
         string track = TrackSelection.CurrentId ?? "";
+        string appointment = WeekendAppointment.PendingId ?? "";
 
-        // Sized for the two strings (length prefix + UTF-16 payload) plus the fixed fields, with slack.
-        int size = 64 + ledger.Length * 2 + track.Length * 2;
+        // Sized for the three strings (length prefix + UTF-16 payload) plus the fixed fields, with slack.
+        int size = 64 + ledger.Length * 2 + track.Length * 2 + appointment.Length * 2;
         using var writer = new FastBufferWriter(size, Allocator.Temp, 1024 * 1024);
 
         writer.WriteValueSafe(ledger);
@@ -276,6 +281,7 @@ public class CareerMirror : MonoBehaviour
         writer.WriteValueSafe(RaceWeekend.SessionLive);
         writer.WriteValueSafe(track);
         writer.WriteValueSafe((int)RaceStart.Current);
+        writer.WriteValueSafe(appointment);
 
         // The ledger can run to a few KB once a weekend has headlines in it, so this has to be able to
         // fragment rather than being capped at one MTU.
@@ -295,6 +301,9 @@ public class CareerMirror : MonoBehaviour
         reader.ReadValueSafe(out bool sessionLive);
         reader.ReadValueSafe(out string trackId);
         reader.ReadValueSafe(out int racePhase);
+        // Added after the rest: a host on an older build stops here, and its guest just has no objective.
+        string appointment = "";
+        if (reader.Position < reader.Length) reader.ReadValueSafe(out appointment);
 
         // The book, held in memory only — ImportJson never writes the guest's prefs.
         WeekendLedger.ImportJson(ledgerJson);
@@ -305,6 +314,9 @@ public class CareerMirror : MonoBehaviour
         PlayerPrefs.SetInt("raceweekend.id", weekendId);
         PlayerPrefs.SetInt("raceweekend.sessionlive", sessionLive ? 1 : 0);
         if (!string.IsNullOrEmpty(trackId)) PlayerPrefs.SetString("track.current", trackId);
+        // Where the host is due next: the guest's objective strip and marker point at the same place. Written
+        // even when empty, so a guest's own old booking never shows through.
+        PlayerPrefs.SetString(WeekendAppointment.Key, appointment ?? "");
 
         // Plain statics — no prefs, nothing to protect.
         RaceWeekend.Current = (RaceWeekend.Session)Mathf.Clamp(session, 0, 2);

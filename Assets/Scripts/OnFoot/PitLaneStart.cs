@@ -841,8 +841,10 @@ public class PitLaneStart : MonoBehaviour
 
         StepIndoorZoom();
 
+        // Never on a co-op guest: the run is taught after the phone lesson, which is the host's beat
+        // (ChiefCheckInBeat), so a guest would wait for a hint that never comes and never run.
         RunLocked = showControlHints && _player != null && !_entered && _phase == EntryPhase.Walking
-                    && !ControlHints.Taught("run");
+                    && !ControlHints.Taught("run") && !Coop.IsGuest;
 
         if (_player == null) return;
 

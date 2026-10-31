@@ -21,6 +21,7 @@ public static class CoopGuestPrefs
         "track.current",              // TrackSelection
         "raceweekend.id",             // RaceWeekend.WeekendId
         "raceweekend.sessionlive",    // RaceWeekend.SessionLive
+        WeekendAppointment.Key,       // the objective strip and marker
     };
 
     const string StashPrefix = "coop.guest.stash.";

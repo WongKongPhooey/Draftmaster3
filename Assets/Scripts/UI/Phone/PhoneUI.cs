@@ -142,10 +142,9 @@ public class PhoneUI : MonoBehaviour
 
     void Update()
     {
-        // The phone is the career's own device — contacts, deals, tasks, all of it the host's. A co-op guest
-        // is a driver in the host's weekend, not the owner of that career, so they do not carry it.
-        if (Coop.IsGuest) return;
-
+        // A co-op guest carries a phone too. The schedule reads the host's mirrored ledger (read-only on the
+        // guest) and the one thing on it that moves the career — SKIP TO HERE — is host-only; the rest is
+        // this player's own. Only the summons (ChiefCheckInBeat) stays the host's.
         _pollTimer -= Time.unscaledDeltaTime;
         if (_pollTimer <= 0f)
         {
@@ -325,7 +324,6 @@ public class PhoneUI : MonoBehaviour
 
     void DrawTouchButton()
     {
-        if (Coop.IsGuest) return;
         var body = _player != null ? _player : OnFootController.Current;
         if (!TouchButtonShows(body)) return;
 
@@ -373,7 +371,6 @@ public class PhoneUI : MonoBehaviour
     // origin), the space TouchWalkLayout is measured in.
     bool TouchButtonPressed()
     {
-        if (Coop.IsGuest) return false;
         var body = _player != null ? _player : OnFootController.Current;
         if (!TouchButtonShows(body)) return false;
 

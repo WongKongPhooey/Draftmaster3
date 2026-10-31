@@ -12,7 +12,8 @@ using UnityEngine;
 // loads, and an appointment made in the paddock has to survive the reload that follows a session.
 public static class WeekendAppointment
 {
-    const string Key = "weekend.appointment";
+    // Public for the co-op mirror, which writes the host's booking straight into a guest's prefs.
+    public const string Key = "weekend.appointment";
 
     // The id of the booking being walked to, or "" when the player is not due anywhere.
     public static string PendingId

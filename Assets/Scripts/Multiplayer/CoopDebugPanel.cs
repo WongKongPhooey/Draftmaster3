@@ -132,6 +132,14 @@ public class CoopDebugPanel : MonoBehaviour
         if (OnFootController.Current != null)
             GUILayout.Label($"me        {OnFootController.Current.transform.position}");
 
+        // The HUD layer, for "the guest has no UI". The phone, the stick and the prompts all need a body of
+        // this player's own that nothing is holding; the pause menu only answers in a scene with a track.
+        var body = OnFootController.Current;
+        GUILayout.Label($"ui        body {(body == null ? "NONE" : body.MovementLocked ? "LOCKED" : "free")}   " +
+                        $"track {(TrackPackage.ActiveTrack != null ? "yes" : "NO")}   " +
+                        $"touch {(TouchDriveControls.TouchPlatform ? "yes" : "no")}   " +
+                        $"paused {(RacePauseMenu.IsPaused ? "yes" : "no")}");
+
         string code = NetworkLauncher.Instance != null ? NetworkLauncher.Instance.JoinCode : null;
         if (!string.IsNullOrEmpty(code)) GUILayout.Label($"CODE      {code}");
         if (!string.IsNullOrEmpty(_status)) GUILayout.Label($"status    {_status}");
