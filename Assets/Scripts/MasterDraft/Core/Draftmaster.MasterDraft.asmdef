@@ -1,0 +1,14 @@
+{
+    "name": "Draftmaster.MasterDraft",
+    "rootNamespace": "Draftmaster.MasterDraft",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
