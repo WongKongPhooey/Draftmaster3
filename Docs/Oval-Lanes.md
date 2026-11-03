@@ -360,13 +360,55 @@ Results (2026-11-03):
 
 These were measured with the working tree's uncommitted AI changes present, as stages 1 and 2 were.
 
+## Live races: `OvalLaneDirector`
+
+`OvalLaneDirector` (`Assets/Scripts/AI/OvalLaneDirector.cs`) puts the lanes into real sessions: single races,
+weekend races, practice, and watched fields. It bootstraps itself (no scene wiring) and runs before `SplineDriver`
+each physics step.
+
+- **Under green on an oval**, every AI car on the main track (every enabled `SplineDriver` in `RaceField`, except the
+  safety car, cars on pit road and cars held still on the grid) is given a lane, at most 8 cars a step. Trains,
+  spacing and passing by lane change then run exactly as in the sim.
+- **Off the green** (pre-grid, the formation lap, a full-course caution) it takes back the lanes it gave. A car mid
+  lane change keeps its lane until the move lands (~3 s). The formation brain then lines the field up two-wide and
+  single file as before, and the next green hands the lanes out again.
+- **Which lane:** the nearer one. Cars alongside each other (within 6 m along, 4.5 m across) are split: the one
+  further toward the infield takes the inside lane and the other the outside. A car alongside one that already has
+  a lane takes the other one.
+- **No snap at the green.** Lane mode drops the car's tactical offsets at once. So the car is handed its lane with
+  `lateralOffset` set to where it already is relative to the lane line. `AIRacingBehaviour` eases `lateralOffset` to 0
+  at its sideways rate (1.6 m/s) under green. A practice stint car, which `AIRacingBehaviour` leaves alone, is eased
+  by the director.
+- **Not on road courses** (`TryGetOvalLanes` fails there) and **not on plate tracks** (`TrackConditions.AiPackRacing`),
+  which keep their three-wide pack AI. Cars given a lane by hand (the sim tests) are never taken back.
+- **A/B switch:** pause menu (`Esc`) > **Lane AI**, shown on ovals that race in lanes. Stored in PlayerPrefs
+  `OvalLaneAI`, default on. Turning it off hands every lane back at once (cars mid-move finish their move first).
+  **Oval lanes** next to it is just the drawing.
+- EditMode tests never start it (it bootstraps at runtime), so every sim number above is unchanged.
+
+### Verification: `OvalPassingTests.ATwoWidePackIsHandedItsLanesAtTheGreen`
+
+EditMode, ~12 s. Texas, **16 cars, none with a lane**. They are rolled to the green as a tight two-wide pack: rows
+12 m apart, each pair 3.5 m across on GridSpawner's grid stagger. The director is stepped before the cars and hands out
+the lanes at the green. Then 5 laps with passing on. Contacts, walls, spins and offs count from the very first step.
+
+Results (2026-11-03):
+
+| | |
+|---|---|
+| Lanes a second after the green | `I O I O I O I O I O I O I O I O`: every row split, no car without a lane |
+| Car-to-car contacts / wall hits / spins / offs | **0 / 0 / 0 / 0** |
+| Train emergencies | **0** steps |
+| Closest door to door | 0.86 m |
+| Lane error (from the first timed lap) | mean **0.113 m**, max **0.620 m** |
+| Lane changes started / completed / aborted | 3 / 3 / 0, 2 passes |
+
 ## Not done yet
 
-- **Nothing assigns lanes in a real session yet** (still true after stage 3). `ovalLane` defaults to `None`, so
-  races, practice and the formation lap behave exactly as before. All three stages are proved in the sim only.
-  Switching a session on means `GridSpawner` (or the session) handing each car a lane at the green. That is not done:
-  lane mode still ignores `tacticalLateralOffset`, which `FormationController` uses to line cars up two-wide, and
-  `AIRacingBehaviour`'s avoidance of a wrecked car (the train brakes for it, but no car steers round it).
+- **Live races not yet play-tested.** The director has only been run in the sim.
+- `AIRacingBehaviour`'s steering round a wrecked car is still ignored in lane mode. The train brakes for a slow or
+  stopped car, and a car with a run on it may pass by changing lanes. A stopped car on an oval brings out the
+  full-course caution (single player), which hands the lanes back.
 - The train only runs under green. The formation lap and cautions still belong to `FormationController` /
   `AIRacingBehaviour`.
 - Passing only starts under green. A yellow or a pit call mid-move lets the move finish (~3 s); it is dropped only

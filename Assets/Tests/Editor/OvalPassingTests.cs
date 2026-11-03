@@ -101,6 +101,11 @@ public class OvalPassingTests
     const int TimedLaps = 20;               // after one lap to form up
     const float RowGap = 70f;               // m between cars in a lane at the start; the outside lane half a row back
     const float PassWindowSeconds = 60f;    // a lane change has this long to get the car past the one it followed
+    // The live handover (ATwoWidePackIsHandedItsLanesAtTheGreen): a tight two-wide rolling pack.
+    const int HandoverCarsPerLane = 8;
+    const int HandoverLaps = 5;
+    const float HandoverRowGap = 12f;      // m, row to row (nose to tail 7.2 m)
+    const float HandoverStagger = 3.5f;    // m across between a row's two cars (GridSpawner.rowStagger)
 
     GameObject _package;
     readonly List<GameObject> _cars = new List<GameObject>();
@@ -121,6 +126,7 @@ public class OvalPassingTests
         public int passes, noPass;          // lane changes that got the car past the car it followed, and that didn't
         public int overtakes;               // any change of running order between two cars
         public int contacts, wallHits, spins, offs, emergencySteps;
+        public int unassigned, rowsInOneLane;   // live handover: cars with no lane, rows put in one lane
         public float minDoor = float.MaxValue, minBumper = float.MaxValue;
         public double errInSum, errOutSum; public int errInN, errOutN;
         public float errInMax, errOutMax, errOutMaxAt;
@@ -133,7 +139,7 @@ public class OvalPassingTests
 
         public string Report()
         {
-            var sb = new StringBuilder($"[OvalPassing] Texas, {CarsPerLane * 2} cars of mixed pace in two lanes, passing on: {laps} timed laps");
+            var sb = new StringBuilder($"[OvalPassing] Texas, {changesByCar.Length} cars of mixed pace in two lanes, passing on: {laps} timed laps");
             sb.Append($"\n  leader laps {string.Join(", ", leaderLaps.ConvertAll(t => t.ToString("0.00")))}");
             sb.Append($"\n  lane changes started {started}, completed {completed}, aborted {aborted}; passes made by a lane change {passes}, lane changes that didn't get by in {PassWindowSeconds:0} s {noPass}; running-order changes {overtakes}");
             sb.Append($"\n  car contacts {contacts}, wall hits {wallHits}, spins {spins}, offs {offs}, train emergencies {emergencySteps} steps; closest door to door {minDoor:0.00} m, nose to tail {minBumper:0.00} m; closest car behind in the other lane as a move began {minRearGapAtStart:0.0} m");
@@ -184,7 +190,44 @@ public class OvalPassingTests
         Assert.LessOrEqual(r.maxLatRateIn, LaneChange.Spec.Default.maxLateralSpeed + 1f, "A lane change was a swerve. " + report);
     }
 
-    PassResult DriveField(Type raceStart)
+    // Live races (OvalLaneDirector): nobody starts with a lane. The field rolls to the green as a tight two-wide pack
+    // - rows HandoverRowGap apart, each pair side by side on the grid stagger either side of the racing line - and the
+    // director hands the lanes out at the green. Contacts, walls, spins and offs count from the very first step,
+    // because the handover is the moment this tests.
+    [Test]
+    public void ATwoWidePackIsHandedItsLanesAtTheGreen()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var raceStart = Runtime("RaceStart");
+        PassResult r;
+        try
+        {
+            calib.Invoke(null, new object[] { TrackId });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+            raceStart.GetMethod("GreenFlagNow").Invoke(null, null);
+            SpawnTrack(TrackId);
+            r = DriveField(raceStart, handOver: true, timedLaps: HandoverLaps, carsPerLane: HandoverCarsPerLane);
+        }
+        finally
+        {
+            calib.Invoke(null, new object[] { "" });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+        }
+
+        string report = r.Report();
+        Debug.Log(report);
+        Assert.AreEqual(HandoverLaps, r.laps, "The field didn't finish its laps. " + report);
+        Assert.AreEqual(0, r.unassigned, "Cars were never given a lane. " + report);
+        Assert.AreEqual(0, r.rowsInOneLane, "Two cars side by side were given the same lane. " + report);
+        Assert.AreEqual(0, r.contacts, "Cars touched. " + report);
+        Assert.AreEqual(0, r.wallHits, report);
+        Assert.AreEqual(0, r.spins, report);
+        Assert.AreEqual(0, r.offs, report);
+        Assert.Less(r.ErrOut, 0.3f, "Mean lane error too big. " + report);
+        Assert.Less(r.errOutMax, 1f, "Max lane error too big. " + report);
+    }
+
+    PassResult DriveField(Type raceStart, bool handOver = false, int timedLaps = TimedLaps, int carsPerLane = CarsPerLane)
     {
         var trackType = Runtime("TrackBuilder");
         var track = (Component)_package.GetComponentInChildren(trackType, true);
@@ -197,7 +240,7 @@ public class OvalPassingTests
         var racingType = Runtime("AIRacingBehaviour");
         var pvcType = Runtime("PlayerVehicleController");
         var inputType = Runtime("SplineInputDriver");
-        int cars = CarsPerLane * 2;
+        int cars = carsPerLane * 2;
 
         // The drivers, rolled as OvalLaneTests' trains roll them, but started in a mixed order.
         UnityEngine.Random.InitState(23);
@@ -222,6 +265,15 @@ public class OvalPassingTests
         var inputs = new Component[cars];
         float length = 0f;
         var paceLine = new StringBuilder("\n  start order (lane, pace):");
+        // Live handover: which side the infield is, for the grid stagger below (before any car is placed).
+        float gridInside = 0f;
+        if (handOver)
+        {
+            var centre = (System.Collections.IList)trackType.GetMethod("SampleCenterline", Type.EmptyTypes).Invoke(track, null);
+            var tan = new Vector2[centre.Count];
+            for (int i = 0; i < tan.Length; i++) tan[i] = (Vector2)centre[i].GetType().GetField("tangent").GetValue(centre[i]);
+            gridInside = OvalLanes.InsideSide(tan);
+        }
         for (int i = 0; i < cars; i++)
         {
             int ln = i % 2, row = i / 2;
@@ -236,11 +288,13 @@ public class OvalPassingTests
             Set(spline, "spawnInPit", false);
             Set(spline, "spriteFacesUp", false);
             Set(spline, "angleOffsetDeg", 180f);
-            Set(spline, "lateralOffset", 0f);
+            // The grid stagger (GridSpawner's lateralOffset): each row's pair either side of the racing line, the even
+            // car toward the infield. Live handover only; the lane runs start on their lanes.
+            Set(spline, "lateralOffset", handOver ? (i % 2 == 0 ? 1f : -1f) * gridInside * HandoverStagger * 0.5f : 0f);
             Set(spline, "speed", 60f);
             Set(spline, "paceMultiplier", paces[i] * aiPace);
             Set(spline, "cornerCommitment", commit[i]);
-            SetLane(spline, ln == 0 ? "Inside" : "Outside");
+            if (!handOver) SetLane(spline, ln == 0 ? "Inside" : "Outside");
             Set(spline, "lanePassing", true);
             var racing = go.AddComponent(racingType);
             Set(racing, "mistakeProbabilityPerSecond", 0f);
@@ -267,10 +321,11 @@ public class OvalPassingTests
             Call(spline, "Start");
             length = (float)splineType.GetProperty("TrackLength").GetValue(spline);
             Assert.Greater(length, 100f, "The AI brain never built its spline.");
-            Set(spline, "startDistance", Mathf.Repeat(-row * RowGap - ln * RowGap * 0.5f, length));
+            Set(spline, "startDistance", Mathf.Repeat(handOver ? -row * HandoverRowGap : -row * RowGap - ln * RowGap * 0.5f, length));
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
             Call(input, "OnEnable");
-            Assert.IsTrue((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "A car isn't following its lane.");
+            if (!handOver)
+                Assert.IsTrue((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "A car isn't following its lane.");
             splines[i] = spline; racers[i] = racing; pvcs[i] = pvc; inputs[i] = input;
             paceLine.Append($" {(ln == 0 ? "I" : "O")}{paces[i]:0.000}");
         }
@@ -288,6 +343,22 @@ public class OvalPassingTests
             sTan[i] = (Vector2)sampleType.GetField("tangent").GetValue(samples[i]);
         }
         float insideSide = OvalLanes.InsideSide(sTan);
+
+        // Live handover: the director is stepped before the cars, as its execution order puts it.
+        Action directorStep = null;
+        if (handOver)
+        {
+            var dirType = Runtime("OvalLaneDirector");
+            Assert.IsNotNull(dirType, "OvalLaneDirector is gone.");
+            var dirGo = new GameObject("OvalLaneDirector");
+            _cars.Add(dirGo);
+            var dir = dirGo.AddComponent(dirType);
+            Call(dir, "Awake");
+            var en = dirType.GetField("_enabled", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(en, "OvalLaneDirector._enabled is gone.");
+            en.SetValue(null, 1);   // on, whatever this machine's PlayerPrefs say, without writing them
+            directorStep = Step(dir);
+        }
 
         var steps = new Action[cars * 4];
         for (int i = 0; i < cars; i++)
@@ -353,10 +424,12 @@ public class OvalPassingTests
         int lap = -1, lead = 0;
         float lapClock = 0f, clock = 0f;
         double leadMark = 0;
-        int maxSteps = Mathf.RoundToInt((TimedLaps + 2f) * 40f / dt);
+        int maxSteps = Mathf.RoundToInt((timedLaps + 2f) * 40f / dt);
+        bool splitChecked = false;
         for (int step = 0; step < maxSteps; step++)
         {
             SetGreen(raceStart, step * dt);
+            directorStep?.Invoke();
             for (int s = 0; s < steps.Length; s++) steps[s]();
             clock += dt;
             lapClock += dt;
@@ -388,7 +461,17 @@ public class OvalPassingTests
                 if (lap > 0) r.leaderLaps.Add(lapClock);
                 lapClock = 0f;
             }
-            if (lap >= TimedLaps) break;
+            if (lap >= timedLaps) break;
+            if (handOver && !splitChecked && step * dt >= 1f)
+            {
+                // A second after the green: every car has a lane, and each row's pair is split across the two.
+                splitChecked = true;
+                for (int i = 0; i < cars; i++) if (lane[i] == 0) r.unassigned++;
+                for (int i = 0; i + 1 < cars; i += 2) if (lane[i] == lane[i + 1]) r.rowsInOneLane++;
+                var laneList = new StringBuilder("\n  lanes a second after the green:");
+                for (int i = 0; i < cars; i++) laneList.Append(lane[i] == 1 ? " I" : lane[i] == 2 ? " O" : " -");
+                r.incidents.Append(laneList);
+            }
             if (lap < 0)
             {
                 // Forming up: the counters are read from the first timed lap.
@@ -398,7 +481,7 @@ public class OvalPassingTests
                     baseCompleted[i] = (int)completed.GetValue(splines[i]);
                     baseAborted[i] = (int)aborted.GetValue(splines[i]);
                 }
-                continue;
+                if (!handOver) continue;
             }
 
             for (int i = 0; i < cars; i++)
@@ -430,7 +513,8 @@ public class OvalPassingTests
                 float want = (float)targetLat.Invoke(splines[i], new object[] { cd[i] });
                 float err = Mathf.Abs(lat[i] - want);
                 float latRate = sideRate[i];
-                if (changing[i] && wasChanging[i])
+                if (lap < 0) { }   // forming up (handover only): the handover offset is still easing off
+                else if (changing[i] && wasChanging[i])
                 {
                     r.errInSum += err; r.errInN++;
                     r.errInMax = Mathf.Max(r.errInMax, err);
@@ -464,7 +548,7 @@ public class OvalPassingTests
                 {
                     float along = Mathf.Abs(Mathf.Repeat(cd[a] - cd[b] + length * 0.5f, length) - length * 0.5f);
                     float across = Mathf.Abs(lat[a] - lat[b]);
-                    if (lane[a] == lane[b] && !changing[a] && !changing[b]) r.minBumper = Mathf.Min(r.minBumper, along - 2f * CarHalfLength);
+                    if (lane[a] == lane[b] && lane[a] != 0 && !changing[a] && !changing[b]) r.minBumper = Mathf.Min(r.minBumper, along - 2f * CarHalfLength);
                     else if (along < 2f * CarHalfLength) r.minDoor = Mathf.Min(r.minDoor, across - 2f * CarHalfWidth);
                     bool touch = along < 2f * CarHalfLength && across < 2f * CarHalfWidth;
                     if (touch && !touching[a, b])
