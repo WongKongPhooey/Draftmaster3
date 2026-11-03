@@ -41,7 +41,7 @@ public class RacePauseMenu : MonoBehaviour
 
     // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
     // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
-    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, EndSession, SaveGame, Coop, QuitToTitle, Resume }
+    enum PadRow { None, RacingLine, OvalLanes, MiniMap, SwingCamera, DebugStats, EndSession, SaveGame, Coop, QuitToTitle, Resume }
     PadRow _padFocus;
     readonly System.Collections.Generic.List<PadRow> _padRows = new();
 
@@ -114,6 +114,7 @@ public class RacePauseMenu : MonoBehaviour
     {
         _padRows.Clear();
         _padRows.Add(PadRow.RacingLine);
+        if (OvalLaneOverlay.Available) _padRows.Add(PadRow.OvalLanes);
         _padRows.Add(PadRow.MiniMap);
         _padRows.Add(PadRow.SwingCamera);
         _padRows.Add(PadRow.DebugStats);
@@ -146,6 +147,7 @@ public class RacePauseMenu : MonoBehaviour
         switch (_padFocus)
         {
             case PadRow.RacingLine: RacingLineDisplay.Visible = !RacingLineDisplay.Visible; break;
+            case PadRow.OvalLanes: OvalLaneOverlay.Visible = !OvalLaneOverlay.Visible; break;
             case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
             case PadRow.SwingCamera: CameraViewMode.Swinging = !CameraViewMode.Swinging; break;
             case PadRow.DebugStats: DebugStatsOverlay.Visible = !DebugStatsOverlay.Visible; break;
@@ -266,7 +268,8 @@ public class RacePauseMenu : MonoBehaviour
 
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
         // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
-        int toggles = TouchDriveControls.TouchPlatform ? 5 : 4;
+        bool lanesRow = OvalLaneOverlay.Available;   // oval only: the two AI lanes (Docs/Oval-Lanes.md)
+        int toggles = (TouchDriveControls.TouchPlatform ? 5 : 4) + (lanesRow ? 1 : 0);
         int tabs = (EndSessionLabel != null ? 2 : 1)   // [end], co-op
                    + (SaveAnytime.CanSave ? 1 : 0);                        // [save]
         float contentH = headingH + gap * 3f                                // title, rule
@@ -294,6 +297,15 @@ public class RacePauseMenu : MonoBehaviour
         bool newLine = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), line, "  Racing line", _toggle);
         if (newLine != line) RacingLineDisplay.Visible = newLine;
         cy += toggleH;
+
+        if (lanesRow)
+        {
+            bool lanes = OvalLaneOverlay.Visible;
+            PadCursor(PadRow.OvalLanes, new Rect(content.x, cy, content.width, toggleH));
+            bool newLanes = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), lanes, "  Oval lanes", _toggle);
+            if (newLanes != lanes) OvalLaneOverlay.Visible = newLanes;
+            cy += toggleH;
+        }
 
         bool map = TrackMiniMap.Visible;
         PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, toggleH));

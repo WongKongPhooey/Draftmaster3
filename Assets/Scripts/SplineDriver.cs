@@ -595,6 +595,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Additive speed bonus (mph). Used for drafting/slipstream.")]
     public float aiSpeedBoostMph = 0f;
 
+    [Header("Oval Lanes")]
+    [Tooltip("On an oval (any track but a road course), the fixed lane this car drives (Draftmaster.Tracks.OvalLanes, Docs/Oval-Lanes.md). Its line becomes that lane outright - lineFactor, the trained line and tacticalLateralOffset all stand aside on the main track - and its corner speeds are planned off the lane's own curvature, so a car in the outside lane goes round on the outside. None = the normal racing line. Ignored on road courses. Changing it rebuilds the line on the next step.")]
+    public Draftmaster.Tracks.OvalLanes.Lane ovalLane = Draftmaster.Tracks.OvalLanes.Lane.None;
+    // True while the car's line IS its assigned oval lane: ovalLane is set and the track is an oval.
+    public bool LaneFollowing { get; private set; }
+    Draftmaster.Tracks.OvalLanes.Lane _builtLane;
+    // The tactical offset as it applies here: a car holding an oval lane on the main track takes none.
+    float TacticalLateral => LaneFollowing && !_onPit ? 0f : tacticalLateralOffset;
+
     // The run-in to pit road, set each tick by whoever has called the car in (ApproachPitEntry) and cleared once
     // it is on the lane. Kept apart from aiMaxSpeedMph / tacticalLateralOffset because the racing brain rewrites
     // both every tick until the car is on the lane — which is exactly the stretch this has to cover.
@@ -844,6 +853,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     void BuildLateralProfile()
     {
+        LaneFollowing = false;
+        _builtLane = ovalLane;
         if (_mainSamples == null || _mainSamples.Count == 0 || track == null || track.track == null || _anchors == null)
         {
             _lateralProfile = null;
@@ -935,6 +946,31 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
         }
 
+        // An assigned oval lane replaces the line outright. The bounds open to the road edges (the authored band
+        // can sit inside the bottom groove) so nothing clamps the car off its lane, and the lane is not relaxed
+        // like a line: OvalLanes already smoothed it, and relaxing a constant offset round a corner would pull it
+        // toward the inside.
+        if (ovalLane != Draftmaster.Tracks.OvalLanes.Lane.None
+            && track.TryGetOvalLanes(_mainSamples, out var insideLane, out var outsideLane))
+        {
+            LaneFollowing = true;
+            TrainedLineInUse = false;
+            var lane = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? outsideLane : insideLane;
+            for (int i = 0; i < n; i++)
+            {
+                float w = _mainSamples[i].width;
+                float edgeLo = ClampToRoad(float.NegativeInfinity, w), edgeHi = ClampToRoad(float.PositiveInfinity, w);
+                if (float.IsInfinity(edgeLo) || float.IsInfinity(edgeHi)) { edgeLo = _lineLo[i]; edgeHi = _lineHi[i]; }
+                float lo = Mathf.Min(edgeLo, lane[i]), hi = Mathf.Max(edgeHi, lane[i]);
+                bool leftLow = _leftBoundProfile[i] <= _rightBoundProfile[i];
+                _leftBoundProfile[i] = leftLow ? lo : hi;
+                _rightBoundProfile[i] = leftLow ? hi : lo;
+                _lineLo[i] = _roadLo[i] = _escapeLo[i] = lo;
+                _lineHi[i] = _roadHi[i] = _escapeHi[i] = hi;
+                _lateralProfile[i] = lane[i];
+            }
+        }
+
         // Min-curvature relaxation: each pass nudges every point toward the average of its neighbours, clamped to bounds.
         // Only a few passes on a trained line: it is already smooth (the trainer only ever moves it in raised-
         // cosine bumps), and a full relax would drag the late apexes back into the geometric arc it beat. But
@@ -950,7 +986,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // sample sat on top of the first — and a by-index average treats a 0.57 m step like a 2 m one. Where the
         // line was crossing the road there, that folded it into an 8 m "hairpin" on the run to the flag, and the
         // car braked to 31 mph for it every lap. With even spacing the two are identical.
-        int relaxPasses = trained != null ? trainedLineSmoothingPasses : smoothingIterations;
+        int relaxPasses = LaneFollowing ? 0 : trained != null ? trainedLineSmoothingPasses : smoothingIterations;
         var tmp = new float[n];
         for (int p = 0; p < relaxPasses; p++)
         {
@@ -1524,6 +1560,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (_mainSamples == null || _mainSamples.Count < 2) return;
 
+        // A new oval lane assignment: re-lay the line, and the curvature and speed plan built on it.
+        if (ovalLane != _builtLane)
+        {
+            BuildLateralProfile();
+            BuildCurvatureProfile();
+            BuildSpeedProfile();
+        }
+
         // Pre-grid hold: sit parked in the pit box / at the pit exit until the formation lap begins.
         // Still Place() so the pose (and the commanded point feeding any dynamic model) tracks the box,
         // but advance nothing and command zero speed so dynamic-AI cars hold station too.
@@ -1748,6 +1792,21 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return true;
     }
 
+    // Curvature (1/m) of the driven line `aheadMetres` up the road from the brain's point, and which side of travel
+    // the inside of the bend is on (-1 left, +1 right, 0 straight). 0 on the pit lane or with no profile.
+    public float LineCurvatureAhead(float aheadMetres, out float insideSide)
+    {
+        insideSide = 0f;
+        if (_onPit || _curvatureProfile == null || _insideSideProfile == null || _mainSamples == null || _mainLength <= 0f)
+            return 0f;
+        int n = Mathf.Min(_curvatureProfile.Length, _insideSideProfile.Length);
+        if (n == 0) return 0f;
+        float d = ((_distance + aheadMetres) % _mainLength + _mainLength) % _mainLength;
+        int i = SampleIndexAtOrBefore(d, n);
+        insideSide = _insideSideProfile[i];
+        return _curvatureProfile[i];
+    }
+
     // Smallest turn radius (m) on the path within scanDistance ahead, including the current position.
     // float.MaxValue when the road ahead is straight. The AI input driver uses this to shorten its steering
     // lookahead on tight corners (aim short = turn in hard), keep it long on gradual ones (smooth), and to
@@ -1837,7 +1896,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // run outside the road bounds (a player-lap line uses its run-off corridor — Watkins Glen's sits 14 m
         // off the road at the pit rejoin); Place clamps it back, and a bias measured against the unclamped value
         // came out that much too big — every car rejoining at Watkins Glen landed 12 m right, past the barrier.
-        float baseLat = lateralOffset + tacticalLateralOffset + _collisionLateral;
+        float baseLat = lateralOffset + TacticalLateral + _collisionLateral;
         if (!_onPit)
         {
             baseLat += LateralAt(_distance);
@@ -1966,7 +2025,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_mainLength > 0f) d = ((d % _mainLength) + _mainLength) % _mainLength;
         var s = track.SampleAt(d, _mainSamples);
         Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-        float lat = LateralAt(d) + lateralOffset + tacticalLateralOffset;
+        float lat = LateralAt(d) + lateralOffset + TacticalLateral;
         if (_leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(d, out float lo, out float hi);
@@ -2065,7 +2124,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _lineLatSmoothed = _hasLineSmoothed ? Mathf.Lerp(rawLineLateral, _lineLatSmoothed, cornerSmoothing) : rawLineLateral;
         _hasLineSmoothed = true;
         float lineLateral = _lineLatSmoothed;
-        float baseLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
+        float baseLateral = lateralOffset + TacticalLateral + lineLateral + _collisionLateral;
         if (!_onPit && _pitApproachBlend > 0f)
             baseLateral = Mathf.Lerp(baseLateral, _pitApproachLateral, _pitApproachBlend);
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)

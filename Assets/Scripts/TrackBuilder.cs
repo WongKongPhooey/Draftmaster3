@@ -91,6 +91,12 @@ public class TrackBuilder : MonoBehaviour
     public bool drawLeftRightBounds = true;
     public float anchorMarkerRadius = 1.2f;
 
+    [Header("Oval Lanes Gizmo")]
+    [Tooltip("On an oval, draw the two fixed lanes the AI race in (Draftmaster.Tracks.OvalLanes, Docs/Oval-Lanes.md).")]
+    public bool drawOvalLanesGizmo = true;
+    public Color insideLaneColor = new Color(0.1f, 0.85f, 1f, 1f);
+    public Color outsideLaneColor = new Color(1f, 0.35f, 0.9f, 1f);
+
     Mesh _mainMesh;
     Mesh _pitMesh;
     GameObject _pitChild;
@@ -597,6 +603,30 @@ public class TrackBuilder : MonoBehaviour
             seg => seg.width <= 0f ? track.defaultWidth : seg.width);
     }
 
+    // The two oval lanes (Draftmaster.Tracks.OvalLanes) along these centreline samples, as lateral offsets
+    // (m, + right of travel), one per sample. False on a road course, or on a track the dimensions table doesn't
+    // know - those have no lanes.
+    public bool TryGetOvalLanes(List<Sample> samples, out float[] inside, out float[] outside)
+    {
+        inside = outside = null;
+        if (track == null || samples == null || samples.Count < 3) return false;
+        if (!Draftmaster.Tracks.OvalLanes.AppliesTo(track.name)) return false;
+        int n = samples.Count;
+        var distance = new float[n];
+        var width = new float[n];
+        var tangent = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            distance[i] = samples[i].distance;
+            width[i] = samples[i].width;
+            tangent[i] = samples[i].tangent;
+        }
+        float insideSide = Draftmaster.Tracks.OvalLanes.InsideSide(tangent);
+        Draftmaster.Tracks.OvalLanes.Build(distance, width, insideSide, track.closedLoop ? distance[n - 1] : 0f,
+                                           Draftmaster.Tracks.OvalLanes.Default, out inside, out outside);
+        return true;
+    }
+
     public List<Sample> SamplePitCenterline()
     {
         if (track == null || !track.hasPitLane || track.pitSegments == null) return new List<Sample>();
@@ -1086,11 +1116,31 @@ public class TrackBuilder : MonoBehaviour
         }
     }
 
+    void DrawLaneGizmo(List<Sample> samples, float[] lateral, Color color)
+    {
+        Gizmos.color = color;
+        Vector3 prev = Vector3.zero;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var s = samples[i];
+            Vector2 p = s.position + new Vector2(s.tangent.y, -s.tangent.x) * lateral[i];
+            Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
+            if (i > 0) Gizmos.DrawLine(prev, w);
+            prev = w;
+        }
+    }
+
     void OnDrawGizmos()
     {
         if (!drawGizmos || track == null) return;
         var samples = SampleCenterline();
         if (samples.Count < 2) return;
+
+        if (drawOvalLanesGizmo && TryGetOvalLanes(samples, out var insideLane, out var outsideLane))
+        {
+            DrawLaneGizmo(samples, insideLane, insideLaneColor);
+            DrawLaneGizmo(samples, outsideLane, outsideLaneColor);
+        }
 
         Gizmos.color = Color.yellow;
         for (int i = 1; i < samples.Count; i++)

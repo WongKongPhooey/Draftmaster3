@@ -56,6 +56,24 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Most the cross-track term may add to the wheel angle (deg).")]
     public float crossTrackMaxDeg = 5f;
 
+    [Header("Oval Lane Holding")]
+    [Tooltip("Only while the car holds an assigned oval lane (SplineDriver.LaneFollowing - never on a road course): " +
+             "steering fed forward in proportion to the lateral acceleration the lane asks for here (its curvature x " +
+             "speed squared), so the car holds the lane through a long turn rather than running wide of it until the " +
+             "heading loop has enough error to steer with. Without it a car at Texas sat a steady 0.33 m wide of " +
+             "its lane through both long turns, in either lane (OvalLaneTests, Docs/Oval-Lanes.md).")]
+    public bool laneFeedForward = true;
+    [Tooltip("Starting feed-forward gain: degrees of wheel per m/s² of lane lateral acceleration. Texas measured " +
+             "the bias at ~1.7° of wheel at 19 m/s².")]
+    public float laneFeedForwardInitial = 0.08f;
+    [Tooltip("How fast the gain learns from the car running wide (+) or inside (-) of its lane in a turn: " +
+             "deg/(m/s²) per (metre wide x m/s² x second). ~2 s to settle.")]
+    public float laneFeedForwardLearnRate = 0.007f;
+    [Tooltip("Most the learned gain may reach either way (deg per m/s²).")]
+    public float laneFeedForwardMax = 0.25f;
+    [Tooltip("Seconds of travel ahead of the car the lane curvature is read at: the steering acts that much later.")]
+    public float laneFeedForwardLeadTime = 0.2f;
+
     [Header("Braking stability")]
     [Tooltip("How much of the brake a full slide takes away (0..1). Was a fixed 0.5: the car kept braking at half " +
              "force 13° sideways, which is what spun it into Watkins Glen's Turn 10.")]
@@ -143,6 +161,7 @@ public class SplineInputDriver : MonoBehaviour
     float _upset;                     // 0..1 how badly the current hit has upset the driver; 0 = not upset
     float _upsetAge;                  // seconds since the hit that set _upset
     float _heldSteer, _heldThrottle, _heldBrake;   // what the driver was doing when it landed
+    float _laneFfGain;                // learned lane feed-forward gain (deg per m/s²), see laneFeedForward
 
     // What the controller decided on its last physics step, for AIIncidentRecorder and anything else that
     // wants to see WHY a car did what it did. Read-only telemetry; nothing drives off it.
@@ -178,6 +197,7 @@ public class SplineInputDriver : MonoBehaviour
         _recovering = false;
         _hasPrevError = false;
         _kickYawDeg = _kickLatMps = _upset = 0f;
+        _laneFfGain = laneFeedForwardInitial;
         if (_car != null) { _car.CarImpactApplied -= OnCarImpact; _car.CarImpactApplied += OnCarImpact; }
     }
 
@@ -358,8 +378,9 @@ public class SplineInputDriver : MonoBehaviour
                                                LastCrossTrackMetres * Mathf.Sign(slipDeg))
                              * Mathf.InverseLerp(3f, Mathf.Max(slideStartDeg, 3.1f), Mathf.Abs(slipDeg))    // sliding, not just off-line
                              * catchScale;
+            float laneFfDeg = LaneFeedForwardDeg(speed, haveOffset, slide01, catchScale);
             float headingGain = yawRateGain > 0f ? steerGain * dampedSteerGainScale : steerGain;
-            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + (errorRate * steerDamping + yawDeg + slipCatchDeg) * catchScale + crossDeg,
+            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + (errorRate * steerDamping + yawDeg + slipCatchDeg) * catchScale + crossDeg + laneFfDeg,
                                               -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
             steerInput = -steerAngleDeg / maxSteer;
@@ -442,6 +463,27 @@ public class SplineInputDriver : MonoBehaviour
         // Feed actual speed back so the brain advances its path point with the real car (prevents the commanded
         // point running away when the car is slowed by contact/understeer).
         _spline.externalActualSpeedMps = speed;
+    }
+
+    // Oval lane holding (laneFeedForward): wheel angle (deg, + = left, as steerAngleDeg) toward the inside of the
+    // lane's bend, in proportion to the lateral acceleration the lane asks for at this speed. The gain learns from
+    // how far the car sits wide of its lane in a bend, so whatever this car and track need - more slip, less grip -
+    // it settles on. 0 whenever the car isn't holding an oval lane, so road courses never see it.
+    float LaneFeedForwardDeg(float speed, bool haveOffset, float slide01, float catchScale)
+    {
+        if (!laneFeedForward || !_spline.LaneFollowing || _spline.IsOnPit || _recovering) return 0f;
+        float kappa = _spline.LineCurvatureAhead(-SplineDriver.PathPointAheadOfCentre + speed * laneFeedForwardLeadTime,
+                                                 out float insideSide);
+        if (insideSide == 0f) return 0f;
+        float aLat = kappa * speed * speed;
+        // Learn only in a settled bend: the car not sliding, not just hit, at speed, and the bend real.
+        if (haveOffset && slide01 <= 0f && catchScale >= 1f && speed > 15f && aLat > 2f)
+        {
+            float wide = LastCrossTrackMetres * insideSide;   // + = toward the outside of the bend
+            _laneFfGain = Mathf.Clamp(_laneFfGain + laneFeedForwardLearnRate * wide * aLat * Time.fixedDeltaTime,
+                                      -laneFeedForwardMax, laneFeedForwardMax);
+        }
+        return _laneFfGain * aLat * -insideSide;   // a bend to the left (inside -1) wants left (+) lock
     }
 
     // Lateral-accel ceiling (m/s²) the dynamic model can generate RIGHT NOW: maxLateralG × the same grip
