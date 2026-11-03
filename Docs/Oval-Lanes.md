@@ -1,9 +1,9 @@
-# Oval lanes (oval AI rework, stage 1)
+# Oval lanes (oval AI rework, stages 1-2)
 
 The oval AI is being rebuilt in three stages (road courses are not touched by any of them):
 
 1. **Two lanes, and perfect lane following** - this page.
-2. A single-file train in each lane: smooth back-off, no accordion.
+2. **A single-file train in each lane: smooth back-off, no accordion** - this page, [Stage 2](#stage-2-trains).
 3. Passing by switching lanes when there is a gap and a run.
 
 Stage 1 is the foundation: an AI car told to hold a lane holds it, lap after lap, without drifting, running wide
@@ -146,13 +146,121 @@ What is left in the error: the two dog-legs on the front stretch (20° in 50 m, 
 turns in 0.4 m wide and comes out 0.3 m inside - and ~0.25 m wide at the turn-in to the long turns. Shorter
 pure-pursuit lookahead or a spiralled dog-leg would shave that; neither was needed for the targets.
 
-## Not done in stage 1
+## Stage 2: trains
 
-- **Nothing assigns lanes in a real session yet.** `ovalLane` defaults to `None`, so races, practice and the
-  formation lap behave exactly as before. Turning it on for a field now would be wrong: lane mode ignores
-  `tacticalLateralOffset`, which is how `AIRacingBehaviour` passes and avoids and how `FormationController`
-  lines cars up two-wide. Stage 2 (trains) assigns the lanes and owns following distance; stage 3 owns moving
-  between them.
+A field on an oval runs as two trains, one per lane. Every car holds its lane (stage 1), follows exactly the line of
+the car ahead (they share the lane) and never changes lanes. The only thing a car decides is how close it runs.
+
+### The gap law: `Draftmaster.Sim.TrainFollow`
+
+Pure (`Assets/Scripts/Sim/TrainFollow.cs`). A constant-time-headway follower:
+
+    wanted gap = standstillGap + headwaySeconds x v           (centre to centre, v = this car's speed)
+    speed      = min( vAhead + gapGain x (gap - wanted),       the linear term: settles the gap
+                      vAhead + sqrt(2 x b x (gap - wanted)) )   the approach: closing planned on a lift
+    b          = liftShare x what a lift sheds right now
+
+| `TrainFollow.Spec.Default` | | |
+|---|---|---|
+| `standstillGap` | 7 m | a 4.8 m car and 2.2 m of air |
+| `headwaySeconds` | 0.3 s | ~29.5 m centre to centre at Texas speeds, inside the 35 m tow |
+| `gapGain` | 0.5 /s | overdamped with the speed loop: settles in ~2 s, no overshoot |
+| `liftShare` | 0.8 | the approach plans on 80% of a lift's deceleration |
+| `hardGap` | 6 m | closing inside 1.2 m nose to tail is an emergency |
+| `emergencyDecel` | 4 m/s² | needing more than this to stop closing is an emergency |
+
+- **No accordion.** The headway term is what damps the line. A gap error passed from car to car shrinks at every
+  frequency while `headwaySeconds x (2 + gapGain x headwaySeconds) >= 2 x` the speed loop's lag: 0.645 s here,
+  against ~0.4 s. (With no lag the car-to-car speed transfer is `(s + k) / ((1 + k h) s + k)`, never above 1.)
+- **The draft.** `b` is the dynamic model's coast (`PlayerVehicleController.coastDecel`), with half of it gone in a
+  full tow (`TowFactor`), the same way the physics applies it. A car closing in a tow sheds less on a lift, so the
+  approach starts backing off earlier. The tow pulling it in is planned for, not found at the bumper.
+- **Emergency** = still closing with less room than `emergencyDecel` can stop it in (a stopped or spinning car).
+
+### Who runs it
+
+- `OvalTrain` (`Assets/Scripts/AI/OvalTrain.cs`) finds the car ahead: the nearest car within half a lap that has
+  the same `ovalLane` or is physically in the car's path (centres closer than 2 m across, one car width; the lanes are
+  3.2 m apart). A free-driven human car in its path counts too. `OvalTrain.Spec` is the law for the whole field.
+- `SplineDriver.trainFollowing` (default on) + `StepTrain()` run each step, but only while `LaneFollowing`, on the
+  main track, under green. They publish `TrainActive`, `TrainCapMps`, `TrainEmergency`, `TrainGap` and
+  `TrainWantedGap`. For a dynamic car the cap is **not** folded into `TargetMph`, because the input driver brakes
+  to that. A kinematic car just takes the cap.
+- `SplineInputDriver`: where the train allows less than the speed plan, throttle is the lower of the two asks and
+  brake the higher. The train's ask is a lift first. The brake comes in only once the car is `trainBrakeMargin`
+  (1 m/s) too quick, at `trainBrakeGain` (8% brake per m/s past it), and full braking only in an emergency. The
+  speed plan's own braking for a corner is untouched. `LastTrainBinding` / `LastTrainBrake` are there for telemetry.
+- `AIRacingBehaviour`: while its car is `LaneFollowing` with `trainFollowing` on and not under a yellow, its follow
+  caps stand aside (`aiMaxSpeedMph` is left open). Those caps are built for passing and brake a line in steps. The
+  tow boost stays, because it keeps a slower car hanging on in the draft. Everything under a yellow still applies.
+  Mistakes still apply too: their wobble does nothing in a lane, but their pace dip does.
+
+Road courses: `LaneFollowing` is false off an oval, so none of this runs. Watkins Glen's `AILapSimTests` (all four
+cases), `TheBrainStaysWithTheCar` and `GrandstandRaceSimTests.TheDynamicWatchedField_TakesTurnOneApex_AtWatkinsGlen`
+pass unchanged.
+
+### Verification: `OvalLaneTests.TwoTrainsHoldTheirLanesAndGapsAtTexas`
+
+EditMode, ~45 s. Texas, **2 lanes x 9 cars**, built like `GrandstandRaceSimTests.RunDynamic` (SplineDriver +
+AIRacingBehaviour + PlayerVehicleController + SplineInputDriver, stepped by hand). Grip and pace are calibrated,
+driver ratings are rolled the way GridSpawner rolls them, and mistakes are off.
+
+- Each lane is ordered **slowest first**, so every follower is quicker than the car ahead and the whole line has to
+  close up and hold.
+- Rolling start 30 m apart, one lap to form up, then **20 timed laps**.
+- On timed lap 10 each lane's leader lifts (6% off its pace for 2 s). The response is watched down the line for 20 s.
+- Contacts are geometric: car boxes (4.8 x 2.0 m) in track space. Nothing steps Physics2D.
+- Walls, spins, offs and lateral error are measured as in stage 1.
+
+Three unit tests cover the law itself.
+
+Results (2026-11-03):
+
+| | |
+|---|---|
+| Car-to-car contacts / wall hits / spins / offs | **0 / 0 / 0 / 0** |
+| Closest nose to tail (same lane) | 16.95 m |
+| Closest door to door (cars overlapping, other lane) | 0.80 m |
+| Lateral error vs lane, all 18 cars | mean **0.115 m**, max **0.707 m** (276 m, the Turn 1 dog-leg turn-in, same as solo) |
+| Max body slip | 7.3° |
+| Leader laps | inside 34.24 -> 34.50 s, outside 34.34 -> 34.60 s (the slowest drivers; tyres fade ~0.013 s a lap) |
+| Train emergencies | **0** steps |
+| Train brake | on 12.2% of follower time, mean 0.16 when on, over 20% for 4.1% of the time, max 0.51 |
+| Any brake over 30% | followers 4.8% of the time, **leaders 8.6%** |
+
+The last row means a follower lifts early and brakes less than the car leading it into the corner.
+
+Gap to the car ahead by train position (centre to centre; error = gap minus the wanted gap at the car's speed):
+
+| Position | Mean (m) | Min | Max | Error mean ± sd | Headway (s) mean ± sd | After the lift: peak error | Min gap |
+|---|---|---|---|---|---|---|---|
+| P1 | 25.2 | 21.7 | 29.6 | -1.87 ± 0.61 | 0.377 ± 0.011 | 3.65 | 21.7 |
+| P2 | 25.6 | 22.2 | 31.4 | -1.47 ± 0.69 | 0.383 ± 0.013 | 3.16 | 22.3 |
+| P3 | 25.4 | 22.4 | 29.5 | -1.71 ± 0.56 | 0.380 ± 0.011 | 3.06 | 22.4 |
+| P4 | 25.5 | 22.4 | 29.4 | -1.64 ± 0.58 | 0.381 ± 0.011 | 2.82 | 22.6 |
+| P5 | 25.5 | 22.3 | 29.6 | -1.56 ± 0.54 | 0.382 ± 0.011 | 2.81 | 22.9 |
+| P6 | 25.7 | 23.0 | 32.4 | -1.45 ± 0.71 | 0.383 ± 0.013 | 2.48 | 23.4 |
+| P7 | 25.7 | 22.8 | 32.9 | -1.42 ± 0.65 | 0.384 ± 0.012 | 2.50 | 23.5 |
+| P8 | 25.6 | 23.0 | 30.0 | -1.48 ± 0.58 | 0.383 ± 0.011 | 2.52 | 23.5 |
+
+- **No accordion.** The gap's wobble round the lap (sd 0.54-0.71 m, headway sd 0.011-0.013 s) is the same at the
+  back of the train as at the front. The leader's lift **shrinks** down the line: 3.65 m of gap error behind the
+  leader, 2.52 m at the eighth car. The test asserts the last car's peak is no bigger than the first's (+1 m).
+- The trains run ~1.5-1.9 m inside the wanted gap (0.38 s against ~0.39 s wanted). That is the steady lag a
+  time-headway follower carries behind a car that is accelerating for most of the lap, plus a follower in the tow
+  creeping in until the lift catches it. It holds steady and does not grow.
+- These were measured with the working tree's uncommitted AI changes present (`SplineDriver.driveToTarget` and
+  others, not part of this work), as stage 1 was.
+
+## Not done yet
+
+- **Nothing assigns lanes in a real session yet** (still true after stage 2). `ovalLane` defaults to `None`, so
+  races, practice and the formation lap behave exactly as before. Turning it on for a field now would take passing
+  away completely. Lane mode ignores `tacticalLateralOffset`, which is how `AIRacingBehaviour` passes and avoids
+  and how `FormationController` lines cars up two-wide, and the trains never change lanes. Stage 2 built and proved
+  the trains in the sim. Stage 3 (moving between lanes to pass) is what makes it worth switching on for a session.
+- The train only runs under green. The formation lap and cautions still belong to `FormationController` /
+  `AIRacingBehaviour`.
 - Lane change at run time is an instant re-lay (see above), not a manoeuvre.
 - Plate tracks: `TrackConditions.AiFlatOut` still plans the turns flat out whatever the lane; only Texas was
   measured.

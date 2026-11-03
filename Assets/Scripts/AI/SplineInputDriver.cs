@@ -174,6 +174,13 @@ public class SplineInputDriver : MonoBehaviour
     public float LastSteer { get; private set; }
     public float LastThrottle { get; private set; }
     public float LastBrake { get; private set; }
+    // Whether the gap to the car ahead in an oval lane train set this step's speed, and the brake it asked for.
+    public bool LastTrainBinding { get; private set; }
+    public float LastTrainBrake { get; private set; }
+    [Tooltip("Oval lane train (SplineDriver.trainFollowing): how far too quick for the gap (m/s) the car runs on a lift alone before it touches the brake.")]
+    public float trainBrakeMargin = 1f;
+    [Tooltip("Oval lane train: brake per m/s past trainBrakeMargin (0.08 = 8% brake, ~0.8 m/s², a metre a second over). Hard braking only in an emergency.")]
+    public float trainBrakeGain = 0.08f;
     public float Upset => _upset;   // 0..1, see Impact Upset
 
     void Awake()
@@ -439,6 +446,26 @@ public class SplineInputDriver : MonoBehaviour
             float over = -speedError;
             brake = over >= flatOutPanicMps ? 1f : Mathf.Clamp01((over - flatOutBrakeMargin) * flatOutBrakeGain);
             brake *= 1f - slideBrakeCut * slideCut01;
+        }
+        // An oval lane train (SplineDriver.TrainActive): where the gap to the car ahead allows less than the speed
+        // plan, it is held on the throttle - a lift sheds the speed - and the brake only comes in once the car is
+        // trainBrakeMargin too quick, gently. Full braking only when closing is an emergency. The speed plan's own
+        // braking for a corner is untouched (throttle is the lower of the two asks, brake the higher).
+        LastTrainBinding = false;
+        LastTrainBrake = 0f;
+        if (_spline.TrainActive && !_spline.IsOnPit && !_recovering && _spline.TrainCapMps < commandedMps)
+        {
+            float trainError = _spline.TrainCapMps - speed;
+            float trainThrottle = Mathf.Clamp01(trainError * speedGain) * (1f - slideCut01) * (1f - wideLift01);
+            float trainBrake = _spline.TrainEmergency
+                ? Mathf.Clamp01(-trainError * speedGain)
+                : Mathf.Clamp01((-trainError - trainBrakeMargin) * trainBrakeGain);
+            trainBrake *= 1f - slideBrakeCut * slideCut01;
+            throttle = Mathf.Min(throttle, trainThrottle);
+            brake = Mathf.Max(brake, trainBrake);
+            commandedMps = _spline.TrainCapMps;
+            LastTrainBinding = true;
+            LastTrainBrake = trainBrake;
         }
         if (rearSlipBrakeRelease > 0f)
         {

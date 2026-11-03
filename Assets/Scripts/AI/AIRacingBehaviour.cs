@@ -1107,6 +1107,13 @@ public class AIRacingBehaviour : MonoBehaviour
             speedBoost = 0f;
         }
 
+        // Holding an oval lane under green (Docs/Oval-Lanes.md): the lane train owns the gap to the car ahead
+        // (SplineDriver.trainFollowing) and the lane owns the line, so the follow caps above stand aside - they are
+        // built for passing and would brake the train in steps. The tow boost stays (it keeps a slower car hanging
+        // on in the draft) and so does everything under a yellow.
+        if (_spline.LaneFollowing && _spline.trainFollowing && !_spline.IsOnPit && !underYellow)
+            speedCap = float.MaxValue;
+
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;

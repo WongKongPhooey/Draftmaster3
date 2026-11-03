@@ -378,6 +378,436 @@ public class OvalLaneTests
         return r;
     }
 
+    // ---------------------------------------------------------------- stage 2: two trains
+
+    [Test]
+    public void TheTrainGapGrowsWithSpeedAndIsHeldOnTheCarAhead()
+    {
+        var s = Draftmaster.Sim.TrainFollow.Spec.Default;
+        float wanted = Draftmaster.Sim.TrainFollow.WantedGap(s, 75f);
+        Assert.AreEqual(s.standstillGap + s.headwaySeconds * 75f, wanted, 1e-4f);
+        // At the wanted gap, at the car ahead's speed: its speed exactly, nothing to do.
+        var at = Draftmaster.Sim.TrainFollow.Follow(s, wanted, 75f, 75f, 1.5f);
+        Assert.AreEqual(75f, at.speedMps, 1e-4f);
+        Assert.IsFalse(at.emergency);
+        // Too close: asks for less than the car ahead is doing.
+        Assert.Less(Draftmaster.Sim.TrainFollow.Follow(s, wanted - 4f, 75f, 75f, 1.5f).speedMps, 75f);
+    }
+
+    [Test]
+    public void ATowMakesTheApproachBackOffEarlier()
+    {
+        var s = Draftmaster.Sim.TrainFollow.Spec.Default;
+        float wanted = Draftmaster.Sim.TrainFollow.WantedGap(s, 75f);
+        // Well back: the approach (what a lift can shed by the wanted gap) sets the speed, not the linear term.
+        float clean = Draftmaster.Sim.TrainFollow.Follow(s, wanted + 40f, 75f, 70f, 1.5f).speedMps;
+        float towed = Draftmaster.Sim.TrainFollow.Follow(s, wanted + 40f, 75f, 70f, 0.75f).speedMps;
+        Assert.AreEqual(70f + Mathf.Sqrt(2f * 1.5f * s.liftShare * 40f), clean, 1e-3f);
+        Assert.Less(towed, clean, "In a tow a lift sheds less, so the car must close more slowly.");
+    }
+
+    [Test]
+    public void ClosingFastOnAStoppedCarIsAnEmergency()
+    {
+        var s = Draftmaster.Sim.TrainFollow.Spec.Default;
+        Assert.IsTrue(Draftmaster.Sim.TrainFollow.Follow(s, 100f, 70f, 0f, 1.5f).emergency);
+        Assert.IsTrue(Draftmaster.Sim.TrainFollow.Follow(s, s.hardGap - 0.5f, 60f, 59f, 1.5f).emergency);
+        Assert.IsFalse(Draftmaster.Sim.TrainFollow.Follow(s, 30f, 61f, 60f, 1.5f).emergency);
+        Assert.AreEqual(0f, Draftmaster.Sim.TrainFollow.Follow(s, s.standstillGap - 3f, 5f, 0f, 1.5f).speedMps, 1e-4f);
+    }
+
+    const int CarsPerLane = 9;
+    const int TrainTimedLaps = 20;          // after one lap to form up
+    const float RowGap = 30f;               // m between rows on the rolling start, ~the gap the train holds
+    const float CarHalfLength = 2.4f;       // GridSpawner.collisionHalfExtents
+    const int PulseLap = 10;                // the timed lap on which each lane's leader lifts
+    const float PulsePace = 0.94f, PulseSeconds = 2f;
+    const float PulseWatchSeconds = 20f;
+
+    public class TrainResult
+    {
+        public int laps;
+        public readonly List<float>[] leaderLaps = { new List<float>(), new List<float>() };
+        public int contacts, wallHits, spins, offs;
+        public float minBumper = float.MaxValue;    // m, nose to tail, same lane
+        public float minDoor = float.MaxValue;      // m, door to door, cars overlapping along the track
+        public double errSum; public int errCount;
+        public float errMax, errMaxAt;
+        public float maxSlip;
+        public int emergencySteps, trainBrakeSteps, trainBrakeFirmSteps;
+        public float maxTrainBrake, maxTrainBrakeOutsidePulse;
+        public double trainBrakeSum;
+        public int followerBrakeSteps, followerSteps;   // any brake over 0.3, from anything, on a follower
+        public int leaderBrakeSteps, leaderSteps;       // the same on the two leaders, who have nobody to follow
+        public float pulseStart = -1f;
+        // Per train position (1 = the car behind the leader), both lanes pooled.
+        public readonly double[] gapSum = new double[CarsPerLane], gapErrSum = new double[CarsPerLane], gapErrSq = new double[CarsPerLane];
+        public readonly double[] hwSum = new double[CarsPerLane], hwSq = new double[CarsPerLane];
+        public readonly int[] gapN = new int[CarsPerLane];
+        public readonly float[] gapMin = Fill(float.MaxValue), gapMax = Fill(0f);
+        public readonly float[] pulsePeak = new float[CarsPerLane];      // biggest |gap error| after the pulse
+        public readonly float[] pulseMinGap = Fill(float.MaxValue);
+        public readonly StringBuilder incidents = new StringBuilder();
+        public float Mean => errCount > 0 ? (float)(errSum / errCount) : 0f;
+
+        static float[] Fill(float v) { var a = new float[CarsPerLane]; for (int i = 0; i < a.Length; i++) a[i] = v; return a; }
+
+        public float GapMean(int k) => gapN[k] > 0 ? (float)(gapSum[k] / gapN[k]) : 0f;
+        public float GapErrMean(int k) => gapN[k] > 0 ? (float)(gapErrSum[k] / gapN[k]) : 0f;
+        public float GapErrStd(int k) => gapN[k] > 0 ? Std(gapErrSum[k], gapErrSq[k], gapN[k]) : 0f;
+        public float HeadwayMean(int k) => gapN[k] > 0 ? (float)(hwSum[k] / gapN[k]) : 0f;
+        public float HeadwayStd(int k) => gapN[k] > 0 ? Std(hwSum[k], hwSq[k], gapN[k]) : 0f;
+        static float Std(double sum, double sq, int n) { double m = sum / n; return (float)Math.Sqrt(Math.Max(0.0, sq / n - m * m)); }
+
+        public string Report()
+        {
+            var sb = new StringBuilder("[OvalLanes] Texas, two trains of " + CarsPerLane + ": " + laps + " timed laps");
+            sb.Append($"\n  leader laps inside {Laps(0)} | outside {Laps(1)}");
+            sb.Append($"\n  car contacts {contacts}, wall hits {wallHits}, spins {spins}, offs {offs}; closest nose to tail {minBumper:0.00} m, door to door {minDoor:0.00} m");
+            sb.Append($"\n  lateral error vs lane: mean {Mean:0.000} m, max {errMax:0.000} m at {errMaxAt:0} m; max slip {maxSlip:0.0}°");
+            sb.Append($"\n  braking: train emergencies {emergencySteps} steps; train brake on {(followerSteps > 0 ? (float)trainBrakeSteps / followerSteps : 0f):P1} of follower time, mean {(trainBrakeSteps > 0 ? trainBrakeSum / trainBrakeSteps : 0):0.000} when on, over 20% {(followerSteps > 0 ? (float)trainBrakeFirmSteps / followerSteps : 0f):P2}, max {maxTrainBrake:0.00} ({maxTrainBrakeOutsidePulse:0.00} away from the pulse); followers over 30% brake from anything {(followerSteps > 0 ? (float)followerBrakeSteps / followerSteps : 0f):P1} of the time, leaders {(leaderSteps > 0 ? (float)leaderBrakeSteps / leaderSteps : 0f):P1}");
+            sb.Append("\n  gap to the car ahead by train position (m centre to centre: mean / min / max | error vs wanted mean ± sd | headway s mean ± sd | after the pulse: peak |error|, min gap):");
+            for (int k = 1; k < CarsPerLane; k++)
+                sb.Append($"\n    P{k}: {GapMean(k):0.0} / {gapMin[k]:0.0} / {gapMax[k]:0.0} | {GapErrMean(k):+0.00;-0.00} ± {GapErrStd(k):0.00} | {HeadwayMean(k):0.000} ± {HeadwayStd(k):0.000} | {pulsePeak[k]:0.00}, {pulseMinGap[k]:0.0}");
+            sb.Append(incidents);
+            return sb.ToString();
+        }
+
+        string Laps(int lane) => string.Join(", ", leaderLaps[lane].ConvertAll(t => t.ToString("0.00")));
+    }
+
+    // Two trains at Texas, one per lane, 9 cars each: every car holds its lane and follows the car ahead in it. Each
+    // lane is ordered slowest first, so every follower is quicker than the car ahead and the whole line has to close
+    // up and hold the gap. On timed lap 10 each lane's leader lifts (6% off its pace for 2 s) and the response is
+    // watched down the line. Built like GrandstandRaceSimTests.RunDynamic: SplineDriver + AIRacingBehaviour +
+    // PlayerVehicleController + SplineInputDriver, stepped by hand. Contacts are geometric (car boxes in track space:
+    // 4.8 m x 2.0 m) - nothing steps Physics2D. Mistakes are off: this is the train, not the driver.
+    [Test]
+    public void TwoTrainsHoldTheirLanesAndGapsAtTexas()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var raceStart = Runtime("RaceStart");
+        TrainResult r;
+        try
+        {
+            calib.Invoke(null, new object[] { TrackId });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+            raceStart.GetMethod("GreenFlagNow").Invoke(null, null);
+            SpawnTrack(TrackId);
+            r = DriveTrains(raceStart);
+        }
+        finally
+        {
+            calib.Invoke(null, new object[] { "" });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+        }
+
+        string report = r.Report();
+        Debug.Log(report);
+        Assert.AreEqual(TrainTimedLaps, r.laps, "The field didn't finish its laps. " + report);
+        Assert.AreEqual(0, r.contacts, "Cars touched. " + report);
+        Assert.AreEqual(0, r.wallHits, report);
+        Assert.AreEqual(0, r.spins, report);
+        Assert.AreEqual(0, r.offs, report);
+        Assert.Less(r.Mean, 0.3f, "Mean lateral error too big. " + report);
+        Assert.Less(r.errMax, 1f, "Max lateral error too big. " + report);
+        Assert.AreEqual(0, r.emergencySteps, "A follower had to stand on the brakes. " + report);
+        // No accordion: a gap error passed down the line must not grow - the last car's response to the leader's
+        // lift no bigger than the first follower's, give or take a metre.
+        Assert.LessOrEqual(r.pulsePeak[CarsPerLane - 1], r.pulsePeak[1] + 1f, "The leader's lift grew down the train. " + report);
+    }
+
+    TrainResult DriveTrains(Type raceStart)
+    {
+        var trackType = Runtime("TrackBuilder");
+        var track = (Component)_package.GetComponentInChildren(trackType, true);
+        Assert.IsNotNull(track, "package has no TrackBuilder");
+        var vehicleInfo = Resources.Load("Vehicles/Cup24");
+        Assert.IsNotNull(vehicleInfo, "No Cup24 VehicleInfo.");
+        float aiPace = (float)Runtime("TrackConditions").GetField("AiPaceMultiplier").GetValue(null);
+
+        var splineType = Runtime("SplineDriver");
+        var racingType = Runtime("AIRacingBehaviour");
+        var pvcType = Runtime("PlayerVehicleController");
+        var inputType = Runtime("SplineInputDriver");
+        int cars = CarsPerLane * 2;
+
+        // The drivers: a spread of strength as GridSpawner rolls it, then each lane ordered slowest at the front.
+        UnityEngine.Random.InitState(23);
+        var paces = new float[cars];
+        var commit = new float[cars];
+        for (int i = 0; i < cars; i++)
+        {
+            float q01 = Mathf.Lerp(0.4f, 1f, ((i * 5) % cars) / (float)(cars - 1));
+            float cons01 = Mathf.Lerp(0.65f, 0.95f, ((i * 7) % cars) / (float)(cars - 1));
+            float agg01 = Mathf.Lerp(0.3f, 0.9f, ((i * 3) % cars) / (float)(cars - 1));
+            const int statMax = 20;
+            var ratings = Draftmaster.Sim.AIRatings.ForEvent(Mathf.RoundToInt(q01 * statMax), Mathf.RoundToInt(q01 * statMax),
+                Mathf.RoundToInt(cons01 * statMax), Mathf.RoundToInt(agg01 * statMax), statMax,
+                UnityEngine.Random.value, UnityEngine.Random.value);
+            paces[i] = Draftmaster.Sim.AIRatings.BasePace(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
+            commit[i] = Draftmaster.Sim.AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
+        }
+        var byPace = new int[cars];
+        for (int i = 0; i < cars; i++) byPace[i] = i;
+        Array.Sort(byPace, (a, b) => paces[a].CompareTo(paces[b]));
+
+        // trains[lane][position]: car index. Cars alternate lanes in pace order, so the two lanes are matched.
+        var trains = new int[2][] { new int[CarsPerLane], new int[CarsPerLane] };
+        var splines = new Component[cars];
+        var racers = new Component[cars];
+        var pvcs = new Component[cars];
+        var inputs = new Component[cars];
+        var basePace = new float[cars];
+        var lane = new int[cars];
+        var pos = new int[cars];
+        float length = 0f;
+        for (int k = 0; k < cars; k++)
+        {
+            int src = byPace[k];
+            int ln = k % 2, p = k / 2;
+            int i = k;
+            trains[ln][p] = i; lane[i] = ln; pos[i] = p;
+            basePace[i] = paces[src];
+
+            var go = new GameObject($"Train{(ln == 0 ? "In" : "Out")}{p}");
+            _cars.Add(go);
+            var spline = go.AddComponent(splineType);
+            Set(spline, "track", track);
+            Set(spline, "vehicleInfo", vehicleInfo);
+            Set(spline, "cornerSpeedScale", 0.95f);
+            Set(spline, "externalMotionController", true);
+            Set(spline, "loop", true);
+            Set(spline, "spawnInPit", false);
+            Set(spline, "spriteFacesUp", false);
+            Set(spline, "angleOffsetDeg", 180f);
+            Set(spline, "lateralOffset", 0f);
+            Set(spline, "speed", 60f);
+            Set(spline, "paceMultiplier", basePace[i] * aiPace);
+            Set(spline, "cornerCommitment", commit[src]);
+            SetLane(spline, ln == 0 ? "Inside" : "Outside");
+            var racing = go.AddComponent(racingType);
+            Set(racing, "mistakeProbabilityPerSecond", 0f);
+            var pvc = go.AddComponent(pvcType);
+            Set(pvc, "vehicleInfo", vehicleInfo);
+            Set(pvc, "track", track);
+            Set(pvc, "spriteFacesUp", false);
+            Set(pvc, "angleOffsetDeg", 180f);
+            Set(pvc, "grassTrails", false);
+            Set(pvc, "enableWheelspin", false);
+            Set(pvc, "externalInput", true);
+            Set(pvc, "damageImpairsHandling", false);
+            Set(pvc, "surfaceSpray", false);
+            Set(pvc, "impactDebris", false);
+            Set(pvc, "corneringStiffness", 15f);   // GridSpawner.aiCorneringStiffness
+            var input = go.AddComponent(inputType);
+
+            Call(spline, "Awake");
+            Call(spline, "OnEnable");
+            Call(racing, "Awake");
+            racingType.GetMethod("SetBasePace").Invoke(racing, new object[] { basePace[i] });
+            Call(input, "Awake");
+            Call(pvc, "Start");
+            Call(spline, "Start");
+            length = (float)splineType.GetProperty("TrackLength").GetValue(spline);
+            Assert.Greater(length, 100f, "The AI brain never built its spline.");
+            Set(spline, "startDistance", Mathf.Repeat(-p * RowGap, length));
+            splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+            Call(input, "OnEnable");
+            Assert.IsTrue((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "A car isn't following its lane.");
+            splines[i] = spline; racers[i] = racing; pvcs[i] = pvc; inputs[i] = input;
+        }
+
+        // The centreline: half width and the infield side, for the walls.
+        var samples = (System.Collections.IList)splineType.GetField("_mainSamples", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(splines[0]);
+        int n = samples.Count;
+        var sDist = new float[n];
+        var sHalf = new float[n];
+        var sTan = new Vector2[n];
+        var sampleType = samples[0].GetType();
+        for (int i = 0; i < n; i++)
+        {
+            sDist[i] = (float)sampleType.GetField("distance").GetValue(samples[i]);
+            sHalf[i] = (float)sampleType.GetField("width").GetValue(samples[i]) * 0.5f;
+            sTan[i] = (Vector2)sampleType.GetField("tangent").GetValue(samples[i]);
+        }
+        float insideSide = OvalLanes.InsideSide(sTan);
+
+        var steps = new Action[cars * 4];
+        for (int i = 0; i < cars; i++)
+        {
+            steps[i * 4 + 0] = Step(racers[i]);
+            steps[i * 4 + 1] = Step(inputs[i]);
+            steps[i * 4 + 2] = Step(pvcs[i]);
+            steps[i * 4 + 3] = Step(splines[i]);
+        }
+        var centreDistance = splineType.GetProperty("CentreDistanceOnTrack");
+        var distanceOnTrack = splineType.GetProperty("DistanceOnTrack");
+        var carLateral = splineType.GetProperty("CarLateral");
+        var trainEmergency = splineType.GetProperty("TrainEmergency");
+        var lateralAt = splineType.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(float) }, null);
+        var speedMps = pvcType.GetProperty("SpeedMps");
+        var slipDeg = pvcType.GetProperty("SlipAngleDeg");
+        var recovering = inputType.GetProperty("IsRecovering");
+        var lastBrake = inputType.GetProperty("LastBrake");
+        var lastTrainBrake = inputType.GetProperty("LastTrainBrake");
+        var setBasePace = racingType.GetMethod("SetBasePace");
+        var onLegal = Runtime("LapTimingManager").GetMethod("OnLegalSurface", BindingFlags.Public | BindingFlags.Static);
+        var spec = (Draftmaster.Sim.TrainFollow.Spec)Runtime("OvalTrain").GetField("Spec").GetValue(null);
+
+        var r = new TrainResult();
+        float dt = Time.fixedDeltaTime;
+        var cd = new float[cars];
+        var lat = new float[cars];
+        var v = new float[cars];
+        var wasOn = new bool[cars];
+        var wasRec = new bool[cars];
+        var wasWall = new bool[cars];
+        var touching = new bool[cars, cars];
+        for (int i = 0; i < cars; i++) wasOn[i] = true;
+        var leaderClock = new float[2];
+        var leaderLast = new float[2];
+        var crossings = new int[2];
+        for (int ln = 0; ln < 2; ln++) leaderLast[ln] = (float)distanceOnTrack.GetValue(splines[trains[ln][0]]);
+        int lap = -1;                 // the inside leader's first crossing starts the timed laps
+        float clock = 0f, pulseEnd = -1f;
+        int maxSteps = Mathf.RoundToInt((TrainTimedLaps + 2f) * 40f / dt);
+
+        for (int step = 0; step < maxSteps; step++)
+        {
+            SetGreen(raceStart, step * dt);
+            for (int s = 0; s < steps.Length; s++) steps[s]();
+            clock += dt;
+
+            // Lap counting off each lane's leader.
+            bool newLap = false;
+            for (int ln = 0; ln < 2; ln++)
+            {
+                leaderClock[ln] += dt;
+                float d = (float)distanceOnTrack.GetValue(splines[trains[ln][0]]);
+                if (d < leaderLast[ln] - length * 0.5f)
+                {
+                    crossings[ln]++;
+                    if (crossings[ln] > 1) r.leaderLaps[ln].Add(leaderClock[ln]);
+                    if (ln == 0) { lap++; newLap = true; }
+                    leaderClock[ln] = 0f;
+                }
+                leaderLast[ln] = d;
+            }
+            if (lap >= TrainTimedLaps) break;
+            if (lap < 0) continue;
+
+            // The pulse: each lane's leader lifts off its pace for a moment.
+            if (newLap && lap == PulseLap - 1 && r.pulseStart < 0f)
+            {
+                r.pulseStart = clock;
+                pulseEnd = clock + PulseSeconds;
+                for (int ln = 0; ln < 2; ln++) { int c = trains[ln][0]; setBasePace.Invoke(racers[c], new object[] { basePace[c] * PulsePace }); }
+            }
+            if (pulseEnd > 0f && clock >= pulseEnd)
+            {
+                pulseEnd = -1f;
+                for (int ln = 0; ln < 2; ln++) { int c = trains[ln][0]; setBasePace.Invoke(racers[c], new object[] { basePace[c] }); }
+            }
+            bool watchingPulse = r.pulseStart >= 0f && clock - r.pulseStart <= PulseWatchSeconds;
+
+            for (int i = 0; i < cars; i++)
+            {
+                cd[i] = Mathf.Repeat((float)centreDistance.GetValue(splines[i]), length);
+                lat[i] = (float)carLateral.GetValue(splines[i]);
+                v[i] = (float)speedMps.GetValue(pvcs[i]);
+
+                float laneLat = (float)lateralAt.Invoke(splines[i], new object[] { cd[i] });
+                float err = Mathf.Abs(lat[i] - laneLat);
+                r.errSum += err; r.errCount++;
+                if (err > r.errMax) { r.errMax = err; r.errMaxAt = cd[i]; }
+
+                float half = sHalf[Index(sDist, cd[i])];
+                float towardInfield = lat[i] * insideSide;
+                bool onWall = half + InfieldWallOffset - (towardInfield + CarHalfWidth) <= 0f
+                              || half + OutsideWallOffset - (-towardInfield + CarHalfWidth) <= 0f;
+                if (onWall && !wasWall[i]) { r.wallHits++; r.incidents.Append($"\n  lap {lap}: car {Name(lane[i], pos[i])} wall at {cd[i]:0} m"); }
+                wasWall[i] = onWall;
+
+                float slip = (float)slipDeg.GetValue(pvcs[i]);
+                r.maxSlip = Mathf.Max(r.maxSlip, Mathf.Abs(slip));
+                bool on = (bool)onLegal.Invoke(null, new object[] { track, splines[i].transform.position, 1f });
+                bool rec = (bool)recovering.GetValue(inputs[i]);
+                if (!on && wasOn[i]) { r.offs++; r.incidents.Append($"\n  lap {lap}: car {Name(lane[i], pos[i])} off at {cd[i]:0} m"); }
+                if (rec && !wasRec[i]) { r.spins++; r.incidents.Append($"\n  lap {lap}: car {Name(lane[i], pos[i])} spin at {cd[i]:0} m, slip {slip:0.0}°"); }
+                wasOn[i] = on; wasRec[i] = rec;
+
+                if ((bool)trainEmergency.GetValue(splines[i])) r.emergencySteps++;
+                float tb = (float)lastTrainBrake.GetValue(inputs[i]);
+                if (tb > 0f) { r.trainBrakeSteps++; r.trainBrakeSum += tb; }
+                if (tb > 0.2f) r.trainBrakeFirmSteps++;
+                r.maxTrainBrake = Mathf.Max(r.maxTrainBrake, tb);
+                if (!watchingPulse) r.maxTrainBrakeOutsidePulse = Mathf.Max(r.maxTrainBrakeOutsidePulse, tb);
+                bool braking = (float)lastBrake.GetValue(inputs[i]) > 0.3f;
+                if (pos[i] > 0) { r.followerSteps++; if (braking) r.followerBrakeSteps++; }
+                else { r.leaderSteps++; if (braking) r.leaderBrakeSteps++; }
+            }
+
+            // Contacts: every pair of car boxes in track space.
+            for (int a = 0; a < cars; a++)
+                for (int b = a + 1; b < cars; b++)
+                {
+                    float along = Mathf.Abs(Mathf.DeltaAngle(cd[a] / length * 360f, cd[b] / length * 360f)) / 360f * length;
+                    float across = Mathf.Abs(lat[a] - lat[b]);
+                    if (lane[a] == lane[b]) r.minBumper = Mathf.Min(r.minBumper, along - 2f * CarHalfLength);
+                    else if (along < 2f * CarHalfLength) r.minDoor = Mathf.Min(r.minDoor, across - 2f * CarHalfWidth);
+                    bool touch = along < 2f * CarHalfLength && across < 2f * CarHalfWidth;
+                    if (touch && !touching[a, b])
+                    {
+                        r.contacts++;
+                        r.incidents.Append($"\n  lap {lap}: contact {Name(lane[a], pos[a])} / {Name(lane[b], pos[b])} at {cd[a]:0} m ({along:0.00} m along, {across:0.00} m across, {v[a]:0.0} / {v[b]:0.0} m/s)");
+                    }
+                    touching[a, b] = touch;
+                }
+
+            // The gap to the car ahead in the lane, by train position.
+            for (int ln = 0; ln < 2; ln++)
+                for (int p = 1; p < CarsPerLane; p++)
+                {
+                    int me = trains[ln][p], ahead = trains[ln][p - 1];
+                    float gap = Mathf.Repeat(cd[ahead] - cd[me], length);
+                    float error = gap - Draftmaster.Sim.TrainFollow.WantedGap(spec, v[me]);
+                    float hw = gap / Mathf.Max(v[me], 1f);
+                    r.gapSum[p] += gap; r.gapErrSum[p] += error; r.gapErrSq[p] += (double)error * error;
+                    r.hwSum[p] += hw; r.hwSq[p] += (double)hw * hw; r.gapN[p]++;
+                    r.gapMin[p] = Mathf.Min(r.gapMin[p], gap);
+                    r.gapMax[p] = Mathf.Max(r.gapMax[p], gap);
+                    if (watchingPulse)
+                    {
+                        r.pulsePeak[p] = Mathf.Max(r.pulsePeak[p], Mathf.Abs(error));
+                        r.pulseMinGap[p] = Mathf.Min(r.pulseMinGap[p], gap);
+                    }
+                }
+        }
+        r.laps = r.leaderLaps[0].Count;
+
+        // Leave RaceField as we found it.
+        var unregister = Runtime("RaceField").GetMethod("Unregister");
+        foreach (var s in splines) unregister.Invoke(null, new object[] { s });
+        return r;
+    }
+
+    static string Name(int lane, int pos) => (lane == 0 ? "In" : "Out") + pos;
+
+    static Action Step(Component c)
+    {
+        var m = c.GetType().GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        Assert.IsNotNull(m, $"{c.GetType().Name}.FixedUpdate is gone.");
+        return (Action)Delegate.CreateDelegate(typeof(Action), c, m);
+    }
+
+    static void SetGreen(Type raceStart, float t)
+    {
+        var f = raceStart.GetField("<GreenTime>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.IsNotNull(f, "RaceStart.GreenTime is gone.");
+        f.SetValue(null, Time.time - t);
+    }
+
     static int Index(float[] distance, float d)
     {
         int lo = 0, hi = distance.Length - 1;

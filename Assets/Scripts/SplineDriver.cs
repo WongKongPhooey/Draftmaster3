@@ -604,6 +604,37 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // The tactical offset as it applies here: a car holding an oval lane on the main track takes none.
     float TacticalLateral => LaneFollowing && !_onPit ? 0f : tacticalLateralOffset;
 
+    [Tooltip("Under green, a car holding an oval lane runs single file behind the car ahead in its lane (OvalTrain, Draftmaster.Sim.TrainFollow): a time gap at its own speed, closed on a lift, held without an accordion. Off = it drives its lane at its own pace and only the racing brain's caps slow it.")]
+    public bool trainFollowing = true;
+    // This step's train (see trainFollowing): whether there is a car ahead in the lane, the most the gap to it
+    // allows (m/s), whether closing on it is an emergency, and the gap itself and the gap wanted (m, centre to centre).
+    public bool TrainActive { get; private set; }
+    public float TrainCapMps { get; private set; } = float.MaxValue;
+    public bool TrainEmergency { get; private set; }
+    public float TrainGap { get; private set; } = float.MaxValue;
+    public float TrainWantedGap { get; private set; }
+    PlayerVehicleController _trainCar;
+
+    void StepTrain()
+    {
+        TrainActive = false;
+        TrainEmergency = false;
+        TrainCapMps = float.MaxValue;
+        TrainGap = float.MaxValue;
+        if (!LaneFollowing || !trainFollowing || _onPit || !RaceStart.IsGreen) return;
+        if (!OvalTrain.TryFindAhead(this, out float gap, out float aheadMps)) return;
+        float v = OvalTrain.SpeedOf(this);
+        // What a lift sheds right now: the dynamic model's coast, half of it gone in a full tow.
+        if (_trainCar == null) _trainCar = GetComponent<PlayerVehicleController>();
+        float lift = _trainCar != null ? _trainCar.coastDecel * (1f - 0.5f * _trainCar.TowFactor) : 1.5f;
+        var c = Draftmaster.Sim.TrainFollow.Follow(OvalTrain.Spec, gap, v, aheadMps, lift);
+        TrainActive = true;
+        TrainCapMps = c.speedMps;
+        TrainEmergency = c.emergency;
+        TrainGap = gap;
+        TrainWantedGap = c.wantedGap;
+    }
+
     // The run-in to pit road, set each tick by whoever has called the car in (ApproachPitEntry) and cleared once
     // it is on the lane. Kept apart from aiMaxSpeedMph / tacticalLateralOffset because the racing brain rewrites
     // both every tick until the car is on the lane — which is exactly the stretch this has to cover.
@@ -1646,6 +1677,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
                 if (_pitApproachCapMph < targetMph) targetMph = _pitApproachCapMph;
+                // An oval lane train: the dynamic model's input driver holds the gap itself (lift first, so it is
+                // kept out of TargetMph, which it brakes to); a kinematic car just takes the cap.
+                StepTrain();
+                if (TrainActive && !externalMotionController && TrainCapMps * MpsToMph < targetMph)
+                    targetMph = TrainCapMps * MpsToMph;
             }
             else
             {
