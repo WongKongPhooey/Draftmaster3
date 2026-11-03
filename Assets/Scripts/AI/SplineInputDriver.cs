@@ -504,7 +504,8 @@ public class SplineInputDriver : MonoBehaviour
         if (insideSide == 0f) return 0f;
         float aLat = kappa * speed * speed;
         // Learn only in a settled bend: the car not sliding, not just hit, at speed, and the bend real.
-        if (haveOffset && slide01 <= 0f && catchScale >= 1f && speed > 15f && aLat > 2f)
+        // Not mid lane change either: the error then is the blend leading the car, not the car running wide.
+        if (haveOffset && slide01 <= 0f && catchScale >= 1f && speed > 15f && aLat > 2f && !_spline.LaneChanging)
         {
             float wide = LastCrossTrackMetres * insideSide;   // + = toward the outside of the bend
             _laneFfGain = Mathf.Clamp(_laneFfGain + laneFeedForwardLearnRate * wide * aLat * Time.fixedDeltaTime,

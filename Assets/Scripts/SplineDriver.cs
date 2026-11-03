@@ -614,6 +614,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float TrainGap { get; private set; } = float.MaxValue;
     public float TrainWantedGap { get; private set; }
     PlayerVehicleController _trainCar;
+    SplineDriver _trainAhead;     // the car the train is following (null: none, or a free-driven human car)
+    float _trainAheadMps;
 
     void StepTrain()
     {
@@ -621,8 +623,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         TrainEmergency = false;
         TrainCapMps = float.MaxValue;
         TrainGap = float.MaxValue;
+        _trainAhead = null;
         if (!LaneFollowing || !trainFollowing || _onPit || !RaceStart.IsGreen) return;
-        if (!OvalTrain.TryFindAhead(this, out float gap, out float aheadMps)) return;
+        if (!OvalTrain.TryFindAhead(this, out float gap, out float aheadMps, out _trainAhead)) return;
+        _trainAheadMps = aheadMps;
         float v = OvalTrain.SpeedOf(this);
         // What a lift sheds right now: the dynamic model's coast, half of it gone in a full tow.
         if (_trainCar == null) _trainCar = GetComponent<PlayerVehicleController>();
@@ -633,6 +637,156 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         TrainEmergency = c.emergency;
         TrainGap = gap;
         TrainWantedGap = c.wantedGap;
+    }
+
+    [Tooltip("Under green, a car in an oval lane train may move to the other lane to pass the car it is following, when it has a run on it and the other lane has room (OvalPass, Draftmaster.Sim.LaneChange; Docs/Oval-Lanes.md stage 3). The move is a smooth blend between the two lane lines at a capped sideways speed and acceleration; it turns back if the room closes while the car is still mostly in its own lane. Off = it stays in its lane.")]
+    public bool lanePassing = true;
+    // The lane change under way: ovalLane is already the lane being moved to (its line, speed plan and train), and
+    // the car's line is the old lane's blended into it by _laneP (0 = on the old line, 1 = landed). _laneRate is in
+    // progress per second.
+    public bool LaneChanging { get; private set; }
+    public float LaneChangeProgress => LaneChanging ? _laneP : 1f;
+    public Draftmaster.Tracks.OvalLanes.Lane LaneChangeFrom => _laneFrom;
+    public bool LaneChangeAborting => LaneChanging && _laneAborting;
+    // The car this lane change set out to pass (null for a free-driven human car, or once it is over).
+    public SplineDriver LaneChangePassing { get; private set; }
+    // The smoothed run on the car ahead (m/s) the pass decision reads (Draftmaster.Sim.LaneChange.WantsToPass).
+    public float PassAdvantage => _passAdvantage;
+    // Running counts, for telemetry and the sim tests.
+    public int LaneChangesStarted { get; private set; }
+    public int LaneChangesCompleted { get; private set; }
+    public int LaneChangesAborted { get; private set; }
+    Draftmaster.Tracks.OvalLanes.Lane _laneFrom;
+    float _laneP = 1f, _laneRate;
+    bool _laneAborting;
+    float _laneCooldown;
+    float _passAdvantage;
+    float[] _insideLaneLine, _outsideLaneLine;   // both lanes' laterals per main sample (lane mode only)
+
+    // Lateral (m) of an oval lane's line at `distance` along the main track. 0 when the car has no lanes.
+    public float LaneLateralAt(Draftmaster.Tracks.OvalLanes.Lane lane, float distance)
+    {
+        var line = lane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? _outsideLaneLine : _insideLaneLine;
+        return line != null && lane != Draftmaster.Tracks.OvalLanes.Lane.None ? SampleAlongLine(line, distance, 0f) : 0f;
+    }
+
+    // What a lane change adds on top of the line (ovalLane's lane) at `distance`: the rest of the way back to the old
+    // lane, (old - new) x (1 - progress). Read ahead of the brain's point, the progress is projected at the move's
+    // current rate, so the steering aims at where the blend will be when the car gets there.
+    float LaneShiftAt(float distance)
+    {
+        if (!LaneChanging || _onPit) return 0f;
+        float p = _laneP;
+        if (_mainLength > 0f)
+        {
+            float ahead = Mathf.Repeat(distance - _distance + _mainLength * 0.5f, _mainLength) - _mainLength * 0.5f;
+            float v = Mathf.Max(5f, OvalTrain.SpeedOf(this));
+            p = Mathf.Clamp01(p + _laneRate * ahead / v);
+        }
+        return (LaneLateralAt(_laneFrom, distance) - LaneLateralAt(ovalLane, distance)) * (1f - p);
+    }
+
+    // The line the car is meant to be on at `distance` (m lateral): its lane, blended from the old one mid lane
+    // change. What lane-following error is measured against.
+    public float LaneTargetLateralAt(float distance) => LateralAt(distance) + LaneShiftAt(distance);
+
+    // Runs first thing each step, before the line is rebuilt for a new ovalLane, so a change and its re-lay land on
+    // the same step. Reads last step's train (StepTrain).
+    void StepLaneChange()
+    {
+        float dt = Time.fixedDeltaTime;
+        var spec = OvalPass.Spec;
+        if (LaneChanging)
+        {
+            // A pit call or a yellow mid-move lets it finish (it is ~3 s); on pit road there is no lane to blend.
+            if (_onPit || !LaneFollowing) { EndLaneChange(); return; }
+            float d = CentreDistanceOnTrack;
+            float spacing = Mathf.Abs(LaneLateralAt(ovalLane, d) - LaneLateralAt(_laneFrom, d));
+            // The room closing while the car is still mostly in its own lane: turn back, the same smooth way.
+            if (!_laneAborting && Draftmaster.Sim.LaneChange.CanAbort(spec, _laneP, _laneRate, spacing)
+                && !OvalPass.TargetLaneClear(this, ovalLane, 0f, spec.abortShare))   // 0: a train gap ahead, not the pass
+            {
+                var back = _laneFrom;
+                _laneFrom = ovalLane;
+                ovalLane = back;
+                _laneP = 1f - _laneP;
+                _laneRate = -_laneRate;
+                _laneAborting = true;
+                LaneChangesAborted++;
+            }
+            if (Draftmaster.Sim.LaneChange.Step(spec, ref _laneP, ref _laneRate, spacing, dt))
+            {
+                if (!_laneAborting) LaneChangesCompleted++;
+                EndLaneChange();
+            }
+            return;
+        }
+
+        _laneCooldown -= dt;
+        if (!LaneFollowing || !lanePassing || _onPit || usePitLane || _pitApproachBlend > 0f || _apronEntryActive || _apronExitBlend > 0f
+            || !RaceStart.IsGreen || !TrainActive)
+        {
+            _passAdvantage = 0f;
+            return;
+        }
+
+        // The run on the car ahead: our own speed plan where it is now over its plan there (the pace edge, with any
+        // tow boost), or the speed we are closing on it at (a run off the corner, a draft), whichever is bigger.
+        float v = OvalTrain.SpeedOf(this);
+        float advantage = v - _trainAheadMps;
+        if (_trainAhead != null && _speedProfile != null)
+        {
+            float there = CentreDistanceOnTrack + TrainGap + PathPointAheadOfCentre;
+            float ratio = Mathf.Max(0.1f, paceMultiplier) / _profilePace;
+            float plan = Mathf.Min(ProfileAt(there) * ratio + aiSpeedBoostMph, GripLimitAt(there)) * MphToMps;
+            advantage = Mathf.Max(advantage, plan - _trainAhead.DesiredMph * MphToMps);
+        }
+        _passAdvantage = Mathf.Lerp(_passAdvantage, advantage, Mathf.Clamp01(dt / Mathf.Max(dt, spec.advantageSeconds)));
+
+        if (_laneCooldown > 0f || TrainEmergency) return;
+        if (!Draftmaster.Sim.LaneChange.WantsToPass(spec, _passAdvantage, TrainGap, TrainWantedGap)) return;
+        var target = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside
+            ? Draftmaster.Tracks.OvalLanes.Lane.Outside : Draftmaster.Tracks.OvalLanes.Lane.Inside;
+        float here = CentreDistanceOnTrack;
+        float laneSpacing = Mathf.Abs(LaneLateralAt(target, here) - LaneLateralAt(ovalLane, here));
+        if (laneSpacing < 1f) return;   // the road is too narrow for two lanes here
+        if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, laneSpacing), spec.maxCornerAccel)) return;
+        if (!OvalPass.TargetLaneClear(this, target, TrainGap, 1f)) return;
+
+        _laneFrom = ovalLane;
+        ovalLane = target;
+        _laneP = 0f;
+        _laneRate = 0f;
+        _laneAborting = false;
+        LaneChanging = true;
+        LaneChangePassing = _trainAhead;
+        LaneChangesStarted++;
+    }
+
+    void EndLaneChange()
+    {
+        LaneChanging = false;
+        LaneChangePassing = null;
+        _laneAborting = false;
+        _laneP = 1f;
+        _laneRate = 0f;
+        _laneCooldown = OvalPass.Spec.cooldownSeconds;
+        _passAdvantage = 0f;
+    }
+
+    // Whether the road over the next `seconds` at `speedMps` corners gently enough to move across on: the most
+    // cornering load (curvature x speed squared) on the driven line there, under `maxAccel`.
+    bool CornerAllowsLaneChange(float speedMps, float seconds, float maxAccel)
+    {
+        if (_curvatureProfile == null || _mainSamples == null || _mainLength <= 0f) return false;
+        float reach = Mathf.Max(10f, speedMps * seconds);
+        float kMax = maxAccel / Mathf.Max(1f, speedMps * speedMps);
+        for (float a = 0f; a <= reach; a += 5f)
+        {
+            float k = SampleAlongLine(_curvatureProfile, _distance + a, 0f);
+            if (k > kMax) return false;
+        }
+        return true;
     }
 
     // The run-in to pit road, set each tick by whoever has called the car in (ApproachPitEntry) and cleared once
@@ -886,6 +1040,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         LaneFollowing = false;
         _builtLane = ovalLane;
+        _insideLaneLine = _outsideLaneLine = null;
         if (_mainSamples == null || _mainSamples.Count == 0 || track == null || track.track == null || _anchors == null)
         {
             _lateralProfile = null;
@@ -986,6 +1141,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             LaneFollowing = true;
             TrainedLineInUse = false;
+            _insideLaneLine = insideLane;
+            _outsideLaneLine = outsideLane;
             var lane = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? outsideLane : insideLane;
             for (int i = 0; i < n; i++)
             {
@@ -1591,6 +1748,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (_mainSamples == null || _mainSamples.Count < 2) return;
 
+        // Passing by lane change (lanePassing): may set a new ovalLane, re-laid just below on this same step.
+        StepLaneChange();
         // A new oval lane assignment: re-lay the line, and the curvature and speed plan built on it.
         if (ovalLane != _builtLane)
         {
@@ -1935,7 +2094,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float baseLat = lateralOffset + TacticalLateral + _collisionLateral;
         if (!_onPit)
         {
-            baseLat += LateralAt(_distance);
+            baseLat += LateralAt(_distance) + LaneShiftAt(_distance);
             if (_leftBoundProfile != null && _rightBoundProfile != null)
             {
                 BoundsAt(_distance, out float boundLo, out float boundHi);
@@ -2061,7 +2220,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_mainLength > 0f) d = ((d % _mainLength) + _mainLength) % _mainLength;
         var s = track.SampleAt(d, _mainSamples);
         Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-        float lat = LateralAt(d) + lateralOffset + TacticalLateral;
+        float lat = LateralAt(d) + LaneShiftAt(d) + lateralOffset + TacticalLateral;
         if (_leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(d, out float lo, out float hi);
@@ -2156,7 +2315,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // raw value kinks at segment boundaries — the rear axle (built straight off this offset) snaps into and out
         // of turns. A generous low-pass rounds those kinks so the car flows through the corner. Reset on a lane
         // change (RejoinSplineContinuous clears _hasLineSmoothed) so it doesn't drag a stale value across the merge.
-        float rawLineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
+        float rawLineLateral = !_onPit ? LateralAt(placeDistance) + LaneShiftAt(placeDistance) : 0f;
         _lineLatSmoothed = _hasLineSmoothed ? Mathf.Lerp(rawLineLateral, _lineLatSmoothed, cornerSmoothing) : rawLineLateral;
         _hasLineSmoothed = true;
         float lineLateral = _lineLatSmoothed;

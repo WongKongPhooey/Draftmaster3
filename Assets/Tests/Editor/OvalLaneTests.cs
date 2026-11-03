@@ -586,6 +586,7 @@ public class OvalLaneTests
             Set(spline, "paceMultiplier", basePace[i] * aiPace);
             Set(spline, "cornerCommitment", commit[src]);
             SetLane(spline, ln == 0 ? "Inside" : "Outside");
+            Set(spline, "lanePassing", false);   // the trains alone: passing is OvalPassingTests
             var racing = go.AddComponent(racingType);
             Set(racing, "mistakeProbabilityPerSecond", 0f);
             var pvc = go.AddComponent(pvcType);

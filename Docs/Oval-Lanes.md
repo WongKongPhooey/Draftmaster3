@@ -1,10 +1,10 @@
-# Oval lanes (oval AI rework, stages 1-2)
+# Oval lanes (oval AI rework, stages 1-3)
 
 The oval AI is being rebuilt in three stages (road courses are not touched by any of them):
 
 1. **Two lanes, and perfect lane following** - this page.
 2. **A single-file train in each lane: smooth back-off, no accordion** - this page, [Stage 2](#stage-2-trains).
-3. Passing by switching lanes when there is a gap and a run.
+3. **Passing by switching lanes when there is a gap and a run** - this page, [Stage 3](#stage-3-passing-by-lane-change).
 
 Stage 1 is the foundation: an AI car told to hold a lane holds it, lap after lap, without drifting, running wide
 or hitting anything. Test bed: Texas Motor Speedway (`FortWorth`).
@@ -57,7 +57,8 @@ the overlay all go through it, so they always agree.
   plans the outside line's speed and goes round on the outside, rather than drifting down to where the speed
   plan was made.
 - Changing `ovalLane` at run time re-lays the line, curvature and speed plan on the next step. (The aim point
-  jumps 3.2 m sideways when it does; stage 3 needs a proper lane-change blend.)
+  jumps 3.2 m sideways when it does. A pass does not set it this way: stage 3's `StepLaneChange` blends the line
+  across, see [Stage 3](#stage-3-passing-by-lane-change).)
 
 On a road course `ovalLane` is ignored and `LaneFollowing` stays false (`OvalLaneTests.ARoadCourseIgnoresAnAssignedLane`).
 
@@ -252,15 +253,125 @@ Gap to the car ahead by train position (centre to centre; error = gap minus the 
 - These were measured with the working tree's uncommitted AI changes present (`SplineDriver.driveToTarget` and
   others, not part of this work), as stage 1 was.
 
+## Stage 3: passing by lane change
+
+A car in a lane train may move across to the other lane to pass the car it is following. It does this when it is
+held up, has a run on that car, and the other lane has room. The move is a smooth blend from one lane's line to the
+other. Once landed, the car is an ordinary lane follower in its new lane. The car that was passed keeps its lane and
+does nothing different: it never defends, and if the passer later pulls back in ahead of it, it backs off by the stage 2
+train law.
+
+### The rules: `Draftmaster.Sim.LaneChange`
+
+Pure (`Assets/Scripts/Sim/LaneChange.cs`). A move **starts** only when all of these hold:
+
+| Rule | | `LaneChange.Spec.Default` |
+|---|---|---|
+| **Held up** | the gap to the car ahead (centre to centre) is within `engageGap` of the train gap wanted | 8 m |
+| **A run on it** | the larger of two figures, smoothed over `advantageSeconds`, is at least `minAdvantage`. The first is the car's own speed plan at the car ahead's position (pace, plus any tow boost) minus that car's own plan there; this is the pace edge, and it has no bias because both sides are plans. The second is the closing speed (a run off the corner, a draft) | 0.8 m/s (~1% of pace at Texas), 1 s |
+| **Room ahead** in the other lane | no car closer than `max(train gap at my speed, gap to the car being passed) + aheadMargin`. That is room to pull fully alongside the car being passed, and never less than a train gap | +10 m (≈ 39 m at Texas) |
+| **Room behind** in the other lane | every car behind gets its own train gap, plus `closingLookSeconds` of its closing speed if it is quicker. Nobody is cut off | 3 s |
+| **Not mid-corner** | the most cornering load (curvature × speed²) on the line over the move's length ahead is under `maxCornerAccel`. The move adds up to 1.5 m/s² sideways, and the speed plan keeps only ~2 m/s² in hand at the limit. So moves start on the straights, the dog-legs and the last part of a corner exit | 12 m/s² |
+| **Not just moved** | `cooldownSeconds` since the last move ended | 3 s |
+
+"In the other lane" means any car whose `ovalLane` is that lane, any car that is **mid lane change itself** (it
+counts as being in both lanes, so two cars can never swap into each other), and anything physically on that lane's
+line (centres within `OvalTrain.CorridorWidth`, 2 m), including a free-driven human car.
+
+**The move** (`LaneChange.Step`): progress goes from 0 (old line) to 1 (new line). Sideways speed is capped at
+`maxLateralSpeed` (2 m/s) and sideways acceleration at `lateralAccel` (1.5 m/s²), with a braking ramp
+(`rate = sqrt(2 a remaining)`) into the new line. The car speeds up sideways, holds its speed, slows, and **lands
+exactly on the new line**: progress is snapped to 1 when it is within 0.01% of it, a millimetre or less. For a 3.2 m
+change that takes ~2.8 s and peaks at 1.5° of heading at Texas speeds.
+
+**Turning back** (`LaneChange.CanAbort`): every step of a move, the other lane is checked again, with the room cut to
+`abortShare` (0.6) of what the start needed (ahead: 0.6 × a train gap + margin). If the room has gone, and the car can
+still stop short of the middle of the road (progress plus its sideways stopping distance < 0.5), it turns back.
+The old and new lanes swap, progress becomes 1 - progress and the rate is negated. The same acceleration-limited
+motion then carries it back. It decelerates sideways rather than reversing at once, so there is no swerve. Past the
+middle, it completes, and the new lane's train law handles whatever is there.
+
+### Who runs it
+
+- `SplineDriver.lanePassing` (default on) + `StepLaneChange()`. This runs first in every `FixedUpdate`, before the
+  re-lay for a new `ovalLane`, so a decision and its re-lay land on the same step. It reads last step's train. It
+  runs only while `LaneFollowing`, under green, on the main track, not called to the pits, not on the apron, and only
+  with a car ahead in the train.
+- At the start of a move, `ovalLane` becomes the **new** lane at once. Its line, its speed plan and its train take
+  over at once (a car ahead in the new lane is followed from the first step). The car's line is laid as the old
+  lane blended into the new one: `LaneShiftAt(d) = (old(d) - new(d)) × (1 - progress)`. This is added in `Place`
+  (before the line smoothing, so the commanded lateral is continuous), in `PathPointAhead` and in the pit rejoin. Read
+  ahead of the car, progress is projected forward at the move's current rate, so the steering aims at where the
+  blend will be. The car being passed still counts as "in the path" (`OvalTrain`, 2 m corridor) until the mover is
+  2 m across, so the mover cannot run into its back early in the move.
+- `OvalPass` (`Assets/Scripts/AI/OvalPass.cs`) walks the field for the room rules. `OvalPass.Spec` is the rule set
+  for the whole field.
+- `SplineInputDriver`: the lane feed-forward stops learning during a lane change, because the error there is the
+  blend leading the car, not the car running wide.
+- Telemetry: `LaneChanging`, `LaneChangeProgress`, `LaneChangeFrom`, `LaneChangeAborting`, `LaneChangePassing` (the
+  car it set out to pass), `PassAdvantage`, `LaneChangesStarted/Completed/Aborted`, `LaneLateralAt(lane, d)`,
+  `LaneTargetLateralAt(d)` (the line the car is meant to be on, mid-blend included).
+
+Road courses: `LaneFollowing` is false off an oval, so `StepLaneChange` returns at once and `LaneShiftAt` is 0.
+Watkins Glen's `AILapSimTests.AnAICarLapsWatkinsGlenCleanly` (all four cases), `TheBrainStaysWithTheCar` and
+`GrandstandRaceSimTests.TheDynamicWatchedField_TakesTurnOneApex_AtWatkinsGlen` pass unchanged.
+
+Stage 2's `TwoTrainsHoldTheirLanesAndGapsAtTexas` sets `lanePassing = false`, so it still measures the trains
+alone. Its numbers and the stage 1 solo-lane numbers are unchanged to the last digit.
+
+### Verification: `Assets/Tests/Editor/OvalPassingTests.cs`
+
+- Three unit tests of the rules: a move lands exactly on the new line inside its speed and acceleration limits; a
+  turn back never passes halfway and never swerves; the room ahead and behind, and the wish to pass.
+- `AMixedFieldPassesByChangingLanesAtTexas` (~45 s): **18 cars**, 9 to a lane. Driver ratings are rolled as the
+  stage 2 trains roll them (pace 0.966-1.038) but started in **mixed order**, 70 m apart, with the outside lane half a
+  row back. One lap to form up, then **20 timed laps** under green with passing on. Mistakes are off. Contacts,
+  walls, spins and offs are measured as in stage 2. Lane error is the car centre against `LaneTargetLateralAt`: the
+  lane, or the blend mid-move. A "pass" is a lane change that gets the car past the car it set out to pass within
+  60 s.
+- `ALaneChangeTurnsBackWhenTheGapCloses` (~5 s): a quick car (A) runs up on a slow one (B) in the inside lane and
+  pulls out. As soon as it is 5% across, a kinematic car (C) is dropped 14 m behind it in the outside lane at its
+  speed (inside the 0.6 × 29.5 m a move under way keeps). A must turn back.
+
+Results (2026-11-03):
+
+| Mixed field, 20 laps | |
+|---|---|
+| Lane changes started / completed / aborted | **19 / 19 / 0** |
+| Passes made by a lane change (got by the car followed within 60 s) | **12** (6 didn't get by: a 1% pace edge needs ~40 s to clear 30 m, and some found the new lane's train ahead) |
+| Running-order changes, any (both lanes, incl. lapping) | 153 |
+| Car-to-car contacts / wall hits / spins / offs | **0 / 0 / 0 / 0** |
+| Train emergencies | **0** steps |
+| Closest door to door / nose to tail (same lane) | 0.82 m / 16.29 m |
+| Closest car behind in the new lane as a move began | 26.3 m |
+| Lane error outside lane changes | mean **0.113 m**, max **0.647 m** (275 m, the Turn 1 dog-leg turn-in, as solo) |
+| Lane error during lane changes (vs the blend) | mean **0.214 m**, max **0.539 m** |
+| Fastest sideways, against the lanes | 2.96 m/s during changes; 2.63 m/s with no change at all. The background is the projected car lateral moving against a lane whose offset drifts with Texas's width, so the move itself adds little |
+| Max body slip | 7.5° (7.3° with trains alone) |
+
+| Turn-back scenario | |
+|---|---|
+| Pulled out | 1087 m, 70.3 m/s |
+| Aborted / completed | **1 / 0**, final lane Inside |
+| Furthest across | **7%** of the way to the other lane |
+| Back on the inside lane | 1.30 s after C appeared |
+| Fastest sideways / max error vs the blend | 0.67 m/s / 0.271 m |
+| Contacts / spins | **0 / 0** |
+
+These were measured with the working tree's uncommitted AI changes present, as stages 1 and 2 were.
+
 ## Not done yet
 
-- **Nothing assigns lanes in a real session yet** (still true after stage 2). `ovalLane` defaults to `None`, so
-  races, practice and the formation lap behave exactly as before. Turning it on for a field now would take passing
-  away completely. Lane mode ignores `tacticalLateralOffset`, which is how `AIRacingBehaviour` passes and avoids
-  and how `FormationController` lines cars up two-wide, and the trains never change lanes. Stage 2 built and proved
-  the trains in the sim. Stage 3 (moving between lanes to pass) is what makes it worth switching on for a session.
+- **Nothing assigns lanes in a real session yet** (still true after stage 3). `ovalLane` defaults to `None`, so
+  races, practice and the formation lap behave exactly as before. All three stages are proved in the sim only.
+  Switching a session on means `GridSpawner` (or the session) handing each car a lane at the green. That is not done:
+  lane mode still ignores `tacticalLateralOffset`, which `FormationController` uses to line cars up two-wide, and
+  `AIRacingBehaviour`'s avoidance of a wrecked car (the train brakes for it, but no car steers round it).
 - The train only runs under green. The formation lap and cautions still belong to `FormationController` /
   `AIRacingBehaviour`.
-- Lane change at run time is an instant re-lay (see above), not a manoeuvre.
+- Passing only starts under green. A yellow or a pit call mid-move lets the move finish (~3 s); it is dropped only
+  once the car is on pit road.
+- The car being passed never defends or reacts. A pass that stalls alongside (the new lane's train ahead, or too
+  little pace edge) stays alongside; nothing makes the passer give up and drop back.
 - Plate tracks: `TrackConditions.AiFlatOut` still plans the turns flat out whatever the lane; only Texas was
   measured.

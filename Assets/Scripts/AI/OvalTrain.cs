@@ -20,8 +20,13 @@ public static class OvalTrain
 
     // The nearest car ahead in this car's lane (or physically in its path), within half a lap: the centre-to-centre
     // gap along the track and its speed. False when there is none.
-    public static bool TryFindAhead(SplineDriver self, out float gap, out float aheadMps)
+    public static bool TryFindAhead(SplineDriver self, out float gap, out float aheadMps) =>
+        TryFindAhead(self, out gap, out aheadMps, out _);
+
+    // The same, and the car it is (null for a free-driven human car).
+    public static bool TryFindAhead(SplineDriver self, out float gap, out float aheadMps, out SplineDriver ahead)
     {
+        ahead = null;
         gap = float.MaxValue;
         aheadMps = 0f;
         if (self == null || self.TrackLength <= 0f) return false;
@@ -43,6 +48,7 @@ public static class OvalTrain
             if (g <= 0f || g >= gap) continue;
             gap = g;
             aheadMps = SpeedOf(d);
+            ahead = d;
             found = true;
         }
 
@@ -57,6 +63,7 @@ public static class OvalTrain
             if (g <= 0f || g >= gap) continue;
             gap = g;
             aheadMps = p.SpeedMph * MphToMps;
+            ahead = null;
             found = true;
         }
         return found;
