@@ -185,6 +185,53 @@ public static class TrackAuthoringMenu
 
     // ---------------------------------------------------------------- one-shot menu items
 
+    // Re-lay the selected oval's pit road straight across its infield: an arc off the racing line before the
+    // start/finish line, a straight held behind the infield wall, an arc back on after it. For a pit lane that
+    // has ended up on the wrong side of the track (outside the oval) or no longer meets a reshaped lap.
+    // Re-dress the package afterwards so the wall openings follow it.
+    [MenuItem("Draftmaster/Tracks/Fit Infield Pit Road (Selected Track)")]
+    public static void FitInfieldPitRoadSelected()
+    {
+        string id = TrackSelection.CurrentId;
+        var v2 = AssetDatabase.LoadAssetAtPath<TrackInfoV2>($"{GeometryDir}/{id}.asset");
+        if (v2 == null || !v2.hasPitLane)
+        {
+            Debug.LogError($"Tracks: {id} has no layout with a pit lane at {GeometryDir}/{id}.asset.");
+            return;
+        }
+        if (!TrackDimensions.TryGet(id, out var row))
+        {
+            Debug.LogError($"Tracks: {id} is not in TrackDimensions.");
+            return;
+        }
+        // The chord fit lays pit road to the left of travel, which is the infield of an anticlockwise lap.
+        if (!TrackDressingFactory.TurnsLeft(v2))
+        {
+            Debug.LogError($"Tracks: {id} laps clockwise; the infield pit fit only handles anticlockwise laps.");
+            return;
+        }
+
+        // Centre-to-centre distance from the racing line to the pit straight at its nearest: half the road, the
+        // infield wall's setback, half the pit road, and a few metres of grass between wall and pit road. A
+        // venue with a measured inset (Daytona) keeps it.
+        float road = v2.segments.Length > 0 && v2.segments[0].width > 0f ? v2.segments[0].width : v2.defaultWidth;
+        float pit = v2.pitDefaultWidth > 0f ? v2.pitDefaultWidth : row.pitWidthMetres;
+        float clearance = row.pitChordInsetMetres > 0f
+            ? row.pitChordInsetMetres
+            : road * 0.5f + TrackDressingFactory.OvalInfieldWallOffset + pit * 0.5f + 3f;
+
+        Undo.RecordObject(v2, "Fit infield pit road");
+        string note = OsmTrackImporter.FitChordPit(v2, row, clearance);
+        v2.RebakePitDistances();
+        EditorUtility.SetDirty(v2);
+        AssetDatabase.SaveAssets();
+        string text = $"Tracks: {id} pit road{note} (asked for {clearance:0.#} m clearance). " +
+                      "Re-dress the package so the wall openings follow it.";
+        Debug.Log(text, v2);
+        try { File.WriteAllText(Path.Combine(Application.dataPath, "..", "Logs", "track-tools.txt"), text); }
+        catch (IOException) { }
+    }
+
     [MenuItem("Draftmaster/Tracks/Create Starter Layouts (Daytona + Martinsville)")]
     public static void CreateDemoTracks()
     {

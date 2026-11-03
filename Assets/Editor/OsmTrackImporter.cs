@@ -272,8 +272,10 @@ public static class OsmTrackImporter
     // Pit road straight across the infield, fitted to the traced lap (PitChordFit): it leaves the racing line
     // before the start/finish line, crosses the inside with its straight held pitChordInsetMetres in from the
     // racing line, and rejoins after. Its arcs are half the corners' radius, as the formula's chord was.
-    static string FitChordPit(TrackInfoV2 v2, TrackDimensionRow row)
+    // `clearance` overrides row.pitChordInsetMetres when it is zero or more (TrackAuthoringMenu's infield pit fit).
+    internal static string FitChordPit(TrackInfoV2 v2, TrackDimensionRow row, float clearance = -1f)
     {
+        if (clearance < 0f) clearance = row.pitChordInsetMetres;
         float lap = v2.TotalLength();
         // The corners' mean radius, weighted by length: total cornering distance over total cornering angle, so a
         // corner read as several pieces counts once, not once per piece.
@@ -297,7 +299,7 @@ public static class OsmTrackImporter
             return new PitChordFit.Pose(p, h);
         };
         // Counter-clockwise (MakeCounterClockwise), so the infield is on the left.
-        if (!PitChordFit.TryFit(poseAt, lap, v2.startFinishDistance, 1f, radius, row.pitChordInsetMetres, out var road))
+        if (!PitChordFit.TryFit(poseAt, lap, v2.startFinishDistance, 1f, radius, clearance, out var road))
             return "; NO chord pit road fits this lap - pit lane left alone";
 
         ApplyPitRoad(v2, row, road);

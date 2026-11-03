@@ -78,7 +78,7 @@ move, delete or replace by hand.
 | Piece | Where it comes from |
 | --- | --- |
 | Ground plane | `TrackGround`, sized from the bounding box of the road + pit lane, tiled at the pixel standard |
-| Walls | A generated `TrackEnvironment` asset (`Resources/Tracks/<id>Environment.asset`) driving the existing `TrackEnvironmentBuilder`, with barrier gaps cut at pit entry and exit |
+| Walls | A generated `TrackEnvironment` asset (`Resources/Tracks/<id>Environment.asset`) driving the existing `TrackEnvironmentBuilder`, with barrier gaps cut at pit entry and exit. On ovals the outside wall stands 1 m off the racing surface and the infield wall 6 m off (room for the apron); which side is the infield follows the direction the lap turns. Road courses keep both walls at 1 m |
 | Grandstands | `Grandstand` quads along every straight ≥ 150 m, on the side facing away from the middle of the circuit |
 | Paddock | A `PaddockBoundary` pocket behind the pit lane, with the RV prefab (which carries `SpawnPoint_RV`) and a fallback `PlayerSpawnPoint` in it |
 | `Paddock/NPCs` | An empty root — the home for NPCs belonging to this track alone. The paddock regulars are spawned from the pit lane by the shared scene; see `Docs/NPCs-and-Quests.md` §4 |
@@ -91,6 +91,11 @@ Two rules make it safe to re-run:
   root — adds nothing.
 - A hand-made piece doesn't always carry the component that identifies a generated one (Watkins' ground is a
   bare quad, not a `TrackGround`), so the **name** counts as a claim as well as the component.
+
+An oval whose pit lane ends up outside the track, or no longer meets a reshaped lap, can have it re-laid across
+the infield with `Draftmaster > Tracks > Fit Infield Pit Road (Selected Track)`. This is the chord fit Daytona
+uses: an arc off the racing line before start/finish, a straight held behind the infield wall, and an arc back
+on. It only handles anticlockwise laps. Re-dress afterwards so the wall openings move with it.
 
 `Draftmaster > Tracks > Dress All Undressed Packages` fills in every package that's missing pieces; the
 window's **Dress** button re-does one (with the Overwrite toggle to replace what was generated before).

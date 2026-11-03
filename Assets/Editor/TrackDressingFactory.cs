@@ -157,15 +157,25 @@ public static class TrackDressingFactory
 
         if (fresh || overwrite)
         {
+            // An oval's outside wall stands right at the edge of the racing surface; its infield wall stands
+            // back past the apron. The builder's sides are right/left of travel ("Inner" = right), so which one
+            // is the infield depends on which way the lap turns.
+            float rightOffset = 1f, leftOffset = 1f;
+            if (TrackCatalog.TypeOf(trackId) != TrackType.RoadCourse)
+            {
+                if (TurnsLeft(builder.track)) leftOffset = OvalInfieldWallOffset;
+                else rightOffset = OvalInfieldWallOffset;
+            }
+
             env.generateBarriers = true;
-            env.innerEdgeOffset = 1f;
-            env.outerEdgeOffset = 1f;
+            env.innerEdgeOffset = rightOffset;
+            env.outerEdgeOffset = leftOffset;
             env.barrierWidth = 1f;
             env.barrierColliders = true;
             env.barrierSortingOrder = 2;
             env.barrierMaterial = FindMaterial("Concrete", "WallStripe", "White");
             env.grassMaterial = FindMaterial("Grass", "Grassy");
-            env.barrierGaps = PitGaps(builder);
+            env.barrierGaps = PitGaps(builder, rightOffset, leftOffset);
         }
 
         if (fresh)
@@ -193,7 +203,26 @@ public static class TrackDressingFactory
     // corner on an arc and is still crossing the wall line a hundred metres later — so the wall is cut
     // wherever it would stand on the pit road (plus its box lane), with a fixed window round the entry and exit
     // nodes as the minimum.
+    // Metres from the racing surface's edge to an oval's infield wall: room for the apron.
+    public const float OvalInfieldWallOffset = 6f;
+
+    // True when the lap's corners turn left on balance (an anticlockwise oval), putting the infield on the
+    // left of travel.
+    public static bool TurnsLeft(TrackInfoV2 track)
+    {
+        float total = 0f;
+        if (track != null && track.segments != null)
+            foreach (var s in track.segments)
+                if (s.type == TrackInfoV2.SegmentType.Turn) total += s.angle;
+        return total >= 0f;
+    }
+
     public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float wallOffset = 1f)
+        => PitGaps(builder, wallOffset, wallOffset);
+
+    // rightWallOffset / leftWallOffset: how far each wall stands off its edge of the road (innerEdgeOffset /
+    // outerEdgeOffset), so the cut is measured against the wall on the pit road's side where it really is.
+    public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float rightWallOffset, float leftWallOffset)
     {
         var track = builder.track;
         if (track == null || !track.hasPitLane) return new TrackEnvironment.BarrierGap[0];
@@ -213,6 +242,7 @@ public static class TrackDressingFactory
             ? TrackEnvironment.BarrierSide.Inner    // pit road sits to the right of travel
             : TrackEnvironment.BarrierSide.Outer;
         float sign = side >= 0f ? 1f : -1f;
+        float wallOffset = side >= 0f ? rightWallOffset : leftWallOffset;
 
         const float halfWindow = 35f;   // the minimum, either side of each node
         const float clearance = 3f;     // wall to pit-road edge, below which the wall is cut
