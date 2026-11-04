@@ -514,6 +514,41 @@ rosters, double-file start), `PlateTrack` (one roster with hard contacts and slo
 throttle (flat-out share, lifts per lap, braking), nose-to-tail share, speed range, and contacts split into
 nose-to-tail, side and hard (closing faster than `VehicleCollision`'s 3 m/s no-damage speed).
 
+## The authored line: how anchors become a curve
+
+`TrackInfoV2.BuildRacingLineAnchors` turns the segments' entry / apex / exit offsets into points and
+`GetLateralAt` interpolates them. The leftmost and rightmost lines use every authored point (straight apexes
+included) with Catmull-Rom, unchanged — oval lanes are built from them. The **ideal** line (since 2026-11-04)
+is built from corners only:
+
+- **Straights put no point on it**, nor do shallow bends (a same-direction run of turns under
+  `racingLineCornerMinDegrees`, 12°). A straight's apex used to drag the line back to the centre mid-straight,
+  so the line weaved out of every corner. Tick `keepOnStraight` on a segment to get the old pinned point back.
+- **Corners less than `racingLineMergeGap` (100 m) apart run one arc apex to apex** — the first corner's exit
+  and the next one's entry drop out of the ideal (chicanes, doglegs, a tri-oval's kink pair). Touching turns
+  are 0 m apart.
+- **Longer gaps keep both points, held inside the gap** (each lead capped at 40% of it, so they never cross).
+- **The ideal is the minimum-curvature line through its points** — the line that turns least *in the world*.
+  An offset held steady from the centre just copies the road (a tri-oval's straight-kink-straight); the
+  minimum-curvature line keeps turning through the straights and bows out between kink apexes. With n the
+  offset (right +) and k the road's curvature (left +), world curvature is about k − n'', and the line that
+  minimises ∫(k − n'')² through the points is n = P + S: P'' = k (the road's bend integrated twice, taken
+  against k less its lap mean so it is periodic) plus the periodic cubic spline S through n_i − P(s_i). Exact
+  and cheap — one cyclic tridiagonal solve.
+- **Long straights are driven straight.** Across a gap of `racingLineFlatStraightMin` (300 m) or more, the line
+  from the corner's exit point to the next corner's entry point is a straight line, and each neighbouring arc is
+  solved to finish/start lined up with it (a clamped spline per piece of lap between long straights). Shorter
+  gaps carry the arc across (Texas: the back straight is flat, the 160-215 m tri-oval gaps arc).
+- **It stays off the apron** (`racingLineKeepIdealOffApron`, on): never inside the inside line (leftmost on a
+  lap turning left). A long corner's minimum-curvature line otherwise cuts the infield between apex and exit
+  (Texas Turn 3: 8 m onto the apron); wherever it would, it gets a point on the inside line and is re-solved.
+  It is free to run wide. Tick `racingLineKeepIdealInsideSideLines` to hold it inside both side lines.
+
+The `skipEntry` / `skipExit` / `skipApex` flags still drop points from all three lines. Covered by
+`RacingLineShapingTests` (`TexasTriOvalIsOneLongArc` checks the line turns left the whole way from Turn 3's
+exit to Turn 1's apex). The game drives the *trained* line where one is stored, so retrain a track (pinned:
+`Train Racing Lines Pinned To Anchors (Selected Track)`) to see an authored change in a race.
+
 ## Training the racing line
 
 The AI's line used to be asserted: the authored ideal (entry / apex / exit offsets on each segment),

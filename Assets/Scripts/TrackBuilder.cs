@@ -1198,14 +1198,17 @@ public class TrackBuilder : MonoBehaviour
                 DrawRacingLineCurve(samples, anchors, 0f, idealLineColor);
 
                 Gizmos.color = idealLineColor;
+                // The points the ideal line is built from (straight apexes and merged corner exits/entries shape only
+                // the side lines, so they get no marker); points the generator added to keep it off the apron are smaller.
                 for (int i = 0; i < anchors.Count; i++)
                 {
                     var anchor = anchors[i];
+                    if (!anchor.InIdeal) continue;
                     var s = SampleAt(anchor.distance, samples);
                     Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
                     Vector2 p = s.position + right * anchor.ideal;
                     Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
-                    Gizmos.DrawWireSphere(w, anchorMarkerRadius);
+                    Gizmos.DrawWireSphere(w, anchor.shapeOnly ? anchorMarkerRadius * 0.5f : anchorMarkerRadius);
                 }
             }
         }
