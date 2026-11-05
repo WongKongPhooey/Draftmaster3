@@ -425,6 +425,36 @@ ahead of its first lot box) keeps its size at the matching end of pit road, the 
 rest of Watkins' along-pit-road offsets are squeezed into what is left. Same rule as Daytona: re-run the menu
 item after regenerating; never follow it with an overwriting `Dress Selected Package`.
 
+## Texas: dressed after the real Texas Motor Speedway
+
+`Draftmaster > Tracks > Texas > Author Texas (Real Layout)` (`Assets/Editor/TexasPackageAuthoring.cs`) dresses
+the FortWorth package to match the top-down aerial (`Assets/RefImages/texas-aerial.png`, calibrated as in
+`TexasOverlay.unity`: 0.8414 m/px, 0.24 deg, centre (-143.82, -265.85)). It does **not** touch the geometry,
+the walls, the drawn or trained racing lines or the `FortWorthEnvironment` asset - those were hand-fitted to the
+same aerial already (the trioval deliberately has no infield wall). What it lays:
+
+- **One main grandstand** from the middle of turn 4 round the whole front stretch to the middle of turn 1, where
+  the real one stops against the Speedway Club: 9 bent pieces (overlapping 1.5 m so no grass shows at the joints),
+  34 m of seating 5 m off the road, then a 22 m white suites roof. The generic back-stretch stands are gone -
+  Texas took its back-stretch seats out for Big Hoss TV in 2014.
+- **Landmarks** as flat roofs with drop shadows: the Speedway Club (turn 1), the Lone Star Tower (turn 2), Big Hoss
+  TV (a 66 m board at the middle of the back stretch) on the old grandstand deck, the service buildings behind
+  it, and the infield garage buildings south of the paddock.
+- **The infield**: paved from the box lane back to the far side of Infield Drive (garage compound, the infield
+  car park on the turn 1 side, the care centre and skid pad on the turn 4 side), 14 m clear of the racing
+  surface; the infield road course ("Holler Loop") across the grass in the south half. Grass stays between the
+  front stretch and pit road.
+- **The paddock**: Watkins Glen's, laid behind the straight of the infield pit road exactly as Daytona's is
+  (`DaytonaPackageAuthoring.LayWatkinsPaddock`) - it lands on the real garage compound. Pit boxes run along the
+  straight of pit road only (not its entry/exit arcs), on the infield side.
+
+All of it is `TrackDressingShape` / `Grandstand` recipes that rebuild their meshes on load: visual only, no
+colliders, nothing registered with the car physics. Re-running is safe (it replaces `Environment/Grandstands`,
+`Environment/TexasDressing` and the pieces the paddock step places) and removes scattered scenery that ends up
+under anything it lays. `... > Texas > Report Layout Over Aerial` writes `Temp/texas_layout.png` (the package over
+the photo); `... > Texas > Capture Rendered Preview` writes `Temp/texas_preview_*.png` (the package as the game
+draws it). Covered by `TexasPackageTests`.
+
 ## Building the whole calendar
 
 `Draftmaster > Tracks > Build All Calendar Tracks` does layout, package and dressing for all 37 generated

@@ -95,6 +95,38 @@ public static class DaytonaPackageAuthoring
 
     public static string AuthorDaytona() => AuthorVenue(Daytona);
 
+    // Texas (FortWorth) takes Watkins Glen's paddock the way Daytona does - the rigid copy behind the straight of
+    // its infield pit road, boxes along that straight - but keeps its hand-shaped geometry, its walls and its own
+    // grandstands, so TexasPackageAuthoring calls only this, on a package it already has loaded. Build the stands
+    // first: the grandstand gate's seat is picked from them. No paddock tarmac either - Texas paves its infield
+    // itself. Returns the notes.
+    public static string LayWatkinsPaddock(GameObject contents)
+    {
+        var package = contents.GetComponent<TrackPackage>();
+        var builder = package != null ? package.Builder : null;
+        var track = builder != null ? builder.track : null;
+        if (track == null || !track.hasPitLane || track.pitSegments == null || track.pitSegments.Length != 3)
+            return "no TrackBuilder with a three-piece pit road - paddock left alone";
+        var paddockRoot = package.paddockRoot != null ? package.paddockRoot : contents.transform.Find("Paddock");
+        if (paddockRoot == null) return "no Paddock root - paddock left alone";
+
+        var blueprint = ReadBlueprint(out string error);
+        if (blueprint == null) return error;
+        try
+        {
+            var notes = new List<string>();
+            var frame = DaytonaFrame(builder, notes);
+            var map = BlueprintToDaytona(blueprint.frame, frame);
+            LayPaddock(contents, paddockRoot, builder, frame, blueprint, map, null, notes);
+            return string.Join("; ", notes);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(blueprint.root);
+        }
+    }
+
+
     // Only the grandstands, for when they are all that has changed: re-running Author regenerates the geometry and
     // re-lays the whole paddock, which is far more than a stand needs. Re-lays the generated stands (the front
     // stretch as one stand bent round the tri-oval), keeps the grandstand gate's seat inside a stand, and takes out

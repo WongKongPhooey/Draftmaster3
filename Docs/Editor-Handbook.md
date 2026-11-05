@@ -195,6 +195,11 @@ regenerates the paddock pocket and throws the layout away. `... > Daytona > Repo
 `Temp/track_package_report.txt` comparing the two paddocks. Detail: `Docs/Tracks.md` § Daytona.
 **Martinsville likewise**: `Draftmaster > Tracks > Martinsville > Author Martinsville (Watkins Glen Blueprint)`
 (traced geometry, infield paddock sized to fit). Same rule. Detail: `Docs/Tracks.md` § Martinsville.
+**Texas** is dressed after the real Texas Motor Speedway by `Draftmaster > Tracks > Texas > Author Texas (Real
+Layout)` - main grandstand round the front stretch, Speedway Club, Lone Star Tower, Big Hoss TV, paved infield and
+road course, Watkins Glen's paddock behind pit road - without touching its hand-shaped geometry, walls or lines.
+Check it with `... > Texas > Report Layout Over Aerial` / `Capture Rendered Preview` (Temp pngs). Detail:
+`Docs/Tracks.md` § Texas.
 
 ## 4. Paint the start/finish line or pit exit line
 
@@ -709,6 +714,10 @@ it, B would close the pause menu and open it again, and in the car it would paus
 | Report Current Selection | Which track the next race builds, and why — prefs, travel-map fallback, resolved id |
 | Clear Package Previews From Scene | Optional now — saving `RaceScene` does the same. Applies hand edits on any track in the scene to its package, then removes the track |
 | Report Calendar Coverage | What's built vs catalogue-only |
+| Texas > Author Texas (Real Layout) | Dresses FortWorth after the real track (stands, landmarks, paved infield, road course, Watkins Glen paddock). Geometry, walls and lines untouched. Safe to re-run |
+| Texas > Report Layout Over Aerial (Temp png) | `Temp/texas_layout.png`: the package drawn over the calibrated aerial, plus a text dump |
+| Texas > Capture Rendered Preview (Temp png) | `Temp/texas_preview_*.png`: the package as the game draws it, from a preview scene (nothing opened or saved) |
+| Texas > Clear Orphaned Scenery Art In Open Scenes | Removes stray `SceneryArt` left at the root of a FortWorth preview after a re-author (Author runs it too) |
 
 ### `Draftmaster > AI`
 | Item | Does |
