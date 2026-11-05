@@ -640,8 +640,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Wheelspin/donuts: heavy throttle below wheelspinSpeed lights up the rears. Works from a standstill on
         // purpose — that's how you spin the car around to recover from a spin. The low-speed kinematic branch
         // below reads `wheelspin` to pivot the car toward steering lock.
+        // Not on the pit limiter: it holds the engine to pit speed, so it never puts enough power down to light the
+        // rears. Floored out of the pit box with the limiter on (how every formation lap and pit stop starts), the
+        // wheelspin pivot swung the tail round the front axle the moment the driver steered out of the box.
         float wheelspin = 0f;
-        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
+        if (enableWheelspin && float.IsPositiveInfinity(pitLimiterMps) && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
             wheelspin = Mathf.Clamp01(
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));

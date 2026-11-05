@@ -253,6 +253,31 @@ namespace Draftmaster.Sim
             return centre + (column < 0f ? -half : half) - line;
         }
 
+        // A car filing out of its pit box for the formation lap: its lateral (box strip -> pit driving line) as a
+        // function of the distance it has rolled, an S-curve from `from` to 0 over `length` metres. The kinematic car
+        // points down its own path (SplineDriver.Place: heading = atan(lateral rate / forward speed)), so easing the
+        // lateral at a fixed rate in TIME swung the body up to ~48 degrees at a crawl, snapped it straight again each
+        // time the queue stopped, and again when the lateral reached the line - the field's twitch out of the boxes.
+        // Tied to distance, the path angle is the same at any speed, starts and ends at zero, and peaks mid-way at
+        // atan(1.5 * |from| / length).
+        public static float PullOutLateral(float from, float travelled, float length)
+        {
+            if (!(length > 0f)) return 0f;
+            float t = Mathf.Clamp01(travelled / length);
+            return from * (1f - t * t * (3f - 2f * t));
+        }
+
+        // The pull-out length (m) that keeps the peak path angle at `maxAngleDeg` for a car starting `from` metres
+        // off the driving line, shortened to fit the lane left before the pit exit (`roomM`) so it is on the line
+        // before the merge, but never shorter than `minLengthM`.
+        public static float PullOutLength(float from, float maxAngleDeg, float roomM, float minLengthM)
+        {
+            float tan = Mathf.Tan(Mathf.Clamp(maxAngleDeg, 1f, 60f) * Mathf.Deg2Rad);
+            float ideal = 1.5f * Mathf.Abs(from) / tan;
+            float fit = roomM > 0f ? Mathf.Min(ideal, roomM) : ideal;
+            return Mathf.Max(fit, minLengthM);
+        }
+
         public static float Weave(float time, int gridSlot, float amplitude, float hz, float phasePerSlot, float envelope)
             => Mathf.Sin(time * (2f * Mathf.PI * hz) + gridSlot * phasePerSlot) * amplitude * envelope;
 

@@ -122,8 +122,10 @@ public class FormationController : MonoBehaviour
     public float pitOutMph = 45f;
     [Tooltip("How long (s) the pit-out settle lasts after leaving the pit lane.")]
     public float pitOutSettleSeconds = 3f;
-    [Tooltip("How fast (m/s of lateral) a car filing out for the formation lap pulls off the grey parked-box strip onto the pit lane's driving line. The grid spawn parks cars at the box-lane lateral; without this they ride that offset single-file down the wall for the whole lane.")]
-    public float pitPullOutLateralRate = 1.5f;
+    [Tooltip("Steepest angle (deg) a car filing out for the formation lap takes off the grey parked-box strip onto the pit lane's driving line. The grid spawn parks cars at the box-lane lateral; without the pull-out they ride that offset single-file down the wall for the whole lane. The lateral follows an S-curve over the distance the car rolls (FormationLanes.PullOutLateral), so the body points gently across and back - a fixed lateral rate in time swung it ~48 degrees at a crawl and the rear flailed.")]
+    [Range(2f, 30f)] public float pitPullOutAngleDeg = 8f;
+    [Tooltip("Shortest pull-out (m), for a box so near the pit exit that the angle above would not fit before the merge.")]
+    public float pitPullOutMinLength = 8f;
 
     [Header("Tyre-warming weave")]
     [Tooltip("Lateral weave amplitude (m) on straights. Suppressed in/near turns and at pit-out. Layered on TOP of the two-wide column offset with a per-slot phase, so anti-phase neighbours close their pair gap by up to twice this — keep it well under columnHalfOffset minus a car width.")]
@@ -156,6 +158,10 @@ public class FormationController : MonoBehaviour
     float _lateral;     // current applied tacticalLateralOffset (slew-limited)
     float _weaveEnv;    // 0..1 envelope so the weave ramps in gently
     bool _wasPit;
+    bool _pullingOut;      // filing out of the pit box: lateralOffset follows the pull-out S-curve
+    float _pullOutFrom;    // box-strip lateral the pull-out started from
+    float _pullOutTravel;  // metres rolled since
+    float _pullOutLength;  // metres the pull-out takes
     float _pitOutTimer;
     float _halfLength = DefaultHalfLength;
     float _halfWidth = DefaultHalfWidth;
@@ -388,12 +394,12 @@ public class FormationController : MonoBehaviour
             DbgOnPit = true;
             DbgSettling = false;
             HasPlan = false;
-            if (_spline.CurrentMph > 3f)
-                _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, pitPullOutLateralRate * dt);
+            StepPullOut(dt);
             if (_spline.IsOnPit) PitLaneStep(dt, cruise);
             return;
         }
         DbgOnPit = false;
+        _pullingOut = false;
         // Just rejoined the main track — start the pit-out settle so the merge doesn't snap the car off line.
         if (_wasPit) { _wasPit = false; _pitOutTimer = pitOutSettleSeconds; _weaveEnv = 0f; }
         bool settling = _pitOutTimer > 0f;
@@ -496,6 +502,28 @@ public class FormationController : MonoBehaviour
         PlannedTrackLateral = _planner.PlannedLateral(self.Lateral - self.Tactical, self.Lateral) - merge;
         HasPlan = true;
         DbgSettling = settling;
+    }
+
+    // Off the box strip onto the pit lane's driving line, by distance rolled rather than by time (see
+    // pitPullOutAngleDeg): a car held in the queue stays where it is, pointing where it was.
+    void StepPullOut(float dt)
+    {
+        if (!_pullingOut)
+        {
+            if (Mathf.Abs(_spline.lateralOffset) < 0.01f) return;
+            _pullingOut = true;
+            _pullOutFrom = _spline.lateralOffset;
+            _pullOutTravel = 0f;
+            // On the line before the merge: SplineDriver zeroes lateralOffset at the pit exit and eases whatever is
+            // left out as a merge bias, which is a sideways slide of its own.
+            float room = _spline.IsOnPit && _spline.PitLength > 0f
+                ? (_spline.PitLength * _spline.pitExitThreshold - _spline.DistanceOnTrack) * 0.8f
+                : 0f;
+            _pullOutLength = FormationLanes.PullOutLength(_pullOutFrom, pitPullOutAngleDeg, room, pitPullOutMinLength);
+        }
+        _pullOutTravel += Mathf.Max(0f, _spline.CurrentMph) / 2.237f * dt;
+        _spline.lateralOffset = FormationLanes.PullOutLateral(_pullOutFrom, _pullOutTravel, _pullOutLength);
+        if (_pullOutTravel >= _pullOutLength) _pullingOut = false;
     }
 
     // 0..1: how far away the nearest car ahead on the track is, from catchUpNearGap (0) to catchUpFarGap (1). Looks
