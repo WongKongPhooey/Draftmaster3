@@ -18,8 +18,19 @@ public static class TrackConditions
     [Tooltip("Driver-facing power slider. Default 0.8 (= 1.5 baked × 0.8 = 1.2x effective), <1 hot air / thin atmosphere. Multiplied by BasePower.")]
     public static float PowerMultiplier = 0.8f;
 
-    // Effective grip the dynamics actually consume: baked baseline × driver slider × the track's own grip.
-    public static float Effective => BaseGrip * GripMultiplier * TrackGripScale;
+    // Effective grip the dynamics actually consume: baked baseline × driver slider × the track's own grip × the car
+    // package raced here.
+    public static float Effective => BaseGrip * GripMultiplier * TrackGripScale * PackageGripScale;
+
+    // The car package's grip (TrackTuning.packageGrip): 1 on a road course, under 1 on an unplated oval, where the
+    // road-course grip took every turn at or near the top speed. Every car - player and AI, physics and speed plans -
+    // reads it through Effective. Set when the track loads.
+    public static float PackageGripScale = 1f;
+
+    // The car package's yaw inertia (TrackTuning.packageYawInertia) for the player's car: >1 on ovals, a heavier car
+    // slower to take a set and to snap back. PlayerVehicleController applies it to the human car only. Set when the
+    // track loads.
+    public static float PackageYawInertiaScale = 1f;
 
     // Grip the track itself adds - 1 everywhere but a plated superspeedway, where the turns are given exactly
     // what they need to be taken flat out at the plate speed with a full tow (RestrictorPlate). Set when it loads.
@@ -114,6 +125,8 @@ public static class TrackConditions
         AiLaneSpacing = 0f;
         AiAlongsideGap = 0f;
         AiPackLanes = 0;
+        PackageGripScale = 1f;
+        PackageYawInertiaScale = 1f;
         if (string.IsNullOrEmpty(trackId)) return;
         var tuning = TrackProfile.ForTrack(trackId);
         if (tuning.draftScale > 0f) DraftScale = tuning.draftScale;
@@ -129,12 +142,19 @@ public static class TrackConditions
         AiLaneSpacing = tuning.laneSpacing;
         AiAlongsideGap = tuning.alongsideGap;
         AiPackLanes = tuning.packLanes;
+        // A track the catalogue doesn't know falls back to the Speedway row above; it keeps the road-course car
+        // rather than being handed the oval package on a guess.
+        bool known = TrackCatalog.Row(trackId) != null;
+        if (known && tuning.packageGrip > 0f) PackageGripScale = tuning.packageGrip;
+        if (known && tuning.packageYawInertia > 0f) PackageYawInertiaScale = tuning.packageYawInertia;
         float plate = 0f, gripScale = 1f;
         if (tuning.plateMph > 0f && RestrictorPlate.Solve(trackId, tuning.plateMph, out plate, out gripScale))
         {
             PlateMph = plate;
             TrackGripScale = gripScale;
             AiFlatOut = tuning.flatOut;
+            // The plate solve owns a superspeedway's grip (it is solved against the un-packaged grip).
+            PackageGripScale = 1f;
         }
     }
 
@@ -176,5 +196,7 @@ public static class TrackConditions
         AiLaneSpacing = 0f;
         AiAlongsideGap = 0f;
         AiPackLanes = 0;
+        PackageGripScale = 1f;
+        PackageYawInertiaScale = 1f;
     }
 }

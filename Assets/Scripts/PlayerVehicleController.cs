@@ -748,6 +748,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         float m = Mass;
         float h = dt / Mathf.Max(subSteps, 1);
+        // The car package's weight (TrackConditions.PackageYawInertiaScale, >1 on ovals): the player's car is slower to
+        // take a set and to snap back. Human car only - the AI's steering is tuned on the road-course car - and only
+        // the tyre-driven rotation, not how hard a hit spins the car (ApplyCarImpact keeps _iz).
+        float izDrive = externalInput ? _iz : _iz * Mathf.Max(TrackConditions.PackageYawInertiaScale, 0.1f);
         float wearAccumF = 0f, wearAccumR = 0f;
 
         for (int s = 0; s < subSteps; s++)
@@ -792,7 +796,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 _lastAy = ay;
                 // Yaw damper opposes rotation (stabilises oversteer); extra damping under braking kills spin-on-the-brakes.
                 float yawDamp = yawDamping + brakeYawDamping * brakeIn;
-                float dr = (_a * fyF - _b * fyR) / _iz - yawDamp * _r; // yaw accel from front/rear moment + damping
+                float dr = (_a * fyF - _b * fyR) / izDrive - yawDamp * _r; // yaw accel from front/rear moment + damping
                 _vy += ay * h;
                 _r += dr * h;
                 // Velocity-vector rotation (Coriolis), paired with the -_vx*_r term in ay so it conserves speed:

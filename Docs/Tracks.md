@@ -491,6 +491,8 @@ Daytona; Bristol eats tyres faster than Martinsville). Read it through `TrackPro
 | Tyre wear | 0.7 | 1.0 | 1.5 | 1.25 |
 | Caution proneness | 0.8 | 0.45 | 0.9 | 0.35 |
 | Racing zoom | 26 | 22 | 16 | 20 |
+| Car package grip | 1 (the plate solves it) | 0.8 | 0.7 (Bristol 0.8) | 1 |
+| Car package yaw inertia (player car) | 1.3 | 1.3 | 1.3 | 1 |
 
 Indianapolis is a superspeedway by type but races like an intermediate: no plate, no pack (`ForTrack`).
 
@@ -499,6 +501,28 @@ row into `TrackConditions`, which is what the physics and the AI read: `DraftSca
 `AiLanes`, `PlateMph`, `TrackGripScale`, `AiFlatOut`, `AiPackRacing`, `PushScale`, `AiSideAwareness`,
 `AiLaneSpacing`, `AiPackLanes`. Tyre wear, line spread, caution proneness, grid columns and zoom are still
 unread.
+
+### The car package: ovals and road courses run different cars
+
+NASCAR brings a different package to an oval than to a road course, and so does this. With the road-course
+grip (Cup24's 2.0 g x the 1.44 baked conditions) every oval was taken at or near the top speed - Texas's 3-4
+held 213 mph on the centreline, the 1.5-milers barely lifted, and the short tracks lapped 15-25% under a real
+lap - so the car felt glued down rather than heavy. `TrackTuning.packageGrip` / `packageYawInertia` are the
+fix, applied by `ApplyTrackTuning` into `TrackConditions.PackageGripScale` / `PackageYawInertiaScale`:
+
+- **Grip** multiplies `TrackConditions.Effective` (and so `AiEffective`), which every grip consumer reads - the
+  player's and the AI's physics, the AI's speed plan, the racing-line overlay. AI and player lose the same share.
+  The numbers came from a centreline lap model (Cup24's curves, `BankedGrip`, the generated radii and banking)
+  against real Cup laps: x0.8 puts Texas at 29.4 s (real ~28.4), Charlotte 31.5 (30.0), Atlanta 30.9 (30.6),
+  Dover 21.8 (22.9), Indianapolis 49.8 (49.5), before the racing line's wider radius; x0.7 on the short tracks
+  still leaves Phoenix, Richmond and New Hampshire a little quick. In the headless lap sim an AI car at top pace
+  lapped Charlotte, Texas, Bristol and Phoenix with no incidents at either grip, 5-13% slower on the package.
+- **Yaw inertia** is the player's car only (`PlayerVehicleController`, the tyre-driven rotation - not how hard a
+  hit spins it): slower to take a set into a turn and to snap back. The AI's steering is tuned on the road car.
+- A **road course is exactly the road car** (`CarPackageTests` pins Watkins Glen's grip), a plated superspeedway
+  keeps grip x1 because `RestrictorPlate` already solves its turns, and a track the catalogue doesn't know keeps
+  the road car rather than inheriting the Speedway row's package.
+- Tune live with the F1 handling tuner (`PackageGripScale`, `PackageYawInertiaScale` in its Global section).
 
 ### The plate
 

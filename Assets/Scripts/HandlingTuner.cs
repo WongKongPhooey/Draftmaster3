@@ -103,6 +103,8 @@ public class HandlingTuner : MonoBehaviour
         _globalDefaults["DamageMultiplier"] = TrackConditions.DamageMultiplier;
         _globalDefaults["AiPaceMultiplier"] = TrackConditions.AiPaceMultiplier;
         _globalDefaults["AiGripMultiplier"] = TrackConditions.AiGripMultiplier;
+        _globalDefaults["PackageGripScale"] = TrackConditions.PackageGripScale;
+        _globalDefaults["PackageYawInertiaScale"] = TrackConditions.PackageYawInertiaScale;
     }
 
     void OnGUI()
@@ -160,6 +162,9 @@ public class HandlingTuner : MonoBehaviour
         TrackConditions.DamageMultiplier   = LabeledSlider("DamageMultiplier",   TrackConditions.DamageMultiplier,   0f,   4f);
         TrackConditions.AiPaceMultiplier   = LabeledSlider("AiPaceMultiplier",   TrackConditions.AiPaceMultiplier,   0.5f, 1.5f);
         TrackConditions.AiGripMultiplier   = LabeledSlider("AiGripMultiplier",   TrackConditions.AiGripMultiplier,   0.5f, 1.5f);
+        // The car package this track runs (TrackTuning.packageGrip / packageYawInertia): 1 / 1 on a road course.
+        TrackConditions.PackageGripScale       = LabeledSlider("PackageGripScale",       TrackConditions.PackageGripScale,       0.5f, 1.2f);
+        TrackConditions.PackageYawInertiaScale = LabeledSlider("PackageYawInertiaScale", TrackConditions.PackageYawInertiaScale, 0.5f, 2f);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -192,6 +197,8 @@ public class HandlingTuner : MonoBehaviour
         if (_globalDefaults.TryGetValue("DamageMultiplier", out var d)) TrackConditions.DamageMultiplier = d;
         if (_globalDefaults.TryGetValue("AiPaceMultiplier", out var a)) TrackConditions.AiPaceMultiplier = a;
         if (_globalDefaults.TryGetValue("AiGripMultiplier", out var ag)) TrackConditions.AiGripMultiplier = ag;
+        if (_globalDefaults.TryGetValue("PackageGripScale", out var pg)) TrackConditions.PackageGripScale = pg;
+        if (_globalDefaults.TryGetValue("PackageYawInertiaScale", out var pi)) TrackConditions.PackageYawInertiaScale = pi;
     }
 
     void LogValues()
@@ -208,6 +215,8 @@ public class HandlingTuner : MonoBehaviour
         sb.AppendLine($"  [Global] DamageMultiplier = {TrackConditions.DamageMultiplier:0.####}");
         sb.AppendLine($"  [Global] AiPaceMultiplier = {TrackConditions.AiPaceMultiplier:0.####}");
         sb.AppendLine($"  [Global] AiGripMultiplier = {TrackConditions.AiGripMultiplier:0.####}");
+        sb.AppendLine($"  [Global] PackageGripScale = {TrackConditions.PackageGripScale:0.####}");
+        sb.AppendLine($"  [Global] PackageYawInertiaScale = {TrackConditions.PackageYawInertiaScale:0.####}");
         Debug.Log(sb.ToString());
     }
 

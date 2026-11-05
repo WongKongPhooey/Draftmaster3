@@ -41,6 +41,10 @@ namespace Draftmaster.Tracks
         public float fuelBurnScale;      // multiplier on burn rate
         public float dirtyAirLoss;       // share of grip a full tow's wake costs at speed (Draftmaster.Sim.DirtyAir; 0 = none)
 
+        // The car package - NASCAR runs a different car on ovals than on road courses, and so does this. Both 0 = 1.
+        public float packageGrip;        // multiplier on every car's tyre grip (TrackConditions.PackageGripScale)
+        public float packageYawInertia;  // multiplier on the player car's yaw inertia (TrackConditions.PackageYawInertiaScale)
+
         public float lineSpread;         // 0-1: how far off the ideal line the AI will race
         public float cautionProneness;   // 0-1: rough likelihood of contact-driven cautions
 
@@ -54,6 +58,26 @@ namespace Draftmaster.Tracks
 
     public static class TrackTuning
     {
+        // The oval package. With the road-course grip (Cup24's 2.0 g x the 1.44 baked conditions) every oval was
+        // taken at or near the top speed: Texas's 3-4 held 213 mph on the centreline and the 1.5-milers barely
+        // lifted, so the car felt glued down and slow rather than heavy. A centreline lap model (Cup24's accel/brake
+        // curves, BankedGrip, the generated turn radii and banking) against real Cup laps put the grip at:
+        //   intermediates x0.8  - Texas 29.4 s (real ~28.4), Charlotte 31.5 (30.0), Atlanta 30.9 (30.6), Dover 21.8
+        //                          (22.9), Homestead 31.8 (32.0), Nashville 30.0 (29.5), Indianapolis 49.8 (49.5);
+        //                          the racing line's wider radius takes a second or so off each. Was 28-29 s at
+        //                          Texas/Charlotte with corners at 170-200 mph - flat or nearly.
+        //   short tracks x0.7   - Phoenix 24.8 (27.0), Richmond 20.7 (22.6), New Hampshire 26.4 (29.3), Martinsville
+        //                          18.9 (19.8); still quick, but from 15-25% under a real lap at x1.
+        // The grip goes to everyone through TrackConditions.Effective / AiEffective, so the AI's speed plan, the
+        // racing-line overlay and the physics all move together. A plated superspeedway keeps x1: RestrictorPlate
+        // already solves its turns' grip to be taken flat out at the plate speed, and the packs are tuned on that.
+        public const float OvalPackageGrip = 0.8f;
+        public const float ShortTrackPackageGrip = 0.7f;
+        // A stock car on an oval should feel like 3,400 lb: slower to take a set into the turn, slower to snap back.
+        // Player's car only - the AI's steering is tuned on the road-course car and an oval is long steady arcs, so
+        // this is feel, not pace.
+        public const float OvalPackageYawInertia = 1.3f;
+
         public static TrackTuningData For(TrackKind kind)
         {
             switch (kind)
@@ -82,6 +106,8 @@ namespace Draftmaster.Tracks
                         flatOut = true,
                         packRacing = true,
                         pushScale = 1f,
+                        packageGrip = 1f,          // the plate solves the turns' grip (RestrictorPlate)
+                        packageYawInertia = OvalPackageYawInertia,
                         sideAwareness = 0.15f,     // three wide is normal; you hold your lane and trust the others to
                         laneSpacing = 3.6f,        // 40 ft of road, three grooves: a car's width and a metre and a half
                         packLanes = 3,
@@ -108,6 +134,8 @@ namespace Draftmaster.Tracks
                         raceInLanes = true,
                         pushScale = 0.3f,
                         sideAwareness = 0.6f,      // two wide off the corners, give a little room
+                        packageGrip = OvalPackageGrip,
+                        packageYawInertia = OvalPackageYawInertia,
                         // Aero push (NR2003's wake cuts the follower's downforce with the same table as its drag):
                         // OFF for now. At 0.06 (~6% grip right behind a car at 170 mph) the pack sim
                         // (PackRaceSimTests.DirtyAirOvals, Charlotte + Atlanta, two rosters) lost a quarter of its
@@ -135,6 +163,8 @@ namespace Draftmaster.Tracks
                         raceInLanes = true,
                         sideAwareness = 0.45f,     // leaning on each other is part of it
                         alongsideGap = 3.4f,       // braking side by side into a tight turn: at 2.6 m the boxes touched
+                        packageGrip = ShortTrackPackageGrip,
+                        packageYawInertia = OvalPackageYawInertia,
                         tyreWearScale = 1.5f,      // brake, turn, throttle, repeat
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.5f,         // barely room for two
@@ -155,6 +185,10 @@ namespace Draftmaster.Tracks
                         draftScale = 1f,
                         draftFollowScale = 1f,
                         sideAwareness = 1f,        // braking zones and run-off: leave room
+                        // The road-course package is the car every handling number was tuned on (Watkins Glen's AI
+                        // calibration, the trained lines, the player's dialled-in balance). Leave it at 1.
+                        packageGrip = 1f,
+                        packageYawInertia = 1f,
                         tyreWearScale = 1.25f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.55f,
@@ -209,6 +243,9 @@ namespace Draftmaster.Tracks
                 case "Bristol":         // concrete bullring, 28 degrees of banking — hardest on tyres anywhere
                     t.tyreWearScale = 1.8f;
                     t.racingZoom = 14f;
+                    // The banking carries real speed: at the short-track grip the lap model ran 16.2 s (real ~15.1),
+                    // at the intermediate grip 15.3.
+                    t.packageGrip = OvalPackageGrip;
                     break;
 
                 case "Martinsville":    // flat paperclip: brakes, not banking. No speed in the corner at all
@@ -228,6 +265,7 @@ namespace Draftmaster.Tracks
                     t.draftFollowScale = 0.8f;
                     t.lineSpread = 0.6f;
                     t.turnShareOfLap = 0.3f;
+                    t.packageGrip = OvalPackageGrip;   // unplated, so the intermediate package (49.8 s, real ~49.5)
                     break;
 
                 case "Darlington":      // egg-shaped, one groove, wall-scraping
