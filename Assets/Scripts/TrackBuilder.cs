@@ -772,12 +772,24 @@ public class TrackBuilder : MonoBehaviour
     // main lap (its AI brain's distance, or the player's projection). Nothing when the car is not on the main
     // road: off it, on the apron or in the pit lane the ground is taken as level.
     public bool BankAt(float distance, Vector3 worldPos, out float bankDeg, out Vector2 downhillWorld)
+        => BankAt(distance, worldPos, out bankDeg, out downhillWorld, out _);
+
+    // As above, plus gravity's whole pull on the car in the road's plane (world space, m/s²): down the bank toward
+    // the inside at the banking under the car's lane (BankedGrip.BankAcross - the top groove is steeper), and along
+    // the lap where the banking is changing under it - downhill off the top of a turn as it flattens onto the
+    // straight, uphill climbing into one (BankedGrip.SurfaceHeight).
+    public bool BankAt(float distance, Vector3 worldPos, out float bankDeg, out Vector2 downhillWorld, out Vector2 slopeAccelWorld)
     {
         bankDeg = 0f;
         downhillWorld = Vector2.zero;
+        slopeAccelWorld = Vector2.zero;
         if (track == null || track.segments == null) return false;
+        // Banking a little behind and ahead as well: the road's height changes along the lap only where these differ.
+        const float slopeStep = 4f;
         float bank = track.BankingAt(distance);
-        if (Mathf.Abs(bank) < 0.01f) return false;
+        float bankBehind = track.BankingAt(distance - slopeStep);
+        float bankAhead = track.BankingAt(distance + slopeStep);
+        if (Mathf.Abs(bank) < 0.01f && Mathf.Abs(bankBehind) < 0.01f && Mathf.Abs(bankAhead) < 0.01f) return false;
 
         // The cached centreline: SampleAt without a list rebuilds the whole thing, and this runs for every car
         // every physics step.
@@ -788,10 +800,20 @@ public class TrackBuilder : MonoBehaviour
         if (Mathf.Abs(lateral) > s.width * 0.5f + 0.5f) return false;
 
         // Sample normal is the right of travel; the bottom of the banking is the inside of the lap.
-        Vector2 downLocal = track.LapTurnsLeft() ? -s.normal : s.normal;
+        bool turnsLeft = track.LapTurnsLeft();
+        Vector2 downLocal = turnsLeft ? -s.normal : s.normal;
         downhillWorld = ((Vector2)transform.TransformDirection(new Vector3(downLocal.x, downLocal.y, 0f))).normalized;
-        bankDeg = bank;
-        return true;
+        Vector2 fwdWorld = ((Vector2)transform.TransformDirection(new Vector3(s.tangent.x, s.tangent.y, 0f))).normalized;
+
+        // How far up the road the car is: 0 at the bottom (inside) edge, 1 at the top (outside) edge.
+        float width = Mathf.Max(s.width, 0.1f);
+        float up = turnsLeft ? lateral : -lateral;
+        float across = Mathf.Clamp01(up / width + 0.5f);
+
+        bankDeg = Draftmaster.Sim.BankedGrip.BankAcross(bank, across);
+        float alongAccel = Draftmaster.Sim.BankedGrip.AlongTrackAccel(bankBehind, bankAhead, 2f * slopeStep, across, width);
+        slopeAccelWorld = downhillWorld * Draftmaster.Sim.BankedGrip.DownslopeAccel(bankDeg) + fwdWorld * alongAccel;
+        return Mathf.Abs(bankDeg) >= 0.01f || Mathf.Abs(alongAccel) > 1e-4f;
     }
 
     // Project a WORLD position onto the main centerline and return its distance (m) along the spline.

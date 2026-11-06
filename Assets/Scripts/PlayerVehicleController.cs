@@ -726,10 +726,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         muR *= surfGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
 
         // Banking. The tyres are loaded harder by cornering into the bank, and gravity pulls down it - toward the
-        // inside of an oval's turn - carrying part of the cornering for free (BankedGrip). Only on the main road:
-        // the apron, the grass and pit road are level.
+        // inside of an oval's turn - carrying part of the cornering for free (BankedGrip). The banking is the one
+        // under the car's lane: the top groove is steeper than the bottom, so the high line holds more (BankAcross).
+        // Where a turn's banking eases onto the straight the top of the road comes down, so a car up the bank runs
+        // downhill off it and gains speed on the exit (and climbs, paying for it, running in high). Only on the main
+        // road: the apron, the grass and pit road are level.
         float bankDeg = 0f;
-        Vector2 downhill = Vector2.zero;
+        Vector2 slopeAccel = Vector2.zero;
         if (applyBanking && track != null && onTrackSurface)
         {
             float bankDistance = -1f;
@@ -739,14 +742,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             }
             else if (_isObstacle) bankDistance = TrackDistance;
             else bankDistance = track.NearestCenterlineDistance(transform.position);
-            if (bankDistance >= 0f) track.BankAt(bankDistance, transform.position, out bankDeg, out downhill);
+            if (bankDistance >= 0f) track.BankAt(bankDistance, transform.position, out bankDeg, out _, out slopeAccel);
         }
-        float downhillAccel = Draftmaster.Sim.BankedGrip.DownslopeAccel(bankDeg);
         float headingRad = _headingDeg * Mathf.Deg2Rad;
         Vector2 bodyFwd = new Vector2(Mathf.Cos(headingRad), Mathf.Sin(headingRad));
         Vector2 bodyLeft = new Vector2(-bodyFwd.y, bodyFwd.x);
-        float downhillLat = Vector2.Dot(downhill, bodyLeft) * downhillAccel;
-        float downhillLon = Vector2.Dot(downhill, bodyFwd) * downhillAccel;
+        float downhillLat = Vector2.Dot(slopeAccel, bodyLeft);
+        float downhillLon = Vector2.Dot(slopeAccel, bodyFwd);
         CurrentBankDeg = bankDeg;
 
         float m = Mass;

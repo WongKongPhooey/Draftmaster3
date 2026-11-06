@@ -1407,10 +1407,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _speedProfile = new float[n];
         _gripLimitProfile = new float[n];
         _bakedALatMaxMps2 = GripLateralAccelMps2();
+        bool lapTurnsLeft = track != null && track.track != null && track.track.LapTurnsLeft();
+        bool hasLateral = _lateralProfile != null && _lateralProfile.Length == n;
         for (int i = 0; i < n; i++)
         {
             int segIdx = SegmentIndexAt(_mainSamples[i].distance);
             float kappa = _curvatureProfile != null ? _curvatureProfile[i] : 0f;
+            // How far up the banking this car's line runs here (0 bottom edge, 1 top): the top groove is steeper
+            // (BankedGrip.BankAcross), and the physics banks the car at its real lane, so the plan must too - an
+            // outside-lane car plans the extra the high line holds, an inside one no more than the bottom holds.
+            float lat = hasLateral ? _lateralProfile[i] : 0f;
+            float across = Mathf.Clamp01((lapTurnsLeft ? lat : -lat) / Mathf.Max(_mainSamples[i].width, 0.1f) + 0.5f);
             // Curvature-true target where the line actually bends; the old segment target (top speed or the
             // authored cap) elsewhere and as the fallback when no curvature data exists.
             //
@@ -1434,9 +1441,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 // the corners (it is capped at the grip limit, and a track's calibrated AI pace puts everyone
                 // well above it), so without this every car took every corner at the identical speed and the
                 // field only differed on the straights — it spread out and never passed.
-                float limit = ComputeTargetSpeedForCurvature(kappa, segIdx, atLimit: true) * Mathf.Clamp(cornerCommitment, 0.5f, 1f);
+                float limit = ComputeTargetSpeedForCurvature(kappa, segIdx, atLimit: true, acrossFrac: across) * Mathf.Clamp(cornerCommitment, 0.5f, 1f);
                 _gripLimitProfile[i] = limit;
-                _speedProfile[i] = Mathf.Min(ComputeTargetSpeedForCurvature(kappa, segIdx) * _profilePace, limit);
+                _speedProfile[i] = Mathf.Min(ComputeTargetSpeedForCurvature(kappa, segIdx, acrossFrac: across) * _profilePace, limit);
             }
             else
             {
@@ -1491,7 +1498,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // uses, so with cornerSpeedScale ≤ 1 the car is guaranteed lateral headroom instead of being commanded into
     // saturation (which is what strews understeering cars across the track when grip/speed tuning changes).
     // `atLimit`: the most the car can take this curvature at — no cornerSpeedScale margin.
-    float ComputeTargetSpeedForCurvature(float kappa, int segIdx, bool atLimit = false)
+    // `acrossFrac`: how far up the banking the line runs (0 bottom edge, 0.5 the middle - the published banking -
+    // 1 the top), for the progressive banking under it (BankedGrip.BankAcross).
+    float ComputeTargetSpeedForCurvature(float kappa, int segIdx, bool atLimit = false, float acrossFrac = 0.5f)
     {
         float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
         float radius = 1f / kappa;
@@ -1522,7 +1531,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (Mathf.Abs(seg.banking) > 0.01f)
             {
                 float flat = Mathf.Max(_bakedALatMaxMps2, 0.1f);
-                baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(flat, seg.banking));
+                float bank = Draftmaster.Sim.BankedGrip.BankAcross(seg.banking, acrossFrac);
+                baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(flat, bank));
             }
             if (seg.maxSpeed > 0) capMph = Mathf.Min(capMph, seg.maxSpeed);
         }

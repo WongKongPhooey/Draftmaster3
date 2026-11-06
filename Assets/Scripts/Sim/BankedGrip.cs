@@ -47,5 +47,58 @@ namespace Draftmaster.Sim
         // How much a bank multiplies what the car can hold - for planning code that scales a flat-ground figure.
         public static float CapacityScale(float flatPeak, float bankDeg)
             => flatPeak > 0f ? Capacity(flatPeak, bankDeg) / flatPeak : 1f;
+
+        // ---- Across the width: progressive banking ----
+        //
+        // A real oval's banking is not one flat plane. The surface curves up from the apron to the wall, so the top
+        // groove sits on steeper banking than the bottom (Bristol 24-30, Homestead 18-20, Kansas 17-20). A track's
+        // published figure is taken as the middle of the road; the bottom edge is ProgressiveSpread/2 of it flatter
+        // and the top edge as much steeper. Proportional, so the steeper the track the more the high line gains:
+        // a couple of degrees at Daytona, a fraction of one at a flat track.
+        //
+        // TrackBuilder.BankAt hands the physics the banking under the car's actual lateral position, and SplineDriver
+        // plans each AI line's corner speeds off the banking under that line, so the outside lane plans what the
+        // outside lane holds and the inside lane no more than the inside holds.
+        public static float ProgressiveSpread = 0.2f;
+
+        // Banking (degrees) at acrossFrac of the way across the road from the bottom (inside) edge (0) to the top
+        // (outside) edge (1). acrossFrac 0.5 - the middle of the road - is bankDeg itself.
+        public static float BankAcross(float bankDeg, float acrossFrac)
+            => bankDeg * (1f + ProgressiveSpread * (Mathf.Clamp01(acrossFrac) - 0.5f));
+
+        // ---- Running off the banking ----
+        //
+        // Height (m) of the road surface acrossFrac of the way up from its bottom edge, on a road widthM wide
+        // banked bankDeg at its middle: the integral of sin(bank) up the progressive cross-section. The bottom edge
+        // is at 0 - level with the apron and the flat infield.
+        //
+        // Where a turn's banking eases out onto a flatter straight, the top of the road comes down and the bottom
+        // stays where it is, so a car up the banking runs downhill along the track as it exits - gravity hands it
+        // the height back as speed - and one high on the way in climbs and pays for it. The gradient of this along
+        // the lap is what TrackBuilder.BankAt turns into a fore-aft pull. It is the same surface whose sideways
+        // slope is DownslopeAccel(BankAcross(...)), so the two forces together are gravity on one real surface:
+        // nothing is gained round a closed lap that was not paid for in height.
+        public static float SurfaceHeight(float bankDeg, float acrossFrac, float widthM)
+        {
+            if (widthM <= 0f) return 0f;
+            float u = Mathf.Clamp01(acrossFrac) * widthM;
+            float b0 = Mathf.Abs(BankAcross(bankDeg, 0f)) * Mathf.Deg2Rad;
+            float b1 = Mathf.Abs(BankAcross(bankDeg, 1f)) * Mathf.Deg2Rad;
+            float beta = (b1 - b0) / widthM;   // bank (rad) gained per metre up the road
+            if (Mathf.Abs(beta) < 1e-6f) return u * Mathf.Sin(b0);
+            return (Mathf.Cos(b0) - Mathf.Cos(b0 + beta * u)) / beta;
+        }
+
+        // Gravity's pull ALONG the lap (m/s², + = forward) on a car acrossFrac up a road widthM wide, given the
+        // nominal banking a step behind (bankBehindDeg) and a step ahead (bankAheadDeg), stepM apart in total.
+        // Positive where the banking flattens ahead - the exit, for a car up the bank.
+        public static float AlongTrackAccel(float bankBehindDeg, float bankAheadDeg, float stepM, float acrossFrac, float widthM)
+        {
+            if (stepM <= 0f) return 0f;
+            float dh = SurfaceHeight(bankAheadDeg, acrossFrac, widthM) - SurfaceHeight(bankBehindDeg, acrossFrac, widthM);
+            float slope = dh / stepM;
+            // Along a slope of rise/run `slope`, gravity's component down it is g·sin(atan(slope)).
+            return -G * slope / Mathf.Sqrt(1f + slope * slope);
+        }
     }
 }
