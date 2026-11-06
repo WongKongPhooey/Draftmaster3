@@ -233,6 +233,19 @@ namespace Draftmaster.Sim
     // pulled in (never together) through turns, with a slow tyre-warming weave on the straights.
     public static class FormationLanes
     {
+        // Under a full-course caution the field comes out at race gaps, strung round the lap, and has to close up on
+        // the safety car well inside the caution's minimum laps. How much over cruise (mph) a car may run with
+        // gapM of road to the car ahead: the closing speed it could still shed at decelMps2 by the time it is
+        // arriveAtM behind it, capped at maxBonusMph. A car far back closes hard; one nearing the train arrives at the
+        // train's pace, not as a much faster car the planner would take for a blockage and drive round.
+        public static float CautionCatchUpMph(float gapM, float arriveAtM, float decelMps2, float maxBonusMph)
+        {
+            float room = gapM - arriveAtM;
+            if (!(room > 0f) || !(maxBonusMph > 0f)) return 0f;
+            float closing = Mathf.Sqrt(2f * Mathf.Max(decelMps2, 0.01f) * room) * PackAvoidance.MpsToMph;
+            return Mathf.Min(closing, maxBonusMph);
+        }
+
         // Even grid slots run the left column, odd slots the right.
         public static float Column(int gridSlot, float halfOffset, bool corner, float cornerScale)
         {

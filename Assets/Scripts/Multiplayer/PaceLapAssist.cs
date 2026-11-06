@@ -37,10 +37,14 @@ public class PaceLapAssist : MonoBehaviour
     [Header("Caution")]
     [Tooltip("Under a full-course caution the player is never let go faster than this (mph) — enough to catch the train up, not to race.")]
     public float cautionMaxMph = 90f;
-    [Tooltip("Under a caution a car counts as the one in front only if it is within this far (m) across from the player. Further over it is passed alongside, not followed.")]
+    [Tooltip("Under a caution a car within this far (m) across from the player is in their lane: held behind if it is doing over cautionMovingMph.")]
     public float cautionLaneHalfWidth = 2.6f;
     [Tooltip("Under a caution a car slower than this (mph) is an obstacle to drive round, not a car to hold station behind.")]
     public float cautionMovingMph = 15f;
+    [Tooltip("Under a caution a car OUT of the player's lane still counts as the one in front unless it is slower than this (mph) — a damaged car limping round, driven past. Nobody passes the train under the caution, in any lane: the lane test alone let a player coming off pit road on the apron run cruise-and-a-half past the whole single-file field and take the lead.")]
+    public float cautionPassableMph = 35f;
+    [Tooltip("Under a caution, from further back than holdGap the player is eased down onto the car in front as if braking at this rate (m/s^2), so closing up at speed is a firm lift rather than a wall at holdGap.")]
+    public float cautionApproachDecelMps2 = 4f;
 
     const float MphToMps = 1f / 2.237f;
 
@@ -159,8 +163,11 @@ public class PaceLapAssist : MonoBehaviour
         // projected onto the main lap while an AI car on the lane reports a pit-lane distance, so the car ahead
         // came out far "behind" and the hold backed the player off to 80% of its speed - stuck
         // well under the limit (Daytona's 55) while the AI ran the lane at it.
+        // Under a caution, though, a car past the pit exit line is rejoining the race: from there to the merge it is
+        // held behind the train like any car on the track. Let go to the end of the pit road, a player coming out
+        // ran flat out down the exit road beside the field and merged in ahead of half of it.
         var track = pvc.ObstacleTrack;
-        if (track != null && track.IsOnPitSurface(transform.position))
+        if (track != null && track.IsOnPitSurface(transform.position) && !(RaceStart.IsCaution && PastPitExitLine(track)))
         {
             pvc.speedGovernorMps = Mathf.Infinity;
             _showPrompt = false;
@@ -253,9 +260,11 @@ public class PaceLapAssist : MonoBehaviour
         else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
     }
 
-    // Caution: hold behind the nearest moving car in front on the road, whoever it is, capped at cautionMaxMph. The
-    // leader of the train holds the director's close-up pace once the safety car peels off, as the AI front row does.
-    // Only reached off pit road: UpdateSpline hands pit road to the limiter first.
+    // Caution: hold behind the nearest car in front on the road, whoever it is and whichever lane it is in, capped at
+    // cautionMaxMph — no passing under the caution, so where the player comes out of the pits is where they run. Only
+    // a stopped or crawling car may be driven round. The leader of the train holds the director's close-up pace once
+    // the safety car peels off, as the AI front row does. Only reached off pit road: UpdateSpline hands pit road to
+    // the limiter first.
     void UpdateCaution()
     {
         var field = RaceField.Drivers;
@@ -268,7 +277,8 @@ public class PaceLapAssist : MonoBehaviour
             var d = field[i];
             if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.TrackLength <= 0f) continue;
             if (d.CurrentMph < cautionMovingMph) continue;
-            if (Mathf.Abs(d.LateralOnTrack - myLat) > cautionLaneHalfWidth) continue;
+            bool inMyLane = Mathf.Abs(d.LateralOnTrack - myLat) <= cautionLaneHalfWidth;
+            if (!inMyLane && d.CurrentMph < cautionPassableMph) continue;
             float g = Mathf.Repeat(d.DistanceOnTrack - playerDist, d.TrackLength);
             if (g <= 0f || g >= d.TrackLength * 0.5f || g >= gap) continue;
             gap = g;
@@ -282,6 +292,7 @@ public class PaceLapAssist : MonoBehaviour
             float aheadMps = ahead.CurrentMph * MphToMps;
             if (gap <= hardGap) gov = Mathf.Min(gov, aheadMps * 0.8f);
             else if (gap < holdGap) gov = Mathf.Min(gov, aheadMps);
+            else gov = Mathf.Min(gov, Mathf.Sqrt(aheadMps * aheadMps + 2f * Mathf.Max(cautionApproachDecelMps2, 0.1f) * (gap - holdGap)));
         }
         var sc = FormationDirector.Instance != null ? FormationDirector.Instance.SafetyCarInstance : null;
         bool leading = ahead == null || paceCar != null || gap > catchUpGap * 4f;
@@ -294,6 +305,13 @@ public class PaceLapAssist : MonoBehaviour
         if (ahead == null) { _promptText = "CAUTION — hold your position"; return; }
         string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
         _promptText = gap > catchUpGap ? $"CAUTION — close up behind {who}" : $"CAUTION — hold station behind {who}";
+    }
+
+    // On the pit road past its exit line (PitLimiter's zone ends there), the stretch where the car rejoins the track.
+    bool PastPitExitLine(TrackBuilder track)
+    {
+        if (track.track == null || !track.track.hasPitLane) return false;
+        return track.NearestPitDistance(transform.position) >= track.track.PitExitLineDistance;
     }
 
     void UpdatePrompt(Vector2 myPos, Vector2 fwd)

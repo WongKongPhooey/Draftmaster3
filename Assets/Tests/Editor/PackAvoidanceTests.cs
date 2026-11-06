@@ -22,6 +22,9 @@ public class PackAvoidanceTests
     const float CatchUp = 9f;
     const float Column = 2.2f;               // FormationController.columnHalfOffset
     const float RowGap = 15f;
+    const float CautionCatchUpMaxMph = 60f;  // FormationController.cautionCatchUpMaxMph
+    const float CautionCloseDecelMps2 = 2f;  // FormationController.cautionCloseDecelMps2
+    const float CautionArriveMarginM = 16f;  // FormationController.cautionArriveMarginM
 
     sealed class Car
     {
@@ -60,6 +63,7 @@ public class PackAvoidanceTests
         public bool AllowSwerve = true;
         public bool Corner;              // formation cars pull their columns in and stop weaving
         public bool ClosingUp;           // formation cars pack into rows and stop weaving
+        public bool Caution;             // full-course caution: FormationController's caution catch-up, no passing
         public string FirstContact;
         // Set these to log one car's view every half second (and every swerve change) while tuning a scenario.
         public System.Text.StringBuilder Trace;
@@ -139,11 +143,29 @@ public class PackAvoidanceTests
                              + FormationLanes.Weave(Time, me.Slot, 0.45f, 0.18f, 0.8f, me.WeaveEnv);
                 }
                 bool calm = Corner || ClosingUp;
+                float baseCap = calm ? Cruise : Cruise + CatchUp;
+                float cautionBonus = 0f;
+                if (Caution)
+                {
+                    // FormationController under caution: close on the nearest car ahead (any lane) by the road to it.
+                    float aheadGap = float.MaxValue;
+                    bool aheadPace = false;
+                    foreach (var o in Cars)
+                    {
+                        float g = o.Dist - me.Dist;
+                        if (o != me && g > 0f && g < aheadGap) { aheadGap = g; aheadPace = o.PaceCar; }
+                    }
+                    if (aheadGap < float.MaxValue)
+                        cautionBonus = FormationLanes.CautionCatchUpMph(aheadGap, (aheadPace ? 26f : 9f) + CautionArriveMarginM,
+                                                                        CautionCloseDecelMps2, CautionCatchUpMaxMph);
+                    baseCap = Cruise + Mathf.Max(Corner ? 0f : CatchUp, cautionBonus);
+                }
                 var intent = new PackIntent
                 {
-                    BaseCapMph = calm ? Cruise : Cruise + CatchUp, MaxCapMph = Cruise + CatchUp, FloorMph = 12f,
-                    WantGap = ClosingUp ? 8f : 9f, PaceCarGap = 26f, CruiseMph = Cruise,
+                    BaseCapMph = baseCap, MaxCapMph = Mathf.Max(baseCap, Cruise + CatchUp), FloorMph = 12f,
+                    WantGap = ClosingUp ? 8f : 9f, PaceCarGap = 26f, CruiseMph = Cruise + cautionBonus,
                     ColumnTactical = column, ColumnSlew = 1.5f, AllowSwerve = AllowSwerve,
+                    NoUrgentSwerve = Caution,
                 };
                 me.Pending = me.Planner.Step(self, intent, _buf, Dt);
 
@@ -246,6 +268,53 @@ public class PackAvoidanceTests
         Assert.AreEqual(column, FormationLanes.FitColumn(column, 0f, lo, hi), 1e-4f);
         // No bounds known (pit lane): untouched.
         Assert.AreEqual(column, FormationLanes.FitColumn(column, 3.9f, float.NegativeInfinity, float.PositiveInfinity), 1e-4f);
+    }
+
+    [Test]
+    public void TheCautionCatchUpClosesHardFromFarBackAndRunsOutAtTheTrain()
+    {
+        // Run out at the arrival point, capped far back, and never more than could be shed at the rate before the
+        // arrival point: v^2 = 2 a d.
+        Assert.AreEqual(0f, FormationLanes.CautionCatchUpMph(20f, 25f, 2f, 60f), 1e-4f);
+        Assert.AreEqual(0f, FormationLanes.CautionCatchUpMph(25f, 25f, 2f, 60f), 1e-4f);
+        Assert.AreEqual(60f, FormationLanes.CautionCatchUpMph(1000f, 25f, 2f, 60f), 1e-4f);
+        float v = FormationLanes.CautionCatchUpMph(50f, 25f, 2f, 60f) * PackAvoidance.MphToMps;
+        Assert.AreEqual(2f * 2f * 25f, v * v, 0.01f);
+        // Below the planner's blockage threshold (18 mph faster) well before it is close enough to go round.
+        Assert.Less(FormationLanes.CautionCatchUpMph(40f, 25f, 2f, 60f), 18f);
+        Assert.AreEqual(0f, FormationLanes.CautionCatchUpMph(float.MaxValue, 25f, 2f, 0f), 1e-4f);
+    }
+
+    [TestCase(0f)]
+    [TestCase(3.5f)]
+    public void UnderCautionACarOutOfThePitsClosesOnTheTrainAndStaysBehindIt(float startLat)
+    {
+        // A full-course caution: a single-file train behind the safety car, and a car rejoining from the pits 500 m
+        // back (on the line, or still out on the apron merging across). It used to close at catchUpBonusMph, 4 m/s;
+        // now it closes hard and arrives at the train's pace - and comes out of it where it rejoined: behind the
+        // tail, never past it.
+        var w = new World { Caution = true };
+        var pace = w.AddScripted(26f + 2f * HalfLength + 300f, 0f, Cruise, paceCar: true);
+        var train = new List<Car>();
+        for (int i = 0; i < 6; i++) train.Add(w.AddAI(300f - i * 12f, 0f, Cruise));
+        var tail = train[train.Count - 1];
+        var late = w.AddAI(tail.Dist - 500f, 0f, 45f);
+        late.Lat = late.Tactical = startLat;
+
+        float closedAt = -1f;
+        bool passed = false;
+        w.Run(90f, world =>
+        {
+            if (late.Dist > tail.Dist) passed = true;
+            if (closedAt < 0f && tail.Dist - late.Dist < 30f) closedAt = world.Time;
+        });
+
+        Assert.IsNull(w.FirstContact, w.FirstContact);
+        Assert.IsFalse(passed, "the car out of the pits passed the train under caution");
+        Assert.Greater(closedAt, 0f, $"never closed up: still {tail.Dist - late.Dist:0} m behind after 90 s");
+        Assert.Less(closedAt, 45f, $"took {closedAt:0} s to close 500 m on the train");
+        foreach (var c in train) Assert.AreEqual(0, c.SwerveCount, $"train car {c.Id} swerved");
+        Assert.AreEqual(0, late.SwerveCount, "the car out of the pits swerved round the train");
     }
 
     [Test]

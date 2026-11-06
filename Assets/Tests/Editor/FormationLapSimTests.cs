@@ -259,7 +259,9 @@ public class FormationLapSimTests
 
         // Race: nothing here runs AIRacingBehaviour, so lift the formation's last speed cap and let the field run its
         // race pace for a while.
-        for (int i = 1; i < n; i++) Set(cars[i], "aiMaxSpeedMph", 200f);
+        // The last car limps round at 60 mph meanwhile, so it is far behind the field when the caution comes out and
+        // has to close up on it.
+        for (int i = 1; i < n; i++) Set(cars[i], "aiMaxSpeedMph", i == n - 1 ? 60f : 200f);
         for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
             foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
         float raceMph = 0f;
@@ -286,6 +288,26 @@ public class FormationLapSimTests
         var travelled = new float[n];
         var prevD = new float[n];
         for (int i = 0; i < n; i++) prevD[i] = (float)distProp.GetValue(cars[i]);
+        // Where each car is along the road behind the safety car as the caution comes out (metres, negative), so that
+        // plus what it has travelled is its running order and how far back the tail is.
+        float scStart = prevD[0];
+        var rel0 = new float[n];
+        for (int i = 1; i < n; i++) rel0[i] = Mathf.Repeat(prevD[i] - scStart, lap) - lap;
+        float Progress(int i) => rel0[i] + travelled[i];
+        // How far behind the safety car the last car is, and the widest gap between consecutive cars.
+        void Spread(out float tailM, out float widestM)
+        {
+            var at = new List<float> { Progress(0) };
+            for (int i = 1; i < n; i++) at.Add(Progress(i));
+            at.Sort();
+            tailM = at[at.Count - 1] - at[0];
+            widestM = 0f;
+            for (int i = 1; i < at.Count; i++) widestM = Mathf.Max(widestM, at[i] - at[i - 1]);
+        }
+        Spread(out float tailAtCaution, out float widestAtCaution);
+        float tailAtLap = -1f, widestAtLap = -1f, closedUpAt = -1f;
+        int[] orderAt15 = null;
+        var passes = new List<string>();
         var pos = new Vector2[n];
         var fwd = new Vector2[n];
         var touching = new HashSet<long>();
@@ -323,6 +345,30 @@ public class FormationLapSimTests
             // Nor on the green step itself: the hand-back to the racing brain (AIRacingBehaviour.TakeLateral) is not
             // in this harness, which is why the formation runs above stop at the green too.
             if (t < 15f || green) continue;
+
+            // Closing up: the field within 40 m car to car. And nobody passes anybody once the field has formed up.
+            Spread(out float tailNow, out float widestNow);
+            if (closedUpAt < 0f && widestNow < 40f) closedUpAt = t;
+            if (tailAtLap < 0f && travelled[0] >= lap) { tailAtLap = tailNow; widestAtLap = widestNow; }
+            // A pass: a car more than a car length behind another at 15 s (cars still level then are filing into
+            // single file, which settles who is in front) that gets more than a car length ahead of it.
+            const float PassM = 6f;
+            if (orderAt15 == null)
+            {
+                orderAt15 = new int[n * n];
+                for (int i = 1; i < n; i++)
+                for (int j = 1; j < n; j++)
+                    orderAt15[i * n + j] = Progress(i) < Progress(j) - PassM ? 1 : 0;   // 1: i is behind j
+            }
+            else if (passes.Count < 10)
+                for (int i = 1; i < n; i++)
+                for (int j = 1; j < n; j++)
+                {
+                    if (orderAt15[i * n + j] != 1 || Progress(i) < Progress(j) + PassM) continue;
+                    passes.Add($"t{t:0.0} {cars[i].name} passed {cars[j].name}");
+                    orderAt15[i * n + j] = 0;
+                }
+
             for (int i = 0; i < n; i++)
             for (int j = i + 1; j < n; j++)
             {
@@ -338,12 +384,20 @@ public class FormationLapSimTests
         for (int i = 1; i < n; i++) leaderLaps = Mathf.Max(leaderLaps, travelled[i] / lap);
         string summary = $"[CautionSim] {trackId}: race pace {raceMph:0} mph; green {(green ? "after" : "NOT after")} {t:0} s; " +
                          $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
-                         $"{contacts.Count} contacts\n  " + string.Join("\n  ", contacts);
+                         $"tail {tailAtCaution:0} m behind the safety car (widest gap {widestAtCaution:0} m) as it came out, " +
+                         $"{tailAtLap:0} m (widest {widestAtLap:0} m) after its first lap; closed up (all gaps < 40 m) at t{closedUpAt:0} s; " +
+                         $"{passes.Count} passes, {contacts.Count} contacts\n  " + string.Join("\n  ", passes) +
+                         "\n  " + string.Join("\n  ", contacts);
         Debug.Log(summary);
         Assert.IsTrue(green, summary);
         Assert.Greater(scTravelAtPit, 0f, summary);
         Assert.GreaterOrEqual(leaderLaps, 1.95f, summary);
         Assert.IsEmpty(contacts, summary);
+        Assert.IsEmpty(passes, summary);
+        // The field, straggler and all, closes up on the safety car well inside its first lap out (~150 s at Daytona).
+        Assert.Greater(closedUpAt, 0f, summary);
+        Assert.Less(closedUpAt, 60f, summary);
+        Assert.Less(widestAtLap, 40f, summary);
     }
 
     [TestCase("WatkinsGlen")]

@@ -113,6 +113,14 @@ public class FormationController : MonoBehaviour
     [Tooltip("A free car further than this (m) across from the pit centreline is on the track, not in the pit lane.")]
     public float pitLaneHalfWidth = 7f;
 
+    [Header("Closing up under a full-course caution")]
+    [Tooltip("Under a caution the field comes out at race gaps, strung round the lap, and must close up on the safety car quickly. Most a car may run over cruise (mph) while it has a long way to go to the car ahead (or to the safety car). The corner speed profile still caps it, and every car is kinematic behind the safety car. It was the formation lap's far catch-up (farCatchUpBonusMph, halved in what race-speed corner phases call a turn - most of an oval), and the back of the field took a lap and more to get back to the train.")]
+    public float cautionCatchUpMaxMph = 60f;
+    [Tooltip("Under a caution a car closing on the one ahead runs no faster than it could shed its closing speed at this rate (m/s^2) by the time it is cautionArriveMarginM behind its station — so it arrives at the train's pace, never as a much faster car the planner would take for a blockage and pass. Nobody passes under the caution.")]
+    public float cautionCloseDecelMps2 = 2f;
+    [Tooltip("Metres beyond the station gap (targetGap off a car, paceCarGap off the safety car) by which the caution catch-up has run out.")]
+    public float cautionArriveMarginM = 16f;
+
     [Header("Corner caution")]
     [Tooltip("Distance ahead (m) scanned for a turn. Inside this, the car drops the catch-up boost and the weave so it can hold the racing line through the corner.")]
     public float cornerLookahead = 55f;
@@ -418,11 +426,20 @@ public class FormationController : MonoBehaviour
         // In the close-up the front row eases down to the director's close-up pace and everything behind it runs a
         // little faster, so the field concertinas up into rows behind it; each car also draws level with its row
         // partner (PairAlign).
-        float far = FarCatchUp(out bool leading);
+        float far = FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace);
         float farBonus = farCatchUpBonusMph * far;
         float anchor = caution ? 0f : SlotAnchorMph();   // under caution the field is in running order, not grid order
+        // Under caution: close on the car in front (or the safety car) by how much road there is to it, hard from a
+        // long way back and easing off to arrive at its pace. In the close-up the close-up rules below take over.
+        float cautionBonus = caution && !closingUp && aheadGap < float.MaxValue
+            ? FormationLanes.CautionCatchUpMph(aheadGap, (aheadIsPace ? paceCarGap : targetGap) + cautionArriveMarginM,
+                                               cautionCloseDecelMps2, cautionCatchUpMaxMph)
+            : 0f;
         float baseCap;
         if (settling) baseCap = pitOutMph;
+        else if (caution && !closingUp)
+            // Kinematic behind the safety car, so the corner speed profile is the only corner limit it needs.
+            baseCap = cruise + Mathf.Max(corner ? 0f : catchUpBonusMph, cautionBonus);
         else if (closingUp)
         {
             float frontRow = FormationDirector.Instance.CloseUpLeaderMph;
@@ -479,21 +496,25 @@ public class FormationController : MonoBehaviour
         var intent = new PackIntent
         {
             BaseCapMph = baseCap,
-            MaxCapMph = Mathf.Max(baseCap, cruise + Mathf.Max(catchUpBonusMph, Mathf.Max(farBonus, anchor))),
+            MaxCapMph = Mathf.Max(baseCap, cruise + Mathf.Max(catchUpBonusMph, Mathf.Max(farBonus, Mathf.Max(anchor, cautionBonus)))),
             FloorMph = minCapMph,
             WantGap = closingUp ? rowGap : targetGap,
             PaceCarGap = paceCarGap,
             // Keeping station off the pace car is held to cruise so nobody chases its peel-away — but a car with
             // the human out of its lane up ahead follows the pace car too, and held to cruise it could never close
             // on a human already running cruise behind it. The far catch-up lifts that ceiling for that car only.
-            CruiseMph = cruise + farBonus,
+            // Under caution the safety car can be a long way up the road from the car now leading the train (the
+            // leader pitted): the caution catch-up lifts it the same way.
+            CruiseMph = cruise + Mathf.Max(farBonus, cautionBonus),
             ColumnTactical = column + weave,
             ColumnSlew = squeezed && closingUp ? Mathf.Max(weaveSlewPerSec, pack.SwerveSlewPerSec) + lineRate : weaveSlewPerSec,
             // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.
             AllowSwerve = !settling,
             // In the close-up too: the rows are stacked tight on purpose, and a car closing on a moving one brakes
             // into its row rather than pulling out alongside it into the other column.
-            NoUrgentSwerve = corner || closingUp,
+            // Under caution too: nobody passes a moving car behind the safety car — a car that comes out of the pits
+            // behind another stays behind it. A stopped or crawling car (a blockage) is still driven round.
+            NoUrgentSwerve = corner || closingUp || caution,
         };
         var cmd = _planner.Step(self, intent, _cars, dt);
         Apply(cmd, dt);
@@ -533,12 +554,18 @@ public class FormationController : MonoBehaviour
     // the pace car has pitted the leader would otherwise chase its own tail.
     // `leading`: the front row — nothing ahead but the pace car (or nothing), not counting my own row partner beside
     // me, whom PairAlign lines me up with instead of the close-up bonus running me past them.
-    float FarCatchUp(out bool leading)
+    // `aheadGap` / `aheadIsPace`: the road (m) to the nearest car ahead and whether it is the safety car;
+    // float.MaxValue with nobody. Under a caution, while the safety car is still out on the track, the whole lap is
+    // looked round: the safety car is always in front of the leader then, so the tail of the field can never be
+    // mistaken for the car ahead, and a car that pitted can come out more than half a lap behind the train.
+    float FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace)
     {
         float len = _spline.TrackLength;
         float myC = _spline.CentreDistanceOnTrack;
         // No row partners under caution: the field runs single file in running order.
         int partner = MySlot() >= 0 && !RaceStart.IsCaution ? MySlot() ^ 1 : int.MinValue;
+        bool scOut = RaceStart.IsCaution && FormationDirector.Instance != null && !FormationDirector.Instance.FieldClosingUp;
+        float reach = scOut ? len : len * 0.5f;
         float best = float.MaxValue, bestOther = float.MaxValue;
         bool bestIsPace = false, bestOtherIsPace = false;
 
@@ -560,12 +587,14 @@ public class FormationController : MonoBehaviour
         }
 
         leading = bestOther == float.MaxValue || bestOtherIsPace;
+        aheadGap = best;
+        aheadIsPace = bestIsPace;
         if (best == float.MaxValue || bestIsPace) return 0f;
         return Mathf.Clamp01((best - catchUpNearGap) / Mathf.Max(1f, catchUpFarGap - catchUpNearGap));
 
         void Consider(float gap, bool pace, bool isPartner)
         {
-            if (gap <= 0f || gap >= len * 0.5f) return;
+            if (gap <= 0f || gap >= reach) return;
             if (gap < best) { best = gap; bestIsPace = pace; }
             if (!isPartner && gap < bestOther) { bestOther = gap; bestOtherIsPace = pace; }
         }
