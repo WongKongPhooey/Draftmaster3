@@ -11,8 +11,9 @@ using Draftmaster.Sim;
 //           slides toward the inside of a corner. Everything is smoothed and everything sits behind a dead
 //           band, so a car merely driving round moves the view not at all: constant answering of every load
 //           is what makes a chase camera sickening. Driven by the car's real accelerations
-//           (PlayerVehicleController telemetry), or by differentiating the followed transform when the car is
-//           kinematic (a broadcast AI, a net puppet).
+//           (PlayerVehicleController telemetry, while that controller is running the car), or — when the car is
+//           kinematic (Auto behind the safety car, a kinematic AI, a net puppet) — from its SplineDriver's speed
+//           and heading, or by differentiating the followed transform.
 //   Shake — contacts add to a 0..1 trauma budget that decays on its own; the camera rattles by trauma² and
 //           takes a directional kick away from whatever it hit. A wall scrape trickles trauma in, so grinding
 //           down the barrier rumbles without ever reaching full-shunt violence.
@@ -110,6 +111,7 @@ public class DrivingCameraFeel : MonoBehaviour
 
     Transform _target;
     PlayerVehicleController _pvc;
+    SplineDriver _spline;
     VehicleCollision _collision;
     bool _isCar;
 
@@ -347,15 +349,17 @@ public class DrivingCameraFeel : MonoBehaviour
         if (_collision != null) _collision.Contacted -= OnContact;
         _target = target;
         _pvc = null;
+        _spline = null;
         _collision = null;
         _isCar = false;
         ResetState();
         if (target == null) return;
 
         _pvc = target.GetComponent<PlayerVehicleController>();
+        _spline = target.GetComponent<SplineDriver>();
         _collision = target.GetComponent<VehicleCollision>();
-        // A SplineDriver-only car is kinematic, but it is still a car — differentiate its transform instead.
-        _isCar = _pvc != null || _collision != null || target.GetComponent<SplineDriver>() != null;
+        // A SplineDriver-only car is kinematic, but it is still a car — ask the spline, or differentiate its transform.
+        _isCar = _pvc != null || _collision != null || _spline != null;
         if (_collision != null && isActiveAndEnabled) _collision.Contacted += OnContact;
     }
 
@@ -378,7 +382,15 @@ public class DrivingCameraFeel : MonoBehaviour
 
     void ReadMotion(float dt, out float speedMph, out float headingDeg, out float ax, out float ay)
     {
-        if (_pvc != null)
+        // The controller is only worth asking while it is actually running the car. On Auto behind the safety
+        // car — the formation lap, a caution — FormationController switches it off and lets the SplineDriver
+        // write the transform, and a switched-off controller's readouts stay frozen at the moment it stopped:
+        // the swing sat on that stale heading (and, read as a crawl, held it) all the way round, so Auto looked
+        // like the fixed camera until the green handed the car back to its dynamic model.
+        var source = CameraFeel.PickMotionSource(
+            _pvc != null && _pvc.isActiveAndEnabled,
+            _spline != null && _spline.isActiveAndEnabled && !_spline.externalMotionController);
+        if (source == CameraFeel.MotionSource.Controller)
         {
             speedMph = _pvc.SpeedMph;
             headingDeg = _pvc.HeadingDeg;
@@ -388,20 +400,54 @@ public class DrivingCameraFeel : MonoBehaviour
             return;
         }
 
-        // No controller to ask: recover speed, heading and both accelerations from the transform. Raw
-        // differences are noisy at frame rate, so everything is low-passed before it reaches the lean.
+        // A kinematic SplineDriver owns the transform: it knows its own speed and heading exactly, so only the
+        // accelerations need differentiating. Anything else (a net puppet, a car parked with its controller off)
+        // is recovered from the transform. Raw differences are noisy at frame rate, so everything is low-passed
+        // before it reaches the lean.
+        bool splineDrives = source == CameraFeel.MotionSource.Spline;
         Vector2 pos = _target.position;
         if (!_hasPrev)
         {
+            // Seeded from whatever last knew the car, so the hand-over from the controller to the spline (or to
+            // nothing) carries straight on instead of reading as a standing start — a lurch in the lean, and the
+            // swing held still for the moment the smoothed speed takes to climb back past swingHoldBelowMph.
+            float seedSpeed = 0f;
+            float seedHeading = _target.eulerAngles.z;
+            if (splineDrives)
+            {
+                seedSpeed = _spline.CurrentMph / 2.237f;
+                seedHeading = _spline.CommandedHeadingDeg;
+            }
+            else if (_pvc != null)
+            {
+                seedHeading = _pvc.HeadingDeg;   // still right for a car that has stopped moving
+            }
             _prevPos = pos;
-            _prevSpeed = 0f;
-            _prevHeadingDeg = _fallbackHeadingDeg = _target.eulerAngles.z;
+            _prevSpeed = _fallbackSpeed = seedSpeed;
+            _prevHeadingDeg = _fallbackHeadingDeg = seedHeading;
             _hasPrev = true;
         }
 
-        Vector2 vel = (pos - _prevPos) / dt;
-        float speed = vel.magnitude;
-        if (speed > 0.2f) _fallbackHeadingDeg = Mathf.Atan2(vel.y, vel.x) * Mathf.Rad2Deg;
+        float speed;
+        if (splineDrives)
+        {
+            speed = _spline.CurrentMph / 2.237f;
+            _fallbackHeadingDeg = _spline.CommandedHeadingDeg;
+        }
+        else
+        {
+            Vector2 moved = pos - _prevPos;
+            if (CameraFeel.IsTeleport(moved.magnitude, dt))
+            {
+                speed = _prevSpeed;   // put down somewhere else: keep the old speed and heading
+            }
+            else
+            {
+                Vector2 vel = moved / dt;
+                speed = vel.magnitude;
+                if (speed > 0.2f) _fallbackHeadingDeg = Mathf.Atan2(vel.y, vel.x) * Mathf.Rad2Deg;
+            }
+        }
         _prevPos = pos;
 
         float rawAx = (speed - _prevSpeed) / dt;

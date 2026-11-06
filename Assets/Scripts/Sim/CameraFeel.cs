@@ -16,6 +16,27 @@ namespace Draftmaster.Sim
     {
         public const float Gravity = 9.81f;
 
+        // Where the camera reads a car's speed and heading from. The car's controller only while it is actually
+        // running the car: a switched-off PlayerVehicleController keeps reporting the speed and heading it had
+        // when it stopped. That is the player's car on Auto behind the safety car (FormationController hands it
+        // to a kinematic SplineDriver for the formation lap and cautions), and reading the frozen numbers held
+        // the swing camera still all the way round. Then the spline, when it is the thing writing the transform;
+        // failing both, the transform itself, differentiated.
+        public enum MotionSource { Controller, Spline, Transform }
+
+        public static MotionSource PickMotionSource(bool controllerRunning, bool splineDrivesTransform)
+            => controllerRunning ? MotionSource.Controller
+             : splineDrivesTransform ? MotionSource.Spline
+             : MotionSource.Transform;
+
+        // Faster than any car goes (about 335 mph): a frame's movement past this is a teleport — a tow back to
+        // the box, a reset — not driving, and is dropped rather than read as a burst pointing wherever the car
+        // was put down.
+        public const float MaxPlausibleMps = 150f;
+
+        public static bool IsTeleport(float displacementMetres, float dt, float maxMps = MaxPlausibleMps)
+            => dt > 0f && displacementMetres > maxMps * dt;
+
         // Frame-rate independent exponential approach. responseHz is roughly "how many e-folds per second",
         // so 6 settles in about a third of a second regardless of frame rate.
         public static float Approach(float current, float target, float responseHz, float dt)
