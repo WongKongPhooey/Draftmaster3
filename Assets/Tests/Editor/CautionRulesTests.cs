@@ -74,4 +74,71 @@ public class CautionRulesTests
     {
         Assert.That(CautionRules.PitFloor(Lap, -1f, 0f, 2f, 20f), Is.EqualTo(2f * Lap).Within(0.01f));
     }
+
+    // ---- Overtime (RaceDirector): a caution out with under two laps left extends the race for two laps of green.
+
+    [Test]
+    public void ACautionWithUnderTwoLapsLeftGoesToOvertime()
+    {
+        Assert.IsTrue(OvertimeRules.Triggers(scheduledLaps: 10, leaderLaps: 8.4f, overtimeRun: false));
+        Assert.IsTrue(OvertimeRules.Triggers(10, 9.9f, false));
+        // Leader already at the scheduled distance under the caution.
+        Assert.IsTrue(OvertimeRules.Triggers(10, 10.3f, false));
+    }
+
+    [Test]
+    public void ACautionWithTwoOrMoreLapsLeftIsNoOvertime()
+    {
+        Assert.IsFalse(OvertimeRules.Triggers(10, 7.5f, false));
+        Assert.IsFalse(OvertimeRules.Triggers(10, 8f, false));
+    }
+
+    [Test]
+    public void OvertimeOnlyHappensOnce()
+    {
+        // A caution after the overtime green finishes the race under caution.
+        Assert.IsFalse(OvertimeRules.Triggers(10, 11.2f, overtimeRun: true));
+        Assert.IsFalse(OvertimeRules.Triggers(10, 8.4f, overtimeRun: true));
+    }
+
+    [Test]
+    public void AnUnknownRaceDistanceNeverGoesToOvertime()
+    {
+        Assert.IsFalse(OvertimeRules.Triggers(0, 0.5f, false));
+    }
+
+    [Test]
+    public void TheGreenAtTheLineGivesTwoLapsToTheChequer()
+    {
+        // Leader just short of the line as the green waves: that crossing starts the two laps.
+        Assert.AreEqual(12, OvertimeRules.Distance(10, 9.98f));
+        // Leader just over it — the same crossing, not counted again.
+        Assert.AreEqual(12, OvertimeRules.Distance(10, 10.02f));
+    }
+
+    [Test]
+    public void AGreenWavedMidLapCountsFromTheNextCrossing()
+    {
+        // At least two full laps of racing, never fewer.
+        Assert.AreEqual(13, OvertimeRules.Distance(10, 10.4f));
+        Assert.That(OvertimeRules.Distance(10, 10.4f) - 10.4f, Is.GreaterThanOrEqualTo(2f));
+    }
+
+    [Test]
+    public void UnderAnOvertimeCautionNobodyTakesTheChequer()
+    {
+        // However far the leader runs behind the safety car, the distance stays at least two laps past the laps it
+        // has completed, so the finish check (completed laps >= distance) can never fire.
+        for (float led = 8.1f; led < 15f; led += 0.01f)
+        {
+            int completed = (int)System.Math.Floor(led);
+            Assert.That(OvertimeRules.Distance(10, led), Is.GreaterThanOrEqualTo(completed + 2), $"leader at {led}");
+        }
+    }
+
+    [Test]
+    public void OvertimeNeverShortensTheRace()
+    {
+        Assert.AreEqual(10, OvertimeRules.Distance(10, 6.5f));
+    }
 }

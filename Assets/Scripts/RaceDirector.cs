@@ -66,6 +66,15 @@ public class RaceDirector : MonoBehaviour
         (Instance != null && Instance.isActiveAndEnabled && Instance._phase != Phase.Waiting)
             ? Instance.RaceProgress01 : -1f;
 
+    // Overtime (Draftmaster.Sim.OvertimeRules): a caution out with fewer than two laps left extends raceLaps so the
+    // field gets two laps of green to the chequer. OvertimePending: the caution out now is an overtime caution — the
+    // race distance grows with the leader until the green, and nobody can take the chequer behind the safety car.
+    // OvertimeRun: the race has gone green in overtime; it never goes to overtime again, so a later caution finishes
+    // the race under caution. ScheduledLaps: the distance before any extension (-1 before the green).
+    public static bool OvertimePending => Instance != null && Instance.isActiveAndEnabled && Instance._overtimePending;
+    public static bool OvertimeRun => Instance != null && Instance.isActiveAndEnabled && Instance._overtimeRun;
+    public int ScheduledLaps => _scheduledLaps;
+
     class Result
     {
         public string name;
@@ -86,6 +95,9 @@ public class RaceDirector : MonoBehaviour
     float _greenTime = -1f;
     float _checkeredTime;
     bool _panelHidden;
+    int _scheduledLaps = -1;
+    bool _overtimePending;
+    bool _overtimeRun;
 
     public static RaceDirector Ensure()
     {
@@ -132,6 +144,7 @@ public class RaceDirector : MonoBehaviour
                 if (RaceStart.IsGreen)
                 {
                     _greenTime = Time.time;
+                    _scheduledLaps = raceLaps;
                     BaselineLapsAtGreen(rt);   // line crossings before green (formation) don't count
                     // Career ledger: taking the green counts as a start. When the player's career gains a
                     // manufacturer, also increment "starts.<manufacturer>" here for sponsor-style quests.
@@ -142,6 +155,7 @@ public class RaceDirector : MonoBehaviour
 
             case Phase.Racing:
                 BaselineLaps(rt);           // cars appearing mid-race start from their current lap
+                UpdateOvertime(rt);         // before the finish check: no chequer behind an overtime caution
                 UpdateRaceProgress(rt);
                 CheckFinishes(rt);
                 if (_results.Count > 0)     // leader took the flag
@@ -216,14 +230,48 @@ public class RaceDirector : MonoBehaviour
     // Leader's share of the race distance. Order is already sorted by progress, so entry 0 is the leader.
     void UpdateRaceProgress(RacePositionTracker rt)
     {
-        if (raceLaps <= 0 || rt.Order.Count == 0) return;
-        var leader = rt.Order[0];
-        if (leader == null || leader.tf == null) return;
+        if (raceLaps <= 0) return;
+        if (TryLeaderLaps(rt, out float laps)) RaceProgress01 = Mathf.Clamp01(laps / raceLaps);
+    }
 
-        // Fraction of the current lap, so a 3-lap race doesn't step through the phases in thirds.
+    // Racing laps the leader has run, plus its fraction of the current one (so a 3-lap race doesn't step through
+    // the phases in thirds). False with nobody in the running order.
+    bool TryLeaderLaps(RacePositionTracker rt, out float laps)
+    {
+        laps = 0f;
+        if (rt.Order.Count == 0) return false;
+        var leader = rt.Order[0];
+        if (leader == null || leader.tf == null) return false;
         float len = rt.TrackLength;
         float frac = len > 0f ? Mathf.Clamp01((leader.progress - leader.lap * len) / len) : 0f;
-        RaceProgress01 = Mathf.Clamp01((RacingLaps(leader) + frac) / raceLaps);
+        laps = RacingLaps(leader) + frac;
+        return true;
+    }
+
+    // Overtime. A caution out with fewer than two laps left (and no overtime run yet) makes this an overtime
+    // caution: until the green, raceLaps is kept two laps on from the line the green would wave at, so the leader
+    // can never take the chequer behind the safety car. When the green waves, that distance stands — two laps of
+    // racing to the finish — and the race is done with overtime: a caution after it finishes under caution.
+    void UpdateOvertime(RacePositionTracker rt)
+    {
+        if (_scheduledLaps <= 0 || !TryLeaderLaps(rt, out float leaderLaps)) return;
+        bool caution = RaceStart.IsCaution;
+
+        if (caution && !_overtimePending && Draftmaster.Sim.OvertimeRules.Triggers(_scheduledLaps, leaderLaps, _overtimeRun))
+        {
+            _overtimePending = true;
+            Debug.Log($"[Overtime] caution with {_scheduledLaps - leaderLaps:0.0} laps left of {_scheduledLaps}: " +
+                      "the race goes to overtime");
+        }
+        if (!_overtimePending) return;
+
+        raceLaps = Draftmaster.Sim.OvertimeRules.Distance(_scheduledLaps, leaderLaps);
+        if (caution) return;
+
+        // Green: the overtime distance is set.
+        _overtimePending = false;
+        _overtimeRun = raceLaps > _scheduledLaps;
+        Debug.Log($"[Overtime] green: race extended from {_scheduledLaps} to {raceLaps} laps");
     }
 
     // The lap each car was on when the flag fell, so a lapped car is seen to take the chequer the next time it

@@ -49,4 +49,32 @@ namespace Draftmaster.Sim
             return r >= length ? 0f : r;
         }
     }
+
+    // Overtime (RaceDirector): a caution that is out with fewer than two laps left would see the race finish behind
+    // the safety car, so the distance is extended — once the field goes green again it gets two laps of racing to
+    // the chequer. It happens once a race: a caution after the overtime green finishes the race under caution.
+    public static class OvertimeRules
+    {
+        // Laps of green racing the overtime restart is given.
+        public const int Laps = 2;
+        // A green waved this little way (of a lap) past the line is taken as waved at it — the lap is not counted again.
+        public const float AtLineTolerance = 0.05f;
+
+        // Whether the caution out now sends the race to overtime. `scheduledLaps`: the race distance before any
+        // extension. `leaderLaps`: racing laps the leader has run, plus the fraction of the current one.
+        // `overtimeRun`: the race has already gone green in overtime.
+        public static bool Triggers(int scheduledLaps, float leaderLaps, bool overtimeRun)
+            => !overtimeRun && scheduledLaps > 0 && scheduledLaps - leaderLaps < Laps;
+
+        // The race distance in overtime if the green waved with the leader here: two laps from the line crossing
+        // the green waves at — the next one, unless the leader is only just past the line. Under the caution it
+        // is always at least two laps beyond the laps the leader has completed, so nobody takes the chequer
+        // behind the safety car. Never shorter than the scheduled distance.
+        public static int Distance(int scheduledLaps, float leaderLaps)
+        {
+            int fromLine = (int)System.Math.Ceiling(leaderLaps - AtLineTolerance);
+            int laps = fromLine + Laps;
+            return laps > scheduledLaps ? laps : scheduledLaps;
+        }
+    }
 }

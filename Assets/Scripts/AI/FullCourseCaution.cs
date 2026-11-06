@@ -13,6 +13,9 @@ using UnityEngine;
 //     closes the field up and pits, and the green waves as the leader reaches the line (FormationDirector) — the
 //     same restart as the end of the pace lap.
 //
+// A caution out with fewer than two laps left is an overtime caution (RaceDirector extends the race for two laps of
+// green after it) and the plate says so.
+//
 // Road courses keep their local yellows only. Single player only: the multiplayer phase replication knows nothing
 // of a caution. Added at runtime by FormationDirector, so it only ever runs in the player's own race.
 public class FullCourseCaution : MonoBehaviour
@@ -246,6 +249,8 @@ public class FullCourseCaution : MonoBehaviour
         var prevColour = style.normal.textColor;
         style.alignment = TextAnchor.MiddleCenter;
         var yellow = new Color(1f, 0.85f, 0.1f, 1f);
+        // An overtime caution (RaceDirector): the race is extended for a two-lap dash once it goes green.
+        bool overtime = RaceDirector.OvertimePending;
 
         if (_cautionMsgTimer > 0f)
         {
@@ -259,15 +264,15 @@ public class FullCourseCaution : MonoBehaviour
             PixelGUI.Kerb(new Rect(0f, y - kerb, Screen.width, kerb));
             PixelGUI.Kerb(new Rect(0f, y + h, Screen.width, kerb));
             style.normal.textColor = new Color(yellow.r, yellow.g, yellow.b, alpha);
-            GUI.Label(new Rect(0f, y, Screen.width, h), "Caution · Safety Car", style);
+            GUI.Label(new Rect(0f, y, Screen.width, h), overtime ? "Caution · Overtime" : "Caution · Safety Car", style);
             GUI.color = prevGui;
         }
         else
         {
             var sc = _director != null ? _director.SafetyCarInstance : null;
-            string text = sc != null && (sc.ClosingUp || sc.Pitted) ? "CAUTION · GREEN AT THE LINE"
-                        : sc != null && sc.HoldOut && LapsRun >= minCautionLaps ? "CAUTION · TRACK NOT CLEAR"
-                        : "Caution · Pit Road Open";
+            string text = sc != null && (sc.ClosingUp || sc.Pitted) ? (overtime ? "OVERTIME · GREEN AT THE LINE" : "CAUTION · GREEN AT THE LINE")
+                        : sc != null && sc.HoldOut && LapsRun >= minCautionLaps ? (overtime ? "OVERTIME · TRACK NOT CLEAR" : "CAUTION · TRACK NOT CLEAR")
+                        : overtime ? "Overtime · Pit Road Open" : "Caution · Pit Road Open";
             float h = PixelGUI.Px(22f);
             float y = Mathf.Round(Screen.height * 0.72f);   // where the pace lap's throttle prompt sits
             PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);
