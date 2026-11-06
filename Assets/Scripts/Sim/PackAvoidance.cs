@@ -246,6 +246,39 @@ namespace Draftmaster.Sim
             return Mathf.Min(closing, maxBonusMph);
         }
 
+        // The centre-to-centre gap (m) a settled row holds off the one ahead in the close-up, both at paceMph: the
+        // planner's station (PackPlanner.Step) with no closing speed — the larger of the wanted gap, the time
+        // headway and the safety law's need (two half-lengths, the standstill clearance, the buffer and the
+        // reaction distance; the braking terms cancel at equal speeds and equal brakes).
+        public static float CloseUpSpacingM(float paceMph, float wantGap, float headwaySec, float minGap,
+                                            float carLength, float standstillClearM, float bufferM, float reactionSec)
+        {
+            float v = Mathf.Max(0f, paceMph) * PackAvoidance.MphToMps;
+            float safety = carLength + standstillClearM + bufferM + v * Mathf.Max(0f, reactionSec);
+            return Mathf.Max(Mathf.Max(wantGap, minGap), Mathf.Max(v * headwaySec, safety));
+        }
+
+        // In the close-up before a start or restart, how much over the front row's pace (mph) a car may run to get
+        // to ITS place in the stacked-up field: carsAhead cars in front of it (perRow abreast — 2 double file, 1
+        // single file), so its place is that many rows x spacingM behind the front of the field, and it is
+        // behindFrontM back. Only stacking up off the car directly ahead closed the field one row at a time — each
+        // row waited for the one in front to settle before it gained on it — so the back of a long field was still
+        // strung out at the green. Anchored to the front, every car closes at once.
+        // Linear in how far short of its place the car is (mphPerMetre beyond arriveMarginM), so two cars one behind
+        // the other differ in pace by the gain times the extra gap between them alone: every gap in the field closes
+        // at the same time, and each car eases into its place (the closing rate falls with the gap). A square-root
+        // arrival profile, or a low cap, left the back half of the field running at one speed — all of it capped —
+        // and its gaps never closed.
+        public static float CloseUpCatchUpMph(float behindFrontM, int carsAhead, int perRow, float spacingM,
+                                              float arriveMarginM, float mphPerMetre, float maxBonusMph)
+        {
+            if (carsAhead <= 0 || !(behindFrontM > 0f) || behindFrontM == float.MaxValue) return 0f;
+            int rows = carsAhead / Mathf.Max(1, perRow);
+            float short_ = behindFrontM - rows * Mathf.Max(0f, spacingM) - Mathf.Max(0f, arriveMarginM);
+            if (!(short_ > 0f) || !(maxBonusMph > 0f)) return 0f;
+            return Mathf.Min(short_ * Mathf.Max(0f, mphPerMetre), maxBonusMph);
+        }
+
         // Even grid slots run the left column, odd slots the right.
         public static float Column(int gridSlot, float halfOffset, bool corner, float cornerScale)
         {

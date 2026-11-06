@@ -85,7 +85,30 @@ public class FormationController : MonoBehaviour
     public float closeUpHeadwaySec = 0.3f;
     [Tooltip("Clearance (m) the station keeping leaves above what the safety law needs in the close-up, in place of " +
              "pack.StationBufferM. The safety law itself is unchanged.")]
-    public float closeUpStationBufferM = 1f;
+    public float closeUpStationBufferM = 0.5f;
+    [Tooltip("Station keeping's dead band (m) in the close-up, in place of pack.GapDeadbandM. A car closing from " +
+             "behind stops gaining at the FAR edge of the band, so with the normal 1.5 m every row sat 1.5 m further " +
+             "back than its station — Daytona's rows settled at ~10 m centre to centre.")]
+    public float closeUpGapDeadbandM = 0.5f;
+    [Tooltip("The safety law's reaction allowance (s) in the close-up, in place of pack.ReactionSec. Behind the " +
+             "safety car the field is kinematic and answers its speed command the next step; the reaction distance " +
+             "(this x speed) is the biggest part of the row gap at close-up pace. The human's car keeps its own " +
+             "extra room (humanBrakeFactor).")]
+    public float closeUpReactionSec = 0.08f;
+    [Tooltip("In the close-up, most a car may run over the front row's pace (mph) to reach its own place in the " +
+             "stacked-up field — its row's worth of settled gaps behind the front (FormationLanes.CloseUpCatchUpMph). " +
+             "Stacking up only off the car ahead closed the field one row at a time, and the back of it was still " +
+             "strung out at the green (Darlington 18 m rows, a 383 m field). On a road course: full on straights, half " +
+             "through a sweeping turn, none into a tight one; on an oval half only in a tight turn. 0 = off.")]
+    public float closeUpCatchUpMaxMph = 35f;
+    [Tooltip("Close-up catch-up (mph) per metre a car is short of its place in the field. Linear, so neighbours differ " +
+             "in pace by this times the gap between them alone and every gap closes at once (0.5 = the gap halves in " +
+             "about 3 s). A car's closing speed on the one directly ahead falls with the gap, so it arrives at the " +
+             "train's pace rather than as a much faster car the planner would take for a blockage.")]
+    public float closeUpCatchUpMphPerMetre = 0.8f;
+    [Tooltip("Metres short of its place in the close-up at which the catch-up has run out; closeUpBonusMph and the " +
+             "station keeping take the car the rest of the way.")]
+    public float closeUpArriveMarginM = 1f;
     [Tooltip("In the close-up, pace (mph) added per metre this car is behind its row partner (the other car of its " +
              "grid row, in the other column) — or taken off per metre it is ahead — so the pair draws level side by " +
              "side. Station keeping still has the final say.")]
@@ -426,7 +449,8 @@ public class FormationController : MonoBehaviour
         // In the close-up the front row eases down to the director's close-up pace and everything behind it runs a
         // little faster, so the field concertinas up into rows behind it; each car also draws level with its row
         // partner (PairAlign).
-        float far = FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace);
+        float far = FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace,
+                               out float frontGap, out int carsAhead);
         float farBonus = farCatchUpBonusMph * far;
         float anchor = caution ? 0f : SlotAnchorMph();   // under caution the field is in running order, not grid order
         // Under caution: close on the car in front (or the safety car) by how much road there is to it, hard from a
@@ -445,6 +469,22 @@ public class FormationController : MonoBehaviour
             float frontRow = FormationDirector.Instance.CloseUpLeaderMph;
             float align = caution ? 0f : PairAlign();
             float bonus = leading ? 0f : closeUpBonusMph * (corner ? cornerCatchUpScale : 1f);
+            // Short of my place in the stacked-up field (rows ahead x a settled row's gap, behind the front): close
+            // on it, every car at once rather than row after row. By the road's own curvature, as the slot anchor.
+            if (!leading && closeUpCatchUpMaxMph > 0f)
+            {
+                var ps = CloseUpPack();
+                float spacing = FormationLanes.CloseUpSpacingM(frontRow, rowGap, ps.HeadwaySec, ps.MinGap,
+                    2f * DefaultHalfLength, ps.StandstillClearM, ps.StationBufferM, ps.ReactionSec);
+                float catchUp = FormationLanes.CloseUpCatchUpMph(frontGap, carsAhead, caution ? 1 : 2, spacing,
+                    closeUpArriveMarginM, closeUpCatchUpMphPerMetre, closeUpCatchUpMaxMph);
+                // On an oval the field is kinematic and its corner speed profile caps it, so a sweeping banked turn
+                // takes the whole of it — Darlington's close-up runs through Turns 3 and 4.
+                float r = _spline.CurvatureRadiusAhead(50f);
+                float share = OnOval() ? (r > 150f ? 1f : 0.5f)
+                                       : (r > 400f ? 1f : r > 150f ? 0.5f : 0f);
+                bonus = Mathf.Max(bonus, catchUp * share);
+            }
             baseCap = frontRow + bonus + (corner ? Mathf.Min(0f, align) : align);
         }
         else
@@ -558,7 +598,9 @@ public class FormationController : MonoBehaviour
     // float.MaxValue with nobody. Under a caution, while the safety car is still out on the track, the whole lap is
     // looked round: the safety car is always in front of the leader then, so the tail of the field can never be
     // mistaken for the car ahead, and a car that pitted can come out more than half a lap behind the train.
-    float FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace)
+    // `frontGap` / `carsAhead`: the road (m) to the front-most car of the field ahead of me (not the safety car) and
+    // how many cars there are between it and me, it included — for the close-up's place in the stacked-up field.
+    float FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace, out float frontGap, out int carsAhead)
     {
         float len = _spline.TrackLength;
         float myC = _spline.CentreDistanceOnTrack;
@@ -568,6 +610,8 @@ public class FormationController : MonoBehaviour
         float reach = scOut ? len : len * 0.5f;
         float best = float.MaxValue, bestOther = float.MaxValue;
         bool bestIsPace = false, bestOtherIsPace = false;
+        float front = 0f;
+        int count = 0;
 
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
@@ -589,6 +633,8 @@ public class FormationController : MonoBehaviour
         leading = bestOther == float.MaxValue || bestOtherIsPace;
         aheadGap = best;
         aheadIsPace = bestIsPace;
+        frontGap = count > 0 ? front : float.MaxValue;
+        carsAhead = count;
         if (best == float.MaxValue || bestIsPace) return 0f;
         return Mathf.Clamp01((best - catchUpNearGap) / Mathf.Max(1f, catchUpFarGap - catchUpNearGap));
 
@@ -597,6 +643,7 @@ public class FormationController : MonoBehaviour
             if (gap <= 0f || gap >= reach) return;
             if (gap < best) { best = gap; bestIsPace = pace; }
             if (!isPartner && gap < bestOther) { bestOther = gap; bestOtherIsPace = pace; }
+            if (!pace) { count++; if (gap > front) front = gap; }
         }
     }
 
@@ -679,6 +726,8 @@ public class FormationController : MonoBehaviour
         _closeUpPack = JsonUtility.FromJson<PackSettings>(JsonUtility.ToJson(pack));
         _closeUpPack.HeadwaySec = Mathf.Min(pack.HeadwaySec, closeUpHeadwaySec);
         _closeUpPack.StationBufferM = Mathf.Min(pack.StationBufferM, closeUpStationBufferM);
+        _closeUpPack.GapDeadbandM = Mathf.Min(pack.GapDeadbandM, closeUpGapDeadbandM);
+        _closeUpPack.ReactionSec = Mathf.Min(pack.ReactionSec, closeUpReactionSec);
         return _closeUpPack;
     }
 

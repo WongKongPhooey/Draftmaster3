@@ -285,6 +285,33 @@ public class PackAvoidanceTests
         Assert.AreEqual(0f, FormationLanes.CautionCatchUpMph(float.MaxValue, 25f, 2f, 0f), 1e-4f);
     }
 
+    [Test]
+    public void TheCloseUpCatchUpAnchorsEachCarToItsPlaceBehindTheFront()
+    {
+        // A settled row at 50 mph: the safety law's need (4.8 m of car, 1 m standstill, 0.5 m buffer, 0.12 s of
+        // reaction) beats the 8 m wanted gap and the 0.3 s headway.
+        float spacing = FormationLanes.CloseUpSpacingM(50f, 8f, 0.3f, 5f, 4.8f, 1f, 0.5f, 0.12f);
+        Assert.AreEqual(4.8f + 1f + 0.5f + 0.12f * 50f * PackAvoidance.MphToMps, spacing, 1e-3f);
+        Assert.AreEqual(8f, FormationLanes.CloseUpSpacingM(0f, 8f, 0.3f, 5f, 4.8f, 1f, 0.5f, 0.12f), 1e-4f);
+
+        // Double file: 7 cars ahead = 3 rows, 3 settled gaps behind the front. Already there (or inside the arrival
+        // margin): nothing extra. Short of it: linear in the shortfall past the margin, capped far back.
+        Assert.AreEqual(0f, FormationLanes.CloseUpCatchUpMph(3f * spacing + 3f, 7, 2, spacing, 4f, 0.5f, 35f), 1e-4f);
+        Assert.AreEqual(4.5f, FormationLanes.CloseUpCatchUpMph(3f * spacing + 4f + 9f, 7, 2, spacing, 4f, 0.5f, 35f), 1e-3f);
+        Assert.AreEqual(35f, FormationLanes.CloseUpCatchUpMph(300f, 7, 2, spacing, 4f, 0.5f, 35f), 1e-4f);
+        // Two cars one behind the other, below the cap: their paces differ by the gain x the extra gap between them
+        // alone, however far back the pair is — so every gap in the field closes at once.
+        float a = FormationLanes.CloseUpCatchUpMph(20f * spacing + 30f, 39, 2, spacing, 1f, 0.5f, 35f);
+        float b = FormationLanes.CloseUpCatchUpMph(20f * spacing + 30f + spacing + 6f, 41, 2, spacing, 1f, 0.5f, 35f);
+        Assert.AreEqual(0.5f * 6f, b - a, 1e-3f);
+        // Single file (a caution restart): every car ahead is a row.
+        Assert.AreEqual(0f, FormationLanes.CloseUpCatchUpMph(7f * spacing, 7, 1, spacing, 4f, 0.5f, 35f), 1e-4f);
+        Assert.AreEqual(4.5f, FormationLanes.CloseUpCatchUpMph(7f * spacing + 4f + 9f, 7, 1, spacing, 4f, 0.5f, 35f), 1e-3f);
+        // Nobody ahead (the front row) or no front found: nothing.
+        Assert.AreEqual(0f, FormationLanes.CloseUpCatchUpMph(300f, 0, 2, spacing, 4f, 0.5f, 35f), 1e-4f);
+        Assert.AreEqual(0f, FormationLanes.CloseUpCatchUpMph(float.MaxValue, 7, 2, spacing, 4f, 0.5f, 35f), 1e-4f);
+    }
+
     [TestCase(0f)]
     [TestCase(3.5f)]
     public void UnderCautionACarOutOfThePitsClosesOnTheTrainAndStaysBehindIt(float startLat)

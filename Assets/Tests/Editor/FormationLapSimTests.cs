@@ -206,7 +206,9 @@ public class FormationLapSimTests
         Assert.IsTrue(r.wentGreen, Report($"{trackId}: never went green", r, 5));
         Assert.Less(r.leaderToLineAtGreen, 60f, Report($"{trackId}: the leader went well short of the line", r, 5));
         Assert.Less(r.meanPairStaggerAtGreen, 3f, Report($"{trackId}: the rows are not side by side at the green", r, 5));
-        Assert.Less(r.meanRowGapAtGreen, 25f, Report($"{trackId}: the field is strung out at the green", r, 5));
+        // Stacked up nose to tail: ~9 m centre to centre at close-up pace. Stacking up only off the car ahead closed
+        // the field a row at a time and left WG 15 m, Darlington 18 m rows (FormationLanes.CloseUpCatchUpMph).
+        Assert.Less(r.meanRowGapAtGreen, 13f, Report($"{trackId}: the field is strung out at the green", r, 5));
     }
 
     [TestCase("WatkinsGlen", 0)]
