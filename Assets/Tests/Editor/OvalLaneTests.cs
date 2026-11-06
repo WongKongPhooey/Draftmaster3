@@ -135,6 +135,66 @@ public class OvalLaneTests
         Assert.IsFalse((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "Lanes are for ovals only.");
     }
 
+    // A stadium oval starting mid front straight: 300 m straights, 200 m-radius turns. The front stretch weight is 1
+    // round the line, 0 in both turns and down the back straight, and eases in and out.
+    [Test]
+    public void TheFrontStretchIsTheRoadThroughTheLineBetweenTheTurns()
+    {
+        const float straight = 300f, radius = 200f, step = 2f;
+        var d = new List<float>();
+        var t = new List<Vector2>();
+        float turn = Mathf.PI * radius, lap = 2f * straight + 2f * turn;
+        for (float x = 0f; x <= lap + 1e-3f; x += step)
+        {
+            // Laid out from the line: half the front straight, turn 1-2, the back straight, turn 3-4, the other half.
+            float u = x, heading;
+            if (u < straight * 0.5f) heading = 0f;
+            else if ((u -= straight * 0.5f) < turn) heading = u / radius;
+            else if ((u -= turn) < straight) heading = Mathf.PI;
+            else if ((u -= straight) < turn) heading = Mathf.PI + u / radius;
+            else heading = 2f * Mathf.PI;
+            d.Add(x);
+            t.Add(new Vector2(Mathf.Cos(heading), Mathf.Sin(heading)));
+        }
+        var dist = d.ToArray();
+        var w = OvalLanes.FrontStretchWeight(dist, t.ToArray(), dist[dist.Length - 1]);
+        float At(float x) => w[Mathf.Clamp(Mathf.RoundToInt(Mathf.Repeat(x, lap) / step), 0, w.Length - 1)];
+        Assert.AreEqual(1f, At(0f), 1e-3f, "on the line");
+        Assert.AreEqual(1f, At(-40f), 1e-3f, "just before the line");
+        Assert.AreEqual(0f, At(straight * 0.5f + turn * 0.5f), 1e-3f, "mid turn 1-2");
+        Assert.AreEqual(0f, At(straight * 0.5f + turn + straight * 0.5f), 1e-3f, "the back straight");
+        Assert.AreEqual(0f, At(-straight * 0.5f - turn * 0.5f), 1e-3f, "mid turn 3-4");
+        for (int i = 1; i < w.Length; i++) Assert.Less(Mathf.Abs(w[i] - w[i - 1]), 0.1f, $"step at {dist[i]} m");
+    }
+
+    // Lanes from the AI lines open out and move up the banking (OvalLanes.Spec extraSpacing / outwardShift, more on the
+    // front stretch). Two lines 2 m apart in the middle of a 20 m road: the gap becomes laneSpacing + the spread, and
+    // the middle of the pair rises by the shift; at the outside edge the pair is held off it, still apart.
+    [Test]
+    public void LanesFromTheAILinesOpenOutAndMoveUp()
+    {
+        var spec = OvalLanes.Default;
+        Assert.Greater(spec.extraSpacing, 0f);
+        Assert.Greater(spec.frontStretchOutwardShift, 0f);
+        const int n = 40;
+        var d = new float[n]; var w = new float[n]; var a = new float[n]; var b = new float[n];
+        var front = new float[n];
+        for (int i = 0; i < n; i++) { d[i] = i * 2f; w[i] = 20f; a[i] = -1f; b[i] = 1f; front[i] = i < n / 2 ? 0f : 1f; }
+        // Infield on the left (insideSide -1): height above the inside edge = half + lateral.
+        OvalLanes.BuildFromLines(d, w, a, b, -1f, 0f, spec, out var inside, out var outside, 0f, front);
+        float hIn0 = 10f + inside[2], hOut0 = 10f + outside[2];
+        Assert.AreEqual(spec.laneSpacing + spec.extraSpacing, hOut0 - hIn0, 1e-3f, "spread, off the front stretch");
+        Assert.AreEqual(10f + spec.outwardShift, (hIn0 + hOut0) * 0.5f, 1e-3f, "shift, off the front stretch");
+        float hIn1 = 10f + inside[n - 2], hOut1 = 10f + outside[n - 2];
+        Assert.AreEqual(spec.laneSpacing + spec.extraSpacing + spec.frontStretchExtraSpacing, hOut1 - hIn1, 1e-3f);
+        Assert.AreEqual(10f + spec.outwardShift + spec.frontStretchOutwardShift, (hIn1 + hOut1) * 0.5f, 1e-3f);
+        // Lines already up against the outside edge: held outsideEdgeMargin off it, the gap kept.
+        for (int i = 0; i < n; i++) { a[i] = 6f; b[i] = 9f; }
+        OvalLanes.BuildFromLines(d, w, a, b, -1f, 0f, spec, out inside, out outside, 0f, front);
+        Assert.AreEqual(20f - spec.outsideEdgeMargin, 10f + outside[n - 2], 1e-3f);
+        Assert.GreaterOrEqual(outside[n - 2] - inside[n - 2], spec.laneSpacing + spec.extraSpacing - 1e-3f);
+    }
+
     public class LaneResult
     {
         public readonly List<float> lapTimes = new List<float>();

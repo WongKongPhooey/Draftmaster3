@@ -23,6 +23,17 @@ namespace Draftmaster.Sim
     //    not discovered at the bumper.
     // Braking only comes in when the car is genuinely too quick for the gap (SplineInputDriver brakes gently past a
     // margin), and hard only in an emergency: still closing with less room than a firm stop needs.
+    //
+    // The launch (a green flag, start or restart): the field goes green nose to tail, far closer than the time gap
+    // wants at race speed, and the gap it wants grows with every m/s gained. Held to that law, every car lifted for
+    // the one ahead the moment the green fell and the whole field stacked up behind the front row. So until a car is
+    // up to speed it is held off only by `launchGap`: flat out, backing off for the car ahead only when it is
+    // closing on it too quickly to stop short of launchGap on a lift. Once up to speed the time gap it wants starts
+    // from the gap it has and grows by `launchHeadwayGrowth` seconds a second (the caller's headwayLimit) up to
+    // headwaySeconds. Opening a gap means running slower than the car ahead, and down a train that adds up: opened
+    // at 1 m/s a car, the eighth car in line ran 10 m/s under its plan out of turn 2 at Texas. Growing slowly, the
+    // train strings out over a couple of laps, the tail a few mph down, not in one go. Grown in time, not metres, so
+    // the gap law keeps its speed term (the damping) the whole way.
     public static class TrainFollow
     {
         [System.Serializable]
@@ -34,6 +45,9 @@ namespace Draftmaster.Sim
             public float liftShare;       // share of a lift's deceleration the approach plans on
             public float hardGap;         // m, centre to centre: closing inside this is an emergency
             public float emergencyDecel;  // m/s²: needing more than this to stop closing is an emergency
+            public float launchGap;       // m, centre to centre: the only gap a launching car is held to
+            public float launchHeadwayGrowth; // s per s: how fast the time gap wanted grows back after a launch
+            public float launchHeadwayMin;    // s: the least time gap wanted once a launch is over
 
             public static Spec Default => new Spec
             {
@@ -43,6 +57,12 @@ namespace Draftmaster.Sim
                 liftShare = 0.8f,
                 hardGap = 6f,             // 1.2 m bumper to bumper
                 emergencyDecel = 4f,
+                launchGap = 7.5f,         // 2.7 m of air: the formation brings the rows to the green 8-9 m apart
+                launchHeadwayGrowth = 0.004f,   // 0.1 -> 0.3 s in 50 s (~1.5 laps at Texas): ~0.26 m/s a car at 65 m/s
+                // With no time gap at all the line has no damping: a car merging ahead of the front of a train out of
+                // turn 2 at Texas squeezed the cars behind to 0.3 m nose to tail. 0.1 s (6 m at 60 m/s) is a few metres
+                // to open as a launch ends, not the 17 m the full law asks.
+                launchHeadwayMin = 0.1f,
             };
         }
 
@@ -57,15 +77,23 @@ namespace Draftmaster.Sim
             s.standstillGap + s.headwaySeconds * Mathf.Max(0f, speedMps);
 
         // gap: m centre to centre to the car ahead in the lane (along the track). liftDecelMps2: what lifting off
-        // the throttle sheds right now (less in a tow).
-        public static Command Follow(in Spec s, float gap, float speedMps, float aheadSpeedMps, float liftDecelMps2)
+        // the throttle sheds right now (less in a tow). headwayLimit: the most time gap wanted (s; under
+        // headwaySeconds while a train opens out after a launch). launching: the car is still getting up to speed
+        // after a green - it is held only to launchGap, and only by the approach (the most a lift can take off in the
+        // room there is).
+        public static Command Follow(in Spec s, float gap, float speedMps, float aheadSpeedMps, float liftDecelMps2,
+                                     float headwayLimit = float.MaxValue, bool launching = false)
         {
-            var c = new Command { wantedGap = WantedGap(s, speedMps) };
+            float wanted = s.standstillGap + Mathf.Min(s.headwaySeconds, Mathf.Max(0f, headwayLimit)) * Mathf.Max(0f, speedMps);
+            if (launching) wanted = Mathf.Min(wanted, s.launchGap);
+            var c = new Command { wantedGap = wanted };
             float spare = gap - c.wantedGap;
             float linear = aheadSpeedMps + s.gapGain * spare;
             float b = Mathf.Max(0.2f, liftDecelMps2 * s.liftShare);
             float approach = aheadSpeedMps + Mathf.Sqrt(2f * b * Mathf.Max(0f, spare));
-            c.speedMps = Mathf.Max(0f, Mathf.Min(linear, approach));
+            // Launching with room to spare, the linear gap term would ask for less than the car ahead is doing as soon
+            // as the gap stops growing; the approach alone lets it run flat out until it is genuinely closing in.
+            c.speedMps = Mathf.Max(0f, launching && spare > 0f ? approach : Mathf.Min(linear, approach));
 
             float closing = speedMps - aheadSpeedMps;
             float room = gap - s.hardGap;

@@ -403,6 +403,58 @@ Results (2026-11-03):
 | Lane error (from the first timed lap) | mean **0.113 m**, max **0.620 m** |
 | Lane changes started / completed / aborted | 3 / 3 / 0, 2 passes |
 
+## Wider, higher lanes and a flat-out launch (2026-11-06)
+
+Josh's report: the field still stacked up at the start (no longer crashing), and everyone should be flat out until
+they are up to speed. Two changes.
+
+**The lanes from the AI lines sit further apart and further up the banking**, most of all through the trioval.
+`OvalLanes.Spec` gained `extraSpacing` / `outwardShift` (all round: +0.4 m apart, +0.3 m up) and
+`frontStretchExtraSpacing` / `frontStretchOutwardShift` (on top, on the front stretch: +0.6 m apart, +0.9 m up).
+`BuildFromLines` widens the drawn gap (never less than `laneSpacing`) about its middle by the spread, moves the pair up
+by the shift, then holds both off the edges as before. Plain `Build` (the fixed grooves) is unchanged.
+`OvalLanes.FrontStretchWeight` finds the front stretch from the lap's own curvature: every sample through the
+start/finish line whose curvature, averaged over ±120 m, is under 60% of the lap's sharpest. 1 there, easing to 0 over
+80 m at each end. The long window matters: Texas's trioval is a run of short kinks as sharp as the turns at their
+peak (5.6 /km against 4.4 /km), but only 100-150 m long. `TrackBuilder.BuildOvalLanes` passes the weight to both
+`BuildFromLines` paths.
+
+Texas (`OvalLaneTests.TexasLanesOpenOutAndMoveUpThroughTheTrioval`): front stretch -154 m to 366 m of the 2356 m lap.
+
+| | lanes apart (drawn -> now) | pair's middle up the banking |
+|---|---|---|
+| Trioval (weight 1) | 4.78 -> 5.78 m | +0.78 m (the outside lane meets its 1.8 m edge margin in places) |
+| Rest of the lap | 4.92 -> 5.32 m | +0.30 m |
+
+**A flat-out launch** (`SplineDriver.flatOutLaunch`, default on; `Draftmaster.Sim.TrainFollow`). The stack-up was the
+train law itself. The green falls with rows 8-9 m apart, and the time gap wants 7 m + 0.3 s x v, so every car lifted
+for the car ahead the moment the green fell. Now:
+
+- From the green (a start or a restart) until a car is up to speed (`launchUpToSpeedShare` 0.97 of its speed plan, or
+  of the speed of a car ahead that is itself up to speed; at most `launchMaxSeconds` 30 s after the green), it is held
+  only by `launchGap` (7.5 m centre to centre). That hold is the approach term alone, so it lifts only when it is
+  closing too fast to stop short of 7.5 m on a lift. A car that joins more than 30 s after the green never launches.
+- Once up to speed, the time gap wanted starts from the gap the car has (never under `launchHeadwayMin`, 0.1 s) and
+  grows by `launchHeadwayGrowth` (0.004 s a second) back to 0.3 s, about 1.5 laps at Texas. It grows in time, not
+  metres, so the law keeps its speed term (its damping). Two values were tried and dropped. Opening the gap at
+  1 m/s a car compounded down the train: the eighth car in line ran 10 m/s under its plan out of turn 2. With no
+  floor, a car merging onto the ideal ahead of a train squeezed the cars behind to 0.3 m nose to tail.
+
+Measured by `OvalPassingTests.AGreenAtPaceSpeedRunsTheFieldFlatOutUpToSpeed`: Texas, 16 cars two wide, green at
+60 mph with rows 9 m apart, 2 laps. The `(False)` case is Explicit and report-only: the old law.
+
+| | old law | flat-out launch |
+|---|---|---|
+| Mean throttle until the first car is up to speed (4.7 s) | 0.758 | **0.994** |
+| Field length (first to last) at the green / 25 s later | 63 / 203 m | 63 / **133 m** |
+| Train emergency steps (2 laps) | 195 | **82** |
+| Car-steps braking for the car ahead in the first 25 s | 1188 | 991 |
+| Closest nose to tail | 4.06 m | 2.82 m |
+| Contacts | 2 (lane changes at ~1545 m) | 0 |
+
+The report carries a 2-second trace of every car (speed / plan, throttle / train brake, train gap, L launching, T the
+train binding, C changing lanes). Not play-tested.
+
 ## Not done yet
 
 - **Live races not yet play-tested.** The director has only been run in the sim.

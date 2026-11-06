@@ -617,6 +617,18 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     SplineDriver _trainAhead;     // the car the train is following (null: none, or a free-driven human car)
     float _trainAheadMps;
 
+    [Tooltip("Oval lane train: after a green flag (start or restart) a car runs flat out until it is up to speed, held off the car ahead only by TrainFollow's launchGap - the time gap is not asked for while the whole field is accelerating, which had every car lifting for the one ahead and the field stacking up behind the front row. Once up to speed the time gap it wants grows back from the gap it has at launchHeadwayGrowth. Off = the time-gap law from the green.")]
+    public bool flatOutLaunch = true;
+    [Tooltip("Flat-out launch: a car is up to speed at this share of its speed plan, or of the speed of a car ahead that is itself up to speed.")]
+    [Range(0.8f, 1f)] public float launchUpToSpeedShare = 0.97f;
+    [Tooltip("Flat-out launch: seconds after the green by which every car's launch is over, whatever its speed (and a car that joins later never launches).")]
+    public float launchMaxSeconds = 30f;
+    bool _trainWasGreen;
+    bool _trainLaunching;
+    float _trainHeadwayLimit = float.MaxValue;   // s: the most time gap the train wants, growing back after a launch
+    // Whether this car is still in its flat-out launch after the green (flatOutLaunch).
+    public bool TrainLaunching => _trainLaunching;
+
     void StepTrain()
     {
         TrainActive = false;
@@ -624,14 +636,39 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         TrainCapMps = float.MaxValue;
         TrainGap = float.MaxValue;
         _trainAhead = null;
-        if (!LaneFollowing || !trainFollowing || _onPit || !RaceStart.IsGreen) return;
-        if (!OvalTrain.TryFindAhead(this, out float gap, out float aheadMps, out _trainAhead)) return;
-        _trainAheadMps = aheadMps;
+        // The launch starts as the green falls (a start or a restart) and lasts until the car is up to speed.
+        bool green = RaceStart.IsGreen;
+        if (green && !_trainWasGreen)
+        {
+            _trainLaunching = flatOutLaunch;
+            _trainHeadwayLimit = float.MaxValue;
+        }
+        _trainWasGreen = green;
+        if (_trainLaunching && (!green || !flatOutLaunch || RaceStart.SecondsSinceGreen > launchMaxSeconds))
+            _trainLaunching = false;
+        if (!_trainLaunching && _trainHeadwayLimit < OvalTrain.Spec.headwaySeconds)
+            _trainHeadwayLimit += OvalTrain.Spec.launchHeadwayGrowth * Time.fixedDeltaTime;
+        if (!LaneFollowing || !trainFollowing || _onPit || !green) return;
         float v = OvalTrain.SpeedOf(this);
+        float upShare = launchUpToSpeedShare;
+        if (!OvalTrain.TryFindAhead(this, out float gap, out float aheadMps, out _trainAhead))
+        {
+            if (_trainLaunching && v >= upShare * DesiredMph * MphToMps) _trainLaunching = false;
+            return;
+        }
+        _trainAheadMps = aheadMps;
+        if (_trainLaunching && (v >= upShare * DesiredMph * MphToMps
+                                || (_trainAhead != null && !_trainAhead._trainLaunching && v >= upShare * aheadMps)))
+        {
+            // Up to speed: the time gap wanted grows back from the gap there is, not all at once.
+            _trainLaunching = false;
+            _trainHeadwayLimit = Mathf.Max(OvalTrain.Spec.launchHeadwayMin,
+                                           Mathf.Max(0f, gap - OvalTrain.Spec.standstillGap) / Mathf.Max(1f, v));
+        }
         // What a lift sheds right now: the dynamic model's coast, half of it gone in a full tow.
         if (_trainCar == null) _trainCar = GetComponent<PlayerVehicleController>();
         float lift = _trainCar != null ? _trainCar.coastDecel * (1f - 0.5f * _trainCar.TowFactor) : 1.5f;
-        var c = Draftmaster.Sim.TrainFollow.Follow(OvalTrain.Spec, gap, v, aheadMps, lift);
+        var c = Draftmaster.Sim.TrainFollow.Follow(OvalTrain.Spec, gap, v, aheadMps, lift, _trainHeadwayLimit, _trainLaunching);
         TrainActive = true;
         TrainCapMps = c.speedMps;
         TrainEmergency = c.emergency;
