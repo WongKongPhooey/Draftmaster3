@@ -24,14 +24,16 @@ public class PitStopController : MonoBehaviour
     public float pitApproachDecel = 7f;
     [Tooltip("How far (m) before the entry node the car starts drifting across to the pit lane's side of the track.")]
     public float pitApproachLeadM = 200f;
-    [Tooltip("Lateral speed (m/s) for moving between the pit-lane centerline (the driving line) and the wall-side box lane. Cars drive the centerline and only cut across at their own box, so a car being serviced never blocks the lane.")]
-    public float laneChangeRate = 3f;
+    [Tooltip("Gentlest path angle (deg) the car takes between the pit-lane centerline (the driving line) and the wall-side box lane, in to its box and back out. Cars drive the centerline and only cut across at their own box, so a car being serviced never blocks the lane. The move is an S-curve over the distance the car rolls (Draftmaster.Sim.PitBoxPath), as the formation pull-out is, so the body points the same way at any speed and squares up on the strip and on the line; it is tightened past this angle only as far as clearing the cars in the neighbouring boxes needs.")]
+    [Range(2f, 30f)] public float boxPathAngleDeg = 12f;
+    [Tooltip("Shortest run (m) over which the car moves between the centerline and the box lane, for a ladder packed too tight to fit the curve between the cars either side.")]
+    public float boxPathMinLength = 8f;
+    [Tooltip("Margin (m) on top of a car's width that the car must be across from the car in the next box while it is alongside it, going in and coming out.")]
+    public float boxPathClearance = 0.5f;
     [Tooltip("Braking rate (m/s^2) used to size the approach to the box. The car is capped at the speed it can still stop from, so it arrives AT its own box instead of sailing through it into the next car's.")]
     public float boxApproachDecel = 5f;
     [Tooltip("Speed (mph) the car keeps creeping at over the last few metres into the box.")]
     public float boxCrawlMph = 5f;
-    [Tooltip("Shortest run-in (m) over which the car may cut from the centerline to the box lane. The real window grows with speed so the car is ON the box lane before it stops.")]
-    public float minCutWindow = 12f;
     [Tooltip("Tell the crew the car is coming this far (m) up the lane from the box, so their sign man is out with the board down before it arrives — the board is what marks the stop.")]
     public float signCallM = 35f;
     [Tooltip("After service, hold in the box while another moving pit-lane car is within this many metres behind the box — pull out into a gap, not into traffic.")]
@@ -88,6 +90,13 @@ public class PitStopController : MonoBehaviour
     float _prevDist = -1f;
     bool _parking;
 
+    // The move across between the driving line and the box strip (PitBoxPath), latched when it starts: where it
+    // started from, the pit-lane distance it started at, and how long it is. In: centerline -> strip, out: back.
+    bool _cutting, _pullingOut;
+    float _pathFrom, _pathStartD, _pathLength;
+    const float BoxPathEndMargin = 1f;   // the cut-in is on the strip this far (m) before the box's stop line
+    VehicleCollision _collision;
+
     // Which box this car stops in. The field uses the box its grid slot owns; the player's car, brought in by
     // the AI after the race (RaceEndPitIn), uses the box the player was given.
     [HideInInspector] public int boxOverride = -1;
@@ -142,6 +151,7 @@ public class PitStopController : MonoBehaviour
             case State.HeadingToPit:
                 if (!_spline.IsOnPit)
                 {
+                    _cutting = false;
                     // Commit to the lane as we reach the entry node so the merge stays continuous.
                     float d = _spline.DistanceOnTrack;
                     float gap = tb.track.PitEntryDistanceOnLap - d;
@@ -174,16 +184,25 @@ public class PitStopController : MonoBehaviour
                     // across to the wall-side box lane only inside the last stretch before this car's own box —
                     // same flow as PracticeAIStint. Servicing ON the centerline blocked the whole lane and the
                     // cars behind (which have no racing brain down here) drove straight into the stop.
-                    // The window is sized from the lateral still to cover: the box lane sits ~8 m off the
-                    // centerline, so the old fixed 10 m run-in only bought ~1 m of it at pit speed and the car
-                    // stopped in the middle of the lane instead of in its box. Under the braking ramp below the
-                    // time left to the box is sqrt(2d/a), so d = (latRemain/rate)^2 * a/2 covers the move; the
-                    // 1.5 margin keeps it honest without driving half the strip through everyone else's boxes.
-                    float latRemain = Mathf.Abs(PitLane.ParkLateral - _spline.lateralOffset);
-                    float latTime = latRemain / Mathf.Max(0.1f, laneChangeRate);
-                    float cutWindow = Mathf.Max(minCutWindow, 0.75f * Mathf.Max(0.5f, boxApproachDecel) * latTime * latTime);
-                    if (remaining < cutWindow)
-                        _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, PitLane.ParkLateral, laneChangeRate * Time.fixedDeltaTime);
+                    // The cut is an S-curve over the distance rolled (PitBoxPath), finished on the strip just short
+                    // of the stop line, so the car arrives square in its box. A fixed lateral rate in time — what
+                    // this used to do — was most of the move in the last few metres at a crawl under the braking
+                    // ramp, and swung the body across the box and back.
+                    float myD = _spline.PitProgress01 * _spline.PitLength;
+                    if (!_cutting && Mathf.Abs(PitLane.ParkLateral - _spline.lateralOffset) > 0.01f)
+                    {
+                        float len = BoxPathLength(PitLane.ParkLateral - _spline.lateralOffset, BoxPathEndMargin);
+                        if (remaining < len + BoxPathEndMargin)
+                        {
+                            _cutting = true;
+                            _pathFrom = _spline.lateralOffset;
+                            _pathStartD = myD;
+                            // Came onto the lane already inside the window (a box right by the entry): fit it in.
+                            _pathLength = Mathf.Max(0.5f, Mathf.Min(len, remaining - BoxPathEndMargin));
+                        }
+                    }
+                    if (_cutting)
+                        _spline.lateralOffset = Draftmaster.Sim.PitBoxPath.Lateral(_pathFrom, PitLane.ParkLateral, myD - _pathStartD, _pathLength);
 
                     // Only queue behind traffic between here and this car's own box — a car parked in a box
                     // further down the lane is not an obstacle, it is someone else's stop.
@@ -200,6 +219,7 @@ public class PitStopController : MonoBehaviour
                     if (_spline.pitStopHold || remaining <= 0.5f || _spline.PitProgress01 >= targetFrac)
                     {
                         _spline.pitStopHold = true;
+                        _cutting = false;
                         if (_parking)
                         {
                             _state = State.Parked;
@@ -244,6 +264,7 @@ public class PitStopController : MonoBehaviour
                     // Yield: stay in the box until no moving pit-lane car is bearing down from behind,
                     // so the pull-out merges into a gap instead of across someone's nose.
                     // The stop line has to be released first or SplineDriver re-pins the car every frame.
+                    _pullingOut = false;
                     if (PitExitClear())
                     {
                         _spline.pitParkDistance = -1f;
@@ -253,13 +274,29 @@ public class PitStopController : MonoBehaviour
                 }
                 else if (_spline.IsOnPit)
                 {
-                    // Ease off the box strip back onto the centerline for the run to the exit.
-                    _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, laneChangeRate * Time.fixedDeltaTime);
+                    // Off the box strip back onto the centerline for the run to the exit — the same S-curve over
+                    // distance rolled as the formation pull-out, fitted to clear the car in the next box down the
+                    // lane and to be on the line before the exit. A fixed lateral rate in time swung the car
+                    // through 50 degrees and more as it crawled out of the box.
+                    float myD = _spline.PitProgress01 * _spline.PitLength;
+                    if (!_pullingOut && Mathf.Abs(_spline.lateralOffset) > 0.01f)
+                    {
+                        _pullingOut = true;
+                        _pathFrom = _spline.lateralOffset;
+                        _pathStartD = myD;
+                        // SplineDriver zeroes lateralOffset at the exit and eases what is left as a merge bias,
+                        // which is a sideways slide of its own, so the curve is done before then.
+                        float room = (_spline.PitLength * _spline.pitExitThreshold - myD) * 0.8f;
+                        _pathLength = BoxPathLength(_pathFrom, 0f, Mathf.Max(room, boxPathMinLength));
+                    }
+                    if (_pullingOut)
+                        _spline.lateralOffset = Draftmaster.Sim.PitBoxPath.Lateral(_pathFrom, 0f, myD - _pathStartD, _pathLength);
                     PitLaneFollowCap();
                 }
                 else // SplineDriver auto-exits the pit; we're back on track
                 {
                     _spline.pitParkDistance = -1f;   // never carry a stop line back onto the track
+                    _pullingOut = false;
                     if (_ai != null) _ai.enabled = true;
                     _state = State.Racing;
                 }
@@ -305,6 +342,7 @@ public class PitStopController : MonoBehaviour
         _spline.parkedHold = false;
         _spline.pitStopHold = false;
         _spline.pitParkDistance = -1f;
+        _cutting = _pullingOut = false;
         _state = State.HeadingToPit;   // on track it heads for the entry; on pit road it rolls on to the box
     }
 
@@ -321,6 +359,17 @@ public class PitStopController : MonoBehaviour
         _parking = true;
         _state = State.Parked;
         _spline.SnapToPitBox(PitLane.BoxDistance(BoxIndex, _spline.PitLength), PitLane.ParkLateral);
+    }
+
+    // Length (m) of the move between the driving line and the box strip (PitBoxPath), from this car's footprint and
+    // the box ladder. `maxLength` > 0 caps it (the lane left to the exit).
+    float BoxPathLength(float delta, float endMargin, float maxLength = 0f)
+    {
+        if (_collision == null) _collision = GetComponent<VehicleCollision>();
+        Vector2 half = _collision != null ? _collision.halfExtents : new Vector2(1.0f, 2.4f);
+        float spacing = PitLane.Configured ? PitLane.Spacing : 0f;
+        return Draftmaster.Sim.PitBoxPath.Length(delta, spacing, 2f * half.y, 2f * half.x + boxPathClearance,
+                                                 boxPathAngleDeg, boxPathMinLength, maxLength, endMargin);
     }
 
     // Pit-lane ACC: nothing else paces a car down here (the racing brain is parked), so without this a car
