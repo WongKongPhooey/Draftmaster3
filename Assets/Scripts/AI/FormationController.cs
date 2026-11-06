@@ -67,8 +67,12 @@ public class FormationController : MonoBehaviour
     [Header("Two-wide formation")]
     [Tooltip("Pack into two columns this far (m) either side of centre — half the lateral gap between the two cars in a row. The field runs double-file the WHOLE formation lap, so it's paired up ready for the start. Must comfortably exceed weaveAmplitude + half a car width: the columns and the weave are ACTIVE AT THE SAME TIME, and anti-phase weave eats 2*weaveAmplitude of the pair gap.")]
     public float columnHalfOffset = 2.2f;
-    [Tooltip("Longitudinal gap (m) each row holds behind the row ahead while closed up. Small = tight rows, but too small and a wobble closes it to a touch.")]
-    public float rowGap = 8f;
+    [Tooltip("Longitudinal gap (m, centre to centre) each row asks for behind the row ahead while closed up. 6 m is " +
+             "nose to tail - about a metre of daylight between bumpers, as a real field stacks up for the green. The " +
+             "close-up safety law (closeUpReactionSec, closeUpStandstillClearM, closeUpStationBufferM) has the final " +
+             "say: at the 50 mph close-up pace it holds rows ~6.4 m apart. At 8 m the field still went green with " +
+             "3.5 m between bumpers.")]
+    public float rowGap = 6f;
     [Tooltip("Through a turn, scale the column offset by this (0..1) so the pair eases toward centre but STAYS paired — never collapses to single file (which is what made the field look single-file on a road course whose close-up zone contains corners). The pair sits 2 x columnHalfOffset x this apart in a turn: keep that over ~3.2 m. Two cars 2.6 m apart clip each other as soon as one draws half alongside with a few degrees of yaw, which a tight road-course corner always gives them. The pair is fitted inside the road (FormationLanes.FitColumn), so a wider spacing no longer pushes the outside car off it.")]
     [Range(0f, 1f)] public float cornerColumnScale = 0.8f;
 
@@ -81,20 +85,26 @@ public class FormationController : MonoBehaviour
              "blockage and swerves alongside instead of tucking in.")]
     public float closeUpBonusMph = 16f;
     [Tooltip("Time headway (s) the station keeping holds in the close-up, in place of pack.HeadwaySec. At formation " +
-             "pace the normal 0.55 s is ~15 m centre to centre, which is a strung-out train, not rows.")]
-    public float closeUpHeadwaySec = 0.3f;
+             "pace the normal 0.55 s is ~15 m centre to centre, which is a strung-out train, not rows. Kept under " +
+             "rowGap / close-up pace (0.2 s = 4.5 m at 50 mph) so it never sets the gap.")]
+    public float closeUpHeadwaySec = 0.2f;
     [Tooltip("Clearance (m) the station keeping leaves above what the safety law needs in the close-up, in place of " +
              "pack.StationBufferM. The safety law itself is unchanged.")]
-    public float closeUpStationBufferM = 0.5f;
+    public float closeUpStationBufferM = 0.25f;
     [Tooltip("Station keeping's dead band (m) in the close-up, in place of pack.GapDeadbandM. A car closing from " +
              "behind stops gaining at the FAR edge of the band, so with the normal 1.5 m every row sat 1.5 m further " +
              "back than its station — Daytona's rows settled at ~10 m centre to centre.")]
-    public float closeUpGapDeadbandM = 0.5f;
+    public float closeUpGapDeadbandM = 0.25f;
     [Tooltip("The safety law's reaction allowance (s) in the close-up, in place of pack.ReactionSec. Behind the " +
              "safety car the field is kinematic and answers its speed command the next step; the reaction distance " +
-             "(this x speed) is the biggest part of the row gap at close-up pace. The human's car keeps its own " +
-             "extra room (humanBrakeFactor).")]
-    public float closeUpReactionSec = 0.08f;
+             "(this x speed) is the biggest part of the row gap at close-up pace. 0.04 s = two physics steps of " +
+             "latency (the scan reads the car ahead's last step). The human's car keeps its own extra room " +
+             "(humanBrakeFactor).")]
+    public float closeUpReactionSec = 0.04f;
+    [Tooltip("The safety law's bumper-to-bumper clearance after a full stop (m) in the close-up, in place of " +
+             "pack.StandstillClearM. With every car rolling at the same pace and able to brake as hard as the one " +
+             "ahead, this is pure margin on top of the row gap; 1 m of it was a metre of daylight between every row.")]
+    public float closeUpStandstillClearM = 0.5f;
     [Tooltip("In the close-up, most a car may run over the front row's pace (mph) to reach its own place in the " +
              "stacked-up field — its row's worth of settled gaps behind the front (FormationLanes.CloseUpCatchUpMph). " +
              "Stacking up only off the car ahead closed the field one row at a time, and the back of it was still " +
@@ -728,6 +738,7 @@ public class FormationController : MonoBehaviour
         _closeUpPack.StationBufferM = Mathf.Min(pack.StationBufferM, closeUpStationBufferM);
         _closeUpPack.GapDeadbandM = Mathf.Min(pack.GapDeadbandM, closeUpGapDeadbandM);
         _closeUpPack.ReactionSec = Mathf.Min(pack.ReactionSec, closeUpReactionSec);
+        _closeUpPack.StandstillClearM = Mathf.Min(pack.StandstillClearM, closeUpStandstillClearM);
         return _closeUpPack;
     }
 

@@ -57,7 +57,8 @@ namespace Draftmaster.Sim
                 liftShare = 0.8f,
                 hardGap = 6f,             // 1.2 m bumper to bumper
                 emergencyDecel = 4f,
-                launchGap = 7.5f,         // 2.7 m of air: the formation brings the rows to the green 8-9 m apart
+                launchGap = 6f,           // 1.2 m of air: the formation stacks the rows up ~6.4 m apart for the green (7.5 m had
+                                          // every car start inside it and lift off the green)
                 launchHeadwayGrowth = 0.004f,   // 0.1 -> 0.3 s in 50 s (~1.5 laps at Texas): ~0.26 m/s a car at 65 m/s
                 // With no time gap at all the line has no damping: a car merging ahead of the front of a train out of
                 // turn 2 at Texas squeezed the cars behind to 0.3 m nose to tail. 0.1 s (6 m at 60 m/s) is a few metres
