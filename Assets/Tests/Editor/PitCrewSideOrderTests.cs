@@ -79,6 +79,7 @@ public class PitCrewSideOrderTests
         public void End() => Invoke(Box, "EndService");
         public void StepBox(float dt) => Invoke(Box, "StepService", dt);
         public bool OnLeftSide => (bool)Property(Box, "WorkingLeftSide");
+        public bool TyresDone => (bool)Property(Box, "TyresDone");
 
         public Vector3 Station(int i) => (Vector3)Property(Members[i], "WorkStation");
         public bool Fitted(int i) => (bool)Property(Members[i], "WheelFitted");
@@ -270,6 +271,73 @@ public class PitCrewSideOrderTests
         Assert.IsFalse(rig.OnLeftSide, "Nobody changes sides when the sequence is off.");
     }
 
+    // ---- the stop waits for both sides -----------------------------------------------------------
+
+    [Test]
+    public void Tyres_are_not_done_until_the_left_hand_pair_is_on()
+    {
+        using var rig = new Rig();
+        Assert.IsFalse(rig.TyresDone, "No stop running, nothing to be done.");
+        rig.Begin();
+
+        Assert.IsTrue(rig.RunUntilLeftSide(6f));
+        Assert.IsFalse(rig.TyresDone, "Only the right-hand side is on: the car must not leave yet.");
+
+        rig.Run(5f);
+        Assert.IsTrue(rig.TyresDone, "Right side, run round, left side — all four on.");
+
+        rig.End();
+        Assert.IsFalse(rig.TyresDone, "A finished stop does not leave the next car's tyres marked done.");
+    }
+
+    [Test]
+    public void A_stop_lasts_until_the_crew_have_changed_both_sides()
+    {
+        using var rig = new Rig();
+        rig.Begin();
+
+        const float floor = 1f, wait = 20f, dt = 0.02f;
+        float elapsed = 0f;
+        bool sawRightOnlyHold = false;
+        while (!StopComplete(rig.Box, elapsed, floor, wait) && elapsed < 30f)
+        {
+            if (elapsed >= floor && !rig.OnLeftSide) sawRightOnlyHold = true;
+            rig.Run(dt, dt);
+            elapsed += dt;
+        }
+
+        Assert.IsTrue(sawRightOnlyHold, "Past the floor with only the right side being worked, the car is still held.");
+        Assert.IsTrue(rig.TyresDone, "The stop ended on the crew finishing, not on the backstop.");
+        // Out to the right side, a wheel, round the car, a wheel: longer than the old 3.5 s four-at-once stop,
+        // and inside the 6 s + 6 s the stop controllers allow before giving up on the crew.
+        Assert.Greater(elapsed, 3.5f, "Both sides take longer than the old stop did.");
+        Assert.Less(elapsed, 12f, "A healthy crew finishes well inside the backstop.");
+    }
+
+    [Test]
+    public void The_stop_s_own_floor_and_backstop_still_hold()
+    {
+        using var rig = new Rig();
+        Assert.IsFalse(StopComplete(null, 2f, 6f, 6f), "Never before the floor.");
+        Assert.IsTrue(StopComplete(null, 6f, 6f, 6f), "No crew to wait on: the floor is the stop.");
+
+        rig.Begin();
+        Assert.IsFalse(StopComplete(rig.Box, 6f, 6f, 6f), "Crew still on the right side: wait for them.");
+        Assert.IsTrue(StopComplete(rig.Box, 12f, 6f, 6f), "A crew that cannot finish gives up the car at the backstop.");
+
+        rig.End();
+        Assert.IsTrue(StopComplete(rig.Box, 6f, 6f, 6f), "A box that is not running a stop has nothing to wait for.");
+    }
+
+    [Test]
+    public void Both_the_ai_and_the_player_stop_wait_on_the_crew()
+    {
+        StringAssert.Contains("PitCrewBox.StopComplete", Source("Scripts/AI/PitStopController.cs"),
+                              "The AI's stop has to wait for the left-hand tyres.");
+        StringAssert.Contains("PitCrewBox.StopComplete", Source("Scripts/OnFoot/PlayerPitService.cs"),
+                              "So does the player's.");
+    }
+
     // ---- the wiring -------------------------------------------------------------------------------
 
     [Test]
@@ -287,6 +355,13 @@ public class PitCrewSideOrderTests
         var mi = target.GetType().GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.IsNotNull(mi, $"{target.GetType().Name}.{method} is gone; this test is written against it.");
         return mi.Invoke(target, args);
+    }
+
+    static bool StopComplete(Component box, float elapsed, float minSeconds, float crewWaitSeconds)
+    {
+        var mi = Runtime("PitCrewBox").GetMethod("StopComplete", BindingFlags.Public | BindingFlags.Static);
+        Assert.IsNotNull(mi, "PitCrewBox.StopComplete is gone; this test is written against it.");
+        return (bool)mi.Invoke(null, new object[] { box, elapsed, minSeconds, crewWaitSeconds });
     }
 
     static object Property(object target, string name)

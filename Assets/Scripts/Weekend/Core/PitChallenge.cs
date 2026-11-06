@@ -13,8 +13,9 @@ namespace Draftmaster.Weekend
     // hands the finished time here.
     public static class PitChallenge
     {
-        // How long the crew take to change four tyres, seconds. The clock keeps running through it.
-        public const float ServiceSeconds = 4f;
+        // How long the crew take to change four tyres, seconds: the right-hand pair, the run round the car, then
+        // the left-hand pair (PitCrewBox works a stop one side at a time). The clock keeps running through it.
+        public const float ServiceSeconds = 6f;
 
         // The give-up: a run still going after this long has gone wrong somewhere (spun, parked, lost).
         public const float TimeLimitSeconds = 75f;

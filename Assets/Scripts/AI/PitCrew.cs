@@ -9,7 +9,9 @@ using UnityEngine;
 // on they run round the car and do the left-hand pair. The fueller stays at the left rear — that is where the
 // filler is — and never changes sides. A sixth man — the sign man (PitCrewSignMan) — goes out earlier, on the
 // car's APPROACH, and holds the stop/go board over the nose until the crew are done. The car's own pit logic (PitStopController for the AI, PlayerPitService for the human)
-// calls SignalApproach/BeginService/EndService — the crew are purely cosmetic and never gate the stop.
+// calls SignalApproach/BeginService/EndService, and holds the car in the box until the crew report all four
+// wheels on (PitCrewBox.TyresDone, via PitCrewBox.StopComplete) — so a stop lasts as long as both sides take,
+// and the car never drives off with the crew still running round to the left-hand pair.
 //
 // Boxes register themselves by box index (= a car's grid / qualifying position) so a pitting car can find its
 // crew with no scene wiring. PitCrewSpawner builds the boxes from the shared PitLane geometry.
@@ -50,8 +52,8 @@ public class PitCrewMember : MonoBehaviour
     [Tooltip("Walk art faces -Y, so +90 lines the drawn facing up with the movement angle (same as PaddockWalker).")]
     public float spriteFacingOffsetDeg = 90f;
     public float turnRate = 720f;
-    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. Half the beat it used to be, because a wheel man now fits two of them in a stop, one per side. A fueller (and the sign man) keep what they are holding for the whole stop.")]
-    public float wheelFitSeconds = 0.6f;
+    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car: off with the old one, on with the new, five lug nuts. A wheel man fits two in a stop, one per side, and the stop waits for both. A fueller (and the sign man) keep what they are holding for the whole stop.")]
+    public float wheelFitSeconds = 1.5f;
     [Tooltip("Turn to face the car on arrival instead of keeping the walk-in heading. The sign man does — he works facing the nose he is holding the board over.")]
     public bool faceCarWhenWorking;
     [Tooltip("Repair work: how far (m) either side of his spot along the car a man shuffles while he works a panel.")]
@@ -336,8 +338,8 @@ public class PitCrewBox : MonoBehaviour
     public bool rightSideFirst = true;
     [Tooltip("Gap (m) along the car between the two men on one corner: the changer on the wheel and the carrier a step further out towards the bumper.")]
     public float carrierOffset = 0.7f;
-    [Tooltip("Send the crew round for the left side after this long (s) even if a wheel man never got his wheel on, so one member who cannot reach his corner can't strand the stop on one side.")]
-    public float sideChangeTimeout = 4f;
+    [Tooltip("Send the crew round for the left side after this long (s) even if a wheel man never got his wheel on, so one member who cannot reach his corner can't strand the stop on one side. Kept clear of a slow but healthy first side: a run out from the far wall plus a wheel change is ~4 s.")]
+    public float sideChangeTimeout = 6f;
 
     [Tooltip("Repair work: how far (m) in front of the nose the fifth man works, clear of the bodywork.")]
     public float repairNoseStandoff = 0.9f;
@@ -370,6 +372,9 @@ public class PitCrewBox : MonoBehaviour
     public int BoxIndex => _boxIndex;
     // The crew have finished the right-hand side and are working the left.
     public bool WorkingLeftSide => _onLeftSide;
+    // A stop is running and all four wheels are on: the right-hand pair, then the left-hand pair after the
+    // run round the car (or all four corners at once with the sequence off). The car may leave.
+    public bool TyresDone => _servicing && (!rightSideFirst || _onLeftSide) && AllWheelsFitted;
     // The crew are out round a parked car working on its bodywork.
     public bool IsRepairing => _repairing;
 
@@ -660,8 +665,11 @@ public class PitCrewBox : MonoBehaviour
             _members[i]?.SendToStation(_leftStations[i], withFreshWheel: true);
     }
 
-    // Every wheel man has left the wheel he carried out on the car.
-    bool RightSideDone
+    // Every wheel man has left the wheel he carried out on the car — on the right-hand side, before the
+    // crew go round. Sending them round hands each a fresh wheel, so the same test then reads the left side.
+    bool RightSideDone => AllWheelsFitted;
+
+    bool AllWheelsFitted
     {
         get
         {
@@ -669,6 +677,19 @@ public class PitCrewBox : MonoBehaviour
                 if (_members[i] != null && !_members[i].WheelFitted) return false;
             return true;
         }
+    }
+
+    // Whether a stop that has been running `elapsed` seconds is finished and the car may go: at least
+    // `minSeconds` (fuel, the stop's own floor) AND all four tyres on. The tyres are the crew's — the car waits
+    // while they run round for the left-hand pair — unless there is no crew to wait for (a scene without a
+    // pit crew), or they have overrun `minSeconds` by `crewWaitSeconds`, the backstop for a crew that cannot
+    // finish (a man who never reaches his corner, a box that is not being ticked). Used by every stop: the
+    // AI's (PitStopController) and the player's (PlayerPitService).
+    public static bool StopComplete(PitCrewBox crew, float elapsed, float minSeconds, float crewWaitSeconds)
+    {
+        if (elapsed < minSeconds) return false;
+        if (crew == null || !crew._servicing) return true;
+        return crew.TyresDone || elapsed >= minSeconds + Mathf.Max(0f, crewWaitSeconds);
     }
 
     void OnDestroy()

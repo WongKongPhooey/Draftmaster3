@@ -12,8 +12,10 @@ public class PitStopController : MonoBehaviour
 {
     [Tooltip("Pit when average tyre wear exceeds this (0..1). A small random spread is added per car so the field doesn't all stop together.")]
     [Range(0.2f, 0.95f)] public float wearThreshold = 0.6f;
-    [Tooltip("Seconds stationary in the box being serviced.")]
-    public float serviceSeconds = 3.5f;
+    [Tooltip("Shortest time (s) stationary in the box being serviced. The car also waits for its crew to change all four tyres — the right-hand pair, then the left-hand pair after they run round the car — so a stop runs to whichever is longer.")]
+    public float serviceSeconds = 6f;
+    [Tooltip("Longest (s) past serviceSeconds the car waits for the crew to finish the tyres, so a crew that cannot finish never keeps the car in the box for good.")]
+    public float crewWaitSeconds = 6f;
     [Tooltip("Where the service box sits along the pit lane (0..1).")]
     [Range(0.1f, 0.9f)] public float serviceFrac = 0.5f;
     [Tooltip("Commit to the pit lane when within this distance (m) of the pit-entry node.")]
@@ -73,7 +75,8 @@ public class PitStopController : MonoBehaviour
     TireModel _tires;
     VehicleDamage _bodywork;
     FuelTank _fuel;
-    float _serviceTimer;
+    float _serviceElapsed;
+    PitCrewBox _crew;   // the crew working this stop; the car waits on their tyres
     float _threshold;
     float _greenTime = -1f;
     float _forcedThreshold;
@@ -202,8 +205,9 @@ public class PitStopController : MonoBehaviour
                             _state = State.Parked;
                             break;
                         }
-                        _serviceTimer = serviceSeconds;
-                        PitCrewRegistry.ForBox(BoxIndex)?.BeginService(transform);
+                        _serviceElapsed = 0f;
+                        _crew = PitCrewRegistry.ForBox(BoxIndex);
+                        if (_crew != null) _crew.BeginService(transform);
                         RecordPit();
                         _state = State.Servicing;
                     }
@@ -211,13 +215,16 @@ public class PitStopController : MonoBehaviour
                 break;
 
             case State.Servicing:
-                _serviceTimer -= Time.fixedDeltaTime;
-                if (_serviceTimer <= 0f)
+                // Fuel and the stop's floor take serviceSeconds; the tyres take as long as the crew need for
+                // the right side, the run round the car and the left side. Both, before the car goes.
+                _serviceElapsed += Time.fixedDeltaTime;
+                if (PitCrewBox.StopComplete(_crew, _serviceElapsed, serviceSeconds, crewWaitSeconds))
                 {
                     if (_tires != null) _tires.PitReset();
                     if (repairDamage && _bodywork != null) _bodywork.RepairFull();
                     if (refuel && _fuel != null) _fuel.FillFull();
-                    PitCrewRegistry.ForBox(BoxIndex)?.EndService();
+                    if (_crew != null) _crew.EndService();
+                    _crew = null;
                     // The race ended while the car was in its box: it stays there.
                     _state = _raceOver ? State.Parked : State.Leaving; // pitStopHold stays on until the lane behind is clear
                 }
@@ -307,7 +314,8 @@ public class PitStopController : MonoBehaviour
     public void ParkInBoxNow()
     {
         if (_spline == null || !PitLane.Configured) return;
-        if (_state == State.Servicing) PitCrewRegistry.ForBox(BoxIndex)?.EndService();
+        if (_state == State.Servicing && _crew != null) _crew.EndService();
+        _crew = null;
         if (_ai != null) _ai.enabled = false;
         _raceOver = true;
         _parking = true;

@@ -2,16 +2,18 @@ using UnityEngine;
 
 // Services the human player's car when they stop in their pit box: a glowing rectangle marks the
 // player's reserved box while they're in the pit lane, and the stop only begins once the car has
-// stopped FULLY inside it. Hold still for a few seconds and the crew fits fresh tyres (and
-// straightens the bodywork). Re-arms once the car leaves the pit. If the session gave the player no
+// stopped FULLY inside it. Hold still while the crew fit fresh tyres — the right-hand pair, then
+// the left-hand pair after they run round the car — and straighten the bodywork. Re-arms once the car leaves the pit. If the session gave the player no
 // reserved box (PitLane.PlayerBox = -1, e.g. multiplayer), falls back to the old anywhere-in-the-lane
 // behaviour.
 public class PlayerPitService : MonoBehaviour
 {
     public TrackBuilder track;
     public PlayerVehicleController playerCar;
-    [Tooltip("Seconds stationary on pit road before the stop completes.")]
-    public float serviceSeconds = 3.5f;
+    [Tooltip("Shortest time (s) stationary on pit road before the stop completes. The car also waits for its crew to change all four tyres — right side, run round, left side — so a stop runs to whichever is longer.")]
+    public float serviceSeconds = 6f;
+    [Tooltip("Longest (s) past serviceSeconds the stop waits for the crew to finish the tyres, so a crew that cannot finish never strands the player in the box.")]
+    public float crewWaitSeconds = 6f;
     [Tooltip("Speed (m/s) below which the car counts as stopped for service.")]
     public float stopSpeedMps = 1.5f;
     [Tooltip("Tell the crew the player is coming once the car is this close (m) to their box, so the sign man is out with the board down before it arrives — the board is what marks the stop.")]
@@ -101,7 +103,9 @@ public class PlayerPitService : MonoBehaviour
                 _crewWorking = true;
             }
             _timer += Time.deltaTime;
-            if (_timer >= serviceSeconds)
+            // Done once the floor has passed AND the crew have both sides on — the car waits for the left-hand
+            // pair rather than leaving the crew running round to a car that has gone.
+            if (PitCrewBox.StopComplete(_activeCrew, _timer, serviceSeconds, crewWaitSeconds))
             {
                 playerCar.PitResetTyres();
                 if (repairDamage && _bodywork != null) _bodywork.RepairFull();
@@ -152,11 +156,20 @@ public class PlayerPitService : MonoBehaviour
         // Pit-stop callouts, centred over the car: a framed strip rather than floating text, so a message
         // that lands over a light piece of pit lane is still readable.
         if (_timer > 0f && !_serviced)
-            Callout($"PITTING…  {Mathf.Max(0f, serviceSeconds - _timer):0.0}s", PixelGUI.Gold, 1f);
+            Callout(PittingText(), PixelGUI.Gold, 1f);
         else if (_msgTimer > 0f)
             Callout("Fresh Tyres", PixelGUI.Confirm, Mathf.Clamp01(_msgTimer));
         else if (_showBoxHint)
             Callout("Stop fully inside your pit box", PixelGUI.Gold, 1f);
+    }
+
+    // Which side the crew are on while they have tyres to fit; the stop's own countdown once they are done
+    // (or with no crew to watch).
+    string PittingText()
+    {
+        if (_activeCrew != null && _activeCrew.IsServicing && !_activeCrew.TyresDone && _timer < serviceSeconds + crewWaitSeconds)
+            return _activeCrew.WorkingLeftSide ? "PITTING…  Left side tyres" : "PITTING…  Right side tyres";
+        return $"PITTING…  {Mathf.Max(0f, serviceSeconds - _timer):0.0}s";
     }
 
     static void Callout(string text, Color colour, float alpha)
