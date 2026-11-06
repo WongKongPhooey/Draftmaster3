@@ -188,10 +188,12 @@ public class OvalLaneTests
         float hIn1 = 10f + inside[n - 2], hOut1 = 10f + outside[n - 2];
         Assert.AreEqual(spec.laneSpacing + spec.extraSpacing + spec.frontStretchExtraSpacing, hOut1 - hIn1, 1e-3f);
         Assert.AreEqual(10f + spec.outwardShift + spec.frontStretchOutwardShift, (hIn1 + hOut1) * 0.5f, 1e-3f);
-        // Lines already up against the outside edge: held outsideEdgeMargin off it, the gap kept.
+        // Lines already up against the outside edge: held outsideEdgeMargin off it (less the front-stretch relief
+        // there), the gap kept.
         for (int i = 0; i < n; i++) { a[i] = 6f; b[i] = 9f; }
         OvalLanes.BuildFromLines(d, w, a, b, -1f, 0f, spec, out inside, out outside, 0f, front);
-        Assert.AreEqual(20f - spec.outsideEdgeMargin, 10f + outside[n - 2], 1e-3f);
+        Assert.AreEqual(20f - spec.outsideEdgeMargin, 10f + outside[2], 1e-3f, "off the front stretch");
+        Assert.AreEqual(20f - (spec.outsideEdgeMargin - spec.frontStretchOutsideEdgeRelief), 10f + outside[n - 2], 1e-3f);
         Assert.GreaterOrEqual(outside[n - 2] - inside[n - 2], spec.laneSpacing + spec.extraSpacing - 1e-3f);
     }
 

@@ -39,6 +39,9 @@ namespace Draftmaster.Tracks
             // turn 4.
             public float frontStretchExtraSpacing;
             public float frontStretchOutwardShift;
+            // ...and the outside lane may come this much closer to the outside edge there than outsideEdgeMargin, so
+            // the shift up the banking is not used up by the edge (Texas: the trioval pair was already held off it).
+            public float frontStretchOutsideEdgeRelief;
         }
 
         // A Cup car is about 2.0 m wide. Inside lane: half a car (1.0) + 0.8 m to the edge, so the inside tyres
@@ -52,11 +55,14 @@ namespace Draftmaster.Tracks
             outsideEdgeMargin = 1.8f,
             smoothingMetres = 40f,
             // The drawn lanes ran a little tight and low: two-wide at the green the field stacked up. Moved apart
-            // and up the banking slightly all round, more through the trioval (2026-11-06).
-            extraSpacing = 0.4f,
-            outwardShift = 0.3f,
-            frontStretchExtraSpacing = 0.6f,
-            frontStretchOutwardShift = 0.9f,
+            // and up the banking slightly all round, more through the trioval (2026-11-06; opened a little more the
+            // same night, and the outside lane let up to 1.4 m off the edge on the trioval - SplineDriver.RoadEdgeMargin,
+            // the AI's own bound - where at 1.8 m the pair had been pinned and only got +0.78 m of its +1.2 m shift).
+            extraSpacing = 0.6f,
+            outwardShift = 0.5f,
+            frontStretchExtraSpacing = 0.8f,
+            frontStretchOutwardShift = 1.1f,
+            frontStretchOutsideEdgeRelief = 0.4f,
         };
 
         // Whether the track with this id is raced in lanes: any kind but a road course, from the published
@@ -118,8 +124,8 @@ namespace Draftmaster.Tracks
         // drifts rather than kinks. Road too narrow for both: both on the centreline, as in Build.
         // `lineSmoothingMetres` < 0 = half the spec's window; 0 = none (lines that are already smooth, such as trained
         // ones, keep their points exactly).
-        // `frontStretch` (optional, one per sample, 0-1: FrontStretchWeight) scales the spec's front-stretch spread and
-        // shift; extraSpacing / outwardShift apply everywhere. The drawn gap (never less than laneSpacing) widens by the
+        // `frontStretch` (optional, one per sample, 0-1: FrontStretchWeight) scales the spec's front-stretch spread,
+        // shift and outside-edge relief; extraSpacing / outwardShift apply everywhere. The drawn gap (never less than laneSpacing) widens by the
         // spread about its middle, and the pair moves up the banking by the shift, before both are held off the edges.
         public static void BuildFromLines(float[] distance, float[] width, float[] lineA, float[] lineB, float insideSide,
                                           float loopLength, Spec spec, out float[] inside, out float[] outside,
@@ -140,7 +146,9 @@ namespace Draftmaster.Tracks
                 float half = w[i] * 0.5f;
                 // Height above the inside edge: 0 at the inside edge, width at the outside edge.
                 float hIn = half - insideSide * inLat, hOut = half - insideSide * outLat;
-                float lo = spec.insideEdgeMargin, hi = w[i] - spec.outsideEdgeMargin;
+                float front = frontStretch != null && i < frontStretch.Length ? Mathf.Clamp01(frontStretch[i]) : 0f;
+                float lo = spec.insideEdgeMargin;
+                float hi = w[i] - Mathf.Max(0f, spec.outsideEdgeMargin - front * spec.frontStretchOutsideEdgeRelief);
                 if (hi < lo)
                 {
                     hIn = hOut = half;
@@ -149,7 +157,6 @@ namespace Draftmaster.Tracks
                 {
                     hIn = Mathf.Clamp(hIn, lo, hi);
                     hOut = Mathf.Clamp(hOut, lo, hi);
-                    float front = frontStretch != null && i < frontStretch.Length ? Mathf.Clamp01(frontStretch[i]) : 0f;
                     float spread = Mathf.Max(0f, spec.extraSpacing + front * spec.frontStretchExtraSpacing);
                     float shift = spec.outwardShift + front * spec.frontStretchOutwardShift;
                     float gap = Mathf.Max(hOut - hIn, spec.laneSpacing) + spread;
