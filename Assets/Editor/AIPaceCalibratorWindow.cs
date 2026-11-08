@@ -224,6 +224,10 @@ public class AIPaceCalibratorWindow : EditorWindow
         finally
         {
             EditorUtility.ClearProgressBar();
+            // LapSim.Build applied the track's tuning; leave the neutral defaults behind, not this track's lanes,
+            // draft and dirty air for whatever runs next in the editor (an EditMode suite after a calibration
+            // raced with Watkins Glen's settings and failed GrandstandRaceSimTests' Turn 1 apex check).
+            TrackConditions.ApplyTrackTuning(null);
             TrackConditions.AiGripMultiplier = prevGrip;
             TrackConditions.AiPaceMultiplier = prevPace;
             if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
@@ -283,6 +287,10 @@ public class AIPaceCalibratorWindow : EditorWindow
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) { error = $"No track package at {path}."; return null; }
             var package = (GameObject)PrefabUtility.InstantiatePrefab(prefab, SceneManager.GetActiveScene());
+            // The track type's settings, as a session applies them when the package binds (AIPaceCalibration.ApplyFor).
+            // Whether the AI races in lanes decides which racing line it drives (SplineDriver.optimiseLine), so a
+            // sim without them calibrated a different line from the one the game drives.
+            TrackConditions.ApplyTrackTuning(trackId);
 
             // Runoff and kerbs, so leaving the road puts the car on grass as it would in a session.
             var env = package.GetComponentInChildren<TrackEnvironmentBuilder>(true);

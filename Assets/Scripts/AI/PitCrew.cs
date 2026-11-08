@@ -23,7 +23,14 @@ public static class PitCrewRegistry
     static readonly Dictionary<int, PitCrewBox> _boxes = new();
 
     public static void Register(int boxIndex, PitCrewBox box) => _boxes[boxIndex] = box;
-    public static void Unregister(int boxIndex) { if (_boxes.ContainsKey(boxIndex)) _boxes.Remove(boxIndex); }
+    // Only drops the slot if it still holds THIS box. Crews are rebuilt whenever the pit ladder changes, and the
+    // replacement registers under the same index in the same frame the old one is Destroy()ed — whose OnDestroy
+    // runs at the end of that frame. An unconditional Remove took the new crew out of the registry, so stops
+    // found no crew: the car was serviced on the floor timer with the crew stood on the wall.
+    public static void Unregister(int boxIndex, PitCrewBox box)
+    {
+        if (_boxes.TryGetValue(boxIndex, out var b) && (b == box || b == null)) _boxes.Remove(boxIndex);
+    }
 
     public static PitCrewBox ForBox(int boxIndex) => _boxes.TryGetValue(boxIndex, out var b) && b != null ? b : null;
 
@@ -694,6 +701,6 @@ public class PitCrewBox : MonoBehaviour
 
     void OnDestroy()
     {
-        if (_boxIndex >= 0) PitCrewRegistry.Unregister(_boxIndex);
+        if (_boxIndex >= 0) PitCrewRegistry.Unregister(_boxIndex, this);
     }
 }

@@ -97,12 +97,36 @@ namespace Draftmaster.Sim
             => Mathf.Lerp(1f - spread, 1f + spread, Mathf.Clamp01(strength01));
 
         // How close to the grip limit they corner. The best use all of it; the weakest give up ~4%. Consistency
-        // adds a little spread so equal-rated drivers differ. jitterRoll01 is a uniform 0..1 draw.
-        public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01)
+        // adds a little spread so equal-rated drivers differ. jitterRoll01 is a uniform 0..1 draw. `spread` scales how
+        // far under 1 it goes (TrackConditions.AiSpreadScale): 1 = the whole 0.93-1 range; on an oval, where every car
+        // has the same engine and the corners are all that separate them, the full range made the weakest car 4.5% a
+        // lap slower than the best and the field strung out over a lap in a few dozen.
+        public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01, float spread = 1f)
         {
             float jitter = Mathf.Lerp(-(1f - consistency01) * 0.012f, (1f - consistency01) * 0.004f, Mathf.Clamp01(jitterRoll01));
-            return Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) + jitter, MinCornerCommitment - 0.01f, 1f);
+            float c = Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) + jitter, MinCornerCommitment - 0.01f, 1f);
+            return 1f - (1f - c) * Mathf.Max(0f, spread);
         }
+
+        // Tyre management: how much a driver takes out of a set. The best make one last 15% longer than the field's
+        // middle, the worst wear it 15% faster - over a run on an abrasive track (Darlington, ~2.4 s of falloff on a
+        // set 0.8 worn) that is the half second a lap that reorders a field late in a stint.
+        public static float TyreWearScale(float tyreManagement01) => Mathf.Lerp(1.15f, 0.85f, Mathf.Clamp01(tyreManagement01));
+
+        // Awareness: how much room a driver wants before moving into a lane - how far back and ahead they check it
+        // is clear. A low one takes a lane a car is about to fill and squeezes it; a high one waits.
+        public static float AwarenessMargin(float awareness01) => Mathf.Lerp(0.85f, 1.15f, Mathf.Clamp01(awareness01));
+
+        // Adaptability: how quickly a driver finds the pace at a track in practice. The least adaptable start
+        // AdaptPenalty off it and get there over AdaptSeconds on track; the most adaptable are on it at once.
+        public const float AdaptPenalty = 0.015f;
+        public const float AdaptSeconds = 600f;
+        public static float AdaptationPace(float adaptability01, float secondsOnTrack)
+            => 1f - AdaptPenalty * (1f - Mathf.Clamp01(adaptability01)) * Mathf.Clamp01(1f - secondsOnTrack / AdaptSeconds);
+
+        // A track's caution-proneness (TrackTuning.cautionProneness, 0..1) as a multiplier on the mistake rate:
+        // a bullring or a plate pack makes drivers err more, a road course with room to run less. 0.5 = as tuned.
+        public static float MistakeScale(float cautionProneness01) => Mathf.Lerp(0.6f, 1.4f, Mathf.Clamp01(cautionProneness01));
 
         static float Norm(int stat, int statMax) => statMax > 0 ? Mathf.Clamp01(stat / (float)statMax) : 0f;
     }

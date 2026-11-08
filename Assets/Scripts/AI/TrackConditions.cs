@@ -32,6 +32,18 @@ public static class TrackConditions
     // track loads.
     public static float PackageYawInertiaScale = 1f;
 
+    [Tooltip("The car package's engine at this track (TrackTuning.packageSpeed): a multiplier on every car's engine pull and top speed - the player's and the AI's physics and the AI's speed plan. Set per track when it loads.")]
+    public static float PackageSpeedScale = 1f;
+
+    [Tooltip("The AI's engine power here, apart from its pace (TrackTuning.aiPower). <= 0 = the same as AiPaceMultiplier, as everywhere that has not set it. Set per track when it loads.")]
+    public static float AiPowerMultiplier = 0f;
+
+    [Tooltip("On this oval the AI's ideal (single-file) line is the road's minimum-curvature line, not its trained one (TrackTuning.aiOptimisedLine). Set per track when it loads.")]
+    public static bool AiOptimisedOvalLine;
+
+    [Tooltip("How far apart the AI drivers' corner commitment spreads here (TrackTuning.aiSpread; AIRatings.CornerCommitment). 1 = the full rating range. Set per track when it loads.")]
+    public static float AiSpreadScale = 1f;
+
     // Grip the track itself adds - 1 everywhere but a plated superspeedway, where the turns are given exactly
     // what they need to be taken flat out at the plate speed with a full tow (RestrictorPlate). Set when it loads.
     public static float TrackGripScale = 1f;
@@ -89,6 +101,11 @@ public static class TrackConditions
 
     [Tooltip("The AI races as a pack: lines nose to tail, pull out only with a run, a line follows its leader, nobody backs out. Superspeedways.")]
     public static bool AiPackRacing = false;
+    // The tow is worth more the faster the car goes (DraftAero.SpeedShare). False = the same at any speed over the
+    // car's draftingMinSpeed.
+    public static bool DraftBySpeed = true;
+    // How error-prone racing is here (TrackTuning.cautionProneness): Draftmaster.Sim.AIRatings.MistakeScale.
+    public static float AiCautionProneness = 0.5f;
 
     [Tooltip("How much a line of cars pushes the car at its head (bump drafting). 0 = none.")]
     public static float PushScale = 0f;
@@ -125,8 +142,13 @@ public static class TrackConditions
         AiLaneSpacing = 0f;
         AiAlongsideGap = 0f;
         AiPackLanes = 0;
+        AiCautionProneness = 0.5f;
         PackageGripScale = 1f;
         PackageYawInertiaScale = 1f;
+        PackageSpeedScale = 1f;
+        AiPowerMultiplier = 0f;
+        AiOptimisedOvalLine = false;
+        AiSpreadScale = 1f;
         if (string.IsNullOrEmpty(trackId)) return;
         var tuning = TrackProfile.ForTrack(trackId);
         if (tuning.draftScale > 0f) DraftScale = tuning.draftScale;
@@ -142,19 +164,25 @@ public static class TrackConditions
         AiLaneSpacing = tuning.laneSpacing;
         AiAlongsideGap = tuning.alongsideGap;
         AiPackLanes = tuning.packLanes;
+        AiCautionProneness = tuning.cautionProneness > 0f ? Mathf.Clamp01(tuning.cautionProneness) : 0.5f;
         // A track the catalogue doesn't know falls back to the Speedway row above; it keeps the road-course car
         // rather than being handed the oval package on a guess.
         bool known = TrackCatalog.Row(trackId) != null;
         if (known && tuning.packageGrip > 0f) PackageGripScale = tuning.packageGrip;
         if (known && tuning.packageYawInertia > 0f) PackageYawInertiaScale = tuning.packageYawInertia;
+        if (known && tuning.packageSpeed > 0f) PackageSpeedScale = tuning.packageSpeed;
+        if (known && tuning.aiPower > 0f) AiPowerMultiplier = tuning.aiPower;
+        AiOptimisedOvalLine = known && tuning.aiOptimisedLine;
+        if (known && tuning.aiSpread > 0f) AiSpreadScale = tuning.aiSpread;
         float plate = 0f, gripScale = 1f;
         if (tuning.plateMph > 0f && RestrictorPlate.Solve(trackId, tuning.plateMph, out plate, out gripScale))
         {
             PlateMph = plate;
             TrackGripScale = gripScale;
             AiFlatOut = tuning.flatOut;
-            // The plate solve owns a superspeedway's grip (it is solved against the un-packaged grip).
+            // The plate solve owns a superspeedway's grip and speed (it is solved against the un-packaged car).
             PackageGripScale = 1f;
+            PackageSpeedScale = 1f;
         }
     }
 
@@ -165,8 +193,9 @@ public static class TrackConditions
     // player's car, so the AI still holds them flat out without its bonus.
     public static bool AiParity => PlateMph > 0f;
 
-    // The AI's engine-power (and envelope-stretch) multiplier: AiPaceMultiplier, or 1 on a plated track.
-    public static float AiPowerScale => AiParity ? 1f : AiPaceMultiplier;
+    // The AI's engine-power (and envelope-stretch) multiplier: AiPaceMultiplier unless the track sets its own
+    // (AiPowerMultiplier), and 1 on a plated track.
+    public static float AiPowerScale => AiParity ? 1f : AiPowerMultiplier > 0f ? AiPowerMultiplier : AiPaceMultiplier;
 
     // Effective grip for AI-driven cars: global effective grip × AI-only bonus (none on a plated track).
     public static float AiEffective => AiParity ? Effective : Effective * AiGripMultiplier;
@@ -196,7 +225,12 @@ public static class TrackConditions
         AiLaneSpacing = 0f;
         AiAlongsideGap = 0f;
         AiPackLanes = 0;
+        AiCautionProneness = 0.5f;
         PackageGripScale = 1f;
         PackageYawInertiaScale = 1f;
+        PackageSpeedScale = 1f;
+        AiPowerMultiplier = 0f;
+        AiOptimisedOvalLine = false;
+        AiSpreadScale = 1f;
     }
 }

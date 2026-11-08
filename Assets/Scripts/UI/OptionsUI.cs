@@ -8,6 +8,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Draftmaster.Audio;
+using Draftmaster.Sim;
 using Draftmaster.Controls;
 
 // OPTIONS: the screen behind the title menu's last row.
@@ -52,7 +53,7 @@ public class OptionsUI : MonoBehaviour
     }
 
     // Which sheet of rows is up.
-    enum Page { Main, Sound }
+    enum Page { Main, Sound, AI }
 
     class MenuRow
     {
@@ -128,6 +129,7 @@ public class OptionsUI : MonoBehaviour
     {
         _rows.Clear();
         if (_page == Page.Sound) { BuildSoundRows(); return; }
+        if (_page == Page.AI) { BuildAIRows(); return; }
 
         _rows.Add(new MenuRow
         {
@@ -177,6 +179,14 @@ public class OptionsUI : MonoBehaviour
             open = () => ShowPage(Page.Sound, 0),
         });
 
+        _rows.Add(new MenuRow
+        {
+            label = "AI Drivers",
+            kind = RowKind.Page,
+            read = () => "Strength  " + AIDifficultyRules.Format(AIDifficulty.StrengthPercent),
+            open = () => ShowPage(Page.AI, 0),
+        });
+
         _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back });
     }
 
@@ -197,6 +207,36 @@ public class OptionsUI : MonoBehaviour
                 cycle = () => SoundVolumes.SetPercent(c, SoundMix.Cycle(SoundVolumes.Percent(c))),
             });
         }
+
+        _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back, gapBefore = 26f });
+    }
+
+    // NR2003's two sliders. Read when a track loads and when a driver is put in a car, so a change counts from the next
+    // session on.
+    void BuildAIRows()
+    {
+        _rows.Add(new MenuRow
+        {
+            label = "AI Strength",
+            kind = RowKind.Choice,
+            hint = "How fast the field is, on top of each track's calibration.",
+            read = () => AIDifficultyRules.Format(AIDifficulty.StrengthPercent),
+            describe = () => AIDifficultyRules.DescribeStrength(AIDifficulty.StrengthPercent),
+            step = dir => AIDifficulty.StrengthPercent = AIDifficultyRules.StepStrength(AIDifficulty.StrengthPercent, dir),
+            cycle = () => AIDifficulty.StrengthPercent = AIDifficultyRules.CycleStrength(AIDifficulty.StrengthPercent),
+        });
+
+        _rows.Add(new MenuRow
+        {
+            label = "AI Aggression",
+            kind = RowKind.Choice,
+            gapBefore = 22f,
+            hint = "How readily the AI go for a gap and hold their line.",
+            read = () => AIDifficultyRules.Format(AIDifficulty.AggressionPercent),
+            describe = () => AIDifficultyRules.DescribeAggression(AIDifficulty.AggressionPercent),
+            step = dir => AIDifficulty.AggressionPercent = AIDifficultyRules.StepAggression(AIDifficulty.AggressionPercent, dir),
+            cycle = () => AIDifficulty.AggressionPercent = AIDifficultyRules.CycleAggression(AIDifficulty.AggressionPercent),
+        });
 
         _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back, gapBefore = 26f });
     }

@@ -91,11 +91,15 @@ public class PitCrewSpawner : MonoBehaviour
 
     Transform _boxes;
     int _builtFor = -1;
+    // The one build in flight. Start's build waits for PitLane to be configured, and the Changed event that
+    // configuring raises started a second; both then built a full set of crews, the second destroying the
+    // first's — so only ever one runs.
+    Coroutine _spawning;
 
     void Start()
     {
         PitLane.Changed += OnPitLaneChanged;
-        StartCoroutine(SpawnWhenReady());
+        Respawn();
     }
 
     void OnDestroy() => PitLane.Changed -= OnPitLaneChanged;
@@ -112,8 +116,15 @@ public class PitCrewSpawner : MonoBehaviour
         int want = boxCount > 0 ? boxCount : (PitLane.Configured ? PitLane.BoxCount : 0);
         if (want == _builtFor) return;
 
+        if (_spawning != null) { StopCoroutine(_spawning); _spawning = null; }
         Clear();
-        if (want > 0) StartCoroutine(SpawnWhenReady());
+        if (want > 0) Respawn();
+    }
+
+    void Respawn()
+    {
+        if (_spawning != null) StopCoroutine(_spawning);
+        _spawning = StartCoroutine(SpawnWhenReady());
     }
 
     void Clear()

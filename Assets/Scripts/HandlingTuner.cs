@@ -105,6 +105,7 @@ public class HandlingTuner : MonoBehaviour
         _globalDefaults["AiGripMultiplier"] = TrackConditions.AiGripMultiplier;
         _globalDefaults["PackageGripScale"] = TrackConditions.PackageGripScale;
         _globalDefaults["PackageYawInertiaScale"] = TrackConditions.PackageYawInertiaScale;
+        _globalDefaults["PackageSpeedScale"] = TrackConditions.PackageSpeedScale;
     }
 
     void OnGUI()
@@ -165,6 +166,7 @@ public class HandlingTuner : MonoBehaviour
         // The car package this track runs (TrackTuning.packageGrip / packageYawInertia): 1 / 1 on a road course.
         TrackConditions.PackageGripScale       = LabeledSlider("PackageGripScale",       TrackConditions.PackageGripScale,       0.5f, 1.2f);
         TrackConditions.PackageYawInertiaScale = LabeledSlider("PackageYawInertiaScale", TrackConditions.PackageYawInertiaScale, 0.5f, 2f);
+        TrackConditions.PackageSpeedScale      = LabeledSlider("PackageSpeedScale",      TrackConditions.PackageSpeedScale,      0.8f, 1.2f);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -199,6 +201,7 @@ public class HandlingTuner : MonoBehaviour
         if (_globalDefaults.TryGetValue("AiGripMultiplier", out var ag)) TrackConditions.AiGripMultiplier = ag;
         if (_globalDefaults.TryGetValue("PackageGripScale", out var pg)) TrackConditions.PackageGripScale = pg;
         if (_globalDefaults.TryGetValue("PackageYawInertiaScale", out var pi)) TrackConditions.PackageYawInertiaScale = pi;
+        if (_globalDefaults.TryGetValue("PackageSpeedScale", out var ps)) TrackConditions.PackageSpeedScale = ps;
     }
 
     void LogValues()
@@ -217,6 +220,7 @@ public class HandlingTuner : MonoBehaviour
         sb.AppendLine($"  [Global] AiGripMultiplier = {TrackConditions.AiGripMultiplier:0.####}");
         sb.AppendLine($"  [Global] PackageGripScale = {TrackConditions.PackageGripScale:0.####}");
         sb.AppendLine($"  [Global] PackageYawInertiaScale = {TrackConditions.PackageYawInertiaScale:0.####}");
+        sb.AppendLine($"  [Global] PackageSpeedScale = {TrackConditions.PackageSpeedScale:0.####}");
         Debug.Log(sb.ToString());
     }
 

@@ -46,6 +46,12 @@ public class RacePositionTracker : MonoBehaviour
     }
 
     readonly List<Entry> _entries = new();
+    static readonly System.Comparison<Entry> _byProgress = (a, b) => b.progress.CompareTo(a.progress);
+    static readonly System.Comparison<Entry> _byRestartOrder = (a, b) =>
+    {
+        int c = CautionLineup.Key(a.tf).CompareTo(CautionLineup.Key(b.tf));
+        return c != 0 ? c : b.progress.CompareTo(a.progress);
+    };
     readonly Dictionary<Transform, Entry> _byTf = new();
     Entry _playerEntry;
     float _len;
@@ -125,7 +131,11 @@ public class RacePositionTracker : MonoBehaviour
 
         for (int i = 0; i < _entries.Count; i++) UpdateProgress(_entries[i]);
 
-        _entries.Sort((a, b) => b.progress.CompareTo(a.progress));
+        // Under a full-course caution the positions were frozen when the flag came out (CautionLineup): the order is the
+        // restart order - cars that pitted behind those that stayed out, cars caught up in the crash at the tail - not
+        // wherever the cars happen to be on the road while it sorts itself out behind the safety car.
+        if (CautionLineup.Active && RaceStart.IsCaution) _entries.Sort(_byRestartOrder);
+        else _entries.Sort(_byProgress);
         for (int i = 0; i < _entries.Count; i++) _entries[i].position = i + 1;
 
         if (_entries.Count > 0)
@@ -133,7 +143,7 @@ public class RacePositionTracker : MonoBehaviour
             var leader = _entries[0];
             float leadSpeed = Mathf.Max(leader.speedMps, 8f);
             for (int i = 0; i < _entries.Count; i++)
-                _entries[i].gapToLeaderSec = (leader.progress - _entries[i].progress) / leadSpeed;
+                _entries[i].gapToLeaderSec = Mathf.Max(0f, leader.progress - _entries[i].progress) / leadSpeed;
         }
 
         UpdateHud();

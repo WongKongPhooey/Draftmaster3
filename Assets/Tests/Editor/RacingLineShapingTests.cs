@@ -35,6 +35,9 @@ public class RacingLineShapingTests
         public float lEntry, lApex, lExit;           // leftmost
         public float rEntry, rApex, rExit;           // rightmost
         public bool skipEntry, skipExit, skipApex;
+        public float width;                          // 0 = the test road (40 m, wide enough not to clamp)
+
+        public Seg Wide(float w) { var s = this; s.width = w; return s; }
 
         public Seg Sides(float l0, float l1, float l2, float r0, float r1, float r2)
         {
@@ -86,11 +89,13 @@ public class RacingLineShapingTests
             Set(seg, "angle", s.angle);
             Set(seg, "leadIn", s.lead);
             Set(seg, "leadOut", s.lead);
+            Set(seg, "width", s.width);
             Set(seg, "racingLine", line);
             arr.SetValue(seg, i);
         }
         Info.GetField("segments").SetValue(_info, arr);
         Info.GetField("closedLoop").SetValue(_info, true);
+        Info.GetField("defaultWidth").SetValue(_info, 40f);
         Info.GetField("racingLineKeepIdealInsideSideLines").SetValue(_info, keepInsideSideLines);
         _anchors = Info.GetMethod("BuildRacingLineAnchors").Invoke(_info, null);
     }
@@ -120,10 +125,11 @@ public class RacingLineShapingTests
         return k;
     }
 
-    // The ideal line's curvature in the world (1/m, positive left): the road's less the offset's second derivative.
-    float LineCurvature(float distance, float step, out float toJoin)
+    // A line's curvature in the world (1/m, positive left): the road's less the offset's second derivative.
+    float LineCurvature(float distance, float step, out float toJoin, float lineFactor = 0f)
     {
-        float n2 = (Lateral(distance - step) - 2f * Lateral(distance) + Lateral(distance + step)) / (step * step);
+        float n2 = (Lateral(distance - step, lineFactor) - 2f * Lateral(distance, lineFactor)
+                    + Lateral(distance + step, lineFactor)) / (step * step);
         return RoadCurvature(distance, out toJoin) - n2;
     }
 
@@ -161,8 +167,8 @@ public class RacingLineShapingTests
 
         Assert.That(Lateral(400f), Is.GreaterThan(4f), "ideal should stay on the exit side mid-straight");
         Assert.That(Lateral(1000f), Is.GreaterThan(4f));
-        // The side lines still go through every authored point, the straight's included.
-        Assert.That(Lateral(400f, -1f), Is.EqualTo(-4f).Within(0.01f));
+        // The side lines are built the same way: the straight's own point (-4) does not pull the leftmost line in.
+        Assert.That(Lateral(400f, -1f), Is.EqualTo(-6f).Within(0.01f));
     }
 
     [Test]
@@ -214,17 +220,96 @@ public class RacingLineShapingTests
         AssertBetweenSideLines(0.15f);
     }
 
+    // Texas (FortWorth) as authored on 2026-11-04, real widths included.
     static Seg[] TexasNow() => new[]
     {
-        Straight(215.6f, 0f, -3f, 2f),
-        Turn(50f, 20f, 90f, 5f, -5f, 5f, skipEntry: true).Sides(0f, -5f, 0f, 5f, 0f, 5f),
-        Straight(160f, 5f, 0f, 5f, skipApex: true),
-        Turn(630f, 160f, 21.4f, 5f, -8f, 8f).Sides(0f, -8f, 3f, 5f, 0f, 8f),
-        Straight(460f, 8f, 2f, 8f, skipApex: true),
-        Turn(630f, 160f, 25.7f, 6f, -5f, 3f).Sides(0f, -5f, -2f, 6f, 0f, 3f),
-        Straight(160f, 0f, -5f, 3f, skipApex: true).Sides(-2f, -5f, -5f, 3f, 3f, 3f),
-        Turn(50f, 20f, 90f, 5f, -5f, 5f, skipEntry: true, skipExit: true).Sides(0f, -5f, 0f, 5f, 0f, 5f),
+        Straight(215.6f, 0f, -3f, 2f).Wide(15.5f),
+        Turn(50f, 20f, 90f, 5f, -5f, 5f, skipEntry: true).Sides(0f, -5f, 0f, 5f, 0f, 5f).Wide(15.5f),
+        Straight(160f, 5f, 0f, 5f, skipApex: true).Wide(15.5f),
+        Turn(630f, 160f, 21.4f, 5f, -8f, 8f).Sides(0f, -8f, 3f, 5f, 0f, 8f).Wide(33f),
+        Straight(460f, 8f, 2f, 8f, skipApex: true).Wide(23f),
+        Turn(630f, 160f, 25.7f, 6f, -5f, 3f).Sides(0f, -5f, -2f, 6f, 0f, 3f).Wide(23.5f),
+        Straight(160f, 0f, -5f, 3f, skipApex: true).Sides(-2f, -5f, -5f, 3f, 3f, 3f).Wide(16f),
+        Turn(50f, 20f, 90f, 5f, -5f, 5f, skipEntry: true, skipExit: true).Sides(0f, -5f, 0f, 5f, 0f, 5f).Wide(15.5f),
     };
+
+    // The road at a distance on TexasNow: half-width less SplineDriver.RoadEdgeMargin (1.4 m), eased across each
+    // segment towards the next one's width as TrackBuilder lays it.
+    float TexasRoomAt(float distance)
+    {
+        float lap = LapLength();
+        distance = ((distance % lap) + lap) % lap;
+        float s = 0f;
+        for (int i = 0; i < _segs.Length; i++)
+        {
+            var seg = _segs[i];
+            if (distance < s + seg.length || i == _segs.Length - 1)
+            {
+                float next = _segs[(i + 1) % _segs.Length].width;
+                return Mathf.Lerp(seg.width, next, Mathf.Clamp01((distance - s) / seg.length)) * 0.5f - 1.4f;
+            }
+            s += seg.length;
+        }
+        return 0f;
+    }
+
+    // The leftmost and rightmost lines are lanes: the outside one at least racingLineMinLaneGap (4 m) outside the
+    // inside one all the way round. Built alike from sparse points they used to meet at Turn 3's exit and on the
+    // front stretch.
+    [Test]
+    public void TexasLanesNeverMeet()
+    {
+        Build(TexasNow());
+        float lap = LapLength();
+        for (float d = 0f; d < lap; d += 1f)
+        {
+            float gap = Lateral(d, 1f) - Lateral(d, -1f);
+            Assert.That(gap, Is.GreaterThanOrEqualTo(3.85f), $"lanes {gap:0.00} m apart at {d} m");
+        }
+    }
+
+    // Every line stays on the road.
+    [Test]
+    public void TexasLinesStayOnTheRoad()
+    {
+        Build(TexasNow());
+        float lap = LapLength();
+        foreach (float f in new[] { -1f, 0f, 1f })
+            for (float d = 0f; d < lap; d += 1f)
+            {
+                float v = Lateral(d, f), room = TexasRoomAt(d);
+                Assert.That(Mathf.Abs(v), Is.LessThanOrEqualTo(room + 0.15f), $"line {f} at {v:0.00} is off a road {room:0.00} wide each side at {d} m");
+            }
+    }
+
+    // The leftmost and rightmost lines are built like the ideal: one arc through the tri-oval, straight down the back
+    // straight.
+    [Test]
+    public void TexasSideLinesArcAndRunStraightLikeTheIdeal()
+    {
+        Build(TexasNow());
+        float lap = LapLength();
+        foreach (float f in new[] { -1f, 1f })
+        {
+            float t3Exit = 2145.6f + 25.7f, t1Apex = lap + 240.6f;
+            float minCurvature = float.MaxValue, minAt = 0f;
+            for (float d = t3Exit; d <= t1Apex; d += 5f)
+            {
+                float k = LineCurvature(d, 2f, out float toJoin, f);
+                if (toJoin < 3f) continue;
+                if (k < minCurvature) { minCurvature = k; minAt = d % lap; }
+            }
+            // A lane is held off the apron by the straight join of its own points (TrackInfoV2.DrawnJoinAt), which has a
+            // corner at each drawn point; at Turn 3's exit (inside lane drawn at -2 between -5s) that leaves a reverse
+            // bend of about a kilometre's radius (-0.00096 1/m, 2026-11-04). Anything sharper is a weave.
+            Assert.That(minCurvature, Is.GreaterThan(-0.0015f),
+                        $"line {f} bends back right at {minAt:0} m ({minCurvature:0.00000} 1/m) - not one arc");
+
+            float exit = 1055.6f + 21.4f, entry = 1515.6f - 25.7f;
+            for (float d = exit + 3f; d <= entry - 3f; d += 5f)
+                Assert.That(Mathf.Abs(LineCurvature(d, 2f, out _, f)), Is.LessThan(1e-4f), $"line {f} bends on the back straight at {d:0} m");
+        }
+    }
 
     // Turn 3 is 630 m round; its apex and exit points are 340 m apart, and the pure minimum-curvature line between
     // them cut up to 8 m onto the apron. racingLineKeepIdealOffApron (on by default) holds it to the inside line.

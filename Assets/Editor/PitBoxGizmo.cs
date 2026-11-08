@@ -21,6 +21,8 @@ static class PitBoxGizmo
     static readonly Color LineColor = new Color(1f, 0.95f, 0.35f, 0.95f);
     static readonly Color ParkColor = new Color(0.2f, 0.9f, 1f, 0.9f);
     static readonly Color OverflowColor = new Color(1f, 0.3f, 0.25f, 0.95f);
+    static readonly Color EntryLineColor = new Color(0.3f, 1f, 0.4f, 0.95f);
+    static readonly Color ExitLineColor = new Color(1f, 0.55f, 0.15f, 0.95f);
 
     static GUIStyle _label;
 
@@ -85,6 +87,13 @@ static class PitBoxGizmo
             if (i % labelEvery == 0 || i == fit.boxes - 1)
                 Handles.Label(p, $"#{i}  {d:0.0}m", Label());
         }
+
+        // The pit entry and exit lines, across the whole pit lane, so pitBoxFirstOffset can be judged by eye.
+        DrawPitLine(track, pit, track.track.PitEntryLineDistance, inner, outer, EntryLineColor,
+            track.BoxesFromEntryLine ? $"pit entry line {track.track.PitEntryLineDistance:0.0}m (first box +{track.pitBoxFirstOffset:0.0}m)"
+                                     : $"pit entry line {track.track.PitEntryLineDistance:0.0}m");
+        DrawPitLine(track, pit, track.track.PitExitLineDistance, inner, outer, ExitLineColor,
+            $"pit exit line {track.track.PitExitLineDistance:0.0}m");
 
         if (fit.Overflow > 0.01f)
         {
@@ -165,6 +174,17 @@ static class PitBoxGizmo
             prev = next;
         }
         Gizmos.DrawLine(prev, World(track, track.SamplePitAt(to, pit), lateral));
+    }
+
+    // A line straight across the pit lane and the box strip at `d`, labelled on the far side of the boxes.
+    static void DrawPitLine(TrackBuilder track, List<TrackBuilder.Sample> pit, float d, float inner, float outer,
+                            Color color, string label)
+    {
+        var s = track.SamplePitAt(d, pit);
+        float laneEdge = -Mathf.Sign(outer - inner) * s.width * 0.5f;   // the pit lane's far edge from the boxes
+        Gizmos.color = color;
+        Gizmos.DrawLine(World(track, s, laneEdge), World(track, s, outer));
+        Handles.Label(World(track, s, outer), label, Label(color));
     }
 
     static Vector3 World(TrackBuilder track, TrackBuilder.Sample s, float lateral)

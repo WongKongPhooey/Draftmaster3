@@ -103,6 +103,25 @@ public static class PitLane
             spanTo = pitLength - FallbackExitGap,
         };
 
+        // Placed from the pit entry line: the entry-most box's back line sits on the strip start
+        // (entry line + pitBoxFirstOffset) and the ladder runs toward the exit, a box per `spacing`.
+        // Box CENTRES are computed outright, so no PathPointAheadOfCentre set-back (PitParkDistanceFor
+        // already parks the car's body on the centre). A field too long for the strip at MinSpacing runs
+        // past the strip end, and the overflow is reported like the exit-fitted ladder's.
+        if (track != null && track.HasPitBoxLane && track.BoxesFromEntryLine && pitLength > 0f)
+        {
+            float start = track.PitBoxLaneFrom(pitLength);
+            float end = Mathf.Max(start, track.PitBoxLaneTo(pitLength));
+            fit.rawSpacing = (end - start) / fit.boxes;
+            fit.spacing = Mathf.Clamp(fit.rawSpacing, MinSpacing, MaxSpacing);
+            float box0Centre = start + (fit.boxes - 0.5f) * fit.spacing;
+            fit.exitGap = pitLength - box0Centre;
+            fit.spanFrom = start + fit.spacing * 0.5f;
+            fit.spanTo = Mathf.Max(fit.spanFrom, end - fit.spacing * 0.5f);
+            fit.usable = fit.spanTo - fit.spanFrom;
+            return fit;
+        }
+
         // The grey strip can start well after the pit entry and end well before the exit ramp, so box 0's
         // exit gap comes from the strip's end offset — a fixed gap would park the pole car on the ramp.
         if (track != null && track.HasPitBoxLane && pitLength > 0f)

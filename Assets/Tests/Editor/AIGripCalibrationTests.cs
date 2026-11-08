@@ -38,7 +38,7 @@ public class AIGripCalibrationTests
 
         var sb = new StringBuilder();
         sb.AppendLine($"[SkidPad] Cup24 maxLateralG {maxLatG:0.00} x AiEffective {aiEffective:0.00} -> AI assumes {assumed:0.0} m/s² ({assumed / 9.81f:0.00} g)");
-        foreach (float v in new[] { 25f, 35f, 45f, 55f, 65f })
+        foreach (float v in new[] { 25f, 35f, 45f, 55f, 65f, 70f, 75f, 80f, 85f })
         {
             float best = 0f, bestSteer = 0f, bestSlip = 0f;
             for (float steer = 0.05f; steer <= 1.001f; steer += 0.05f)

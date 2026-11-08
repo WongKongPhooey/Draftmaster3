@@ -44,6 +44,18 @@ namespace Draftmaster.Tracks
         // The car package - NASCAR runs a different car on ovals than on road courses, and so does this. Both 0 = 1.
         public float packageGrip;        // multiplier on every car's tyre grip (TrackConditions.PackageGripScale)
         public float packageYawInertia;  // multiplier on the player car's yaw inertia (TrackConditions.PackageYawInertiaScale)
+        public float packageSpeed;       // multiplier on every car's engine pull and top speed for this track's package
+                                         // (TrackConditions.PackageSpeedScale; 0 = 1)
+        public float aiGrip;             // the AI's grip bonus here (TrackConditions.AiGripMultiplier; 0 = DefaultAiGrip).
+        public float aiPace;             // the AI's power/pace bonus here (TrackConditions.AiPaceMultiplier; 0 = DefaultAiPace).
+                                         // An AIPaceCalibration entry for the track wins over both.
+        public float aiPower;            // the AI's engine power here, apart from its pace (TrackConditions.AiPowerMultiplier;
+                                         // 0 = the same as aiPace). Pace above 1 lets every driver use the whole engine and
+                                         // the grip; power above 1 is a bigger engine than the player's.
+        public float aiSpread;           // how far apart the AI drivers' corner speeds spread (TrackConditions.AiSpreadScale;
+                                         // 0 = 1, the full rating range)
+        public bool aiOptimisedLine;     // oval: the AI's single-file line is the road's minimum-curvature line, not the
+                                         // trained one (TrackConditions.AiOptimisedOvalLine)
 
         public float lineSpread;         // 0-1: how far off the ideal line the AI will race
         public float cautionProneness;   // 0-1: rough likelihood of contact-driven cautions
@@ -137,12 +149,14 @@ namespace Draftmaster.Tracks
                         packageGrip = OvalPackageGrip,
                         packageYawInertia = OvalPackageYawInertia,
                         // Aero push (NR2003's wake cuts the follower's downforce with the same table as its drag):
-                        // OFF for now. At 0.06 (~6% grip right behind a car at 170 mph) the pack sim
-                        // (PackRaceSimTests.DirtyAirOvals, Charlotte + Atlanta, two rosters) lost a quarter of its
-                        // passes (39 -> 28.5 a run) with a few more side contacts (19 -> 25, HARD 0 -> 2): the AI
-                        // has nothing that looks for clean air in another lane, which is how NR2003's lateral field
-                        // turns the same wake into passing. Turn on with that, and play-test the player's car.
-                        dirtyAirLoss = 0f,
+                        // ~4% grip right behind a car at Charlotte's 143 mph corners. Off until 2026-11-01, when the
+                        // AI still ran the ovals 30-45 mph under the corner speeds the car holds and the pack sim lost
+                        // a quarter of its passes to it. At real corner speeds (16 cars, 4 laps, two rosters) it costs
+                        // 10-20% of them (Charlotte 26/35 -> 21/23, Atlanta 15/34 -> 21/30, Darlington 58/54 ->
+                        // 40/48) with no more hard contacts, and the passes it leaves are made off the tyre falloff
+                        // a run builds. A "move to clean air early" rule changed nothing: the AI already starts a pass
+                        // from further back than the tow reaches. The player's car feels it too - play-test it.
+                        dirtyAirLoss = 0.06f,
                         tyreWearScale = 1f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.75f,
@@ -266,6 +280,32 @@ namespace Draftmaster.Tracks
                     t.lineSpread = 0.6f;
                     t.turnShareOfLap = 0.3f;
                     t.packageGrip = OvalPackageGrip;   // unplated, so the intermediate package (49.8 s, real ~49.5)
+                    break;
+
+                case "FortWorth":       // Texas: calibrated to a real lap's speeds, not the intermediate package
+                    // Real Cup laps: ~190 into Turn 2, ~155 mid-corner, ~180 down the back, a lift to ~175 for Turn 3,
+                    // flat through the tri-oval (Turns 4 and 1). The lap sim (AI on the player's physics, AIGrip's
+                    // measured grip) takes Turn 2 at 155-157 on x1.2 grip - the intermediates' x0.8 held it to 141.
+                    // The engine needs nothing: the straights' top ends are set by the corners at each end, and with
+                    // those at speed the car's own pull reaches ~190 and ~180 on these straight lengths.
+                    // The AI's engine is the player's (aiPower 1): the default x1.2 power made it 15-20 mph quicker
+                    // down every straight. Its pace (1.1) only lifts every driver's rating (0.93-1.04) over 1, so
+                    // none of them is held off full throttle or under the grip limit by it, and x1.1 grip pays back
+                    // what the AI leaves in the corners (corner commitment 0.93-1, its grip governor): in the lap sim
+                    // the player's car at the limit laps 31.4 s, a mid-field AI 31.4, the best 30.8, the weakest 32.2.
+                    // With no bonus (1 / 1) a mid-field AI lapped ~34.5 and the player drove past the lot.
+                    // Its line is the road's minimum-curvature line: the trained one hugs the inside through the
+                    // tri-oval (R150 at the kinks, 143 mph) - the optimised one sweeps it, ~1.5 s a lap.
+                    t.packageGrip = 1.2f;
+                    t.packageSpeed = 1f;
+                    t.aiGrip = 1.1f;
+                    t.aiPace = 1.1f;
+                    t.aiPower = 1f;
+                    t.aiOptimisedLine = true;
+                    // With one engine for all, corner commitment (0.93-1) is all that separates the drivers, and its
+                    // full range made the weakest 4.5% a lap slower than the best (lap sim 32.2 vs 30.8 s); the
+                    // field strung out round the lap. A Cup field at Texas covers about 1%: a third of the range.
+                    t.aiSpread = 0.35f;
                     break;
 
                 case "Darlington":      // egg-shaped, one groove, wall-scraping

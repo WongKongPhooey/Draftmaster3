@@ -587,6 +587,11 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     static bool IsPitExitLine(string label) =>
         !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Replace(" ", "").Contains("pitexit");
 
+    // And a strip labelled "PitEntryLine" is anchored to TrackInfoV2.PitEntryLineDistance, which the pit boxes
+    // can be placed from (TrackBuilder.pitBoxFirstOffset).
+    static bool IsPitEntryLine(string label) =>
+        !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Replace(" ", "").Contains("pitentry");
+
     // A kerb is just a Strip by construction (see TrackEnvironmentBuilderEditor's Create Kerb), so it is
     // recognised by its label or its material rather than by a flag no existing authored track carries.
     // Recognised kerbs register their footprint with SurfaceField so the physics stops calling them grass.
@@ -638,6 +643,15 @@ public class TrackEnvironmentBuilder : MonoBehaviour
                 if (band < 0.01f) band = 1f;
                 endAbs = track.track.PitExitLineDistance;
                 startAbs = Mathf.Max(0f, endAbs - band);
+            }
+            // The pit entry line is anchored at its START, so the painted band sits AFTER the line.
+            else if (track.track != null && IsPitEntryLine(strip.label) &&
+                     strip.useSpline == TrackEnvironment.SplineRef.Pit)
+            {
+                float band = endAbs - startAbs;
+                if (band < 0.01f) band = 1f;
+                startAbs = track.track.PitEntryLineDistance;
+                endAbs = startAbs + band;
             }
 
             if (endAbs <= startAbs) continue;

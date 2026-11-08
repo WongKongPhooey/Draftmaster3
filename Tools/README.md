@@ -5,6 +5,7 @@ Scripts that are run by hand, outside Unity.
 | Script | What it does |
 | --- | --- |
 | `fetch_traces.py` | Pulls one venue's traced centreline out of OpenStreetMap into `Assets/TrackTraces/`. Identifies the circuit by finding a closed ring — walking several ways through their junctions where a venue is mapped that way — and checking it against the published lap length. |
+| `play_upload.py` | Uploads an `.aab` to a Google Play testing track (internal by default) and commits it, through the Play Developer API with a service account key. Normally run by Unity's `Draftmaster > Build > Build + Upload To Play Internal Testing`; setup in `Docs/Play-Internal-Testing.md`. Needs `pip install rsa`. |
 | `fetch_traces_batch.py` | The same thing for every venue still missing a trace, in one Overpass query per five venues. Overpass rate-limits a request per venue into uselessness; asking in batches takes a couple of minutes for the lot. It caches the raw answer as `all_raceways.json` so the ring-finding can be iterated on offline. |
 
 Run either with the repo root as the working directory:

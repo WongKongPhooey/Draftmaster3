@@ -166,6 +166,52 @@ public class OvalPitApronTests
         m?.Invoke(target, null);
     }
 
+    // Pit road's speed plan: the pit limit up to the exit line, then as fast as the lane's own bends allow on level
+    // ground - not the limit all the way to the end of the lane, and never more than a flat bend holds.
+    [Test]
+    public void PitRoadPlan_HoldsTheLimitToTheExitLine_ThenRunsAtLevelGroundGrip()
+    {
+        var pkg = SpawnPackage("Daytona");
+        var go = new GameObject("PlanCar");
+        try
+        {
+            var trackType = Runtime("TrackBuilder");
+            var track = (Component)pkg.GetComponentInChildren(trackType, true);
+            var info = trackType.GetField("track").GetValue(track);
+            var splineType = Runtime("SplineDriver");
+            var spline = go.AddComponent(splineType);
+            Set(spline, "track", track);
+            Set(spline, "vehicleInfo", Resources.Load("Vehicles/Cup24"));
+            Call(spline, "Awake");
+            Call(spline, "Start");
+
+            var plan = splineType.GetMethod("PitSpeedPlanAt");
+            float pitLen = (float)splineType.GetProperty("PitLength").GetValue(spline);
+            float exitLine = (float)info.GetType().GetProperty("PitExitLineDistance").GetValue(info);
+            float limit = (int)info.GetType().GetField("pitSpeedLimit").GetValue(info);
+            Assert.Greater(pitLen, 0f);
+
+            float maxBefore = 0f, maxAfter = 0f;
+            var sb = new StringBuilder($"[PitApron] Daytona pit plan: lane {pitLen:0} m, exit line {exitLine:0}, limit {limit}");
+            for (float d = 0f; d <= pitLen; d += 5f)
+            {
+                float v = (float)plan.Invoke(spline, new object[] { d });
+                if (d < exitLine - 1f) maxBefore = Mathf.Max(maxBefore, v);
+                else if (d > exitLine + 1f) maxAfter = Mathf.Max(maxAfter, v);
+                if (((int)d) % 50 == 0) sb.Append($"\n  {d,6:0} {v,5:0} mph");
+            }
+            Debug.Log(sb.ToString());
+            Assert.LessOrEqual(maxBefore, limit + 0.01f, "Over the pit limit before the exit line.");
+            if (pitLen - exitLine > 60f)
+                Assert.Greater(maxAfter, limit + 10f, "Past the exit line the car still crawls at the pit limit.\n" + sb);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(pkg);
+        }
+    }
+
     // One dynamic-AI car (the real PVC + SplineInputDriver + SplineDriver stack) called in to pit from the back
     // straight. It must be down on the apron before it brakes, and after pit road it must stay below the racing
     // surface until the back straight, then come back up onto it.

@@ -82,6 +82,8 @@ public class TireModel : MonoBehaviour
     [Range(0f, 0.9f)] public float lateralTransfer = 0.5f;
 
     float _wearRate = 0.0006f;
+    // The driver's own wear (AI: TyreManagement, set by AIRacingBehaviour every step). 1 = the car's rate.
+    [System.NonSerialized] public float driverWearScale = 1f;
 
     void Awake()
     {
@@ -137,7 +139,7 @@ public class TireModel : MonoBehaviour
 
         // Wear: scales with work and accelerates when the tyre runs hot.
         float overheat = 1f + Mathf.Max(0f, tempC[i] - overheatWearStartC) * overheatWearPerDeg;
-        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * CompoundWear * TrackConditions.TireWearMultiplier * TrackConditions.TyreWearScale * work * overheat * dt * 60f);
+        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * driverWearScale * CompoundWear * TrackConditions.TireWearMultiplier * TrackConditions.TyreWearScale * work * overheat * dt * 60f);
     }
 
     // Compound multipliers. Soft is the reference (1.0) so the tuned defaults keep their meaning.

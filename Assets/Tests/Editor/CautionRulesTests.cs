@@ -141,4 +141,21 @@ public class CautionRulesTests
     {
         Assert.AreEqual(10, OvertimeRules.Distance(10, 6.5f));
     }
+
+    [Test]
+    public void TheSafetyCarComesOutFarEnoughForTheLeaderToSlowToItsPace()
+    {
+        // From 190 mph to a 60 mph safety car at 6 m/s^2 takes ~540 m; a fixed 80 m had the leader drive past it.
+        float gap = CautionRules.PickupGap(190f / 2.237f, 60f / 2.237f, 6f, 80f);
+        Assert.Greater(gap, 500f);
+        // The leader can brake to the safety car's pace inside that gap.
+        Assert.LessOrEqual((190f / 2.237f) * (190f / 2.237f) - (60f / 2.237f) * (60f / 2.237f), 2f * 6f * gap);
+    }
+
+    [Test]
+    public void ALeaderAlreadyAtTheSafetyCarsPaceStillGetsTheMinimumGap()
+    {
+        Assert.AreEqual(80f, CautionRules.PickupGap(60f / 2.237f, 60f / 2.237f, 6f, 80f), 0.01f);
+        Assert.AreEqual(80f, CautionRules.PickupGap(0f, 60f / 2.237f, 6f, 80f), 0.01f);
+    }
 }

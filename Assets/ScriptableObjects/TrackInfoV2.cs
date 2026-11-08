@@ -42,6 +42,8 @@ public class TrackInfoV2 : ScriptableObject
     public bool racingLineKeepIdealOffApron = true;
     [Tooltip("A straight (or run of straights / shallow bends) at least this long between two corners is driven STRAIGHT: from the first corner's exit point to the next one's entry point the ideal line is a straight line, and each corner's arc finishes lined up with it. Shorter gaps carry the minimum-curvature arc across (a tri-oval front stretch).")]
     public float racingLineFlatStraightMin = 300f;
+    [Tooltip("The leftmost and rightmost lines are the lanes the field races in: the outside one is held at least this far (m) outside the inside one, so the two never meet.")]
+    public float racingLineMinLaneGap = 4f;
 
     [Header("Edge Lines (painted boundary, e.g. white line)")]
     public bool drawEdgeLines;
@@ -80,8 +82,32 @@ public class TrackInfoV2 : ScriptableObject
     public int pitSpeedLimit = 50;
     [Tooltip("Distance along the PIT LANE (m) of the pit exit line — where the speed limit ends and the driver may accelerate. 0 = the end of the pit lane. The painted line (a strip labelled 'PitExitLine') anchors here too.")]
     public float pitExitLineDistance = 0f;
+    [Tooltip("Distance along the PIT LANE (m) of the pit entry line. 0 = the start of the pit lane. The pit boxes can be placed from it (TrackBuilder.pitBoxFirstOffset), and a strip labelled 'PitEntryLine' on the Pit spline is painted from here.")]
+    public float pitEntryLineDistance = 0f;
 
-    void OnValidate() => RebakePitDistances();
+    void OnValidate()
+    {
+        _anchorCache = null;
+        _editStamp++;
+        RebakePitDistances();
+    }
+
+    // BuildRacingLineAnchors costs ~50 ms on an oval (Texas, measured 2026-11-05) and every SplineDriver.Rebuild
+    // and every oval lane change paid it again for the same answer - the recurring ~80 ms race hitches in the
+    // profiler. In Play Mode the result is kept and handed out as a copy (the anchors are structs). An inspector
+    // edit (OnValidate) or a new play session drops it; edit mode always builds fresh, since the generators and
+    // editor tools reshape segments in code.
+    [System.NonSerialized] List<RacingLineAnchor> _anchorCache;
+    [System.NonSerialized] int _anchorCacheSession = -1;
+    [System.NonSerialized] int _editStamp;
+    static int s_playSession;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void NewPlaySession() => s_playSession++;
+
+    // Changes whenever the cached racing-line shape may have: a new play session or an inspector edit. Caches
+    // built from the anchors (TrackBuilder's oval lanes) key on it.
+    public long RacingLineStamp => ((long)s_playSession << 32) | (uint)_editStamp;
 
     // Recompute where the pit lane leaves and rejoins the main spline, from the segment indices and the
     // fine-tune offsets. Runs on every inspector edit; public so a generator (OvalTrackFactory) can bake
@@ -117,6 +143,9 @@ public class TrackInfoV2 : ScriptableObject
     // end of the lane, which is the safe default — the limiter then holds until the car is back on track.
     public float PitExitLineDistance =>
         pitExitLineDistance > 0.01f ? Mathf.Min(pitExitLineDistance, PitLaneLength) : PitLaneLength;
+
+    // The pit entry line, as a distance along the pit lane, kept inside [0, exit line].
+    public float PitEntryLineDistance => Mathf.Clamp(pitEntryLineDistance, 0f, PitExitLineDistance);
 
     // pitEntryDistance folded into [0, lap). The bake anchors to the END of the entry segment plus the
     // offset, so an entry authored on the final segment lands past the lap total — raw gap maths against
@@ -228,7 +257,7 @@ public class TrackInfoV2 : ScriptableObject
         public bool skipExit;
         [Tooltip("Skip the apex anchor (straights only). Useful for very short straights linking two turns where the neighbours already shape the line.")]
         public bool skipApex;
-        [Tooltip("Straights and shallow bends only: make the IDEAL line pass through this segment's own point(s) (a straight's idealApex) instead of carrying the corners' arcs across it. Off by default - a straight normally puts no point on the ideal line; its apex values still shape the leftmost/rightmost lines.")]
+        [Tooltip("Straights and shallow bends only: make every line (ideal, leftmost, rightmost) pass through this segment's own point(s) (a straight's apex values) instead of carrying the corners' arcs across it. Off by default - a straight normally puts no point on any line.")]
         public bool keepOnStraight;
     }
 
@@ -238,25 +267,27 @@ public class TrackInfoV2 : ScriptableObject
         public float ideal;
         public float left;
         public float right;
-        // Which lines the point shapes. Default (both false) = all three. A straight's apex, or a corner exit/entry
-        // merged across a short straight, shapes only the leftmost/rightmost lines (noIdeal); an ideal point moved
-        // off its authored spot, or a hold point, shapes only the ideal (noSides).
+        // Which lines the point shapes. Default (all false) = all three. The drawn points shape every line; a point
+        // the generator added to keep one line on the road (or the ideal off the apron) shapes only that line.
         public bool noIdeal;
-        public bool noSides;
-        // A point the generator added (not drawn by anyone) to keep the ideal between the side lines: shapes the
-        // ideal line but is not pinned by training.
+        public bool noLeft;
+        public bool noRight;
+        // A point the generator added (not drawn by anyone): shapes its line but is not pinned by training.
         public bool shapeOnly;
-        // The ideal line's minimum-curvature spline at this point (SolveIdealCurve): the offset less the road's own
-        // bend, and the spline's second derivative.
-        internal float idealResidual;
-        internal float idealCurve;
+        // Each line's minimum-curvature spline at this point (SolveLine): the offset less the road's own bend, and
+        // the spline's second derivative.
+        internal float idealResidual, idealCurve;
+        internal float leftResidual, leftCurve;
+        internal float rightResidual, rightCurve;
         // A corner exit point with a long straight after it (flatAfter) / an entry point with one before it
-        // (flatBefore): between such a pair the ideal is a straight line (racingLineFlatStraightMin).
+        // (flatBefore): between such a pair every line is a straight line (racingLineFlatStraightMin).
         internal bool flatAfter;
         internal bool flatBefore;
 
         public bool InIdeal => !noIdeal;
-        public bool InSides => !noSides;
+        public bool InLeft => !noLeft;
+        public bool InRight => !noRight;
+        public bool InSides => !noLeft || !noRight;
     }
 
     enum LineChannel { Ideal, Left, Right }
@@ -308,22 +339,36 @@ public class TrackInfoV2 : ScriptableObject
         return total;
     }
 
-    // The racing-line points round the lap, sorted by distance.
-    //
-    // The leftmost/rightmost lines are exactly the authored points (every entry/apex/exit and straight apex that is
-    // not skipped), joined by Catmull-Rom. The IDEAL line is built from corners, not from every segment:
-    //   - a straight, or a shallow bend (a same-direction run of turns under racingLineCornerMinDegrees), puts no
-    //     point on it (unless keepOnStraight) - its apex used to drag the line back to the centre mid-straight;
+    // The racing-line points round the lap, sorted by distance. All three lines (ideal, leftmost, rightmost) are
+    // built the same way, each from its own entry / apex / exit values:
+    //   - points come from corners: a straight, or a shallow bend (a same-direction run of turns under
+    //     racingLineCornerMinDegrees), puts no point on any line unless keepOnStraight - a straight's apex used to
+    //     drag the line back to the centre mid-straight;
     //   - between two corners less than racingLineMergeGap apart, the first corner's exit and the next one's entry
-    //     drop out, so the line is one arc from apex to apex (a chicane, a dogleg, a tri-oval kink pair);
+    //     drop out, so each line is one arc from apex to apex (a chicane, a dogleg, a tri-oval kink pair);
     //   - between corners further apart, the exit and entry are kept but held inside the gap (so they never cross);
-    //   - across a gap of racingLineFlatStraightMin or more the line runs dead straight from that exit to that entry.
-    // The ideal is then the minimum-curvature line through its points (SolveIdealCurve): the line that turns as
-    // little as it can in the WORLD, not the one that holds a steady offset from the centre - an offset held down
-    // a straight between two kinks is just the road's own straight-kink-straight. Finally it is kept between the
-    // side lines (KeepIdealInsideSideLines) when racingLineKeepIdealInsideSideLines is on, or off the apron side
-    // only (racingLineKeepIdealOffApron).
+    //   - across a gap of racingLineFlatStraightMin or more each line runs dead straight from that exit to that entry.
+    // Each line is then the minimum-curvature line through its points (SolveLine): the line that turns as little as
+    // it can in the WORLD, not the one that holds a steady offset from the centre - an offset held down a straight
+    // between two kinks is just the road's own straight-kink-straight. Every line is kept on the road (edge less
+    // SplineDriver.RoadEdgeMargin), and the ideal off the apron (racingLineKeepIdealOffApron) or between the side
+    // lines (racingLineKeepIdealInsideSideLines) - ClampLine.
     public List<RacingLineAnchor> BuildRacingLineAnchors()
+    {
+        if (!Application.isPlaying)
+        {
+            _anchorCache = null;
+            return BuildRacingLineAnchorsUncached();
+        }
+        if (_anchorCache == null || _anchorCacheSession != s_playSession)
+        {
+            _anchorCache = BuildRacingLineAnchorsUncached();
+            _anchorCacheSession = s_playSession;
+        }
+        return new List<RacingLineAnchor>(_anchorCache);
+    }
+
+    List<RacingLineAnchor> BuildRacingLineAnchorsUncached()
     {
         var list = new List<RacingLineAnchor>();
         if (segments == null || segments.Length == 0) return list;
@@ -344,48 +389,46 @@ public class TrackInfoV2 : ScriptableObject
             if (seg.type == SegmentType.Turn)
             {
                 bool isCorner = corner[i];
-                bool idealHere = isCorner || rl.keepOnStraight;
+                if (!isCorner && !rl.keepOnStraight) continue;
 
                 if (!rl.skipEntry)
                 {
                     var a = new RacingLineAnchor { distance = s0 - seg.leadIn, ideal = rl.idealEntry, left = rl.leftEntry, right = rl.rightEntry };
-                    if (!isCorner) { a.noIdeal = !idealHere; list.Add(a); }
-                    else
+                    float gap = isCorner ? GapToNeighbour(i, -1, Bounds) : -1f;
+                    if (!(gap >= 0f && gap < racingLineMergeGap))
                     {
-                        float gap = GapToNeighbour(i, -1, Bounds);
-                        if (gap >= 0f && gap < racingLineMergeGap) { a.noIdeal = true; list.Add(a); }
-                        else
+                        if (gap >= 0f)
                         {
                             int j = NeighbourIndex(i, -1, Bounds);
                             a.flatBefore = gap >= racingLineFlatStraightMin && j >= 0 && corner[j] && !segments[j].racingLine.skipExit;
-                            AddSplit(list, a, gap >= 0f ? s0 - Mathf.Min(seg.leadIn, gap * 0.4f) : a.distance);
+                            a.distance = s0 - Mathf.Min(seg.leadIn, gap * 0.4f);
                         }
+                        list.Add(a);
                     }
                 }
 
-                list.Add(new RacingLineAnchor { distance = s0 + seg.length * 0.5f, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex, noIdeal = !idealHere });
+                list.Add(new RacingLineAnchor { distance = s0 + seg.length * 0.5f, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });
 
                 if (!rl.skipExit)
                 {
                     var a = new RacingLineAnchor { distance = s1 + seg.leadOut, ideal = rl.idealExit, left = rl.leftExit, right = rl.rightExit };
-                    if (!isCorner) { a.noIdeal = !idealHere; list.Add(a); }
-                    else
+                    float gap = isCorner ? GapToNeighbour(i, +1, Bounds) : -1f;
+                    if (!(gap >= 0f && gap < racingLineMergeGap))
                     {
-                        float gap = GapToNeighbour(i, +1, Bounds);
-                        if (gap >= 0f && gap < racingLineMergeGap) { a.noIdeal = true; list.Add(a); }
-                        else
+                        if (gap >= 0f)
                         {
                             int j = NeighbourIndex(i, +1, Bounds);
                             a.flatAfter = gap >= racingLineFlatStraightMin && j >= 0 && corner[j] && !segments[j].racingLine.skipEntry;
-                            AddSplit(list, a, gap >= 0f ? s1 + Mathf.Min(seg.leadOut, gap * 0.4f) : a.distance);
+                            a.distance = s1 + Mathf.Min(seg.leadOut, gap * 0.4f);
                         }
+                        list.Add(a);
                     }
                 }
             }
-            else if (!rl.skipApex)
+            else if (!rl.skipApex && rl.keepOnStraight)
             {
                 float midFrac = Mathf.Clamp(0.5f + seg.straightMidpointOffset, 0f, 1f);
-                list.Add(new RacingLineAnchor { distance = s0 + seg.length * midFrac, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex, noIdeal = !rl.keepOnStraight });
+                list.Add(new RacingLineAnchor { distance = s0 + seg.length * midFrac, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });
             }
         }
 
@@ -399,22 +442,61 @@ public class TrackInfoV2 : ScriptableObject
             }
         }
         list.Sort((a, b) => a.distance.CompareTo(b.distance));
-        SolveIdealCurve(list, trackLen);
-        if (racingLineKeepIdealInsideSideLines) KeepIdealInsideSideLines(list, trackLen, CorridorSide.Both);
-        else if (racingLineKeepIdealOffApron) KeepIdealInsideSideLines(list, trackLen, LapTurnsLeft() ? CorridorSide.Low : CorridorSide.High);
+        SolveLine(list, trackLen, LineChannel.Ideal);
+        SolveLine(list, trackLen, LineChannel.Left);
+        SolveLine(list, trackLen, LineChannel.Right);
+
+        // The lanes first. The inside one (leftmost on a lap that turns left) on the road, never further in than the
+        // straight join of its own points (its apron) and never so far out the outside lane cannot fit; the outside
+        // one at least racingLineMinLaneGap outside it and on the road. Then the ideal, against the lanes as they
+        // finally stand: on the road and off the apron (or inside both lanes).
+        bool turnsLeft = LapTurnsLeft();
+        var insideLane = turnsLeft ? LineChannel.Left : LineChannel.Right;
+        var outsideLane = turnsLeft ? LineChannel.Right : LineChannel.Left;
+        float gapM = Mathf.Max(0f, racingLineMinLaneGap);
+        ClampLine(list, trackLen, insideLane, d =>
+        {
+            var road = RoadBounds(d);
+            float drawn = DrawnJoinAt(list, d, trackLen, insideLane);
+            float lo = turnsLeft ? Mathf.Max(road.x, drawn) : road.x + gapM;
+            float hi = turnsLeft ? road.y - gapM : Mathf.Min(road.y, drawn);
+            return new Vector2(lo, Mathf.Max(lo, hi));
+        });
+        ClampLine(list, trackLen, outsideLane, d =>
+        {
+            var road = RoadBounds(d);
+            float inside = ChannelAt(list, d, trackLen, insideLane);
+            float lo = turnsLeft ? Mathf.Min(road.y, inside + gapM) : road.x;
+            float hi = turnsLeft ? road.y : Mathf.Max(road.x, inside - gapM);
+            return new Vector2(lo, Mathf.Max(lo, hi));
+        });
+        var corridor = racingLineKeepIdealInsideSideLines ? CorridorSide.Both
+                     : racingLineKeepIdealOffApron ? (turnsLeft ? CorridorSide.Low : CorridorSide.High)
+                     : CorridorSide.None;
+        ClampLine(list, trackLen, LineChannel.Ideal, d =>
+        {
+            var road = RoadBounds(d);
+            if (corridor == CorridorSide.None) return road;
+            float l = ChannelAt(list, d, trackLen, LineChannel.Left);
+            float r = ChannelAt(list, d, trackLen, LineChannel.Right);
+            float lo = corridor != CorridorSide.High ? Mathf.Max(road.x, Mathf.Min(l, r)) : road.x;
+            float hi = corridor != CorridorSide.Low ? Mathf.Min(road.y, Mathf.Max(l, r)) : road.y;
+            return new Vector2(lo, Mathf.Max(lo, hi));
+        });
         return list;
     }
 
-    // ---------------------------------------------------------------- minimum-curvature ideal line
+    // ---------------------------------------------------------------- minimum-curvature lines
     //
     // With n the lateral offset (positive right) and k(s) the road's curvature (positive left), a line's curvature
-    // in the world is about k - n''. The line through the ideal points that bends least - least integral of
+    // in the world is about k - n''. The line through a set of points that bends least - least integral of
     // (k - n'')^2 - is n = P + S, where P'' = k (the road's own bend, integrated twice) and S is the cubic spline
     // (periodic on a closed lap) through what is left at each point, n_i - P(s_i). On a closed lap P is taken
     // against k less its lap mean, so P comes round periodic; that shifts the integrand by a constant and leaves the
-    // minimiser unchanged.
+    // minimiser unchanged. Across a long straight (flatAfter -> flatBefore) the line is a straight line instead, and
+    // the spline either side is clamped to leave/join it at its slope.
 
-    const float IdealPointMinSpacing = 0.5f;
+    const float LinePointMinSpacing = 0.5f;
 
     [System.NonSerialized] RoadBend _bend;
 
@@ -466,6 +548,13 @@ public class TrackInfoV2 : ScriptableObject
         return b;
     }
 
+    int SegmentIndexAt(RoadBend b, float s)
+    {
+        int i = segments.Length - 1;
+        for (int j = 1; j < segments.Length; j++) if (b.start[j] > s) { i = j - 1; break; }
+        return i;
+    }
+
     // P at a distance round the lap: the road's bend integrated twice (see above).
     float RoadBendAt(float s)
     {
@@ -473,8 +562,7 @@ public class TrackInfoV2 : ScriptableObject
         var b = Bend();
         if (b.lap <= 0f) return 0f;
         s = Mathf.Clamp(s, 0f, b.lap);
-        int i = segments.Length - 1;
-        for (int j = 1; j < segments.Length; j++) if (b.start[j] > s) { i = j - 1; break; }
+        int i = SegmentIndexAt(b, s);
         float x = s - b.start[i];
         float q = b.q[i] + b.g[i] * x + 0.5f * b.k[i] * x * x;
         return q - b.meanSlope * s;
@@ -487,31 +575,79 @@ public class TrackInfoV2 : ScriptableObject
         var b = Bend();
         if (b.lap <= 0f) return 0f;
         s = Mathf.Clamp(s, 0f, b.lap);
-        int i = segments.Length - 1;
-        for (int j = 1; j < segments.Length; j++) if (b.start[j] > s) { i = j - 1; break; }
+        int i = SegmentIndexAt(b, s);
         return b.g[i] + b.k[i] * (s - b.start[i]) - b.meanSlope;
     }
 
-    // The cubic spline's second derivative at each ideal point, stored on the points. Points closer together than
-    // IdealPointMinSpacing are one point (the first kept).
-    void SolveIdealCurve(List<RacingLineAnchor> list, float trackLen)
+    // The road's built width at a distance, eased across each segment towards the next one's as TrackBuilder lays it.
+    float RoadWidthAt(float s)
+    {
+        if (segments == null || segments.Length == 0) return defaultWidth;
+        var b = Bend();
+        if (b.lap <= 0f) return defaultWidth;
+        s = Mathf.Clamp(s, 0f, b.lap);
+        int i = SegmentIndexAt(b, s);
+        int next = i + 1 < segments.Length ? i + 1 : (closedLoop ? 0 : i);
+        float W(int k) => segments[k].width <= 0f ? defaultWidth : segments[k].width;
+        float len = Mathf.Max(1e-4f, segments[i].length);
+        return Mathf.Lerp(W(i), W(next), Mathf.Clamp01((s - b.start[i]) / len));
+    }
+
+    // The room a line has at a distance: the road, edge to edge less SplineDriver.RoadEdgeMargin.
+    Vector2 RoadBounds(float s)
+    {
+        float half = RoadWidthAt(s) * 0.5f - SplineDriver.RoadEdgeMargin;
+        if (half <= 0.25f) return new Vector2(float.NegativeInfinity, float.PositiveInfinity);
+        return new Vector2(-half, half);
+    }
+
+    static bool InChannel(in RacingLineAnchor a, LineChannel c) =>
+        c == LineChannel.Ideal ? a.InIdeal : c == LineChannel.Left ? a.InLeft : a.InRight;
+
+    static float ValueOf(in RacingLineAnchor a, LineChannel c) =>
+        c == LineChannel.Ideal ? a.ideal : c == LineChannel.Left ? a.left : a.right;
+
+    static void Exclude(ref RacingLineAnchor a, LineChannel c)
+    {
+        if (c == LineChannel.Ideal) a.noIdeal = true;
+        else if (c == LineChannel.Left) a.noLeft = true;
+        else a.noRight = true;
+    }
+
+    static void SetSpline(ref RacingLineAnchor a, LineChannel c, float residual, float curve)
+    {
+        if (c == LineChannel.Ideal) { a.idealResidual = residual; a.idealCurve = curve; }
+        else if (c == LineChannel.Left) { a.leftResidual = residual; a.leftCurve = curve; }
+        else { a.rightResidual = residual; a.rightCurve = curve; }
+    }
+
+    static void GetSpline(in RacingLineAnchor a, LineChannel c, out float residual, out float curve)
+    {
+        if (c == LineChannel.Ideal) { residual = a.idealResidual; curve = a.idealCurve; }
+        else if (c == LineChannel.Left) { residual = a.leftResidual; curve = a.leftCurve; }
+        else { residual = a.rightResidual; curve = a.rightCurve; }
+    }
+
+    // One line's spline second derivative at each of its points, stored on the points. Points of the line closer
+    // together than LinePointMinSpacing are one point (the first kept).
+    void SolveLine(List<RacingLineAnchor> list, float trackLen, LineChannel c)
     {
         var idx = new List<int>();
         for (int i = 0; i < list.Count; i++)
         {
-            if (!list[i].InIdeal) continue;
-            if (idx.Count > 0 && list[i].distance - list[idx[idx.Count - 1]].distance < IdealPointMinSpacing)
+            if (!InChannel(list[i], c)) continue;
+            if (idx.Count > 0 && list[i].distance - list[idx[idx.Count - 1]].distance < LinePointMinSpacing)
             {
-                var dup = list[i]; dup.noIdeal = true; list[i] = dup;
+                var dup = list[i]; Exclude(ref dup, c); list[i] = dup;
                 continue;
             }
             idx.Add(i);
         }
         bool loop = closedLoop && trackLen > 0f;
-        if (loop && idx.Count > 1 && list[idx[0]].distance + trackLen - list[idx[idx.Count - 1]].distance < IdealPointMinSpacing)
+        if (loop && idx.Count > 1 && list[idx[0]].distance + trackLen - list[idx[idx.Count - 1]].distance < LinePointMinSpacing)
         {
             int last = idx[idx.Count - 1];
-            var dup = list[last]; dup.noIdeal = true; list[last] = dup;
+            var dup = list[last]; Exclude(ref dup, c); list[last] = dup;
             idx.RemoveAt(idx.Count - 1);
         }
 
@@ -521,9 +657,10 @@ public class TrackInfoV2 : ScriptableObject
         for (int k = 0; k < m; k++)
         {
             d[k] = list[idx[k]].distance;
-            y[k] = list[idx[k]].ideal - RoadBendAt(d[k]);
+            y[k] = ValueOf(list[idx[k]], c) - RoadBendAt(d[k]);
         }
-        // Which spans between consecutive ideal points are long straights, driven straight.
+
+        // Which spans between consecutive points are long straights, driven straight.
         var flat = new bool[m];
         bool anyFlat = false;
         for (int k = 0; k < m; k++)
@@ -544,7 +681,7 @@ public class TrackInfoV2 : ScriptableObject
             // start. Each piece is a cubic spline whose ends leave/join the straight at its slope (an open track's
             // own ends are natural).
             float Gap(int from, int to) { float g = d[to] - d[from]; if (g <= 0f && loop) g += trackLen; return Mathf.Max(1e-3f, g); }
-            float StraightSlope(int k) { int kn = (k + 1) % m; return (list[idx[kn]].ideal - list[idx[k]].ideal) / Gap(k, kn); }
+            float StraightSlope(int k) { int kn = (k + 1) % m; return (ValueOf(list[idx[kn]], c) - ValueOf(list[idx[k]], c)) / Gap(k, kn); }
 
             for (int start = 0; start < m; start++)
             {
@@ -576,8 +713,7 @@ public class TrackInfoV2 : ScriptableObject
         for (int k = 0; k < m; k++)
         {
             var a = list[idx[k]];
-            a.idealResidual = y[k];
-            a.idealCurve = curve[k];
+            SetSpline(ref a, c, y[k], curve[k]);
             list[idx[k]] = a;
         }
     }
@@ -672,42 +808,40 @@ public class TrackInfoV2 : ScriptableObject
         return x;
     }
 
+    // ---------------------------------------------------------------- keeping lines where they belong
+
     const float CorridorSampleMetres = 5f;
     const float CorridorTolerance = 0.1f;
     const int CorridorPasses = 12;
 
     // Which side(s) of the corridor the ideal is held to: Low = not below min(left, right), High = not above max.
-    enum CorridorSide { Both, Low, High }
+    enum CorridorSide { None, Both, Low, High }
 
-    // The ideal line stays between the leftmost and rightmost lines. With straights carrying no ideal point, a
-    // corner's line can run on down a straight where the side lines were drawn to pull in (Texas: the tri-oval
-    // kinks apex at -5 m, the start/finish straight between them has its inside lane at 0) and leave the corridor.
-    // Wherever it does, the ideal gets a point on the line it crossed, at the worst spot of each stretch outside,
-    // and the pass repeats until the line stays in. A smooth bend to meet the side line rather than a clamp.
-    void KeepIdealInsideSideLines(List<RacingLineAnchor> list, float trackLen, CorridorSide side)
+    // Hold one line inside bounds(d) = (lo, hi). Wherever it leaves them it gets a point on the bound it crossed, at
+    // the worst spot of each stretch outside, and is re-solved; the pass repeats until it stays in. A smooth bend to
+    // meet the bound rather than a clamp. A stretch around a drawn point of the line that is itself outside the
+    // bounds is the drawing's call (put there on purpose) and is left alone.
+    void ClampLine(List<RacingLineAnchor> list, float trackLen, LineChannel c, System.Func<float, Vector2> bounds)
     {
         if (trackLen <= 0f) return;
-        int ideal = 0, sides = 0;
-        for (int i = 0; i < list.Count; i++) { if (list[i].InIdeal) ideal++; if (list[i].InSides) sides++; }
-        if (ideal < 2 || sides == 0) return;
+        int count = 0;
+        for (int i = 0; i < list.Count; i++) if (InChannel(list[i], c)) count++;
+        if (count < 2) return;
 
         int steps = Mathf.Max(8, Mathf.CeilToInt(trackLen / CorridorSampleMetres));
         float step = trackLen / steps;
         var added = new List<RacingLineAnchor>();
 
-        // A stretch outside the corridor around a drawn ideal point that is itself outside the side lines is the
-        // drawing's call (put there on purpose); only the line between drawn points is pulled in.
         bool HoldsDrawnPoint(float from, float to)
         {
             for (int i = 0; i < list.Count; i++)
             {
                 var a = list[i];
-                if (!a.InIdeal || a.shapeOnly) continue;
+                if (!InChannel(a, c) || a.shapeOnly) continue;
                 if (a.distance < from - step || a.distance > to + step) continue;
-                float l = ChannelAt(list, a.distance, trackLen, LineChannel.Left);
-                float r = ChannelAt(list, a.distance, trackLen, LineChannel.Right);
-                if ((side != CorridorSide.High && a.ideal < Mathf.Min(l, r) - CorridorTolerance) ||
-                    (side != CorridorSide.Low && a.ideal > Mathf.Max(l, r) + CorridorTolerance)) return true;
+                var b = bounds(a.distance);
+                float v = ValueOf(a, c);
+                if (v < b.x - CorridorTolerance || v > b.y + CorridorTolerance) return true;
             }
             return false;
         }
@@ -720,24 +854,29 @@ public class TrackInfoV2 : ScriptableObject
             void CloseRun(float runTo)
             {
                 if (!HoldsDrawnPoint(runFrom, runTo))
-                    added.Add(new RacingLineAnchor { distance = worstAt, ideal = worstBound, left = worstBound, right = worstBound, noSides = true, shapeOnly = true });
+                {
+                    var pin = new RacingLineAnchor { distance = worstAt, ideal = worstBound, left = worstBound, right = worstBound,
+                                                     noIdeal = true, noLeft = true, noRight = true, shapeOnly = true };
+                    if (c == LineChannel.Ideal) pin.noIdeal = false;
+                    else if (c == LineChannel.Left) pin.noLeft = false;
+                    else pin.noRight = false;
+                    added.Add(pin);
+                }
                 inRun = false;
                 worst = 0f;
             }
             for (int s = 0; s < steps; s++)
             {
                 float d = step * s;
-                float v = ChannelAt(list, d, trackLen, LineChannel.Ideal);
-                float l = ChannelAt(list, d, trackLen, LineChannel.Left);
-                float r = ChannelAt(list, d, trackLen, LineChannel.Right);
-                float lo = Mathf.Min(l, r), hi = Mathf.Max(l, r);
-                bool low = side != CorridorSide.High && v < lo - CorridorTolerance;
-                bool high = side != CorridorSide.Low && v > hi + CorridorTolerance;
-                float over = low ? lo - v : high ? v - hi : 0f;
+                float v = ChannelAt(list, d, trackLen, c);
+                var b = bounds(d);
+                bool low = v < b.x - CorridorTolerance;
+                bool high = v > b.y + CorridorTolerance;
+                float over = low ? b.x - v : high ? v - b.y : 0f;
                 if (over > 0f)
                 {
                     if (!inRun) runFrom = d;
-                    if (over > worst) { worst = over; worstAt = d; worstBound = v < lo ? lo : hi; }
+                    if (over > worst) { worst = over; worstAt = d; worstBound = low ? b.x : b.y; }
                     inRun = true;
                 }
                 else if (inRun) CloseRun(d);
@@ -745,24 +884,13 @@ public class TrackInfoV2 : ScriptableObject
             if (inRun) CloseRun(trackLen);
             if (added.Count == 0) return;
             list.AddRange(added);
-            list.Sort((a, b) => a.distance.CompareTo(b.distance));
-            SolveIdealCurve(list, trackLen);
+            list.Sort((p, q) => p.distance.CompareTo(q.distance));
+            SolveLine(list, trackLen, c);
         }
     }
 
-    // One authored point, used by every line where the ideal sits where it was drawn; otherwise the drawn point
-    // stays for the side lines and the ideal gets its own copy at `idealAt`.
-    static void AddSplit(List<RacingLineAnchor> list, RacingLineAnchor a, float idealAt)
-    {
-        if (Mathf.Abs(idealAt - a.distance) < 0.01f) { list.Add(a); return; }
-        var sides = a; sides.noIdeal = true;
-        var ideal = a; ideal.noSides = true; ideal.distance = idealAt;
-        list.Add(sides);
-        list.Add(ideal);
-    }
-
-    // Which Turn segments are corners for the ideal line: a run of consecutive same-direction turns (wrapping
-    // the lap on a closed loop) totalling at least racingLineCornerMinDegrees.
+    // Which Turn segments are corners: a run of consecutive same-direction turns (wrapping the lap on a closed loop)
+    // totalling at least racingLineCornerMinDegrees.
     bool[] IdealLineCorners()
     {
         int n = segments.Length;
@@ -836,9 +964,8 @@ public class TrackInfoV2 : ScriptableObject
     // Pass it so the wrap happens at the real loop end — otherwise the line jumps at the authored-segment total
     // (which sits near the start/finish) and the smoothing spreads that jump into a big sweep.
     //
-    // Each line is interpolated through its own points (see BuildRacingLineAnchors) and the result blended. The
-    // ideal is the minimum-curvature line through its points (SolveIdealCurve); the side lines keep the Catmull-Rom
-    // they were drawn against.
+    // Each line is the minimum-curvature line through its own points (BuildRacingLineAnchors); a factor between
+    // blends the ideal with a side line.
     public float GetLateralAt(float distance, float lineFactor, List<RacingLineAnchor> anchors = null, float loopLengthOverride = 0f)
     {
         if (anchors == null) anchors = BuildRacingLineAnchors();
@@ -855,10 +982,40 @@ public class TrackInfoV2 : ScriptableObject
         return Mathf.Lerp(ideal, side, Mathf.Abs(lineFactor));
     }
 
-    static bool InChannel(in RacingLineAnchor a, LineChannel c) => c == LineChannel.Ideal ? a.InIdeal : a.InSides;
-
-    static float ValueOf(in RacingLineAnchor a, LineChannel c) =>
-        c == LineChannel.Ideal ? a.ideal : c == LineChannel.Left ? a.left : a.right;
+    // A line's own drawn points (not the ones the generator added) joined by straight lines - the furthest in a lane
+    // may cut between them.
+    float DrawnJoinAt(List<RacingLineAnchor> anchors, float distance, float trackLength, LineChannel c)
+    {
+        int n = anchors.Count, first = -1, last = -1, i1 = -1, count = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (!InChannel(anchors[i], c) || anchors[i].shapeOnly) continue;
+            count++;
+            if (first < 0) first = i;
+            last = i;
+            if (anchors[i].distance <= distance) i1 = i;
+        }
+        if (count == 0) return 0f;
+        if (count == 1) return ValueOf(anchors[first], c);
+        int i2 = -1;
+        float d1, d2;
+        bool loop = closedLoop && trackLength > 0f;
+        bool beforeFirst = i1 < 0;
+        if (beforeFirst) i1 = loop ? last : first;
+        for (int k = 1; k <= n; k++)
+        {
+            int j = i1 + k;
+            if (j >= n) { if (!loop) break; j -= n; }
+            if (InChannel(anchors[j], c) && !anchors[j].shapeOnly) { i2 = j; break; }
+        }
+        if (i2 < 0) return ValueOf(anchors[i1], c);
+        d1 = anchors[i1].distance;
+        if (beforeFirst && loop) d1 -= trackLength;
+        d2 = anchors[i2].distance;
+        if (loop) while (d2 <= d1) d2 += trackLength;
+        float t = d2 > d1 ? Mathf.Clamp01((distance - d1) / (d2 - d1)) : 0f;
+        return Mathf.Lerp(ValueOf(anchors[i1], c), ValueOf(anchors[i2], c), t);
+    }
 
     // The next point of channel c from index i in direction dir, or -1 (only when not wrapping).
     static int StepInChannel(List<RacingLineAnchor> anchors, int i, int dir, LineChannel c, bool wrap)
@@ -887,71 +1044,34 @@ public class TrackInfoV2 : ScriptableObject
         if (count == 0) return 0f;
         if (count == 1) return ValueOf(anchors[first], c);
 
-        int i0, i2, i3;
-        float d0, d1, d2, d3;
+        int i2;
+        float d1, d2;
         if (closedLoop && trackLength > 0f)
         {
             bool beforeFirst = i1 < 0;
             if (beforeFirst) i1 = last;
             i2 = StepInChannel(anchors, i1, +1, c, true);
-            i0 = StepInChannel(anchors, i1, -1, c, true);
-            i3 = StepInChannel(anchors, i2, +1, c, true);
-
             d1 = anchors[i1].distance;
             if (beforeFirst) d1 -= trackLength; // wrapped past zero; i1 is one lap behind
             d2 = anchors[i2].distance;
             if (i2 <= i1 || beforeFirst) { while (d2 <= d1) d2 += trackLength; }
-            d0 = anchors[i0].distance;
-            while (d0 > d1) d0 -= trackLength;
-            d3 = anchors[i3].distance;
-            while (d3 < d2) d3 += trackLength;
         }
         else
         {
             if (i1 < 0) i1 = first;
             i2 = StepInChannel(anchors, i1, +1, c, false); if (i2 < 0) i2 = i1;
-            i0 = StepInChannel(anchors, i1, -1, c, false); if (i0 < 0) i0 = i1;
-            i3 = StepInChannel(anchors, i2, +1, c, false); if (i3 < 0) i3 = i2;
-            d0 = anchors[i0].distance; d1 = anchors[i1].distance; d2 = anchors[i2].distance; d3 = anchors[i3].distance;
-            if (i0 == i1) d0 = 2f * d1 - d2;
-            if (i3 == i2) d3 = 2f * d2 - d1;
+            d1 = anchors[i1].distance; d2 = anchors[i2].distance;
         }
 
         float t = (d2 - d1) > 0f ? Mathf.Clamp01((distance - d1) / (d2 - d1)) : 0f;
-        if (c == LineChannel.Ideal)
-        {
-            // The minimum-curvature line: the road's own bend plus the cubic spline through what is left.
-            var p1 = anchors[i1]; var p2 = anchors[i2];
-            if (p1.flatAfter && p2.flatBefore) return Mathf.Lerp(p1.ideal, p2.ideal, t);   // a long straight, driven straight
-            float h = d2 - d1, u = 1f - t;
-            float spline = u * p1.idealResidual + t * p2.idealResidual
-                         + h * h / 6f * ((u * u * u - u) * p1.idealCurve + (t * t * t - t) * p2.idealCurve);
-            return spline + RoadBendAt(distance);
-        }
-        float v0 = ValueOf(anchors[i0], c), v1 = ValueOf(anchors[i1], c);
-        float v2 = ValueOf(anchors[i2], c), v3 = ValueOf(anchors[i3], c);
-        return CatmullRomNonUniform(v0, v1, v2, v3, d0, d1, d2, d3, t);
-    }
+        var p1 = anchors[i1]; var p2 = anchors[i2];
+        if (p1.flatAfter && p2.flatBefore) return Mathf.Lerp(ValueOf(p1, c), ValueOf(p2, c), t);   // a long straight, driven straight
 
-    static float CatmullRomNonUniform(
-        float v0, float v1, float v2, float v3,
-        float d0, float d1, float d2, float d3,
-        float t)
-    {
-        float dt0 = Mathf.Max(d1 - d0, 1e-4f);
-        float dt1 = Mathf.Max(d2 - d1, 1e-4f);
-        float dt2 = Mathf.Max(d3 - d2, 1e-4f);
-
-        float m1 = (v1 - v0) / dt0 - (v2 - v0) / (dt0 + dt1) + (v2 - v1) / dt1;
-        float m2 = (v2 - v1) / dt1 - (v3 - v1) / (dt1 + dt2) + (v3 - v2) / dt2;
-        m1 *= dt1;
-        m2 *= dt1;
-
-        float t2 = t * t;
-        float t3 = t2 * t;
-        return (2f * t3 - 3f * t2 + 1f) * v1
-             + (t3 - 2f * t2 + t) * m1
-             + (-2f * t3 + 3f * t2) * v2
-             + (t3 - t2) * m2;
+        // The minimum-curvature line: the road's own bend plus the cubic spline through what is left.
+        GetSpline(p1, c, out float y1, out float m1);
+        GetSpline(p2, c, out float y2, out float m2);
+        float h = d2 - d1, u = 1f - t;
+        float spline = u * y1 + t * y2 + h * h / 6f * ((u * u * u - u) * m1 + (t * t * t - t) * m2);
+        return spline + RoadBendAt(distance);
     }
 }

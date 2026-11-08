@@ -37,6 +37,15 @@ public static class RacingLineTrainingMenu
     // SplineDriver.cornerSpeedScale's default — the margin the AI keeps off the grip limit.
     const float CornerSpeedScale = 0.95f;
 
+    // Anchor-pinned training (Train Racing Lines Pinned To Anchors): how closely each trained line must go through
+    // its own authored entry / apex / exit points. A funnel round each anchor: this many metres either way at the
+    // anchor, opening by PinSlope per metre out to PinHalfWidth metres, free beyond. The leftmost / rightmost lines
+    // (the oval AI's inside and outside lanes) are held tightest; the ideal is given a little room to trade.
+    const float SidePinTolerance = 0.15f;
+    const float IdealPinTolerance = 0.4f;
+    const float PinSlope = 0.03f;
+    const float PinHalfWidth = 15f;
+
     // Roughly how long one click of "Another Session" spends driving before it stops and writes up. Short
     // on purpose: the point of the budget is that the run is resumable, so clicking three times is the same
     // as one long run, and nothing is lost if a tool call gives up waiting. A short oval is a second or two;
@@ -64,6 +73,30 @@ public static class RacingLineTrainingMenu
 
         var line = TrainTrack(track, car, out string summary);
         if (line != null) Debug.Log("[RacingLineTrainer] " + summary);
+    }
+
+    // Retrain from scratch with every line pinned through its authored points: the ideal, the leftmost and the
+    // rightmost AI lines are each trained for lap time, but must pass through their own entry / apex / exit anchors
+    // (SidePinTolerance / IdealPinTolerance). The leftmost / rightmost results are stored alongside the ideal and
+    // become the oval AI's inside and outside lanes. The selected TrackInfoV2, or the track the race scene is set to
+    // (TrackSelection) when none is selected. Later "Another Session" clicks keep training it pinned.
+    [MenuItem("Draftmaster/AI/Train Racing Lines Pinned To Anchors (Selected Track)", priority = 299)]
+    public static void TrainPinnedSelected()
+    {
+        var track = Selection.activeObject as TrackInfoV2;
+        if (track == null) track = Resources.Load<TrackInfoV2>("Tracks/" + TrackSelection.CurrentId);
+        if (track == null)
+        {
+            Debug.LogWarning("[RacingLineTrainer] Select a TrackInfoV2 asset (Assets/Resources/Tracks), or set a track in TrackSelection.");
+            return;
+        }
+        var car = DefaultVehicle();
+        if (car == null) return;
+        var line = TrainTrack(track, car, false, out string summary, pinned: true);
+        AssetDatabase.Refresh();
+        TrainedRacingLines.Invalidate();
+        if (line != null) Debug.Log("[RacingLineTrainer] " + summary);
+        else Debug.LogWarning("[RacingLineTrainer] " + summary);
     }
 
     [MenuItem("Draftmaster/AI/Train Racing Lines (Missing Only)", priority = 301)]
@@ -233,7 +266,7 @@ public static class RacingLineTrainingMenu
         => TrainTrack(track, car, true, out summary);
 
     public static TrainedRacingLine TrainTrack(TrackInfoV2 track, VehicleInfo car, bool continueFromStored,
-                                               out string summary)
+                                               out string summary, bool? pinned = null)
     {
         summary = null;
         if (track == null || track.segments == null || track.segments.Length == 0)
@@ -280,6 +313,12 @@ public static class RacingLineTrainingMenu
         // is the baseline every stored gain is quoted against: what the AI used to drive.
         var stored = continueFromStored ? LoadFromDisk(track.name) : null;
         if (stored != null && !stored.MatchesLength(length)) stored = null;
+
+        // A line trained pinned keeps being trained pinned; a first pinned run is asked for explicitly.
+        bool pin = pinned ?? (stored != null && stored.anchorPinned);
+        if (pin) return TrainPinned(track, car, samples, length, anchors, course, limits,
+                                    stored != null && stored.anchorPinned && stored.HasSideLines ? stored : null,
+                                    out summary);
 
         float[] authored = BuildSeedLine(track, samples, anchors, length, course);
         float baseline = stored != null && stored.baselineLapTime > 0.01f
@@ -358,6 +397,172 @@ public static class RacingLineTrainingMenu
                   (keptTheSeed ? ", storage round trip cost more than the session found — kept the old line" : "") +
                   $")  |  {line.GainSeconds,5:F2}s off the authored line";
         return line;
+    }
+
+    // --- Anchor-pinned training ---------------------------------------------------------------------------
+
+    // The ideal, leftmost and rightmost lines, each trained for lap time from its authored line with a funnel pin
+    // through each of its own anchors (see BuildPins). The ideal keeps the usual corridor (between the authored
+    // leftmost and rightmost lines); the side lines may use the road, edge to edge less SplineDriver.RoadEdgeMargin,
+    // since they ARE the corridor. Seeded from the authored lines as drawn (not relaxed: relaxing pulls a line off its
+    // own points), or from the stored pinned lines on a later session where those are quicker.
+    static TrainedRacingLine TrainPinned(TrackInfoV2 track, VehicleInfo car, List<TrackBuilder.Sample> samples,
+        float length, List<TrackInfoV2.RacingLineAnchor> anchors, RacingLineTrainer.Course idealCourse,
+        RacingLineTrainer.CarLimits limits, TrainedRacingLine stored, out string summary)
+    {
+        int n = samples.Count;
+        var dist = new float[n];
+        for (int i = 0; i < n; i++) dist[i] = samples[i].distance;
+        // Each line is pinned at its own drawn points - not the ones the generator adds to keep a line on the road
+        // or the ideal off the apron.
+        var idealPinDist = new List<float>();
+        var leftPinDist = new List<float>();
+        var rightPinDist = new List<float>();
+        for (int a = 0; a < anchors.Count; a++)
+        {
+            if (anchors[a].shapeOnly) continue;
+            if (anchors[a].InIdeal) idealPinDist.Add(anchors[a].distance);
+            if (anchors[a].InLeft) leftPinDist.Add(anchors[a].distance);
+            if (anchors[a].InRight) rightPinDist.Add(anchors[a].distance);
+        }
+        var idealPins = idealPinDist.ToArray();
+        var leftPins = leftPinDist.ToArray();
+        var rightPins = rightPinDist.ToArray();
+
+        float[] Authored(float f)
+        {
+            var lat = new float[n];
+            for (int i = 0; i < n; i++) lat[i] = track.GetLateralAt(dist[i], f, anchors, length);
+            return lat;
+        }
+
+        RacingLineTrainer.Course RoadCourse()
+        {
+            var c = new RacingLineTrainer.Course
+            {
+                centre = idealCourse.centre,
+                right = idealCourse.right,
+                minLateral = new float[n],
+                maxLateral = new float[n],
+                speedCapMps = idealCourse.speedCapMps,
+                bankingGripScale = idealCourse.bankingGripScale,
+                loop = idealCourse.loop
+            };
+            for (int i = 0; i < n; i++)
+            {
+                float lo = SplineDriver.ClampToRoad(float.NegativeInfinity, samples[i].width);
+                float hi = SplineDriver.ClampToRoad(float.PositiveInfinity, samples[i].width);
+                if (float.IsInfinity(lo) || float.IsInfinity(hi))
+                {
+                    lo = Mathf.Min(idealCourse.minLateral[i], idealCourse.maxLateral[i]);
+                    hi = Mathf.Max(idealCourse.minLateral[i], idealCourse.maxLateral[i]);
+                }
+                c.minLateral[i] = lo;
+                c.maxLateral[i] = hi;
+            }
+            return c;
+        }
+
+        var idealAuthored = Authored(0f);
+        var leftAuthored = Authored(-1f);
+        var rightAuthored = Authored(+1f);
+        var leftCourse = RoadCourse();
+        var rightCourse = RoadCourse();
+        RacingLineTrainer.BuildPins(idealCourse, dist, idealAuthored, idealPins, length, IdealPinTolerance, PinSlope, PinHalfWidth);
+        RacingLineTrainer.BuildPins(leftCourse, dist, leftAuthored, leftPins, length, SidePinTolerance, PinSlope, PinHalfWidth);
+        RacingLineTrainer.BuildPins(rightCourse, dist, rightAuthored, rightPins, length, SidePinTolerance, PinSlope, PinHalfWidth);
+
+        int refinePass = stored != null ? stored.refinePasses + 1 : 0;
+        var settings = RacingLineTrainer.Settings.For(length, refinePass);
+        var sb = new StringBuilder();
+        int laps = 0;
+
+        float[] TrainOne(string name, RacingLineTrainer.Course c, float[] authored, float[] anchorDist, Func<float, float> storedAt, out float lapTime, out float seedTime)
+        {
+            var seed = (float[])authored.Clone();
+            RacingLineTrainer.ClampToCorridor(c, seed, 0f);
+            if (storedAt != null)
+            {
+                var carried = new float[n];
+                for (int i = 0; i < n; i++) carried[i] = storedAt(dist[i]);
+                RacingLineTrainer.ClampToCorridor(c, carried, 0f);
+                if (RacingLineTrainer.LapTime(c, carried, limits) < RacingLineTrainer.LapTime(c, seed, limits)) seed = carried;
+            }
+            var report = RacingLineTrainer.Train(c, seed, limits, settings);
+            laps += report.lapsSimulated;
+            var trainedGrid = OnStorageGrid(samples, length, report.lateral ?? seed);
+            var seedGrid = OnStorageGrid(samples, length, seed);
+            var trainedRead = ReadBack(c, samples, length, trainedGrid);
+            var seedRead = ReadBack(c, samples, length, seedGrid);
+            var chosen = RacingLineTrainer.PickFaster(c, limits, trainedRead, seedRead);
+            bool keptSeed = ReferenceEquals(chosen, seedRead);
+            var grid = keptSeed ? seedGrid : trainedGrid;
+            lapTime = RacingLineTrainer.LapTime(c, chosen, limits);
+            seedTime = report.seedLapTime;
+
+            // How close the stored line goes to each authored point (the point itself, held inside the corridor).
+            var reader = new TrainedRacingLine { trackLength = length, spacing = StorageSpacing, lateral = grid };
+            float worst = 0f, sum = 0f; float worstAt = 0f;
+            for (int a = 0; a < anchorDist.Length; a++)
+            {
+                int k = NearestSample(dist, anchorDist[a]);
+                float lo = Mathf.Min(c.minLateral[k], c.maxLateral[k]), hi = Mathf.Max(c.minLateral[k], c.maxLateral[k]);
+                float target = Mathf.Clamp(authored[k], lo, hi);
+                float miss = Mathf.Abs(reader.LateralAt(anchorDist[a]) - target);
+                sum += miss;
+                if (miss > worst) { worst = miss; worstAt = anchorDist[a]; }
+            }
+            sb.Append($"\n    {name,-9} {seedTime,7:F2}s -> {lapTime,7:F2}s ({report.improvements} kept{(keptSeed ? ", kept the seed" : "")});" +
+                      $" off its {anchorDist.Length} points: mean {sum / Mathf.Max(1, anchorDist.Length):0.00} m, worst {worst:0.00} m at {worstAt:0} m");
+            return grid;
+        }
+
+        var idealGrid = TrainOne("ideal", idealCourse, idealAuthored, idealPins, stored != null ? stored.LateralAt : (Func<float, float>)null, out float idealTime, out float idealSeed);
+        var leftGrid = TrainOne("leftmost", leftCourse, leftAuthored, leftPins, stored != null ? stored.LeftAt : (Func<float, float>)null, out _, out _);
+        var rightGrid = TrainOne("rightmost", rightCourse, rightAuthored, rightPins, stored != null ? stored.RightAt : (Func<float, float>)null, out _, out _);
+
+        float baseline = stored != null && stored.baselineLapTime > 0.01f
+            ? stored.baselineLapTime
+            : RacingLineTrainer.LapTime(idealCourse, idealAuthored, limits);
+        var telemetry = RacingLineTrainer.Analyse(idealCourse, ReadBack(idealCourse, samples, length, idealGrid), limits);
+        var line = new TrainedRacingLine
+        {
+            version = TrainedRacingLine.CurrentVersion,
+            trackId = track.name,
+            vehicle = car.name,
+            trainedUtc = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            trainerVersion = TrainedRacingLine.CurrentTrainerVersion,
+            trackLength = length,
+            spacing = StorageSpacing,
+            baselineLapTime = baseline,
+            seedLapTime = idealSeed,
+            trainedLapTime = telemetry.lapTimeSeconds,
+            lateralAccelMps2 = limits.lateralAccelMps2,
+            drivenLength = telemetry.drivenLength,
+            lapsSimulated = laps,
+            totalLapsSimulated = (stored != null ? LapsBehind(stored) : 0) + laps,
+            refinePasses = refinePass,
+            lateral = idealGrid,
+            anchorPinned = true,
+            leftLateral = leftGrid,
+            rightLateral = rightGrid
+        };
+        Write(line);
+        summary = $"{track.name,-18} pinned session {refinePass + 1}: {idealPins.Length} ideal / {leftPins.Length} leftmost / {rightPins.Length} rightmost points, " +
+                  $"{laps} laps{sb}";
+        return line;
+    }
+
+    static int NearestSample(float[] dist, float d)
+    {
+        int best = 0;
+        float bestGap = float.MaxValue;
+        for (int i = 0; i < dist.Length; i++)
+        {
+            float g = Mathf.Abs(dist[i] - d);
+            if (g < bestGap) { bestGap = g; best = i; }
+        }
+        return best;
     }
 
     // A lateral profile put onto the even storage grid, rounded the way it will be written out. One extra

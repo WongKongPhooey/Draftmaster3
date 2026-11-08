@@ -32,11 +32,19 @@ public class FullCourseCaution : MonoBehaviour
     public float minSecondsAfterGreen = 5f;
     [Tooltip("The track must have been clear of stopped cars this long (s) before the safety car may come in.")]
     public float clearSeconds = 3f;
-    [Tooltip("The safety car comes out this far (m) ahead of the race leader.")]
+    [Tooltip("The safety car comes out at least this far (m) ahead of the race leader - further at racing speed, so the leader has room to come down to it (pickupDecelMps2).")]
     public float pickupGapM = 80f;
+    [Tooltip("The braking (m/s^2) the safety car's pick-up spot allows the leader to come down from racing speed to its cruise - a firm lift, not a stamp on the brakes.")]
+    public float pickupDecelMps2 = 6f;
     [Tooltip("Road (m) the safety car must have to itself, behind and ahead, where it comes out. Pushed on up the road until it has it.")]
     public float clearRoadBehindM = 12f;
     public float clearRoadAheadM = 25f;
+
+    [Header("Restart order")]
+    [Tooltip("The restart order is frozen when the caution comes out (CautionLineup). A car seen wrecking (CautionWatch: spun, sideways, in the wall, stopped) this many seconds before the flag was caught up in the crash and goes to the tail.")]
+    public float caughtLookbackSeconds = 8f;
+    [Tooltip("...and so does one that wrecks in this many seconds after it - the crash is still happening when the flag comes out.")]
+    public float caughtGraceSeconds = 6f;
 
     // Seconds into the current caution; -1 when there is none.
     public float CautionSeconds { get; private set; } = -1f;
@@ -59,11 +67,17 @@ public class FullCourseCaution : MonoBehaviour
     void Awake() => _director = GetComponent<FormationDirector>();
 
     void OnEnable() => RaceStart.PhaseChanged += OnPhaseChanged;
-    void OnDisable() => RaceStart.PhaseChanged -= OnPhaseChanged;
+    void OnDisable()
+    {
+        RaceStart.PhaseChanged -= OnPhaseChanged;
+        CautionLineup.End();
+    }
 
     void OnPhaseChanged(RaceStart.Phase phase)
     {
         if (phase == RaceStart.Phase.Caution) return;
+        // Green (or a new race): the restart order has been run - the field races for position again.
+        CautionLineup.End();
         // Green again (or a new race): whatever is still stopped has had its caution.
         if (CautionSeconds >= 0f)
         {
@@ -144,11 +158,13 @@ public class FullCourseCaution : MonoBehaviour
         if (scSpline == null || scSpline.TrackLength <= 0f) return;   // no safety car to send out: local yellows only
 
         float lap = scSpline.TrackLength;
-        float leader = LeaderTrackDistance();
+        float leader = LeaderTrackDistance(out float leaderMps);
         if (leader < 0f) return;
-        float at = ClearSpot(Mathf.Repeat(leader + pickupGapM, lap), lap, scSpline);
+        float gap = CautionRules.PickupGap(leaderMps, sc.cruiseMph / 2.237f, pickupDecelMps2, pickupGapM);
+        float at = ClearSpot(Mathf.Repeat(leader + gap, lap), lap, scSpline);
 
         sc.DeployForCaution(at, minCautionLaps);
+        FreezeRestartOrder(Time.time);
         CautionSeconds = 0f;
         LapsRun = 0f;
         _clearFor = -1f;
@@ -169,9 +185,38 @@ public class FullCourseCaution : MonoBehaviour
                   $"at least {minCautionLaps:0.#} laps");
     }
 
+    // The running order now is the restart order (positions are frozen at the flag), with every car caught up in the
+    // crash sent to the tail of it.
+    void FreezeRestartOrder(float now)
+    {
+        var rt = RacePositionTracker.Instance;
+        var watch = CautionWatch.Instance;
+        _scratch.Clear();
+        if (rt != null)
+        {
+            var order = rt.Order;
+            for (int i = 0; i < order.Count; i++)
+            {
+                var e = order[i];
+                if (e == null || e.tf == null) continue;
+                bool caught = _stoppedSince.ContainsKey(e.tf)
+                              || watch != null && watch.SecondsSinceWreck(e.tf) <= caughtLookbackSeconds;
+                if (caught) _scratch.Add(e.tf);
+            }
+        }
+        CautionLineup.Begin(rt, _scratch, now, caughtGraceSeconds);
+        if (_scratch.Count > 0)
+        {
+            var sb = new System.Text.StringBuilder("[Caution] caught up in the crash, to the tail:");
+            for (int i = 0; i < _scratch.Count; i++) sb.Append(' ').Append(_scratch[i].name);
+            Debug.Log(sb.ToString());
+        }
+    }
+
     void StepCaution(bool somethingStopped, float dt)
     {
         CautionSeconds += dt;
+        CautionLineup.Step(RacePositionTracker.Instance, Time.time);
         var sc = _director.SafetyCarInstance;
         if (sc == null) return;
         var spline = sc.GetComponent<SplineDriver>();
@@ -185,8 +230,9 @@ public class FullCourseCaution : MonoBehaviour
 
     // Where the race leader is along the main spline (the scale every SplineDriver works in), skipping cars in the
     // pit lane and cars stopped on the track. -1 with no tracker / nobody running.
-    float LeaderTrackDistance()
+    float LeaderTrackDistance(out float speedMps)
     {
+        speedMps = 0f;
         var rt = RacePositionTracker.Instance;
         if (rt == null || rt.TrackLength <= 0f) return -1f;
         var order = rt.Order;
@@ -197,6 +243,7 @@ public class FullCourseCaution : MonoBehaviour
             bool inPits = e.spline != null && e.spline.enabled ? e.spline.IsOnPit
                         : rt.track != null && rt.track.IsOnPitSurface(e.tf.position);
             if (inPits) continue;
+            speedMps = e.speedMps;
             return Mathf.Repeat(e.trackDistance, rt.TrackLength);
         }
         return -1f;

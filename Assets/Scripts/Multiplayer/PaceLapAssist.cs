@@ -45,6 +45,10 @@ public class PaceLapAssist : MonoBehaviour
     public float cautionPassableMph = 35f;
     [Tooltip("Under a caution, from further back than holdGap the player is eased down onto the car in front as if braking at this rate (m/s^2), so closing up at speed is a firm lift rather than a wall at holdGap.")]
     public float cautionApproachDecelMps2 = 4f;
+    [Tooltip("Caught up in the crash (CautionLineup), the player goes to the tail: while a car due ahead is this close behind (m), they are slowed to let it by.")]
+    public float cautionLetByBehindM = 250f;
+    [Tooltip("How far under the safety car's cruise (mph) the player is held while letting the field by.")]
+    public float cautionLetBySlowMph = 15f;
 
     const float MphToMps = 1f / 2.237f;
 
@@ -270,6 +274,13 @@ public class PaceLapAssist : MonoBehaviour
         var field = RaceField.Drivers;
         float playerDist = pvc.TrackDistance;
         float myLat = pvc.TrackLateral;
+        // Caught up in the crash: to the tail of the restart order (CautionLineup). With a car due ahead coming up
+        // behind, the player is slowed to let it by. A caught car moving over for the player is not held behind.
+        bool meCaught = CautionLineup.IsCaught(pvc.transform);
+        float lap = 0f;
+        for (int i = 0; i < field.Count && lap <= 0f; i++) if (field[i] != null) lap = field[i].TrackLength;
+        bool letBy = meCaught && CautionLineup.ShouldYield(pvc.transform, playerDist, lap, pvc.ObstacleTrack, cautionLetByBehindM);
+        CautionLineup.SetYielding(pvc.transform, letBy);
         SplineDriver ahead = null;
         float gap = float.MaxValue;
         for (int i = 0; i < field.Count; i++)
@@ -277,6 +288,7 @@ public class PaceLapAssist : MonoBehaviour
             var d = field[i];
             if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.TrackLength <= 0f) continue;
             if (d.CurrentMph < cautionMovingMph) continue;
+            if (!meCaught && CautionLineup.IsYielding(d.transform)) continue;
             bool inMyLane = Mathf.Abs(d.LateralOnTrack - myLat) <= cautionLaneHalfWidth;
             if (!inMyLane && d.CurrentMph < cautionPassableMph) continue;
             float g = Mathf.Repeat(d.DistanceOnTrack - playerDist, d.TrackLength);
@@ -298,10 +310,13 @@ public class PaceLapAssist : MonoBehaviour
         bool leading = ahead == null || paceCar != null || gap > catchUpGap * 4f;
         if (sc != null && leading && (sc.ClosingUp || sc.Pitted))
             gov = Mathf.Min(gov, FormationDirector.Instance.CloseUpLeaderMph * MphToMps);
+        if (letBy) gov = Mathf.Min(gov, Mathf.Max(5f, (FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : 60f) - cautionLetBySlowMph) * MphToMps);
         pvc.speedGovernorMps = gov;
 
         _showPrompt = true;
         _promptColor = new Color(1f, 0.85f, 0.2f);
+        if (letBy) { _promptText = "CAUGHT IN THE WRECK — move low, let the field by"; return; }
+        if (meCaught) { _promptText = "CAUGHT IN THE WRECK — restart from the tail"; return; }
         if (ahead == null) { _promptText = "CAUTION — hold your position"; return; }
         string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
         _promptText = gap > catchUpGap ? $"CAUTION — close up behind {who}" : $"CAUTION — hold station behind {who}";

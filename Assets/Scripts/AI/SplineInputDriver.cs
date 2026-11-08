@@ -14,6 +14,8 @@ public class SplineInputDriver : MonoBehaviour
     public float steerGain = 1.5f;
     [Tooltip("Throttle/brake per m/s of speed error (produces a 0..1 input). Higher = snappier speed tracking. Too low makes the AI feel gutless: throttle sags as they close on the target speed, so they cruise 1-2 m/s under it and never use full power.")]
     public float speedGain = 2f;
+    // Share of the asked-for brake that is applied: below 1 during a brake-fade mistake (AIRacingBehaviour).
+    [System.NonSerialized] public float brakeScale = 1f;
     [Tooltip("Below this speed (m/s) steering authority ramps down to avoid low-speed wobble / spin.")]
     public float lowSpeedCutoff = 6f;
     [Tooltip("Derivative damping (s) on the heading error: counters how fast the error is CHANGING, killing the high-frequency tail wiggle of the P-only chase (visible at pace-lap speeds where the weave caps the lookahead short). Acts on the error rate, not raw yaw rate, so steady-state cornering — constant error, constant yaw — is untouched.")]
@@ -398,9 +400,9 @@ public class SplineInputDriver : MonoBehaviour
 
         // --- Speed: throttle when under the commanded speed, brake when over.
         float commandedMps = _spline.CommandedSpeedMps;
-        // Flat out (plated superspeedway): drive to what the brain is asking for, not its accel-curve ramp up to
-        // it - chasing the ramp held the throttle at 30-40% all lap and the car never once ran wide open.
-        if (TrackConditions.AiFlatOut && !_spline.IsOnPit && RaceStart.IsGreen)
+        // Drive to what the brain is asking for, not its accel-curve ramp up to it (SplineDriver.driveToTarget) -
+        // chasing the ramp held the throttle at 30-70% all lap and the car never once ran wide open.
+        if (_spline.DrivesToTarget)
             commandedMps = _spline.TargetMph / 2.237f;
         LastProfileMps = commandedMps;
         LastGripCapMps = float.MaxValue;
@@ -413,13 +415,14 @@ public class SplineInputDriver : MonoBehaviour
         {
             float aLatMax = LiveLateralAccelLimitMps2();
             // On a banked turn the car holds more than its flat-ground grip (BankedGrip, as the physics applies it).
-            if (_car != null && Mathf.Abs(_car.CurrentBankDeg) > 0.01f)
-                aLatMax = Draftmaster.Sim.BankedGrip.Capacity(aLatMax, _car.CurrentBankDeg);
+            float bankNow = _car != null ? _car.CurrentBankDeg : 0f;
             float gripRadius = _spline.CurvatureRadiusAhead(Mathf.Max(8f, speed * gripScanTime));
             if (aLatMax > 0.1f && gripRadius < float.MaxValue)
             {
-                // What the car can hold on that radius, not what the tyre peaks at (AIGrip).
-                float vGrip = AIGrip.CornerSpeed(gripRadius, aLatMax * gripUtilization);
+                // What the car can hold on that radius, not what the tyre peaks at (AIGrip). On a bank the usable share
+                // is of the tyres' part only - it used to be taken off gravity's pull down the bank as well, which held
+                // a car 10 mph and more under what it was planned for through a banked turn.
+                float vGrip = AIGrip.BankedCornerSpeed(gripRadius, aLatMax, bankNow, gripUtilization);
                 LastGripCapMps = vGrip;
                 if (commandedMps > vGrip) commandedMps = vGrip;
             }
@@ -474,6 +477,8 @@ public class SplineInputDriver : MonoBehaviour
                                               Mathf.Max(rearSlipBrakeFullDeg, rearSlipBrakeStartDeg + 0.1f), rearSlip);
             brake *= 1f - rearSlipBrakeRelease * release * catchScale;
         }
+
+        brake *= brakeScale;   // a brake-fade mistake (AIRacingBehaviour.mistakeAsBrakeFade)
 
         // Still reacting to a hit: the driver hasn't moved their hands or feet yet.
         if (holding) { steerInput = _heldSteer; throttle = _heldThrottle; brake = _heldBrake; }

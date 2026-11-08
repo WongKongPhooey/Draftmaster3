@@ -26,9 +26,28 @@ public static class AILineDiagnostics
     [MenuItem("Draftmaster/AI/Diagnose AI Racing Line (Watkins Glen)")]
     static void Run() => Run("WatkinsGlen");
 
-    public static void Run(string trackId)
+    // The same report for every venue that does not race in lanes, one file each (Temp/ai_line_report_<id>.txt),
+    // and the headline lines of all of them in Temp/ai_line_report_road_courses.txt.
+    [MenuItem("Draftmaster/AI/Diagnose AI Racing Line (Every Road Course)")]
+    static void RunEveryRoadCourse()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
+        var summary = new StringBuilder("AI racing line, every road course: lap, then average car centre from the inside edge at the apexes.\n");
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+        {
+            string id = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(guid));
+            if (TrackProfile.ForTrack(id).raceInLanes) continue;
+            summary.AppendLine(Run(id, $"Temp/ai_line_report_{id}.txt"));
+        }
+        File.WriteAllText("Temp/ai_line_report_road_courses.txt", summary.ToString());
+        Debug.Log(summary.ToString());
+    }
+
+    // Returns the report's headline: the two lap times and the average apex distances.
+    public static string Run(string trackId, string outPath = "Temp/ai_line_report.txt")
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return ""; }
+        string headline = trackId + ": diagnostic failed";
 
         var report = new StringBuilder();
         var prevActive = SceneManager.GetActiveScene();
@@ -38,17 +57,20 @@ public static class AILineDiagnostics
         {
             SceneManager.SetActiveScene(scene);
             var sim = AIPaceCalibratorWindow.LapSim.Build(trackId, out string error);
-            if (sim == null) { report.AppendLine(error); return; }
+            if (sim == null) { report.AppendLine(error); return headline; }
+            // As a session binds the package: whether the AI races in lanes decides whether the untrained line is
+            // the road's optimised minimum-curvature line (SplineDriver.optimiseLine) or the authored one.
+            TrackConditions.ApplyTrackTuning(trackId);
 
             var trained = Drive(sim, trainedLine: true);
             var authored = Drive(sim, trainedLine: false);
 
             report.AppendLine($"AI racing line at {trackId} (best driver, today's AI strength).");
             report.AppendLine($"Trained line : {trained.result}");
-            report.AppendLine($"Authored line: {authored.result}");
+            report.AppendLine($"Untrained line ({(TrackConditions.AiLanes ? "authored" : "optimised")}): {authored.result}");
             report.AppendLine();
             report.AppendLine("Metres from the INSIDE edge at each apex (car centre; 1.0 = inside wheels on the paint).");
-            report.AppendLine("  turn                       apex m   width | ideal | TRAINED plan  car  minMph | AUTHORED plan  car  minMph");
+            report.AppendLine("  turn                       apex m   width | ideal | TRAINED plan  car  minMph | UNTRAINED plan car  minMph");
 
             var info = sim.Track.track;
             var anchors = info.BuildRacingLineAnchors();
@@ -82,7 +104,9 @@ public static class AILineDiagnostics
             }
             if (n > 0)
                 report.AppendLine($"  average over {n} turns: ideal {sumIdeal / n:0.0} m, trained car {sumTrainedCar / n:0.0} m, " +
-                                  $"authored car {sumAuthoredCar / n:0.0} m");
+                                  $"untrained car {sumAuthoredCar / n:0.0} m");
+            headline = $"  {trackId,-16} trained {trained.result} | untrained {authored.result}" +
+                       (n > 0 ? $" | apex: trained car {sumTrainedCar / n:0.0} m, untrained car {sumAuthoredCar / n:0.0} m over {n} turns" : "");
             report.AppendLine();
             report.AppendLine($"SplineDriver.RoadEdgeMargin keeps the AI's planned centre {SplineDriver.RoadEdgeMargin:0.0} m inside each edge.");
         }
@@ -92,13 +116,15 @@ public static class AILineDiagnostics
         }
         finally
         {
+            TrackConditions.ApplyTrackTuning(null);
             TrackConditions.AiGripMultiplier = prevGrip;
             TrackConditions.AiPaceMultiplier = prevPace;
             if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
             EditorSceneManager.CloseScene(scene, true);
-            File.WriteAllText("Temp/ai_line_report.txt", report.ToString());
+            File.WriteAllText(outPath, report.ToString());
             Debug.Log(report.ToString());
         }
+        return headline;
     }
 
     // ------------------------------------------------------------------ corner traces

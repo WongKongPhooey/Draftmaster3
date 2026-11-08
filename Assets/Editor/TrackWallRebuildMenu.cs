@@ -18,6 +18,40 @@ public static class TrackWallRebuildMenu
         Debug.Log("TrackWallRebuildMenu: " + RebuildEnvironment("Daytona"));
     }
 
+    // Texas (FortWorth): open the infield wall along the whole trioval - the front stretch from the end of turn 4 to
+    // the start of turn 1 (segments 6, 7, 0, 1, 2: the straight, the start/finish kink, the straight, the second
+    // kink and the straight into turn 1). Left of travel is BarrierSide.Outer, the infield wall. Re-running it is
+    // harmless: the gaps are replaced, not added twice. The outside wall is untouched.
+    static readonly int[] TexasTriovalSegments = { 6, 7, 0, 1, 2 };
+    const string TexasTriovalLabel = "trioval (no infield wall)";
+
+    [MenuItem("Draftmaster/Tracks/Texas/Remove Trioval Infield Wall (rebuild walls only)")]
+    static void TexasNoTriovalInfieldWall()
+    {
+        var env = AssetDatabase.LoadAssetAtPath<TrackEnvironment>("Assets/Resources/Tracks/FortWorthEnvironment.asset");
+        var track = AssetDatabase.LoadAssetAtPath<TrackInfoV2>("Assets/Resources/Tracks/FortWorth.asset");
+        if (env == null || track == null) { Debug.LogError("TrackWallRebuildMenu: no FortWorth / FortWorthEnvironment asset."); return; }
+        var gaps = new System.Collections.Generic.List<TrackEnvironment.BarrierGap>();
+        if (env.barrierGaps != null)
+            foreach (var g in env.barrierGaps) if (g.label != TexasTriovalLabel) gaps.Add(g);
+        foreach (int seg in TexasTriovalSegments)
+        {
+            if (track.segments == null || seg >= track.segments.Length) continue;
+            gaps.Add(new TrackEnvironment.BarrierGap
+            {
+                label = TexasTriovalLabel,
+                side = TrackEnvironment.BarrierSide.Outer,
+                segmentIndex = seg,
+                startDistance = 0f,
+                endDistance = track.segments[seg].length + 1f,   // clamped to the segment: the whole of it
+            });
+        }
+        env.barrierGaps = gaps.ToArray();
+        EditorUtility.SetDirty(env);
+        AssetDatabase.SaveAssets();
+        Debug.Log("TrackWallRebuildMenu: " + RebuildEnvironment("FortWorth"));
+    }
+
     [MenuItem("Draftmaster/Tracks/Daytona/Report Wall Pieces")]
     static void ReportDaytona()
     {

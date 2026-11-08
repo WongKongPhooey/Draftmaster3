@@ -42,6 +42,12 @@ namespace Draftmaster.Tracks
             public float[] maxLateral;        // the other edge
             public float[] speedCapMps;       // optional hard cap per sample (top speed / authored segment cap)
             public float[] bankingGripScale;  // optional multiplier on lateral grip per sample (banking, as BankedGrip gives the physics)
+            // Optional pins: where pinTolerance[i] >= 0 the line must stay within pinTolerance[i] of pinLateral[i]
+            // (still inside the corridor). Negative = free. BuildPins lays them as a funnel round each authored
+            // entry / apex / exit, so the trained line goes through the points that were drawn and is free to find
+            // its own shape between them.
+            public float[] pinLateral;
+            public float[] pinTolerance;
             public bool loop = true;
 
             public int Count => centre != null ? centre.Length : 0;
@@ -56,6 +62,8 @@ namespace Draftmaster.Tracks
                 if (maxLateral == null || maxLateral.Length != n) { why = "maxLateral[] length must match centre[]"; return false; }
                 if (speedCapMps != null && speedCapMps.Length != n) { why = "speedCapMps[] length must match centre[]"; return false; }
                 if (bankingGripScale != null && bankingGripScale.Length != n) { why = "bankingGripScale[] length must match centre[]"; return false; }
+                if ((pinLateral == null) != (pinTolerance == null)) { why = "pinLateral[] and pinTolerance[] go together"; return false; }
+                if (pinLateral != null && (pinLateral.Length != n || pinTolerance.Length != n)) { why = "pin[] lengths must match centre[]"; return false; }
                 return true;
             }
         }
@@ -573,7 +581,41 @@ namespace Draftmaster.Tracks
             float lo = Mathf.Min(course.minLateral[i], course.maxLateral[i]);
             float hi = Mathf.Max(course.minLateral[i], course.maxLateral[i]);
             float m = Mathf.Min(Mathf.Max(0f, margin), Mathf.Max(0f, (hi - lo) * 0.5f - 0.01f));
-            return Mathf.Clamp(value, lo + m, hi - m);
+            value = Mathf.Clamp(value, lo + m, hi - m);
+            if (course.pinTolerance != null && course.pinTolerance[i] >= 0f)
+            {
+                // A pin wins over the edge margin (a point drawn near the edge is meant), never over the corridor.
+                float pin = Mathf.Clamp(course.pinLateral[i], lo, hi);
+                value = Mathf.Clamp(value, pin - course.pinTolerance[i], pin + course.pinTolerance[i]);
+                value = Mathf.Clamp(value, lo, hi);
+            }
+            return value;
+        }
+
+        // Pins for a line: a funnel round every anchor, pinTolerance = `tolerance` at the anchor itself, opening by
+        // `slope` metres per metre either side out to `halfWidth` metres, beyond which the line is free. The target
+        // inside the funnel is the authored line (`authored`, per sample), which passes through the anchor, so the
+        // funnel holds the line's position AND its heading through the point. `sampleDistance` is along the lap
+        // (per sample); `anchorDistance` likewise. Where two funnels overlap the tighter one wins.
+        public static void BuildPins(Course course, float[] sampleDistance, float[] authored, float[] anchorDistance,
+                                     float loopLength, float tolerance, float slope, float halfWidth)
+        {
+            int n = course.Count;
+            course.pinLateral = new float[n];
+            course.pinTolerance = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                course.pinLateral[i] = authored[i];
+                course.pinTolerance[i] = -1f;
+                for (int a = 0; a < anchorDistance.Length; a++)
+                {
+                    float gap = Mathf.Abs(sampleDistance[i] - anchorDistance[a]);
+                    if (course.loop && loopLength > 0f) gap = Mathf.Min(gap, loopLength - gap);
+                    if (gap > halfWidth) continue;
+                    float tol = tolerance + slope * gap;
+                    if (course.pinTolerance[i] < 0f || tol < course.pinTolerance[i]) course.pinTolerance[i] = tol;
+                }
+            }
         }
 
         public static void ClampToCorridor(Course course, float[] lat, float margin)

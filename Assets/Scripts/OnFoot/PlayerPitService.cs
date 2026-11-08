@@ -36,6 +36,7 @@ public class PlayerPitService : MonoBehaviour
     bool _crewWorking;
     float _msgTimer;
     bool _showBoxHint;
+    bool _beenInBox;     // the car has been fully inside its box since it last came onto pit road
 
     void Start()
     {
@@ -76,7 +77,12 @@ public class PlayerPitService : MonoBehaviour
         // pit boxes at all (PitLane never configured, e.g. legacy/multiplayer scenes).
         bool inBox = hasBox ? _marker.CarFullyInside(playerCar.transform, CarHalfExtents())
                             : !PitLane.Configured;
-        _showBoxHint = hasBox && onPit && slow && needs && !inBox && !_serviced;
+        // The hint is for a car coming in to stop, so not once it has sat in its box this visit — rolling out
+        // of it at the start of a session, or after a stop, is leaving, not missing the box — and not while
+        // pit road is closed (pre-green, the pace lap), when there is no stop to make.
+        if (!onPit) _beenInBox = false;
+        else if (inBox) _beenInBox = true;
+        _showBoxHint = hasBox && onPit && slow && needs && !inBox && !_serviced && !_beenInBox && RaceStart.IsRunning;
 
         // Coming down the lane with a stop to make: call the crew so their sign man is out and the board is
         // down over the box before the car gets there. Only ever the player's OWN box — a sign man waving at

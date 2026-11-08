@@ -248,6 +248,41 @@ public class AILapSimTests
         Assert.IsEmpty(r.incidents, Report($"The AI didn't lap Watkins Glen cleanly at pace {pace:0.00}, line {lineFactor:0.00}", r));
     }
 
+    // SCRATCH (remove): Texas field spread sweep.
+    [Test]
+    [Explicit("scratch")]
+    public void TexasSpreadScratch()
+    {
+        var conditions = Runtime("TrackConditions");
+        var aiGrip = conditions.GetField("AiGripMultiplier");
+        var sb = new StringBuilder("[LapSim] TEXAS SPREAD");
+        try
+        {
+            Runtime("AIPaceCalibration").GetMethod("ApplyFor").Invoke(null, new object[] { "FortWorth" });
+            float aiPace = (float)conditions.GetField("AiPaceMultiplier").GetValue(null);
+            aiGrip.SetValue(null, 1f);
+            Despawn(); SpawnTrack("Assets/Resources/TrackPackages/FortWorth.prefab");
+            var proxy = Drive(2, pace: 1.05f, splineOverrides: new Dictionary<string, object> { { "cornerCommitment", 1f } });
+            sb.Append($"\n  proxy {proxy.lapTimes[1]:0.00}");
+            foreach (float spread in new[] { 0.35f })
+            foreach (float g in new[] { 1.05f, 1.1f, 1.15f })
+            {
+                aiGrip.SetValue(null, g);
+                sb.Append($"\n  spread {spread} grip {g}:");
+                foreach (float strength in new[] { 0f, 0.5f, 1f })
+                {
+                    float commit = 1f - (1f - Mathf.Lerp(0.93f, 1f, strength)) * spread;
+                    Despawn(); SpawnTrack("Assets/Resources/TrackPackages/FortWorth.prefab");
+                    var r = Drive(2, pace: Mathf.Lerp(0.93f, 1.04f, strength) * aiPace,
+                                  splineOverrides: new Dictionary<string, object> { { "cornerCommitment", commit } });
+                    sb.Append($" s{strength}={r.lapTimes[1]:0.00}({r.incidents.Count})");
+                }
+            }
+        }
+        finally { conditions.GetMethod("Reset").Invoke(null, null); }
+        Debug.Log(sb.ToString());
+    }
+
     [Test]
     [Explicit("Diagnostic: two flying laps at every venue with a track package; prints pace and incidents per track.")]
     public void EveryTrack()
@@ -262,6 +297,39 @@ public class AILapSimTests
             string report = Report(System.IO.Path.GetFileNameWithoutExtension(path), r);
             sb.AppendLine().Append("  ").Append(report.Replace('\n', '|'));
         }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
+    [Explicit("Diagnostic: every road course (track tuning applied) on the authored line and on the optimised minimum-curvature line; pace and incidents side by side.")]
+    public void EveryRoadCourseOptimisedLine()
+    {
+        var conditions = Runtime("TrackConditions");
+        var lanes = conditions.GetField("AiLanes");
+        var sb = new StringBuilder("[LapSim] optimised line, every road course (authored | optimised | trained)");
+        try
+        {
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string id = System.IO.Path.GetFileNameWithoutExtension(path);
+                conditions.GetMethod("ApplyTrackTuning").Invoke(null, new object[] { id });
+                if ((bool)lanes.GetValue(null)) continue;   // an oval: races in lanes, the optimiser stands aside
+                Despawn();
+                SpawnTrack(path);
+                var off = Drive(2, trainedLine: false, splineOverrides: new Dictionary<string, object> { { "optimiseLine", false } });
+                Despawn();
+                SpawnTrack(path);
+                var on = Drive(2, trainedLine: false, splineOverrides: new Dictionary<string, object> { { "optimiseLine", true } });
+                Despawn();
+                SpawnTrack(path);
+                var trained = Drive(2, trainedLine: true);
+                sb.AppendLine().Append("  ").Append(Report(id, off).Replace('\n', '|'))
+                  .AppendLine().Append("  ").Append(Report(id + " OPT", on).Replace('\n', '|'))
+                  .AppendLine().Append("  ").Append(Report(id + " TRAINED", trained).Replace('\n', '|'));
+            }
+        }
+        finally { conditions.GetMethod("Reset").Invoke(null, null); }
         Debug.Log(sb.ToString());
     }
 
@@ -402,7 +470,7 @@ public class AILapSimTests
         // the authored one, so check the AI brain actually picked up a trained line at every venue.
         var splineType = Runtime("SplineDriver");
         var trackType = Runtime("TrackBuilder");
-        var inUse = splineType.GetProperty("TrainedLineInUse");
+        var inUse = splineType.GetProperty("TrainedLineFound");
         var missing = new List<string>();
         foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
         {

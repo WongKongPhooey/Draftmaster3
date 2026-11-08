@@ -291,9 +291,15 @@ namespace Draftmaster.Sim
         // [lo, hi] (the car-centre limits SplineDriver clamps to). Offsetting each car from the line on its own let
         // that clamp push the outside car of a pair back into its partner wherever the line runs near an edge —
         // the apex of every road-course corner. Both cars of a row share the line, so they agree on the centre.
-        public static float FitColumn(float column, float line, float lo, float hi)
+        // edgeMargin keeps the pair that much further inside [lo, hi] - lo/hi are where a car's centre may go, and a
+        // car running a metre or so wide of its target (as the dynamic cars do through a kink under braking) needs
+        // room beyond it. The margin gives way before the pair's spacing does on a road too narrow for both.
+        public static float FitColumn(float column, float line, float lo, float hi, float edgeMargin = 0f)
         {
             if (float.IsInfinity(lo) || float.IsInfinity(hi) || !(hi > lo)) return column;
+            float margin = Mathf.Clamp(edgeMargin, 0f, Mathf.Max(0f, 0.5f * (hi - lo) - Mathf.Abs(column)));
+            lo += margin;
+            hi -= margin;
             float half = Mathf.Min(Mathf.Abs(column), 0.5f * (hi - lo));
             float centre = Mathf.Clamp(line, lo + half, hi - half);
             return centre + (column < 0f ? -half : half) - line;

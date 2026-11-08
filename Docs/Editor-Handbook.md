@@ -719,9 +719,20 @@ it, B would close the pause menu and open it again, and in the car it would paus
 | Texas > Capture Rendered Preview (Temp png) | `Temp/texas_preview_*.png`: the package as the game draws it, from a preview scene (nothing opened or saved) |
 | Texas > Clear Orphaned Scenery Art In Open Scenes | Removes stray `SceneryArt` left at the root of a FortWorth preview after a re-author (Author runs it too) |
 
+### `Draftmaster > Build`
+| Item | Does |
+| --- | --- |
+| After Task: Bump Version + Patch / Build And Run On Phone | Tokenmaxxer's phone deploy (`PhoneDeploy`): development APK to the HONOR over wireless adb |
+| Build Play Store Bundle (Release .aab) | Release App Bundle at the current version, then the settings go back to a development APK |
+| **Build + Upload To Play Internal Testing** | Asks Play for its highest version code and bumps past it, builds the release `.aab` (Development Build off), puts the settings back to a development APK, then uploads to the internal testing track in the background and commits. Setup: `Docs/Play-Internal-Testing.md` |
+| Upload Last Bundle To Play Internal Testing | Only the upload, for one that failed after a good build |
+| Check Play Upload Setup | Signs in with the service account and logs what each track holds. Changes nothing |
+
 ### `Draftmaster > AI`
 | Item | Does |
 | --- | --- |
+| **Watch AI-Only Race…** | Pick track, series and field size, then Start: enters play mode straight into `RaceScene` as a one-off race with the player car on Auto (no setup sheet, formation starts itself). In play: `,` `.` cycle the camera through the running order, `[` `]` game speed 0.25x–4x, `V` takes the player car back. The career's track / series / session-live prefs are snapshotted and restored when play stops (`AIOnlyRaceMenu` + `AIOnlyRaceWatch`, editor-only) |
+| Watch AI-Only Race (Last Settings) | The same race again without the window |
 | Train Racing Line (Selected Track) | One more session for the selected `TrackInfoV2`, picking up its stored line. Writes `Resources/RacingLines/<id>.json` |
 | **Train Racing Lines (Another Session)** | **The one to keep clicking.** Anything missing or trained by an older optimiser first, then whichever line has had the least practice. About 3 minutes a click; six clicks covers the calendar |
 | Train Racing Lines (Missing Only) | Only tracks with no line, a line that no longer matches its geometry, or one from an older trainer. Resumable |

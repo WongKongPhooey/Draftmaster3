@@ -72,7 +72,8 @@ public class TrackPackage : MonoBehaviour
     {
         // The AI's strength is per track (Draftmaster > AI > Calibrate AI Pace). Set before anything that binds
         // below can spawn a car and bake a speed profile off the old numbers.
-        if (Application.isPlaying) AIPaceCalibration.ApplyFor(trackId);
+        // The player's AI STRENGTH setting goes on top (OPTIONS > AI DRIVERS).
+        if (Application.isPlaying) { AIPaceCalibration.ApplyFor(trackId); AIDifficulty.ApplyStrength(); }
 
         var builder = Builder;
         if (builder == null)

@@ -52,6 +52,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     /// True when Rebuild found a trained line for this track and is driving it.
     public bool TrainedLineInUse { get; private set; }
+    /// True when Rebuild found a trained line that fits the road as built, driven or not (a player's lap gives way to
+    /// the optimised line on a road course - see optimiseLine).
+    public bool TrainedLineFound { get; private set; }
 
     [Header("Racing Line Smoothing")]
     [Tooltip("How many Gauss-Seidel passes to relax the line toward minimum curvature. 0 = follow authored ideal exactly (rigid). 30-80 = realistic smoothed line.")]
@@ -63,6 +66,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public bool lineUsesRunOff = false;
     [Tooltip("Where the AI does not race in lanes (road courses), the car may use the whole road, edge to edge less RoadEdgeMargin, and not only the band between the authored leftmost and rightmost lines. Those lines are where lineFactor spreads the field's lines, not the road: at Watkins Glen they held every car to the left 5 m of the 14 m front straight - nobody used the inside into Turn 1 but the player - and to 3.6 m of Turn 1's 10 m exit, where a field coming out two-wide was squeezed single file.")]
     public bool roadCourseFullWidth = true;
+    [Tooltip("On an oval whose authored leftmost / rightmost lines pinch (somewhere narrower than 40% of the road - the traced ovals: Michigan, Bristol, Dover, Phoenix, Gateway, Iowa, Bowman Gray), the AI's bounds are the road edge to edge less RoadEdgeMargin. Off = the authored band, which squeezed every car onto the centreline for a quarter of the lap: at Michigan to 1.2 m of 19.5 m mid-Turn 2, a 75 m kink in the line where the field braked to 87 mph and ran into each other.")]
+    public bool ovalFullWidth = true;
+    [Tooltip("On such a pinched oval, drive the road's minimum-curvature line as the ideal in place of the trained one. Off: quicker (Michigan 41.5 s against 44-45) but it swings across the lanes, and the field touched more (16 cars x 4 laps, two rosters, Dover HARD 1-4 -> 8-10, Phoenix 1 -> 6-7). With the band widened, the trained line races cleanly: passes pinched -> wide Bristol 6-9 -> 25-36, Dover 17-19 -> 51-76, Phoenix 2-5 -> 20-25, Michigan 1-6 -> 21-25.")]
+    public bool optimisePinchedOvals = false;
+    // The authored band pinches somewhere on this oval (see ovalFullWidth).
+    public bool BoundsPinched { get; private set; }
+    [Tooltip("On a road course with no trained line (or only a player's recorded lap), drive the road's minimum-curvature line (Draftmaster.Sim.MinCurvatureLine) as the ideal: in from the outside, the inside edge at the apex, out to the outside edge on the exit, edge to edge less RoadEdgeMargin. Off = the authored ideal with its lateral offset smoothed, which follows the centreline's arc and apexed metres wide (Watkins Glen authored apexes average 2.5 m off the inside edge).")]
+    public bool optimiseLine = true;
+    [Tooltip("On an oval raced in lanes (not a plate pack) at least this long (m), drive the road's minimum-curvature line as the ideal in place of the trained one. Off (huge) by default. Alone it is quicker on the mile-and-up ovals (solo, 2026-11-01: Michigan -2.9 s, Pocono -1.8, Phoenix -1.1, Atlanta -0.9, Charlotte -0.6), but in a field it swings 7 m across the lanes the pack races in: Atlanta passes 15-34 -> 5-6 and hard contacts 0-1 -> 3-6, Charlotte the same way. Short tracks: the trained lines are quicker anyway.")]
+    public float optimiseOvalFromMetres = float.MaxValue;
     [Tooltip("How far (m) past the road edge a car avoiding a wreck may go onto the paved run-off, where the track's player-lap line records it (TrainedRacingLine corridor). Only while AIRacingBehaviour sets allowRunOff.")]
     public float runOffEscapeMetres = 8f;
     // Set each step by AIRacingBehaviour while it is driving round a stopped car: the bounds take in the run-off.
@@ -196,6 +209,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     int _apronApplies = -1;          // -1 not resolved yet; 0 no; 1 this track uses the apron for pit road
     bool _apronGeometryReady;
     float _apronInsideSide;          // +1 / -1: which side of the track the infield (and the apron) is on
+    // +1 / -1: which side of the track (lateral sign) the infield is on - the way the lap turns.
+    public float InfieldSide { get { EnsureApronGeometry(); return _apronInsideSide; } }
     bool _apronPaved;                // a paved apron below the racing surface (else the lane hugs the road edge)
     float _apronPitCutover = -1f;    // pit-lane distance a car leaving runs off onto the apron (-1 = no apron exit)
     float _apronBackStraight = -1f;  // main distance the back straight starts at, after the pit exit
@@ -300,6 +315,149 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 return;
             }
         }
+    }
+
+    // ---- Pit exit at speed, on level ground ---------------------------------------------------------------
+    // Past the pit exit line a car leaving is free to go - on an oval that means round the first turn or two
+    // BELOW the apron as hard as it can, and back on at the back straight. Down there the ground is level
+    // (PlayerVehicleController only banks a car on the main road), so it carries far less speed than the
+    // banked racing surface beside it. Pit road is planned off its own bends at flat-ground grip, and a car
+    // running the apron on the main spline is capped to the same flat grip on the apron's tighter radius.
+
+    [Header("Pit Exit")]
+    [Tooltip("In a green race, past the pit exit line, run the rest of pit road as fast as its own bends allow on LEVEL ground, instead of holding the pit speed limit to the end of the lane.")]
+    public bool pitExitAtGripLimit = true;
+    [Tooltip("A car down on an oval's paved apron (leaving the pits, or dropping down to come in) is held to the corner speed the apron's tighter radius allows on level ground - the apron has no banking.")]
+    public bool apronFlatGripCap = true;
+
+    float[] _pitSpeedProfile;   // mph per pit sample: pit limit before the exit line, flat-ground grip after it
+
+    // The speed plan along pit road, built from the drawn lane: the pit limit up to the exit line, then each
+    // bend's level-ground corner speed, joined up by the car's acceleration and braking.
+    void BuildPitSpeedProfile()
+    {
+        _pitSpeedProfile = null;
+        if (_pitSamples == null || _pitSamples.Count < 3 || track == null || track.track == null || _pitLength <= 0f) return;
+
+        int n = _pitSamples.Count;
+        float limitMph = track.track.pitSpeedLimit > 0 ? track.track.pitSpeedLimit : 50f;
+        float exitLine = track.track.PitExitLineDistance;
+        float topMph = TopMph;
+
+        var pts = new Vector2[n];
+        for (int i = 0; i < n; i++) pts[i] = _pitSamples[i].position;
+        var kappa = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            int prev = StepDistinctOpen(pts, i, -1, 0.5f);
+            int next = StepDistinctOpen(pts, i, +1, 0.5f);
+            kappa[i] = prev == i || next == i ? 0f : MengerCurvature(pts[prev], pts[i], pts[next]);
+        }
+        var tmp = new float[n];
+        for (int p = 0; p < 2; p++)
+        {
+            for (int i = 0; i < n; i++)
+                tmp[i] = (kappa[Mathf.Max(0, i - 1)] + kappa[i] + kappa[Mathf.Min(n - 1, i + 1)]) / 3f;
+            (tmp, kappa) = (kappa, tmp);
+        }
+
+        var v = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            if (_pitSamples[i].distance < exitLine) { v[i] = limitMph; continue; }
+            // segIdx -1: no banking and no segment cap - pit road and the apron are level.
+            v[i] = kappa[i] > 1e-4f ? Mathf.Min(topMph, ComputeTargetSpeedForCurvature(kappa[i], -1)) : topMph;
+        }
+        for (int i = 1; i < n; i++)
+        {
+            float d = _pitSamples[i].distance - _pitSamples[i - 1].distance;
+            if (d <= 0f) continue;
+            float vPrev = v[i - 1] * MphToMps;
+            float vMax = Mathf.Sqrt(vPrev * vPrev + 2f * SampleAccel(v[i - 1]) * d) * MpsToMph;
+            if (vMax < v[i]) v[i] = vMax;
+        }
+        for (int i = n - 2; i >= 0; i--)
+        {
+            float d = _pitSamples[i + 1].distance - _pitSamples[i].distance;
+            if (d <= 0f) continue;
+            float vNext = v[i + 1] * MphToMps;
+            float vMax = Mathf.Sqrt(vNext * vNext + 2f * SampleDecel(v[i]) * d) * MpsToMph;
+            if (vMax < v[i]) v[i] = vMax;
+        }
+        _pitSpeedProfile = v;
+    }
+
+    // StepDistinct for an open lane (pit road doesn't loop).
+    static int StepDistinctOpen(Vector2[] pts, int from, int dir, float minDist)
+    {
+        int idx = from;
+        for (int k = 0; k < 8; k++)
+        {
+            int cand = idx + dir;
+            if (cand < 0 || cand >= pts.Length) return idx;
+            idx = cand;
+            if (Vector2.Distance(pts[from], pts[idx]) >= minDist) return idx;
+        }
+        return idx;
+    }
+
+    // The pit-road speed plan (mph) at a distance down the lane; the pit limit when there is no plan.
+    public float PitSpeedPlanAt(float pitDistance)
+    {
+        float limitMph = track != null && track.track != null && track.track.pitSpeedLimit > 0 ? track.track.pitSpeedLimit : 50f;
+        var v = _pitSpeedProfile;
+        if (v == null || _pitSamples == null || v.Length != _pitSamples.Count) return limitMph;
+        int lo = 0, hi = v.Length - 1;
+        if (pitDistance <= _pitSamples[0].distance) return v[0];
+        if (pitDistance >= _pitSamples[hi].distance) return v[hi];
+        while (hi - lo > 1)
+        {
+            int mid = (lo + hi) >> 1;
+            if (_pitSamples[mid].distance <= pitDistance) lo = mid; else hi = mid;
+        }
+        float span = _pitSamples[hi].distance - _pitSamples[lo].distance;
+        float t = span > 0f ? (pitDistance - _pitSamples[lo].distance) / span : 0f;
+        return Mathf.Lerp(v[lo], v[hi], t);
+    }
+
+    // The most a car down on the apron may carry here (mph), MaxValue when it is not down there. The bends ahead
+    // are taken on the apron lane - inside the racing line, so a tighter radius - at level-ground grip, with the
+    // braking from here to each. Only while the car really is off the banked road: that is where the physics
+    // stops banking it (TrackBuilder.BankAt), and once it merges back up the race plan has it again.
+    float ApronFlatCapMph()
+    {
+        if (!apronFlatGripCap || _onPit || !(_apronExitBlend > 0f || _apronEntryActive) || !ApronPitRoad) return float.MaxValue;
+        EnsureApronGeometry();
+        if (!_apronPaved || _curvatureProfile == null || _insideSideProfile == null || _mainSamples == null) return float.MaxValue;
+        int n = _mainSamples.Count;
+        if (n != _curvatureProfile.Length || n != _insideSideProfile.Length) return float.MaxValue;
+
+        int i = SampleIndexAtOrBefore(_distance, n);
+        if (Mathf.Abs(LateralOnTrack) <= _mainSamples[i].width * 0.5f + 0.5f) return float.MaxValue;   // on the banking
+
+        float decel = SampleDecel(_currentMph) * 0.85f;
+        if (decel <= 0.1f) return float.MaxValue;
+        float scan = Mathf.Max(offLineScanMetres, (_currentMph * MphToMps) * (_currentMph * MphToMps) / (2f * decel));
+        float here = _mainSamples[i].distance;
+        float best = float.MaxValue;
+        for (int k = 0; k < n; k++)
+        {
+            int j = (i + k) % n;
+            float d = _mainSamples[j].distance - here;
+            if (d < 0f) d += _mainLength;
+            if (d > scan) break;
+            float kappa = _curvatureProfile[j];
+            if (kappa < 0.002f) continue;   // r > 500 m: no bend to speak of
+            float lineLat = _lateralProfile != null && _lateralProfile.Length == n ? _lateralProfile[j] : 0f;
+            float laneLat = Draftmaster.Tracks.OvalPitApron.LaneLateral(_apronInsideSide, _mainSamples[j].width, _apronPaved, apronCarOffset, apronEdgeInset);
+            float inward = (laneLat - lineLat) * _insideSideProfile[j];
+            float r = 1f / kappa;
+            float rIn = Mathf.Max(r - Mathf.Max(0f, inward), r * 0.3f);
+            float vMps = ComputeTargetSpeedForCurvature(1f / rIn, -1) * MphToMps;
+            float allowed = Mathf.Sqrt(vMps * vMps + 2f * decel * d) * MpsToMph;
+            if (allowed < best) best = allowed;
+        }
+        return best;
     }
 
     // A point `pitDistance` down pit road against the main track: the main distance beside it, its lateral off
@@ -601,8 +759,25 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // True while the car's line IS its assigned oval lane: ovalLane is set and the track is an oval.
     public bool LaneFollowing { get; private set; }
     Draftmaster.Tracks.OvalLanes.Lane _builtLane;
-    // The tactical offset as it applies here: a car holding an oval lane on the main track takes none.
-    float TacticalLateral => LaneFollowing && !_onPit ? 0f : tacticalLateralOffset;
+    // A full lane-car build (BuildLateralProfile with ovalLane set) leaves every array but the driven line the same
+    // whichever of the three lanes it was for, so a later switch between lanes only swaps the line (SwapLaneLine)
+    // instead of rebuilding it all - a full build was ~80 ms, once per lane change per car, the race's recurring
+    // hitch. These are what that build was laid with; a mismatch (Rebuild, conditions changed) builds in full.
+    bool _laneSwapReady;
+    bool _laneSwapTrainedInUse;
+    object _laneSwapSamples;
+    bool _laneSwapAiLanes, _laneSwapPack;
+    // The tactical offset as it applies here: a car holding an oval lane on the main track takes none - except the
+    // swerve round a stopped car (laneAvoidLateral), which a lane car takes on top of its lane.
+    float TacticalLateral => LaneFollowing && !_onPit ? laneAvoidLateral : tacticalLateralOffset;
+
+    // A lane car's swerve round a stopped car (AIRacingBehaviour), metres off its lane line. The lane owns the line,
+    // so the brain's tactical offset is ignored while LaneFollowing - which left a car on an oval no way round a
+    // wreck in its lane but to brake for it. Zero whenever the car is not holding a lane.
+    [System.NonSerialized] public float laneAvoidLateral;
+    // This step the brain is steering round a stopped car (AIRacingBehaviour). The lane train then leaves stopped
+    // cars to the brain's own stop-short cap instead of braking for one the car is already steering out from behind.
+    [System.NonSerialized] public bool avoidingStopped;
 
     [Tooltip("Under green, a car holding an oval lane runs single file behind the car ahead in its lane (OvalTrain, Draftmaster.Sim.TrainFollow): a time gap at its own speed, closed on a lift, held without an accordion. Off = it drives its lane at its own pace and only the racing brain's caps slow it.")]
     public bool trainFollowing = true;
@@ -626,6 +801,24 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _trainWasGreen;
     bool _trainLaunching;
     float _trainHeadwayLimit = float.MaxValue;   // s: the most time gap the train wants, growing back after a launch
+    [Tooltip("Flat-out launch: a car holds the speed it had at the green until the car directly ahead of it (in its lane, or in its path) is pulling away, then goes - the accordion of a real restart. The leader, with nobody ahead, goes on the green, and each row follows a beat after the one in front, so the rows (6-7 m apart at the green) open out as the speed builds. Off = the whole field floors it at the same instant: the rows never open, and when the front row eases off at the trioval everyone behind has to lift (Texas 2026-11-06: 55% of the field off the throttle 5 s after the green, 0.02 m nose to tail).")]
+    public bool staggeredLaunch = true;
+    [Tooltip("Staggered launch: seconds after the car ahead goes before this one does - a driver's reaction, and the time gap each row opens on the one behind it (6.4 m at ~50 mph pace grows by ~15 m by racing speed).")]
+    public float launchReactSeconds = 0.25f;
+    [Tooltip("Staggered launch, behind a free-driven human car: it counts as gone once it is this much (mph) quicker than the speed this car is holding.")]
+    public float launchReactMph = 2f;
+    [Tooltip("Staggered launch: a car ahead further than this (m, centre to centre) is not waited for.")]
+    public float launchWaitGapM = 30f;
+    [Tooltip("Staggered launch: the longest (s) any car holds after the green, whatever the car ahead does.")]
+    public float launchMaxHoldSeconds = 6f;
+    bool _launchHold;          // holding the green speed until the car ahead goes (staggeredLaunch)
+    // Whether this car is still holding its speed for the car ahead to go (staggeredLaunch).
+    public bool LaunchHolding => _launchHold;
+    // Seconds since this car stopped holding after the last green (it went); -1 while it holds. Counted in physics
+    // steps, not off Time.time, so a sped-up game and the headless sims time it the same.
+    public float SecondsSinceLaunch { get; private set; } = -1f;
+    float _launchHeldSeconds;
+    float _launchHoldMps;
     // Whether this car is still in its flat-out launch after the green (flatOutLaunch).
     public bool TrainLaunching => _trainLaunching;
 
@@ -642,8 +835,55 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             _trainLaunching = flatOutLaunch;
             _trainHeadwayLimit = float.MaxValue;
+            // Lane AI only (OvalLaneDirector).
+            _launchHold = flatOutLaunch && staggeredLaunch && OvalLaneDirector.Applies && OvalLaneDirector.Enabled && !_onPit;
+            _launchHoldMps = OvalTrain.SpeedOf(this);
+            SecondsSinceLaunch = _launchHold ? -1f : 0f;
+            _launchHeldSeconds = 0f;
         }
         _trainWasGreen = green;
+        if (!_launchHold && SecondsSinceLaunch >= 0f) SecondsSinceLaunch += Time.fixedDeltaTime;
+        if (_launchHold)
+        {
+            _launchHeldSeconds += Time.fixedDeltaTime;
+            // Holding the green speed until the car ahead goes: pace speed, no lift, no chase. Before (2026-11-06 to
+            // -07) each car held until it reached where "the field leader" was at the green, a point worked out once
+            // for the whole field; at Texas it came out 160 m up the road from the real leader, and the leader and
+            // then every row behind it cruised there at 50 mph - the back of the field 13 s after the green.
+            // The car ahead has gone once it stopped holding a reaction time ago (an AI car), or is pulling away (a
+            // human's, which never holds). Rows can sit a few mph apart at the green, so a speed test alone let a
+            // whole column go in one step and nothing opened.
+            bool found = OvalTrain.TryFindAhead(this, out float holdGap, out float holdAhead, out _trainAhead);
+            // Not on the green step itself: a car ahead that has not run its own step yet still shows the last green's
+            // numbers. A car ahead that never launches (the pace car) is not waited for.
+            bool firstStep = _launchHeldSeconds <= Time.fixedDeltaTime * 1.5f;
+            bool aheadGone = !firstStep && (!found || holdGap > launchWaitGapM
+                             || (_trainAhead != null
+                                 ? !_trainAhead.LaunchHolding && (_trainAhead.SecondsSinceLaunch < 0f
+                                                                 || _trainAhead.SecondsSinceLaunch >= launchReactSeconds)
+                                 : holdAhead > _launchHoldMps + launchReactMph * MphToMps));
+            if (!_trainLaunching || !green || !trainFollowing || _onPit || aheadGone
+                || _launchHeldSeconds > launchMaxHoldSeconds)
+            {
+                _launchHold = false;
+                SecondsSinceLaunch = 0f;
+            }
+            else
+            {
+                TrainActive = true;
+                TrainCapMps = _launchHoldMps;
+                {
+                    // Never into the car ahead while holding (it is either holding too or already away).
+                    var hc = Draftmaster.Sim.TrainFollow.Follow(OvalTrain.Spec, holdGap, OvalTrain.SpeedOf(this), holdAhead,
+                                                                1.5f, float.MaxValue, true);
+                    TrainCapMps = Mathf.Min(TrainCapMps, hc.speedMps);
+                    TrainEmergency = hc.emergency;
+                    TrainGap = holdGap;
+                    TrainWantedGap = hc.wantedGap;
+                }
+                return;
+            }
+        }
         if (_trainLaunching && (!green || !flatOutLaunch || RaceStart.SecondsSinceGreen > launchMaxSeconds))
             _trainLaunching = false;
         if (!_trainLaunching && _trainHeadwayLimit < OvalTrain.Spec.headwaySeconds)
@@ -678,6 +918,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     [Tooltip("Under green, a car in an oval lane train may move to the other lane to pass the car it is following, when it has a run on it and the other lane has room (OvalPass, Draftmaster.Sim.LaneChange; Docs/Oval-Lanes.md stage 3). The move is a smooth blend between the two lane lines at a capped sideways speed and acceleration; it turns back if the room closes while the car is still mostly in its own lane. Off = it stays in its lane.")]
     public bool lanePassing = true;
+    [Tooltip("With lanePassing on: single file a lane car runs the ideal racing line (OvalLanes.Lane.Ideal). When a car is alongside it, the one nearer the infield moves to the inside lane (the leftmost AI line) and the other to the outside lane (the rightmost); once clear, each moves back onto the ideal when it has room. A pass from the ideal pulls out to whichever side lane has room. Off = the lane a car is given is the lane it keeps, as stages 1-3 were measured.")]
+    public bool idealWhenSingleFile = true;
+    [Tooltip("Centre to centre along the track (m) inside which a car counts as alongside, so a car on the ideal moves to its side lane. A Cup car is 4.8 m long: 6.5 m is overlapping by a little under 2 m.")]
+    public float alongsideEnterMetres = 6.5f;
+    [Tooltip("...and beyond which a car in a side lane is clear of it and may go back to the ideal: 9 m is 4 m of daylight. The gap between the two is so a car drawing level does not flick back and forth.")]
+    public float alongsideClearMetres = 9f;
+    [Tooltip("A car out of line on a pass stays in its side lane until it is alongsideClearMetres clear ahead of the car it is passing, or this many seconds have gone (the pass has stalled), then goes back to the ideal when there is room.")]
+    public float pairPassGiveUpSeconds = 30f;
+    SplineDriver _pairPassing;   // the car a pass out of the ideal is on, held until we are clear of it
+    float _pairPassTimer;
     // The lane change under way: ovalLane is already the lane being moved to (its line, speed plan and train), and
     // the car's line is the old lane's blended into it by _laneP (0 = on the old line, 1 = landed). _laneRate is in
     // progress per second.
@@ -696,14 +946,19 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     Draftmaster.Tracks.OvalLanes.Lane _laneFrom;
     float _laneP = 1f, _laneRate;
     bool _laneAborting;
+    bool _laneSplit;     // this move is a split for a car alongside: never turned back
+    float _laneInsideSide = -1f;
     float _laneCooldown;
     float _passAdvantage;
-    float[] _insideLaneLine, _outsideLaneLine;   // both lanes' laterals per main sample (lane mode only)
+    float[] _insideLaneLine, _outsideLaneLine, _idealLaneLine;   // every lane's lateral per main sample (lane mode only)
+    float[] _laneBuildInside, _laneBuildOutside;
 
     // Lateral (m) of an oval lane's line at `distance` along the main track. 0 when the car has no lanes.
     public float LaneLateralAt(Draftmaster.Tracks.OvalLanes.Lane lane, float distance)
     {
-        var line = lane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? _outsideLaneLine : _insideLaneLine;
+        var line = lane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? _outsideLaneLine
+                 : lane == Draftmaster.Tracks.OvalLanes.Lane.Ideal ? _idealLaneLine
+                 : _insideLaneLine;
         return line != null && lane != Draftmaster.Tracks.OvalLanes.Lane.None ? SampleAlongLine(line, distance, 0f) : 0f;
     }
 
@@ -740,7 +995,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             float d = CentreDistanceOnTrack;
             float spacing = Mathf.Abs(LaneLateralAt(ovalLane, d) - LaneLateralAt(_laneFrom, d));
             // The room closing while the car is still mostly in its own lane: turn back, the same smooth way.
-            if (!_laneAborting && Draftmaster.Sim.LaneChange.CanAbort(spec, _laneP, _laneRate, spacing)
+            if (!_laneAborting && !_laneSplit && Draftmaster.Sim.LaneChange.CanAbort(spec, _laneP, _laneRate, spacing)
                 && !OvalPass.TargetLaneClear(this, ovalLane, 0f, spec.abortShare))   // 0: a train gap ahead, not the pass
             {
                 var back = _laneFrom;
@@ -761,7 +1016,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         _laneCooldown -= dt;
         if (!LaneFollowing || !lanePassing || _onPit || usePitLane || _pitApproachBlend > 0f || _apronEntryActive || _apronExitBlend > 0f
-            || !RaceStart.IsGreen || !TrainActive)
+            || !RaceStart.IsGreen)
+        {
+            _passAdvantage = 0f;
+            return;
+        }
+        // Side by side splits onto the inside / outside lanes; single file goes back to the ideal.
+        if (idealWhenSingleFile && StepPairLanes()) return;
+        if (!TrainActive)
         {
             _passAdvantage = 0f;
             return;
@@ -782,23 +1044,126 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         if (_laneCooldown > 0f || TrainEmergency) return;
         if (!Draftmaster.Sim.LaneChange.WantsToPass(spec, _passAdvantage, TrainGap, TrainWantedGap)) return;
-        var target = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside
-            ? Draftmaster.Tracks.OvalLanes.Lane.Outside : Draftmaster.Tracks.OvalLanes.Lane.Inside;
         float here = CentreDistanceOnTrack;
-        float laneSpacing = Mathf.Abs(LaneLateralAt(target, here) - LaneLateralAt(ovalLane, here));
-        if (laneSpacing < 1f) return;   // the road is too narrow for two lanes here
-        if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, laneSpacing), spec.maxCornerAccel)) return;
-        if (!OvalPass.TargetLaneClear(this, target, TrainGap, 1f)) return;
+        if (ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Ideal)
+        {
+            // From the ideal: out to a side lane, the one further from where the car being passed is (more room
+            // between the doors on the way past), or the other if that one has no room.
+            float aheadLat = _trainAhead != null ? _trainAhead.CarLateral : LaneLateralAt(ovalLane, here);
+            var first = Mathf.Abs(LaneLateralAt(Draftmaster.Tracks.OvalLanes.Lane.Outside, here) - aheadLat)
+                        >= Mathf.Abs(LaneLateralAt(Draftmaster.Tracks.OvalLanes.Lane.Inside, here) - aheadLat)
+                ? Draftmaster.Tracks.OvalLanes.Lane.Outside : Draftmaster.Tracks.OvalLanes.Lane.Inside;
+            var second = first == Draftmaster.Tracks.OvalLanes.Lane.Outside
+                ? Draftmaster.Tracks.OvalLanes.Lane.Inside : Draftmaster.Tracks.OvalLanes.Lane.Outside;
+            if (!TryStartPass(first, here, v)) TryStartPass(second, here, v);
+            return;
+        }
+        TryStartPass(ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside
+            ? Draftmaster.Tracks.OvalLanes.Lane.Outside : Draftmaster.Tracks.OvalLanes.Lane.Inside, here, v);
+    }
 
+    bool TryStartPass(Draftmaster.Tracks.OvalLanes.Lane target, float here, float v)
+    {
+        var spec = OvalPass.Spec;
+        float laneSpacing = Mathf.Abs(LaneLateralAt(target, here) - LaneLateralAt(ovalLane, here));
+        if (laneSpacing < 1f) return false;   // the road is too narrow for two lanes here
+        if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, laneSpacing), spec.maxCornerAccel)) return false;
+        if (!OvalPass.TargetLaneClear(this, target, TrainGap, 1f)) return false;
+        BeginLaneMove(target, _trainAhead, false);
+        return true;
+    }
+
+    void BeginLaneMove(Draftmaster.Tracks.OvalLanes.Lane target, SplineDriver passing, bool split)
+    {
         _laneFrom = ovalLane;
         ovalLane = target;
         _laneP = 0f;
         _laneRate = 0f;
         _laneAborting = false;
+        _laneSplit = split;
+        if (passing != null) { _pairPassing = passing; _pairPassTimer = 0f; }
+        else if (target == Draftmaster.Tracks.OvalLanes.Lane.Ideal) _pairPassing = null;
         LaneChanging = true;
-        LaneChangePassing = _trainAhead;
+        LaneChangePassing = passing;
         LaneChangesStarted++;
     }
+
+    // Single file on the ideal, side by side on the inside / outside lanes (idealWhenSingleFile). True when it
+    // started a move this step.
+    bool StepPairLanes()
+    {
+        const Draftmaster.Tracks.OvalLanes.Lane Ideal = Draftmaster.Tracks.OvalLanes.Lane.Ideal,
+                                                Inside = Draftmaster.Tracks.OvalLanes.Lane.Inside,
+                                                Outside = Draftmaster.Tracks.OvalLanes.Lane.Outside;
+        float window = ovalLane == Ideal ? alongsideEnterMetres : alongsideClearMetres;
+        bool alongside = OvalPass.TryFindAlongside(this, window, out float otherLat, out var otherLane);
+        float side = _laneInsideSide;
+        float myIn = CarLateral * side, otherIn = otherLat * side;   // how far toward the infield
+
+        if (alongside)
+        {
+            Draftmaster.Tracks.OvalLanes.Lane target;
+            if (ovalLane == Ideal)
+            {
+                // Take the side lane the car beside us is not in (or heading for); if it is on the ideal too, the
+                // one nearer the infield goes inside. Both cars read the same pair, so they always split.
+                if (otherLane == Inside) target = Outside;
+                else if (otherLane == Outside) target = Inside;
+                else target = otherIn > myIn ? Outside : Inside;
+            }
+            else if (otherLane == ovalLane && (ovalLane == Inside ? otherIn > myIn : otherIn < myIn))
+            {
+                // Both in the same side lane: the one on the wrong side of the other moves over.
+                target = ovalLane == Inside ? Outside : Inside;
+            }
+            else return false;   // in a side lane with a car alongside: hold it
+            // A car alongside is the reason to move, so the move is made even mid-corner and never turned back.
+            BeginLaneMove(target, null, true);
+            return true;
+        }
+
+        if (ovalLane == Ideal) { _pairPassing = null; return false; }
+        // Out of line on a pass: stay out until we are clear ahead of the car being passed (or the pass has stalled
+        // for pairPassGiveUpSeconds, or it has dropped out of reach).
+        if (_pairPassing != null)
+        {
+            _pairPassTimer += Time.fixedDeltaTime;
+            float along = Mathf.Repeat(_pairPassing.CentreDistanceOnTrack - CentreDistanceOnTrack + _mainLength * 0.5f, _mainLength)
+                          - _mainLength * 0.5f;
+            bool still = _pairPassing.isActiveAndEnabled && !_pairPassing.IsOnPit
+                         && along > -alongsideClearMetres && along < 80f && _pairPassTimer < pairPassGiveUpSeconds;
+            if (still) return false;
+            _pairPassing = null;
+        }
+        if (_laneCooldown > 0f || TrainEmergency) return false;
+        // Single file again: back onto the ideal once it has room (the room a move under way keeps) and the corner
+        // allows the sideways move.
+        var spec = OvalPass.Spec;
+        float here = CentreDistanceOnTrack;
+        float spacing = Mathf.Abs(LaneLateralAt(Ideal, here) - LaneLateralAt(ovalLane, here));
+        if (spacing > 0.05f)
+        {
+            float v = OvalTrain.SpeedOf(this);
+            if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, spacing), spec.maxCornerAccel)) return false;
+            if (!OvalPass.TargetLaneClear(this, Ideal, 0f, spec.abortShare)) return false;
+        }
+        BeginLaneMove(Ideal, null, false);
+        return true;
+    }
+
+    // Lays the line, curvature and speed plan for ovalLane now if it has changed since they were last laid (otherwise
+    // it happens at the start of the next physics step). OvalLaneDirector calls it to read the new lane's line.
+    public void RelayLaneNow()
+    {
+        if (ovalLane == _builtLane || _mainSamples == null || _mainSamples.Count < 2) return;
+        BuildLateralProfile();
+        BuildCurvatureProfile();
+        BuildSpeedProfile();
+    }
+
+    // Which side of travel the infield is (-1 left, +1 right), from the lanes themselves: the inside lane is the
+    // one further toward it.
+    public float LaneInsideSide => _laneInsideSide;
 
     void EndLaneChange()
     {
@@ -847,6 +1212,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float fallbackCornerMph = 110f;
     [Tooltip("Scales corner target speeds. Targets are computed from the driven line's real curvature and the same grip the physics uses, so 1.0 = the theoretical limit; keep slightly below 1 for margin, >1 commands past the grip ceiling (physics saturation caps what actually happens).")]
     [Range(0.6f, 2f)] public float cornerSpeedScale = 0.95f;
+    [Tooltip("Corner speeds come from the line's curvature and the car's grip and banking alone. Off = a segment's maxSpeed caps them too - on the generated tracks that is a road-car estimate for the marker boards, 30-45 mph under what a Cup car holds on a banked oval.")]
+    public bool cornerSpeedFromGrip = true;
+    [Tooltip("Under green, a car on the dynamic model is driven to the speed the brain asks for with whatever throttle that takes, not along the brain's accel-curve ramp - the ramp held the throttle at 50-70% down every straight off the plate tracks. Plate tracks always drive this way (TrackConditions.AiFlatOut).")]
+    public bool driveToTarget = true;
+    // Whether this step's speed is the car's own, driven to TargetMph (see driveToTarget).
+    public bool DrivesToTarget => externalMotionController && !_onPit && RaceStart.IsGreen && (driveToTarget || TrackConditions.AiFlatOut);
 
     const float MphToMps = 1f / 2.237f;
     const float MpsToMph = 2.237f;
@@ -1071,13 +1442,35 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         BuildLateralProfile();
         BuildCurvatureProfile();
         BuildSpeedProfile();
+        BuildPitSpeedProfile();
+    }
+
+    // Switches the driven line between the three oval lanes laid by the last full lane-car build. False when that
+    // build no longer stands (see _laneSwapReady), and the caller builds in full.
+    bool SwapLaneLine()
+    {
+        if (!_laneSwapReady || ovalLane == Draftmaster.Tracks.OvalLanes.Lane.None) return false;
+        if (!ReferenceEquals(_laneSwapSamples, _mainSamples) || _laneSwapAiLanes != TrackConditions.AiLanes
+            || _laneSwapPack != TrackConditions.AiPackRacing) return false;
+        var lane = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? _outsideLaneLine
+                 : ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside ? _insideLaneLine
+                 : _idealLaneLine;
+        if (lane == null || _lateralProfile == null || lane.Length != _lateralProfile.Length) return false;
+        _builtLane = ovalLane;
+        LaneFollowing = true;
+        TrainedLineInUse = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Ideal && _laneSwapTrainedInUse;
+        _lateralProfile = (float[])lane.Clone();
+        return true;
     }
 
     void BuildLateralProfile()
     {
+        if (SwapLaneLine()) return;
+        _laneSwapReady = false;
         LaneFollowing = false;
+        laneAvoidLateral = 0f;
         _builtLane = ovalLane;
-        _insideLaneLine = _outsideLaneLine = null;
+        _insideLaneLine = _outsideLaneLine = _idealLaneLine = null;
         if (_mainSamples == null || _mainSamples.Count == 0 || track == null || track.track == null || _anchors == null)
         {
             _lateralProfile = null;
@@ -1088,6 +1481,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         int n = _mainSamples.Count;
+        // A car given an oval lane: its single-file line is the plain ideal (no per-driver lineFactor spread - the
+        // lanes are where cars spread), and the side-by-side lanes come from the same place the gizmo draws them.
+        bool laneCar = ovalLane != Draftmaster.Tracks.OvalLanes.Lane.None
+                       && track.TryGetOvalLanes(_mainSamples, out _laneBuildInside, out _laneBuildOutside);
+        float lf = laneCar ? 0f : lineFactor;
         _lateralProfile = new float[n];
         _leftBoundProfile = new float[n];
         _rightBoundProfile = new float[n];
@@ -1104,7 +1502,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             ? Draftmaster.Tracks.TrainedRacingLines.For(track.track.name)
             : null;
         if (trained != null && !trained.MatchesLength(_mainLength)) trained = null;
-        TrainedLineInUse = trained != null;
+        TrainedLineInUse = TrainedLineFound = trained != null;
 
         // Where the LINE may go. Normally the road (the bound profiles below). A line copied from the player's
         // lap carries the legal corridor it was driven in — road, kerb and tarmac run-off — and may use all of
@@ -1115,11 +1513,38 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _lineLo = new float[n];
         _lineHi = new float[n];
 
+        // Does the authored band pinch anywhere on this oval (ovalFullWidth)?
+        bool ovalLanes = TrackConditions.AiLanes && !TrackConditions.AiPackRacing;
+        BoundsPinched = false;
+        if (ovalLanes)
+        {
+            for (int i = 0; i < n && !BoundsPinched; i++)
+            {
+                float d = _mainSamples[i].distance, w = _mainSamples[i].width;
+                float band = Mathf.Abs(ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), w)
+                                       - ClampToRoad(track.track.GetLateralAt(d, -1f, _anchors, _mainLength), w));
+                float road = ClampToRoad(float.PositiveInfinity, w) - ClampToRoad(float.NegativeInfinity, w);
+                if (!float.IsInfinity(road) && band < 0.4f * road) BoundsPinched = true;
+            }
+        }
+        bool ovalWide = ovalLanes && ovalFullWidth && BoundsPinched;
+
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
             _leftBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, -1f, _anchors, _mainLength), _mainSamples[i].width);
             _rightBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), _mainSamples[i].width);
+            if (ovalWide)
+            {
+                float edgeLo = ClampToRoad(float.NegativeInfinity, _mainSamples[i].width);
+                float edgeHi = ClampToRoad(float.PositiveInfinity, _mainSamples[i].width);
+                if (!float.IsInfinity(edgeLo) && !float.IsInfinity(edgeHi))
+                {
+                    bool leftLow = _leftBoundProfile[i] <= _rightBoundProfile[i];
+                    _leftBoundProfile[i] = leftLow ? edgeLo : edgeHi;
+                    _rightBoundProfile[i] = leftLow ? edgeHi : edgeLo;
+                }
+            }
             _lineLo[i] = Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]);
             _lineHi[i] = Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]);
             _roadLo[i] = Mathf.Min(_lineLo[i], ClampToRoad(float.NegativeInfinity, _mainSamples[i].width));
@@ -1159,40 +1584,40 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 // Same blend TrackInfoV2 does between ideal and the outer lines, just off the trained ideal,
                 // so per-driver lineFactor spread still spreads the field across the road.
                 float ideal = Mathf.Clamp(trained.LateralAt(d), _lineLo[i], _lineHi[i]);
-                _lateralProfile[i] = lineFactor >= 0f
-                    ? Mathf.Lerp(ideal, _rightBoundProfile[i], lineFactor)
-                    : Mathf.Lerp(ideal, _leftBoundProfile[i], -lineFactor);
+                _lateralProfile[i] = lf >= 0f
+                    ? Mathf.Lerp(ideal, _rightBoundProfile[i], lf)
+                    : Mathf.Lerp(ideal, _leftBoundProfile[i], -lf);
             }
             else
             {
-                _lateralProfile[i] = ClampToRoad(track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength), _mainSamples[i].width);
+                _lateralProfile[i] = ClampToRoad(track.track.GetLateralAt(d, lf, _anchors, _mainLength), _mainSamples[i].width);
             }
         }
 
-        // An assigned oval lane replaces the line outright. The bounds open to the road edges (the authored band
-        // can sit inside the bottom groove) so nothing clamps the car off its lane, and the lane is not relaxed
-        // like a line: OvalLanes already smoothed it, and relaxing a constant offset round a corner would pull it
-        // toward the inside.
-        if (ovalLane != Draftmaster.Tracks.OvalLanes.Lane.None
-            && track.TryGetOvalLanes(_mainSamples, out var insideLane, out var outsideLane))
+        // On a road course with no trained line, or one copied from a player's lap: the ideal is the road's own
+        // minimum-curvature line, edge to edge, rather than the authored arc (see optimiseLine). lineFactor still
+        // spreads the field off it toward the authored leftmost / rightmost lines, as it does off a trained line.
+        //
+        // A player's lap is one lap, mistakes and all. Watkins Glen's (the only one, and the only line carrying a
+        // run-off corridor) put the car's centre 2.8 m off the inside at the apexes on average and lapped 1:16.6 in
+        // the calibration sim; the optimised line apexed tighter and lapped 1:12.3, clean (AILineDiagnostics,
+        // 2026-10-31). The lines RacingLineTrainer settled on stay: they beat it at all eleven other road courses.
+        // The lap's corridor still opens the run-off to a car driving round a wreck (runOff above).
+        bool optimised = optimiseLine && !TrackConditions.AiPackRacing
+                         && (roadCourseFullWidth && !TrackConditions.AiLanes && (trained == null || trained.HasCorridor)
+                             || ovalLanes && (TrackConditions.AiOptimisedOvalLine || _mainLength >= optimiseOvalFromMetres)
+                             || ovalWide && optimisePinchedOvals);
+        if (optimised)
         {
-            LaneFollowing = true;
             TrainedLineInUse = false;
-            _insideLaneLine = insideLane;
-            _outsideLaneLine = outsideLane;
-            var lane = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? outsideLane : insideLane;
+            float[] ideal = OptimisedIdeal();
             for (int i = 0; i < n; i++)
             {
-                float w = _mainSamples[i].width;
-                float edgeLo = ClampToRoad(float.NegativeInfinity, w), edgeHi = ClampToRoad(float.PositiveInfinity, w);
-                if (float.IsInfinity(edgeLo) || float.IsInfinity(edgeHi)) { edgeLo = _lineLo[i]; edgeHi = _lineHi[i]; }
-                float lo = Mathf.Min(edgeLo, lane[i]), hi = Mathf.Max(edgeHi, lane[i]);
-                bool leftLow = _leftBoundProfile[i] <= _rightBoundProfile[i];
-                _leftBoundProfile[i] = leftLow ? lo : hi;
-                _rightBoundProfile[i] = leftLow ? hi : lo;
-                _lineLo[i] = _roadLo[i] = _escapeLo[i] = lo;
-                _lineHi[i] = _roadHi[i] = _escapeHi[i] = hi;
-                _lateralProfile[i] = lane[i];
+                _lineLo[i] = Mathf.Min(_lineLo[i], _roadLo[i]);
+                _lineHi[i] = Mathf.Max(_lineHi[i], _roadHi[i]);
+                _lateralProfile[i] = lf >= 0f
+                    ? Mathf.Lerp(ideal[i], _rightBoundProfile[i], lf)
+                    : Mathf.Lerp(ideal[i], _leftBoundProfile[i], -lf);
             }
         }
 
@@ -1211,7 +1636,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // sample sat on top of the first — and a by-index average treats a 0.57 m step like a 2 m one. Where the
         // line was crossing the road there, that folded it into an 8 m "hairpin" on the run to the flag, and the
         // car braked to 31 mph for it every lap. With even spacing the two are identical.
-        int relaxPasses = LaneFollowing ? 0 : trained != null ? trainedLineSmoothingPasses : smoothingIterations;
+        // An optimised line is already as smooth as the road allows; it only wants the same light rounding off.
+        int relaxPasses = trained != null || optimised ? trainedLineSmoothingPasses : smoothingIterations;
         var tmp = new float[n];
         for (int p = 0; p < relaxPasses; p++)
         {
@@ -1228,7 +1654,107 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             (tmp, _lateralProfile) = (_lateralProfile, tmp);
         }
+
+        // An assigned oval lane. Ideal (single file) keeps the line just laid; Inside / Outside (side by side)
+        // replace it outright with that lane, which is not relaxed like a line - BuildFromLines already smoothed it,
+        // and relaxing an offset line round a corner pulls it toward the inside. Either way the bounds open to the
+        // road edges (the authored band can sit inside a lane) so nothing clamps the car off its lane, and all three
+        // lanes are kept for the blends between them (LaneLateralAt).
+        if (laneCar)
+        {
+            LaneFollowing = true;
+            _laneSwapTrainedInUse = TrainedLineInUse;
+            if (ovalLane != Draftmaster.Tracks.OvalLanes.Lane.Ideal) TrainedLineInUse = false;
+            _insideLaneLine = _laneBuildInside;
+            _outsideLaneLine = _laneBuildOutside;
+            double towardInside = 0.0;
+            for (int i = 0; i < n; i++) towardInside += _insideLaneLine[i] - _outsideLaneLine[i];
+            _laneInsideSide = towardInside < 0.0 ? -1f : 1f;
+            _idealLaneLine = (float[])_lateralProfile.Clone();
+            var lane = ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Outside ? _outsideLaneLine
+                     : ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside ? _insideLaneLine
+                     : _idealLaneLine;
+            for (int i = 0; i < n; i++)
+            {
+                float w = _mainSamples[i].width;
+                float edgeLo = ClampToRoad(float.NegativeInfinity, w), edgeHi = ClampToRoad(float.PositiveInfinity, w);
+                if (float.IsInfinity(edgeLo) || float.IsInfinity(edgeHi)) { edgeLo = _lineLo[i]; edgeHi = _lineHi[i]; }
+                float lo = Mathf.Min(edgeLo, Mathf.Min(_insideLaneLine[i], _outsideLaneLine[i]));
+                float hi = Mathf.Max(edgeHi, Mathf.Max(_insideLaneLine[i], _outsideLaneLine[i]));
+                lo = Mathf.Min(lo, _idealLaneLine[i]);
+                hi = Mathf.Max(hi, _idealLaneLine[i]);
+                bool leftLow = _leftBoundProfile[i] <= _rightBoundProfile[i];
+                _leftBoundProfile[i] = leftLow ? lo : hi;
+                _rightBoundProfile[i] = leftLow ? hi : lo;
+                _lineLo[i] = _roadLo[i] = _escapeLo[i] = lo;
+                _lineHi[i] = _roadHi[i] = _escapeHi[i] = hi;
+                _lateralProfile[i] = lane[i];
+            }
+            _laneSwapReady = true;
+            _laneSwapSamples = _mainSamples;
+            _laneSwapAiLanes = TrackConditions.AiLanes;
+            _laneSwapPack = TrackConditions.AiPackRacing;
+        }
     }
+
+    // The minimum-curvature line through the road (less RoadEdgeMargin) for this track, solved once and shared by
+    // every car on it: it depends only on the geometry, and each car's own lineFactor is blended on afterwards.
+    // Keyed on the sample count and lap length too, so a regenerated road is solved again.
+    static readonly Dictionary<TrackInfoV2, (int n, float length, float[] ideal)> s_optimisedIdeal = new();
+
+    float[] OptimisedIdeal()
+    {
+        int n = _mainSamples.Count;
+        var info = track.track;
+        if (s_optimisedIdeal.TryGetValue(info, out var hit) && hit.n == n && Mathf.Approximately(hit.length, _mainLength))
+            return hit.ideal;
+
+        // On an oval the solved line is rounded off in world space afterwards (below), which wants no zero-length
+        // chord: a loop's closing sample sits on top of its first, so that one is left out and given the first's offset.
+        bool oval = TrackConditions.AiLanes;
+        int m = oval && loop && n > 3 && (_mainSamples[n - 1].position - _mainSamples[0].position).sqrMagnitude < 0.25f ? n - 1 : n;
+        var centre = new Vector2[m];
+        var right = new Vector2[m];
+        var start = new float[m];
+        var lo = new float[m];
+        var hi = new float[m];
+        for (int i = 0; i < m; i++)
+        {
+            var s = _mainSamples[i];
+            centre[i] = s.position;
+            right[i] = new Vector2(s.tangent.y, -s.tangent.x).normalized;
+            start[i] = ClampToRoad(info.GetLateralAt(s.distance, 0f, _anchors, _mainLength), s.width);
+            lo[i] = _roadLo[i];
+            hi[i] = _roadHi[i];
+        }
+        var solved = Draftmaster.Sim.MinCurvatureLine.Solve(centre, right, lo, hi, start, loop);
+        // The least-squares solve leaves a short tight hump where a short sharp bend meets a straight - Texas's
+        // trioval kinks, 50 m of R143 on a 15.5 m road, came out R170-200 at the kink's end and the car lifted to
+        // 146 there. On an oval, round it off in world space: each point eases toward the middle of its neighbours'
+        // chord, which takes curvature out where it bunches and barely moves a long arc (Texas lap 31.9 -> 31.4 s in
+        // the lap sim, T4 146 -> 155). Not on a road course: there the same pull would drag a hairpin's whole arc
+        // onto the inside kerb.
+        for (int pass = 0; oval && pass < OvalLineRoundingPasses; pass++)
+        {
+            var nxt = (float[])solved.Clone();
+            for (int i = 0; i < m; i++)
+            {
+                int a = i > 0 ? i - 1 : (loop ? m - 1 : 0), b = i < m - 1 ? i + 1 : (loop ? 0 : m - 1);
+                if (a == i || b == i) continue;
+                Vector2 pa = centre[a] + right[a] * solved[a], pb = centre[b] + right[b] * solved[b];
+                Vector2 mid = 0.5f * (pa + pb);
+                float target = Vector2.Dot(mid - centre[i], right[i]);
+                nxt[i] = Mathf.Clamp(Mathf.Lerp(solved[i], target, 0.5f), lo[i], hi[i]);
+            }
+            solved = nxt;
+        }
+        var ideal = new float[n];
+        for (int i = 0; i < n; i++) ideal[i] = solved[i < m ? i : 0];
+        s_optimisedIdeal[info] = (n, _mainLength, ideal);
+        return ideal;
+    }
+
+    const int OvalLineRoundingPasses = 200;
 
     // Track distance from main sample a forward to main sample b, across the start/finish wrap on a loop.
     float SampleGap(int a, int b)
@@ -1470,7 +1996,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 // Flat out (a plated superspeedway): the turns are taken at full throttle like the straights. The
                 // plate keeps the car under what the banking holds; the live grip governor stays as the backstop.
                 _gripLimitProfile[i] = float.MaxValue;
-                _speedProfile[i] = (vehicleInfo != null ? vehicleInfo.topSpeed : 200f) * _profilePace;
+                _speedProfile[i] = TopMph * _profilePace;
             }
             else if (kappa > 1e-4f)
             {
@@ -1539,39 +2065,30 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // 1 the top), for the progressive banking under it (BankedGrip.BankAcross).
     float ComputeTargetSpeedForCurvature(float kappa, int segIdx, bool atLimit = false, float acrossFrac = 0.5f)
     {
-        float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        float topMph = TopMph;
         float radius = 1f / kappa;
 
-        float baseMph;
-        if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
-        {
-            // The curve encodes corner speed by radius at nominal (1.0) grip; corner speed scales with √μ.
-            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective * driverGrip, 0.05f));
-            // The curve is a peak-grip speed too; the car only holds part of that in a corner (AIGrip).
-            baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
-        }
-        else
-        {
-            // Not the tyre's peak: the share of it the car actually holds at the speed it comes out at.
-            baseMph = AIGrip.CornerSpeed(radius, _bakedALatMaxMps2) * MpsToMph;
-        }
-
-        // Banking: what the physics gives the car on this bank (BankedGrip), not a flat bonus. The old
-        // banking × bankingMphPerDegree added 77 mph at Daytona while the physics ignored banking entirely, so
-        // every AI car planned the turns faster than it could hold them and slid wide on the limit.
+        // What the car holds on this radius, measured (AIGrip, the skid pad): the share of the tyres' peak it keeps at the
+        // speed it comes out at, then what the banking under this line adds (BankedGrip: the tyres thrown into the bank
+        // and gravity's pull down it). Not the peak, and not the hand-drawn VehicleInfo.corneringSpeedCurve the plan
+        // used to read - that sat ~9% under the car's real grip on every radius over 200 m, which put the AI 10-20 mph
+        // under what it could hold through every fast oval turn.
+        float flat = Mathf.Max(_bakedALatMaxMps2 * Mathf.Max(driverGrip, 0.05f), 0.1f);
+        float bank = 0f;
         float capMph = topMph;
         var segs = (track != null && track.track != null) ? track.track.segments : null;
-        if (segs != null && segIdx >= 0 && segIdx < segs.Length)
+        bool haveSeg = segs != null && segIdx >= 0 && segIdx < segs.Length;
+        if (haveSeg && Mathf.Abs(segs[segIdx].banking) > 0.01f)
+            bank = Draftmaster.Sim.BankedGrip.BankAcross(segs[segIdx].banking, acrossFrac);
+        float baseMph = AIGrip.BankedCornerSpeed(radius, flat, bank) * MpsToMph;
+        if (haveSeg)
         {
             var seg = segs[segIdx];
-            if (Mathf.Abs(seg.banking) > 0.01f)
-            {
-                float flat = Mathf.Max(_bakedALatMaxMps2, 0.1f);
-                float bank = Draftmaster.Sim.BankedGrip.BankAcross(seg.banking, acrossFrac);
-                baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(flat, bank));
-            }
-            if (seg.maxSpeed > 0) capMph = Mathf.Min(capMph, seg.maxSpeed);
+            // The segment's maxSpeed is not a cap here. On the generated tracks it is OvalGeometry /
+            // RoadCourseGeometry's rough hint for the marker boards, worked out at a road car's 1.05 g, and it held
+            // every oval corner 30-45 mph under what the car's grip and banking hold (Charlotte 109 mph planned,
+            // 150 held) - the AI ran 20-40% off a real lap while the player's car, which never reads it, didn't.
+            if (seg.maxSpeed > 0 && !cornerSpeedFromGrip) capMph = Mathf.Min(capMph, seg.maxSpeed);
         }
         return Mathf.Clamp(baseMph * (atLimit ? 1f : cornerSpeedScale), 5f, capMph);
     }
@@ -1593,7 +2110,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (d < 0f) d += _mainLength;
         if (d <= 0f) return;
         float vPrev = _speedProfile[prev] * MphToMps;
-        float a = SampleAccel(_speedProfile[prev] / ProfileStretch) * ProfileStretch;
+        // What the engine really pulls (driven to the plan, the car gets exactly this), never less than the old
+        // pace-stretched curve. A car slower than its pace still plans its own lower pull.
+        float a = externalMotionController
+            ? EngineAccelMps2(_speedProfile[prev]) * Mathf.Min(1f, paceMultiplier)
+            : SampleAccel(_speedProfile[prev] / ProfileStretch) * ProfileStretch;
         a *= FrictionCircleHeadroom(prev, vPrev);
         float vMaxMps = Mathf.Sqrt(vPrev * vPrev + 2f * a * d);
         float vMaxMph = vMaxMps * MpsToMph;
@@ -1614,6 +2135,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     }
 
     float ProfileAt(float distance) => SampleAlongLine(_speedProfile, distance, 0f);
+
+    // The braking the speed plan asks for over the next second (m/s²; 0 where it isn't slowing).
+    public float PlannedDecelMps2()
+    {
+        if (_speedProfile == null || _speedProfile.Length == 0 || _onPit) return 0f;
+        float v = Mathf.Max(_currentMph * MphToMps, 1f);
+        return Mathf.Max(0f, (ProfileAt(_distance) - ProfileAt(_distance + v)) * MphToMps);
+    }
 
     [Tooltip("A car off its racing line toward the inside of a bend coming up (two wide, or on the inside of a pass) takes the tighter radius at the speed it allows, and brakes for it in time. The profile is the line's - without this the inside car arrived at line speed on a smaller radius, ran wide and into the car beside it.")]
     public bool offLineCornerSpeed = true;
@@ -1684,31 +2213,22 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     float ComputeTargetSpeedForSegment(TrackInfoV2.TrackSegment seg)
     {
-        float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        float topMph = TopMph;
         if (seg.maxSpeed > 0) return Mathf.Min(topMph, seg.maxSpeed);
         if (seg.type == TrackInfoV2.SegmentType.Straight || Mathf.Approximately(seg.angle, 0f)) return topMph;
 
         float radius = seg.length / Mathf.Max(Mathf.Abs(seg.angle) * Mathf.Deg2Rad, 1e-4f);
         float baseMph;
-        if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
+        if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
         {
-            // The curve encodes corner speed at nominal (1.0) grip. Corner speed scales with √μ, so fold the
-            // AI's effective grip in (global boost × AI-only bonus) — otherwise the AI corner at raw curve
-            // speeds while the physics enjoy the multiplied grip and the targets undersell what the car can do.
-            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective * driverGrip, 0.05f));
-            baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
-        }
-        else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
-        {
-            // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions (incl. AI bonus) × tire wear grip.
-            float gripMul = TrackConditions.AiEffective;
+            // What the car holds on this radius and bank (AIGrip, measured): the track conditions (incl. the AI bonus),
+            // the driver's own grip and the tyres' wear.
+            float gripMul = TrackConditions.AiEffective * Mathf.Max(driverGrip, 0.05f);
             var tireModel = GetComponent<TireModel>();
             if (tireModel != null) gripMul *= tireModel.OverallGrip;
             else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }
             float aLatMps2 = vehicleInfo.maxLateralG * Mathf.Max(0.05f, gripMul) * 9.81f;
-            float vMps = AIGrip.CornerSpeed(radius, Draftmaster.Sim.BankedGrip.Capacity(aLatMps2, seg.banking));
-            baseMph = vMps * MpsToMph;
+            baseMph = AIGrip.BankedCornerSpeed(radius, aLatMps2, seg.banking) * MpsToMph;
         }
         else
         {
@@ -1798,12 +2318,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // Passing by lane change (lanePassing): may set a new ovalLane, re-laid just below on this same step.
         StepLaneChange();
         // A new oval lane assignment: re-lay the line, and the curvature and speed plan built on it.
-        if (ovalLane != _builtLane)
-        {
-            BuildLateralProfile();
-            BuildCurvatureProfile();
-            BuildSpeedProfile();
-        }
+        RelayLaneNow();
 
         // Pre-grid hold: sit parked in the pit box / at the pit exit until the formation lap begins.
         // Still Place() so the pose (and the commanded point feeding any dynamic model) tracks the box,
@@ -1858,9 +2373,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (_onPit)
             {
                 float pitLimit = track != null && track.track != null ? track.track.pitSpeedLimit : 50f;
+                // In a green race the drawn lane's own plan: the limit to the exit line, then as fast as the
+                // lane's bends allow on level ground. Otherwise (formation, pace car) the limit to the end.
+                float laneMph = pitExitAtGripLimit && RaceStart.IsGreen ? PitSpeedPlanAt(_distance) : pitLimit;
                 // aiMaxSpeedMph applies on the lane too: PitStopController's pit ACC queues a car behind
                 // slower/stopped lane traffic through it (every other writer leaves it at/above the limit).
-                targetMph = pitStopHold ? 0f : Mathf.Min(pitLimit, aiMaxSpeedMph); // hold = a service stop at the box
+                targetMph = pitStopHold ? 0f : Mathf.Min(laneMph, aiMaxSpeedMph); // hold = a service stop at the box
             }
             else if (_speedProfile != null)
             {
@@ -1880,6 +2398,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 // corner) would put the car back over it.
                 targetMph = Mathf.Min(ProfileAt(_distance) * ratio + aiSpeedBoostMph, GripLimitAt(_distance));
                 if (offLineCornerSpeed) targetMph = Mathf.Min(targetMph, OffLineCornerCapMph(ratio));
+                targetMph = Mathf.Min(targetMph, ApronFlatCapMph());
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
                 if (_pitApproachCapMph < targetMph) targetMph = _pitApproachCapMph;
@@ -1896,10 +2415,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             TargetMph = targetMph;
             UpdateSpeedToward(targetMph);
-            // Flat out, the car is driven to TargetMph with the throttle wide open, not along this ramp - so the
+            // Driven to TargetMph (driveToTarget, and flat out on the plate tracks), not along this ramp - so the
             // brain's speed IS the car's. Left to ramp on its own it ran 25 mph ahead of the car, and every closing
             // speed the racing brain judged a pack by was fiction.
-            if (externalMotionController && TrackConditions.AiFlatOut && !_onPit && RaceStart.IsGreen)
+            if (DrivesToTarget)
                 _currentMph = externalActualSpeedMps * MpsToMph;
             speed = _currentMph * MphToMps;
         }
@@ -1970,7 +2489,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // pace-normalised speed and scaled up, top-speed ceiling raised to match. Sub-1 pace keeps
         // the stock envelope (formation laps just chase lower targets with normal urgency).
         float stretch = Mathf.Max(1f, paceMultiplier);
-        float topMph = (vehicleInfo != null ? vehicleInfo.topSpeed : 200f) * stretch;
+        float topMph = TopMph * stretch;
         if (_currentMph < targetMph)
         {
             float accel = SampleAccel(_currentMph / stretch) * stretch;
@@ -1992,6 +2511,20 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // aiSpeedBoostMph is aero (slipstream) — it legitimately carries a car past its stock flat-out
         // speed, so the ceiling rises with it. Without this the boost is a dead letter on the straights.
         _currentMph = Mathf.Clamp(_currentMph, 0f, topMph + Mathf.Max(0f, aiSpeedBoostMph));
+    }
+
+    // The car's top speed (mph) at this track: the vehicle's, stretched by the package (TrackConditions.PackageSpeedScale).
+    float TopMph => (vehicleInfo != null ? vehicleInfo.topSpeed : 200f) * Mathf.Max(0.1f, TrackConditions.PackageSpeedScale);
+
+    // The engine's pull (m/s^2) at this speed as the physics gives this car (PlayerVehicleController): the accel curve
+    // stretched by the AI's power, times the conditions' power (EffectivePower), that AI power and the package. The
+    // speed plan's straights used the bare curve, a fifth under what the engine pulls, and driving to the plan held the
+    // throttle at ~83% down every straight - the AI never once ran wide open.
+    float EngineAccelMps2(float mph)
+    {
+        float aiPower = TrackConditions.AiPowerScale;
+        return SampleAccel(mph / Mathf.Max(1f, aiPower)) * TrackConditions.EffectivePower * aiPower
+               * Mathf.Max(0.1f, TrackConditions.PackageSpeedScale);
     }
 
     float SampleAccel(float mph)

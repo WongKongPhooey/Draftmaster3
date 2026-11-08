@@ -29,6 +29,16 @@ namespace Draftmaster.Sim
             return clearForSeconds < clearNeededSeconds;
         }
 
+        // How far (m) up the road from the race leader the safety car comes out: at least `minGap`, and far enough for a
+        // leader at `leaderMps` to come down to the safety car's `cruiseMps` braking at `decelMps2`, plus `minGap` to
+        // spare. A fixed 80 m was fine from 140 mph; from a plate pack's 190 it asked for over 3 g and the leader drove
+        // straight past the safety car, splitting the field a lap apart.
+        public static float PickupGap(float leaderMps, float cruiseMps, float decelMps2, float minGap)
+        {
+            float closing = UnityEngine.Mathf.Max(0f, leaderMps * leaderMps - cruiseMps * cruiseMps);
+            return UnityEngine.Mathf.Max(minGap, closing / (2f * UnityEngine.Mathf.Max(0.5f, decelMps2)) + minGap);
+        }
+
         // Metres the safety car must cover, from where it came out, before it may take the pit entry. The green waves
         // as the leader reaches the line after it pits, so the run from the entry to the line counts towards `minLaps`
         // laps; the window it commits inside (`window`) is taken off so it is not a whole lap late. Never under half a

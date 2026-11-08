@@ -126,7 +126,6 @@ public static class DaytonaPackageAuthoring
         }
     }
 
-
     // Only the grandstands, for when they are all that has changed: re-running Author regenerates the geometry and
     // re-lays the whole paddock, which is far more than a stand needs. Re-lays the generated stands (the front
     // stretch as one stand bent round the tri-oval), keeps the grandstand gate's seat inside a stand, and takes out
@@ -460,7 +459,7 @@ public static class DaytonaPackageAuthoring
             ? -chordStart.normal : chordStart.normal;
         // The boxes go on the paddock side of pit road, as at Watkins Glen: pit road, then the boxes, then the
         // paddock behind them. On this anticlockwise lap that is the left of pit-lane travel.
-        builder.pitBoxLaneOnLeft = Vector2.Dot(outward, chordStart.normal) < 0f;
+        builder.pitBoxLaneOnRight = Vector2.Dot(outward, chordStart.normal) >= 0f;
 
         // Ends of the front stretch, projected onto the chord. A traced lap has no "Front Stretch" pieces - it
         // starts on the start/finish line, mid tri-oval - so there the boxes run the length of the chord itself.

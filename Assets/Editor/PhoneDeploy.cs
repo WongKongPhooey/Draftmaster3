@@ -30,7 +30,10 @@ using Debug = UnityEngine.Debug;
 // wedges the editor for the rest of the night). The menu item only schedules the work and returns, because a
 // build blocks the editor for many minutes and the MCP call would time out; progress goes to a status file
 // Tokenmaxxer polls: Library/PhoneDeploy/status.json.
-public static class PhoneDeploy
+//
+// The Google Play half — build a release bundle and push it to the internal testing track — is in
+// PhoneDeploy.PlayUpload.cs.
+public static partial class PhoneDeploy
 {
     const string PhoneModel = "FCP_N49";
     const string StatusDir = "Library/PhoneDeploy";
@@ -59,6 +62,28 @@ public static class PhoneDeploy
     [MenuItem("Draftmaster/Build/After Task: Bump Version + Build And Run On Phone", priority = 201)]
     static void AfterTaskFull() => Schedule("full");
 
+    // A new minor version: 0.7.x -> 0.8.0 in Player Settings. Bumps counted by patches and not yet applied carry on
+    // counting from the new base (the title then reads 0.8.<pending>), so the next full build lands on the same number.
+    // The version code is left alone - only the name moves.
+    [MenuItem("Draftmaster/Build/Bump Minor Version", priority = 210)]
+    static void BumpMinor()
+    {
+        string v = PlayerSettings.bundleVersion ?? "";
+        var parts = v.Split('.');
+        if (parts.Length < 2 || !int.TryParse(parts[1], out int minor))
+        {
+            Debug.LogWarning($"PhoneDeploy: version '{v}' has no minor number to bump; left as it is.");
+            return;
+        }
+        parts[1] = (minor + 1).ToString();
+        for (int i = 2; i < parts.Length; i++) parts[i] = "0";
+        PlayerSettings.bundleVersion = string.Join(".", parts);
+        AssetDatabase.SaveAssets();
+        WriteDisplayVersion(Stepped(PlayerSettings.bundleVersion, PendingBumps));
+        Debug.Log($"PhoneDeploy: minor version bumped {v} -> {PlayerSettings.bundleVersion} " +
+                  $"({PendingBumps} counted bump(s) pending; title reads {Stepped(PlayerSettings.bundleVersion, PendingBumps)}).");
+    }
+
     // For a deploy that has to be retried after the bump already happened (a phone that wasn't the Run Device).
     [MenuItem("Draftmaster/Build/Patch And Run On Phone (No Version Bump)", priority = 202)]
     static void PatchNoBump() => Schedule("patch", bump: false);
@@ -75,7 +100,10 @@ public static class PhoneDeploy
         EditorApplication.delayCall += () => RunRelease(s);
     }
 
-    static void RunRelease(Status s)
+    // upload: push the finished bundle to the Play Console testing track (PhoneDeploy.PlayUpload.cs). The version
+    // code is then bumped past whatever Play already holds before anything is built, and Play is asked first, so a
+    // missing key or a dead network stops the run before a ten-minute build rather than after it.
+    static void RunRelease(Status s, bool upload = false)
     {
         bool wasBundle = EditorUserBuildSettings.buildAppBundle;
         bool wasDev = EditorUserBuildSettings.development;
@@ -89,7 +117,8 @@ public static class PhoneDeploy
                 return;
             }
             // Patches only counted their bumps; an upload has to carry them, or its code could trail the last one.
-            if (PendingBumps > 0) BumpVersion(s, PendingBumps);
+            // (An upload applies them below, together with whatever it takes to clear Play's highest code.)
+            if (!upload && PendingBumps > 0) BumpVersion(s, PendingBumps);
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
                 Finish(s, "skipped", "", $"Active platform is {EditorUserBuildSettings.activeBuildTarget}, not Android.");
@@ -108,6 +137,7 @@ public static class PhoneDeploy
                                          "Player Settings > Publishing Settings. Unity forgets it on restart.");
                 return;
             }
+            if (upload && !PrepareUploadVersion(s)) return;
 
             EditorUserBuildSettings.buildAppBundle = true;
             EditorUserBuildSettings.development = false;
@@ -124,7 +154,9 @@ public static class PhoneDeploy
             };
             Directory.CreateDirectory(Path.GetDirectoryName(bpo.locationPathName));
             var report = BuildPipeline.BuildPlayer(bpo);
-            if (report.summary.result == BuildResult.Succeeded)
+            if (report.summary.result == BuildResult.Succeeded && upload)
+                StartUpload(s, bpo.locationPathName, report);
+            else if (report.summary.result == BuildResult.Succeeded)
                 Finish(s, "deployed", "release",
                        $"Release bundle {bpo.locationPathName} ({report.summary.totalSize / (1024 * 1024)} MB) built in " +
                        $"{report.summary.totalTime.TotalMinutes:0.0} min. Build settings back to development APK.");
@@ -527,7 +559,13 @@ public static class PhoneDeploy
         s.message = message;
         s.finishedAt = Now();
         Write(s);
-        Debug.Log($"PhoneDeploy: {state} — {message}");
+        string line = $"PhoneDeploy: {state} — {message}";
+        // Skipped and failed runs are warnings/errors so they show in the status bar, not just in the Console's
+        // scroll-back - a plain Log line made a run that stopped at its first check look like one that never ran.
+        if (state == "failed") Debug.LogError(line);
+        else if (state == "skipped") Debug.LogWarning(line);
+        else Debug.Log(line);
+        EndRunProgress(s);
     }
 
     static void Write(Status s)

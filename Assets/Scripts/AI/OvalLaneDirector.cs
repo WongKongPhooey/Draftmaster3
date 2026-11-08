@@ -111,11 +111,12 @@ public class OvalLaneDirector : MonoBehaviour
             if (!Eligible(d) || d.ovalLane != OvalLanes.Lane.None) continue;
             var lane = Choose(d, drivers);
             if (lane == OvalLanes.Lane.None) continue;
-            float off = d.CarLateral - LaneAt(lane == OvalLanes.Lane.Inside ? _inside : _outside, d.CentreDistanceOnTrack);
-            d.lateralOffset = Mathf.Clamp(off, -maxHandoverOffset, maxHandoverOffset);
             d.ovalLane = lane;
+            d.RelayLaneNow();   // lay the lane now, to hand it over from where the car is relative to its line
+            float off = d.CarLateral - d.LaneLateralAt(lane, d.CentreDistanceOnTrack);
+            d.lateralOffset = Mathf.Clamp(off, -maxHandoverOffset, maxHandoverOffset);
             _given.Add(d);
-            if (d.GetComponent<PracticeAIStint>() != null) _easing.Add(d);
+            if (d.TryGetComponent<PracticeAIStint>(out _)) _easing.Add(d);
             budget--;
         }
     }
@@ -159,8 +160,9 @@ public class OvalLaneDirector : MonoBehaviour
         if (d == _safetyCarDriver) return false;
         if (_safetyCarDriver == null)
         {
-            var sc = d.GetComponent<SafetyCar>();
-            if (sc != null) { _safetyCarDriver = d; return false; }
+            // TryGetComponent: a failed GetComponent allocates its null-error message in the editor, and this runs
+            // for every eligible car every step while no safety car has been found (~0.5 KB each).
+            if (d.TryGetComponent<SafetyCar>(out _)) { _safetyCarDriver = d; return false; }
         }
         return true;
     }
@@ -177,13 +179,16 @@ public class OvalLaneDirector : MonoBehaviour
             if (o == null || o == self || !o.isActiveAndEnabled || o.IsOnPit || o == _safetyCarDriver) continue;
             float along = Mathf.Abs(Mathf.Repeat(o.CentreDistanceOnTrack - myD + _lapLength * 0.5f, _lapLength) - _lapLength * 0.5f);
             if (along > alongsideMetres || Mathf.Abs(o.CarLateral - myLat) > alongsideLateral) continue;
-            if (o.LaneFollowing && o.ovalLane != OvalLanes.Lane.None) taken = o.ovalLane;
+            if (o.LaneFollowing && (o.ovalLane == OvalLanes.Lane.Inside || o.ovalLane == OvalLanes.Lane.Outside)) taken = o.ovalLane;
             else if (o.CarLateral * _insideSide > myIn) besideInner = true;
             else besideOuter = true;
         }
-        if (taken != OvalLanes.Lane.None)
-            return taken == OvalLanes.Lane.Inside ? OvalLanes.Lane.Outside : OvalLanes.Lane.Inside;
+        if (taken == OvalLanes.Lane.Inside) return OvalLanes.Lane.Outside;
+        if (taken == OvalLanes.Lane.Outside) return OvalLanes.Lane.Inside;
         if (besideInner != besideOuter) return besideInner ? OvalLanes.Lane.Outside : OvalLanes.Lane.Inside;
+        // Single file (idealWhenSingleFile): the ideal line. A car alongside one on the ideal is split from it on
+        // the brain's next step (SplineDriver.StepPairLanes), as any pair drawing level is.
+        if (self.idealWhenSingleFile && self.lanePassing) return OvalLanes.Lane.Ideal;
 
         float inLat = LaneAt(_inside, myD), outLat = LaneAt(_outside, myD);
         return Mathf.Abs(myLat - inLat) <= Mathf.Abs(myLat - outLat) ? OvalLanes.Lane.Inside : OvalLanes.Lane.Outside;

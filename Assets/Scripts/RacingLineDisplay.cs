@@ -6,7 +6,7 @@ using UnityEngine;
 // yellow = lifting / holding corner speed, red = braking.
 //
 // The colours come from a speed profile built the same way SplineDriver's is: per-segment corner
-// speed targets from the player's VehicleInfo (corneringSpeedCurve or maxLateralG + banking),
+// speed targets from the player's VehicleInfo (maxLateralG + banking, through AIGrip's measured grip),
 // relaxed by forward accel and backward brake passes over the sampled centerline. Where the
 // profile falls at brake rate the line is red; where it holds below top speed it's yellow; a short
 // lift band is painted ahead of every brake zone.
@@ -286,16 +286,10 @@ public class RacingLineDisplay : MonoBehaviour
 
         float radius = seg.length / Mathf.Max(Mathf.Abs(seg.angle) * Mathf.Deg2Rad, 1e-4f);
         float grip = Mathf.Max(TrackConditions.Effective, 0.05f);
-        float baseMph;
-        if (vi != null && vi.corneringSpeedCurve != null && vi.corneringSpeedCurve.length > 0)
-            baseMph = vi.corneringSpeedCurve.Evaluate(radius) * Mathf.Sqrt(grip);
-        else if (vi != null && vi.maxLateralG > 0.01f)
-            baseMph = Mathf.Sqrt(radius * vi.maxLateralG * grip * 9.81f) * MpsToMph;
-        else
-            baseMph = fallbackCornerMph;
-
-        if (vi != null && vi.maxLateralG > 0.01f && Mathf.Abs(seg.banking) > 0.01f)
-            baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(vi.maxLateralG * grip * 9.81f, seg.banking));
+        // What the player's car holds on this radius and bank - the same measured grip the AI plans on (AIGrip).
+        float baseMph = vi != null && vi.maxLateralG > 0.01f
+            ? AIGrip.BankedCornerSpeed(radius, vi.maxLateralG * grip * 9.81f, seg.banking) * MpsToMph
+            : fallbackCornerMph;
         return Mathf.Clamp(baseMph * cornerSpeedScale, 5f, topMph);
     }
 

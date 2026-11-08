@@ -72,9 +72,16 @@ public class AIDriverBinding : MonoBehaviour
                                              driver.Consistency, driver.Aggression, Driver.StatMax, rolls.x, rolls.y);
 
             // The maths is AIRatings', shared with the headless pack sim so it races the same field.
+            // The player's AI AGGRESSION setting scales the rolled temperament (OPTIONS > AI DRIVERS).
+            ratings.aggression01 = AIDifficultyRules.Aggression(ratings.aggression01, AIDifficulty.AggressionPercent);
             _spline.lineFactor = AIRatings.LineFactor(ratings.aggression01);
             racing.aggression01 = ratings.aggression01;
             racing.consistency01 = ratings.consistency01;
+            // The rest of the sheet: how they look after tyres, how much room they want, how fast they settle in.
+            // (FuelManagement is not read: no car burns fuel yet - FuelTank.Consume has no caller.)
+            racing.tyreWearScale = AIRatings.TyreWearScale(driver.TyreManagement / (float)Driver.StatMax);
+            racing.awareness01 = Mathf.Clamp01(driver.Awareness / (float)Driver.StatMax);
+            racing.adaptability01 = Mathf.Clamp01(driver.Adaptability / (float)Driver.StatMax);
 
             // Per-session noise on top of the event roll: a little day-to-day variation.
             float basePace = AIRatings.BasePace(ratings.strength01, ratings.consistency01, Random.value);
@@ -84,7 +91,8 @@ public class AIDriverBinding : MonoBehaviour
             // How close to the grip limit they corner. Pace can't do this: it is capped at the limit, and every
             // car sits above it, so without it the whole field cornered identically, strung out ~5 lengths
             // apart and never passed.
-            _spline.cornerCommitment = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, Random.value);
+            _spline.cornerCommitment = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, Random.value,
+                                                                TrackConditions.AiSpreadScale);
             _spline.driverGrip = AIRatings.DriverGrip(ratings.strength01);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";

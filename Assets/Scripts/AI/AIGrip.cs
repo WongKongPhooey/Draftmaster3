@@ -40,6 +40,19 @@ public static class AIGrip
     // The steady speed (m/s) the car can take a corner of this radius at, given its peak lateral acceleration.
     // The usable fraction depends on the speed that comes out, so it is found by a few fixed-point steps —
     // the fraction moves slowly with speed, so it settles almost at once.
+    // The same on a banked turn: the share of the tyres' flat-ground peak the car holds at speed (UsableFraction,
+    // times `utilization`), then what the banking does with it (BankedGrip.Capacity) - the tyres loaded into the bank
+    // and gravity's pull down it. The fraction is the tyres' and the steering's; gravity's share does not fade with
+    // speed, so it is not taken off that. On level ground this is CornerSpeed(radius, peak * utilization).
+    public static float BankedCornerSpeed(float radius, float flatPeakMps2, float bankDeg, float utilization = 1f)
+    {
+        if (radius <= 0f || flatPeakMps2 <= 0f) return 0f;
+        float v = Mathf.Sqrt(radius * Draftmaster.Sim.BankedGrip.Capacity(flatPeakMps2 * utilization * Fractions[0], bankDeg));
+        for (int i = 0; i < 5; i++)
+            v = Mathf.Sqrt(radius * Draftmaster.Sim.BankedGrip.Capacity(Usable(flatPeakMps2, v) * utilization, bankDeg));
+        return v;
+    }
+
     public static float CornerSpeed(float radius, float peakMps2)
     {
         if (radius <= 0f || peakMps2 <= 0f) return 0f;

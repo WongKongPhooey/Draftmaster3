@@ -403,6 +403,58 @@ Results (2026-11-03):
 | Lane error (from the first timed lap) | mean **0.113 m**, max **0.620 m** |
 | Lane changes started / completed / aborted | 3 / 3 / 0, 2 passes |
 
+## Single file on the ideal, side by side inside / outside (2026-11-03)
+
+Replaces "two fixed lanes" as the live rule. `SplineDriver.idealWhenSingleFile` (default on; only acts with
+`lanePassing` on):
+
+- **The lanes are the authored AI lines.** `TrackBuilder.ovalLanesFromAiLines` (default on) makes
+  `TryGetOvalLanes` build the inside and outside lanes from the track's **leftmost and rightmost AI lines** (the blue
+  and red racing-line gizmo lines) through `OvalLanes.BuildFromLines`: per sample the line nearer the infield is the
+  inside lane (the leftmost on an anticlockwise oval), each kept `insideEdgeMargin` / `outsideEdgeMargin` off the
+  edges, pushed at least `laneSpacing` (3.2 m) apart, then smoothed over ±20 m. Off = the old fixed grooves from
+  the road width. The gizmo, overlay, director and brain all read it, so they agree.
+- **Single file = `OvalLanes.Lane.Ideal`**: the car's normal ideal line (trained / optimised / authored), with no
+  per-driver `lineFactor` spread. The director hands Ideal to every car at the green that has nobody alongside.
+- **Alongside** (another car within `alongsideEnterMetres`, 6.5 m centre to centre along the track, anywhere
+  across it; `OvalPass.TryFindAlongside`): a car on the ideal moves to the side lane the other car is not in. If
+  both are on the ideal, the one nearer the infield goes inside. Both cars read the same pair, so they always split.
+  This "split" move is the stage 3 blend, but it starts even mid-corner and is never turned back.
+- **Clear again** (nobody within `alongsideClearMetres`, 9 m, so a pair drawing level doesn't flick back and forth):
+  back to the ideal once the lane cooldown is over, the corner allows the move, and the ideal has the room a move
+  under way keeps (`abortShare` of a train gap).
+- **Passing from the ideal** pulls out to whichever side lane is further from the car being passed and has room,
+  falling back to the other. The passer stays out until it is 9 m clear ahead of that car, or
+  `pairPassGiveUpSeconds` (30 s) pass. The car being passed sees it come alongside and drops to the other lane.
+- Hand-set lanes in tests (`SetLane` in `OvalLaneTests` / `OvalPassingTests`) turn the rule off, so the stage 1-3
+  measurements above still describe fixed lanes. Measured by
+  `OvalPassingTests.SingleFileRunsTheIdeal_SideBySideSplitsInsideAndOutside`: the 18-car mixed field with the rule
+  on, 10 laps. It asserts 0 contacts / walls / spins / offs, that at least 90% of single-file car-steps are on the
+  ideal, and that at least 90% of overlapping pair-steps are split the right way. Not yet run; not play-tested.
+
+### Trained, anchor-pinned lanes (2026-11-03)
+
+`Draftmaster > AI > Train Racing Lines Pinned To Anchors (Selected Track)` (the selected TrackInfoV2, or
+`TrackSelection.CurrentId`) retrains from scratch with **three** lines: ideal, leftmost and rightmost. Each one is
+trained for lap time from its authored line, but pinned through its own entry / apex / exit anchors: a funnel
+`RacingLineTrainer.BuildPins`, +/-0.15 m at the point for the side lines and +/-0.4 m for the ideal, opening 0.03 m
+per metre out to 15 m either side, and free beyond that. The side lines may use the road edge to edge, less
+`SplineDriver.RoadEdgeMargin`. All three are stored in `RacingLines/<id>.json` (`leftLateral`, `rightLateral`,
+`anchorPinned`), and later "Another Session" clicks keep them pinned. While stored side lines match the lap,
+`TryGetOvalLanes` builds the inside and outside lanes from them unsmoothed, held 1.4 m off the edges, and still
+pushed 3.2 m apart where they come closer than that.
+
+Texas, first run (2026-11-03, 59k laps):
+
+| Line | Lap (seed -> trained) | Off its 14 authored points: mean / worst |
+|---|---|---|
+| ideal | 42.50 -> 42.32 s | 0.36 / 0.42 m |
+| leftmost (inside lane) | 42.21 -> 41.73 s | 0.12 / 0.21 m |
+| rightmost (outside lane) | 42.91 -> 42.10 s | 0.13 / 0.21 m |
+
+The pinned ideal is 0.5 s slower than the unpinned trained line it replaced (41.82 s), which was free to leave the
+drawn points. The worst misses (2331 m, just before the line) are the 2 m storage grid's round trip.
+
 ## Wider, higher lanes and a flat-out launch (2026-11-06)
 
 Josh's report: the field still stacked up at the start (no longer crashing), and everyone should be flat out until

@@ -199,78 +199,11 @@ public class TeamSwitchController : MonoBehaviour
 
     // Hand the car the human is leaving to the AI, without a teleport: the spline brain re-engages at the
     // car's current pose, then SplineInputDriver drives the same dynamic model the human was just using.
-    bool HandToAI(GameObject car)
-    {
-        if (car == null) return false;
-        var pvc = car.GetComponent<PlayerVehicleController>();
-        var spline = car.GetComponent<SplineDriver>();
-        if (pvc == null || spline == null) return false;
-
-        float mph = pvc.SpeedMph;
-
-        pvc.enabled = false;   // drops the RaceObstacles registration while we rewire
-        if (spline.track == null) spline.track = pvc.track;
-        if (spline.vehicleInfo == null) spline.vehicleInfo = pvc.vehicleInfo;
-        spline.spriteFacesUp = pvc.spriteFacesUp;
-        spline.angleOffsetDeg = pvc.angleOffsetDeg;
-        spline.enabled = true;                 // back into RaceField
-        spline.EngageFromCurrentPose(mph);
-
-        if (car.GetComponent<TireState>() == null) car.AddComponent<TireState>();
-        var racing = car.GetComponent<AIRacingBehaviour>();
-        if (racing == null) racing = car.AddComponent<AIRacingBehaviour>();
-        racing.enabled = true;
-
-        var input = car.GetComponent<SplineInputDriver>();
-        if (input == null) input = car.AddComponent<SplineInputDriver>();
-        input.steerGain = aiSteerGain;
-        input.speedGain = aiSpeedGain;
-        input.enabled = true;                  // OnEnable: externalMotionController=true, externalInput=true, reseeds
-
-        var pit = car.GetComponent<PitStopController>();
-        if (pit != null) pit.enabled = true;   // wear-based strategy resumes for the AI
-
-        pvc.externalInput = true;
-        pvc.enableWheelspin = false;           // AI parity with GridSpawner-built cars
-        pvc.damageImpairsHandling = false;
-        pvc.enabled = true;                    // OnEnable sees an enabled SplineDriver → not an obstacle
-        return true;
-    }
+    bool HandToAI(GameObject car) => AIHandover.ToAI(car, aiSteerGain, aiSpeedGain);
 
     // Give the human live control of a (dynamic-AI) team car: brains off, inputs live, obstacle
     // registration on so the rest of the field brakes for it like they do for any human.
-    void TakeControl(GameObject car)
-    {
-        var pvc = car.GetComponent<PlayerVehicleController>();
-        var spline = car.GetComponent<SplineDriver>();
-
-        var input = car.GetComponent<SplineInputDriver>();
-        if (input != null) input.enabled = false;
-        var racing = car.GetComponent<AIRacingBehaviour>();
-        if (racing != null) racing.enabled = false;
-        var pit = car.GetComponent<PitStopController>();
-        if (pit != null) pit.enabled = false;  // the human decides when to pit
-
-        float mph = pvc.SpeedMph;
-        float heading = pvc.HeadingDeg;
-        Vector3 pos = car.transform.position;
-        if (spline != null && spline.enabled)
-        {
-            if (!spline.externalMotionController) // kinematic fallback: the spline owned the transform
-            {
-                mph = spline.CurrentMph;
-                heading = spline.CommandedHeadingDeg;
-            }
-            spline.enabled = false;            // out of RaceField — this car is the human now
-        }
-
-        pvc.externalInput = false;
-        pvc.enableWheelspin = true;
-        pvc.damageImpairsHandling = true;
-        pvc.enabled = false;
-        pvc.enabled = true;                    // OnEnable sees the spline disabled → registers as an obstacle
-        pvc.SeedPose(pos, heading, mph / 2.237f);
-    }
+    static void TakeControl(GameObject car) => AIHandover.ToHuman(car);
 
     // The human's name rides with the human; number + livery stay with the chassis.
     static void SwapDriverNames(GameObject a, GameObject b)

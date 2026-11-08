@@ -23,6 +23,20 @@ public static class DraftAero
     public const float SideOverlapLength = 6.5f;   // centre-to-centre longitudinal window (m) for a nose-on-quarter overlap
     public const float SpeedRampMph = 15f;         // effects fade in over this band below draftingMinSpeed (no hard pop)
 
+    // How much a full tow is worth at this speed against what it is worth at ReferenceMps (~168 mph). The hole a car
+    // punches in the air saves the follower drag, and drag goes with v², so a short track's 110 mph straight gets a
+    // third of the slingshot a 1.5-mile oval's 185 does (NR2003 shapes its draft as (v / vTop)^10). Ovals only:
+    // the plate tracks' pack racing was tuned on the flat value, and on a road course it took Watkins Glen's
+    // 130-150 mph straights to two thirds of the tow and its passes from 22 to 10 (16 cars x 4 laps, four rosters).
+    // Off (TrackConditions.DraftBySpeed), there and elsewhere: 1.
+    public const float ReferenceMps = 75f;
+    public static float SpeedShare(float speedMps)
+    {
+        if (!TrackConditions.DraftBySpeed || TrackConditions.AiPackRacing || !TrackConditions.AiLanes) return 1f;
+        float q = speedMps / ReferenceMps;
+        return Mathf.Clamp(q * q, 0f, 1.3f);
+    }
+
     // Total main-spline length for a track, read from any registered AI driving it — the player's own controller
     // has no notion of lap length. 0 when no AI shares the track, and then there is nobody to draft anyway.
     public static float TrackLengthFor(TrackBuilder track)

@@ -381,6 +381,16 @@ is alongside or closing in the lanes it crosses (`apronMergeMaxWaitM` caps the w
 back on the infield side — at the generated ovals whose lanes still end out in the run-off the plain exit stands.
 `OvalPitApronTests.Daytona_PitsFromTheApron_AndRejoinsOnTheBackStraight` drives one car through it.
 
+**Pit exit is level ground.** Draw the whole pit exit as pit-lane segments — round the first turn or two below the
+apron and back on at the back straight. In a green race the AI drive pit road to the pit speed limit up to the exit
+line (`TrackInfoV2.pitExitLineDistance`), then as fast as the lane's own bends allow on LEVEL ground
+(`SplineDriver.pitExitAtGripLimit`, plan built by `BuildPitSpeedProfile` off the drawn lane's curvature); outside a
+green race they hold the limit to the end, as before. Pit road and the apron carry no banking — the physics only banks
+a car on the main road (`TrackBuilder.BankAt`), and pit segments' `banking` is ignored. A car running the paved apron
+on the main spline instead (the exit hold above, or the drop on the way in) is capped to the flat-ground speed of the
+apron's tighter radius (`SplineDriver.apronFlatGripCap`), so it no longer carries the banked racing line's speed down
+there. `OvalPitApronTests.PitRoadPlan_HoldsTheLimitToTheExitLine_ThenRunsAtLevelGroundGrip` checks the plan.
+
 **The catch fence goes all the way round.** Every wall is drawn as the SAFER barrier with its catch fence.
 Pit road used to leave across the outside wall, which cut the fence at both ends. Now that pit road is in
 the infield, the outside wall has no gaps; only the infield wall opens, where pit road crosses it.
@@ -396,8 +406,14 @@ seat across the track in the front-stretch stand nearest the start/finish), `Spo
 `SpawnPoint_PitLaneCenter`. The paddock runs the length of the box lane and is as deep as Watkins Glen's.
 The order away from the track is the same as Watkins Glen's: pit road, then the boxes, then the paddock, whose
 boundary starts at pit road's paddock-side edge so the boxes are inside it. The boxes are on the LEFT of pit-lane
-travel here (`TrackBuilder.pitBoxLaneOnLeft`, set by the Author step from which side the paddock is on): the box
-lane used to be hard-wired to the right, which on an anticlockwise lap is the track side. Every lateral the
+travel here (`TrackBuilder.pitBoxLaneOnRight` off, set by the Author step from which side the paddock is on).
+The left is the default for every package; tick `pitBoxLaneOnRight` on the package's TrackBuilder for the minority
+with the boxes on the right of travel — Watkins Glen is one. To start the boxes at a set place, set
+`TrackInfoV2.pitEntryLineDistance` (metres along the pit lane; 0 = its start) and `TrackBuilder.pitBoxFirstOffset`
+(metres after that line): the first box's back line and the grey strip both start there, and the boxes run toward
+the exit at up to 10 m each. Negative (the default) keeps the old fit, backed off the exit by `pitBoxLaneEndOffset`.
+The pit-box gizmo draws both lines; a pit-spline strip labelled `PitEntryLine` is painted from the entry line.
+Every lateral the
 builder publishes (`PitBoxLaneCenterLateral` / `Outer` / `Inner`) carries the sign (`PitBoxSide`), and the
 scene-wide `wallSide` on the crew, autograph-fan and sponsor-rep spawners is read relative to it.
 
@@ -571,37 +587,45 @@ nose-to-tail, side and hard (closing faster than `VehicleCollision`'s 3 m/s no-d
 ## The authored line: how anchors become a curve
 
 `TrackInfoV2.BuildRacingLineAnchors` turns the segments' entry / apex / exit offsets into points and
-`GetLateralAt` interpolates them. The leftmost and rightmost lines use every authored point (straight apexes
-included) with Catmull-Rom, unchanged — oval lanes are built from them. The **ideal** line (since 2026-11-04)
-is built from corners only:
+`GetLateralAt` interpolates them. Since 2026-11-04 all three lines — ideal, leftmost, rightmost — are built the
+same way, each from its own values:
 
-- **Straights put no point on it**, nor do shallow bends (a same-direction run of turns under
-  `racingLineCornerMinDegrees`, 12°). A straight's apex used to drag the line back to the centre mid-straight,
-  so the line weaved out of every corner. Tick `keepOnStraight` on a segment to get the old pinned point back.
+- **Points come from corners.** Straights put no point on any line, nor do shallow bends (a same-direction run
+  of turns under `racingLineCornerMinDegrees`, 12°). A straight's apex used to drag the line back to the centre
+  mid-straight, so it weaved out of every corner. Tick `keepOnStraight` on a segment to pin its own values.
 - **Corners less than `racingLineMergeGap` (100 m) apart run one arc apex to apex** — the first corner's exit
-  and the next one's entry drop out of the ideal (chicanes, doglegs, a tri-oval's kink pair). Touching turns
-  are 0 m apart.
+  and the next one's entry drop out (chicanes, doglegs, a tri-oval's kink pair). Touching turns are 0 m apart.
 - **Longer gaps keep both points, held inside the gap** (each lead capped at 40% of it, so they never cross).
-- **The ideal is the minimum-curvature line through its points** — the line that turns least *in the world*.
+- **Long straights are driven straight.** Across a gap of `racingLineFlatStraightMin` (300 m) or more, each line
+  from the corner's exit point to the next corner's entry point is a straight line, and the arcs either side
+  are solved to finish/start lined up with it. Shorter gaps carry the arc across (Texas: the back straight is
+  flat, the 160-215 m tri-oval gaps arc).
+- **Each line is the minimum-curvature line through its points** — the line that turns least *in the world*.
   An offset held steady from the centre just copies the road (a tri-oval's straight-kink-straight); the
   minimum-curvature line keeps turning through the straights and bows out between kink apexes. With n the
   offset (right +) and k the road's curvature (left +), world curvature is about k − n'', and the line that
   minimises ∫(k − n'')² through the points is n = P + S: P'' = k (the road's bend integrated twice, taken
-  against k less its lap mean so it is periodic) plus the periodic cubic spline S through n_i − P(s_i). Exact
-  and cheap — one cyclic tridiagonal solve.
-- **Long straights are driven straight.** Across a gap of `racingLineFlatStraightMin` (300 m) or more, the line
-  from the corner's exit point to the next corner's entry point is a straight line, and each neighbouring arc is
-  solved to finish/start lined up with it (a clamped spline per piece of lap between long straights). Shorter
-  gaps carry the arc across (Texas: the back straight is flat, the 160-215 m tri-oval gaps arc).
-- **It stays off the apron** (`racingLineKeepIdealOffApron`, on): never inside the inside line (leftmost on a
-  lap turning left). A long corner's minimum-curvature line otherwise cuts the infield between apex and exit
-  (Texas Turn 3: 8 m onto the apron); wherever it would, it gets a point on the inside line and is re-solved.
-  It is free to run wide. Tick `racingLineKeepIdealInsideSideLines` to hold it inside both side lines.
+  against k less its lap mean so it is periodic) plus the cubic spline S through n_i − P(s_i) (periodic, or
+  clamped to a long straight's slope). Exact and cheap — one tridiagonal solve per line.
+- **Limits** (`ClampLine`: wherever a line leaves its bounds it gets a point on the bound at the worst spot and
+  is re-solved, so it bends to meet the bound rather than being clipped; a stretch round a drawn point that is
+  itself outside is left as drawn):
+  - every line stays on the road (edge less `SplineDriver.RoadEdgeMargin`);
+  - the **inside lane** (leftmost on a lap turning left) is never further in than the straight join of its own
+    points — a long corner's minimum-curvature line otherwise cuts the infield between apex and exit — and never
+    so far out the outside lane cannot fit;
+  - the **outside lane** stays at least `racingLineMinLaneGap` (4 m) outside the inside lane. Without it the two
+    met at Texas Turn 3's exit and on the front stretch;
+  - the **ideal** stays off the apron (`racingLineKeepIdealOffApron`, on): never inside the inside lane (Texas
+    Turn 3 cut 8 m in). It may run wide of the outside lane. Tick `racingLineKeepIdealInsideSideLines` to hold it
+    inside both.
 
-The `skipEntry` / `skipExit` / `skipApex` flags still drop points from all three lines. Covered by
-`RacingLineShapingTests` (`TexasTriOvalIsOneLongArc` checks the line turns left the whole way from Turn 3's
-exit to Turn 1's apex). The game drives the *trained* line where one is stored, so retrain a track (pinned:
-`Train Racing Lines Pinned To Anchors (Selected Track)`) to see an authored change in a race.
+The `skipEntry` / `skipExit` / `skipApex` flags drop points from all three lines. Oval lanes
+(`TrackBuilder.TryGetOvalLanes`) are built from the leftmost/rightmost lines, so they follow these rules too.
+Covered by `RacingLineShapingTests` (on Texas: the tri-oval is one left-hand arc for every line, the back
+straight is straight, the lanes stay 4 m apart, nothing leaves the road or cuts the apron). The game drives the
+*trained* line where one is stored, so retrain a track (pinned: `Train Racing Lines Pinned To Anchors (Selected
+Track)`) to see an authored change in a race.
 
 ## Training the racing line
 

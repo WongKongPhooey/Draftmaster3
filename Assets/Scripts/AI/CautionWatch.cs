@@ -38,6 +38,16 @@ public class CautionWatch : MonoBehaviour
     [Tooltip("How long (s) after its last barrier hit a car keeps the player's flag out. If it stops, the stopped-car rule has taken over by then; if it drives on, the flag drops.")]
     public float wallHitFlagSeconds = 4f;
 
+    [Header("Wrecks")]
+    [Tooltip("A car pointing this far (deg) off the road while it is moving is wrecking - spun, sideways, going round. The field steers clear of it the way it does a stopped car, only with more room (AIRacingBehaviour.wreckPassClearance).")]
+    public float wreckYawDeg = 30f;
+    [Tooltip("Slower than this (m/s) a car's heading says nothing - it may be pointing anywhere as it gets going again.")]
+    public float wreckMinSpeedMps = 4f;
+    [Tooltip("A car that hit a barrier at least wallHitMinClosingMps hard counts as wrecking for this long (s) after the hit.")]
+    public float wreckHitSeconds = 2f;
+    [Tooltip("Once wrecking, a car stays flagged this long (s) after it last looked it, so a spin does not strobe on and off as it swings through straight.")]
+    public float wreckHoldSeconds = 1.5f;
+
     public struct Incident
     {
         public Transform car;      // the stopped car — never flags a yellow for itself
@@ -50,6 +60,17 @@ public class CautionWatch : MonoBehaviour
     // the AI lift for stopped cars, not for every car that glances off the wall.
     public IReadOnlyList<Incident> WallHits => _wallHits;
 
+    // Every car wrecking right now (wreckYawDeg, a fresh wall hit, the AI's own spin recovery, stopped on the road) -
+    // the stopped incidents above included. What the field steers round; the yellow lift still only reads Incidents.
+    public IReadOnlyList<Incident> Wrecks => _wrecks;
+
+    // Whether `car` is wrecking right now (see Wrecks).
+    public bool IsWrecking(Transform car) => car != null && _wrecking.Contains(car);
+
+    // Seconds since `car` was last seen wrecking; +infinity if it never has been (this race).
+    public float SecondsSinceWreck(Transform car) =>
+        car != null && _lastWreckAt.TryGetValue(car, out float at) ? _now - at : float.PositiveInfinity;
+
     // True while there is a stopped car within lookAheadMetres up the road from the player.
     public bool CautionAhead { get; private set; }
     // Distance (m) along the track to the nearest stopped car ahead; 0 when nothing is flagged.
@@ -59,6 +80,11 @@ public class CautionWatch : MonoBehaviour
     readonly List<Incident> _incidents = new();
     readonly Dictionary<Transform, float> _wallHitAt = new();
     readonly List<Incident> _wallHits = new();
+    readonly List<Incident> _wrecks = new();
+    readonly HashSet<Transform> _wrecking = new();
+    readonly Dictionary<Transform, float> _lastWreckAt = new();
+    readonly Dictionary<Transform, PlayerVehicleController> _pvcOf = new();
+    readonly Dictionary<Transform, SplineInputDriver> _inputOf = new();
     float _now;
     float _holdUntil;
     float _lapLength;
@@ -104,14 +130,23 @@ public class CautionWatch : MonoBehaviour
     // the one just passed.
     public bool YellowFor(Transform self, float myDist, float lapLength, float before, float after,
                           out float gap, out Transform incidentCar)
+        => Nearest(_incidents, self, myDist, lapLength, before, after, out gap, out incidentCar);
+
+    // The same zone test against every wrecking car (Wrecks, the stopped ones included): the car to steer round.
+    public bool WreckFor(Transform self, float myDist, float lapLength, float before, float after,
+                         out float gap, out Transform wreckCar)
+        => Nearest(_wrecks, self, myDist, lapLength, before, after, out gap, out wreckCar);
+
+    static bool Nearest(List<Incident> list, Transform self, float myDist, float lapLength, float before, float after,
+                        out float gap, out Transform incidentCar)
     {
         gap = 0f;
         incidentCar = null;
         bool found = false;
         float best = float.MaxValue;
-        for (int i = 0; i < _incidents.Count; i++)
+        for (int i = 0; i < list.Count; i++)
         {
-            var inc = _incidents[i];
+            var inc = list[i];
             if (inc.car == null || inc.car == self) continue;
             if (!RaceCraft.InYellowZone(myDist, inc.distance, lapLength, before, after, out float g)) continue;
             float rank = g >= 0f ? g : 10000f - g;   // anything ahead outranks anything behind
@@ -126,6 +161,7 @@ public class CautionWatch : MonoBehaviour
     {
         _incidents.Clear();
         _wallHits.Clear();
+        _wrecks.Clear();
         _now = now;
         var tracker = RacePositionTracker.Instance;
         if (tracker != null && tracker.TrackLength > 0f) ScanTracker(tracker, now);
@@ -150,13 +186,55 @@ public class CautionWatch : MonoBehaviour
             // and progress is counted from the start/finish line. At Watkins Glen that put every wreck 250 m
             // behind where it was — the field lifted for a yellow a quarter-kilometre short of the scene, then
             // drove into it at racing speed.
-            bool stopped = e.speedMps <= stoppedMps && !InPits(tracker, e);
-            if (StoppedLongEnough(e.tf, stopped, now))
-                _incidents.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) });
-            if (_wallHitAt.TryGetValue(e.tf, out float hitAt) && now - hitAt <= wallHitFlagSeconds
-                && !InPits(tracker, e))
-                _wallHits.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) });
+            bool inPits = InPits(tracker, e);
+            bool stopped = e.speedMps <= stoppedMps && !inPits;
+            var here = new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) };
+            bool stoppedLong = StoppedLongEnough(e.tf, stopped, now);
+            if (stoppedLong) _incidents.Add(here);
+            bool hitRecently = _wallHitAt.TryGetValue(e.tf, out float hitAt) && now - hitAt <= wallHitFlagSeconds;
+            if (hitRecently && !inPits) _wallHits.Add(here);
+            NoteWreck(here, e.spline, inPits, stoppedLong, hitRecently && now - hitAt <= wreckHitSeconds, now);
         }
+    }
+
+    // Wrecking this step or within wreckHoldSeconds: into Wrecks.
+    void NoteWreck(Incident here, SplineDriver spline, bool inPits, bool stopped, bool hitHard, float now)
+    {
+        var tf = here.car;
+        if (!inPits && Wrecking(tf, spline, here.distance, stopped, hitHard)) _lastWreckAt[tf] = now;
+        if (!inPits && _lastWreckAt.TryGetValue(tf, out float wreckAt) && now - wreckAt <= wreckHoldSeconds)
+        {
+            _wrecks.Add(here);
+            _wrecking.Add(tf);
+        }
+        else _wrecking.Remove(tf);
+    }
+
+    // Whether this car looks like it is crashing this step. Only while racing (the green, or a caution - a crash is
+    // still happening when the flag comes out): a grid sat still for the start is not a wreck.
+    bool Wrecking(Transform tf, SplineDriver spline, float trackDistance, bool stopped, bool hitHard)
+    {
+        if (!RaceStart.IsRunning || AIRetirement.IsRetired(tf)) return false;
+        if (hitHard || stopped) return true;
+        if (!_inputOf.TryGetValue(tf, out var input)) _inputOf[tf] = input = tf.GetComponent<SplineInputDriver>();
+        if (input != null && input.isActiveAndEnabled && input.IsRecovering) return true;
+        if (!_pvcOf.TryGetValue(tf, out var pvc)) _pvcOf[tf] = pvc = tf.GetComponent<PlayerVehicleController>();
+        // The dynamic model's heading: a kinematic car (PVC off) sits wherever its spline puts it, on the road.
+        if (pvc == null || !pvc.enabled || pvc.SpeedMps < wreckMinSpeedMps) return false;
+        var road = RoadReference(spline);
+        if (road == null) return false;
+        float yaw = Mathf.DeltaAngle(road.MainTangentWorldDeg(trackDistance), pvc.HeadingDeg);
+        return Mathf.Abs(yaw) > wreckYawDeg;
+    }
+
+    // Any spline on the track to read the road direction off: the car's own, else the first in the field.
+    static SplineDriver RoadReference(SplineDriver own)
+    {
+        if (own != null && own.TrackLength > 0f) return own;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+            if (drivers[i] != null && drivers[i].TrackLength > 0f) return drivers[i];
+        return null;
     }
 
     void ScanRaceField(float now)
@@ -169,8 +247,11 @@ public class CautionWatch : MonoBehaviour
             if (AIRetirement.IsRetired(d.transform)) { _slowSince.Remove(d.transform); continue; }
             _lapLength = d.TrackLength;
             bool stopped = d.CurrentMph <= stoppedMph && !d.IsOnPit;
-            if (StoppedLongEnough(d.transform, stopped, now))
-                _incidents.Add(new Incident { car = d.transform, distance = d.DistanceOnTrack });
+            var here = new Incident { car = d.transform, distance = d.DistanceOnTrack };
+            bool stoppedLong = StoppedLongEnough(d.transform, stopped, now);
+            if (stoppedLong) _incidents.Add(here);
+            bool hitHard = _wallHitAt.TryGetValue(d.transform, out float hitAt) && now - hitAt <= wreckHitSeconds;
+            NoteWreck(here, d, d.IsOnPit, stoppedLong, hitHard, now);
         }
     }
 
@@ -244,5 +325,17 @@ public class CautionWatch : MonoBehaviour
         foreach (var kv in _wallHitAt)
             if (kv.Key == null || _now - kv.Value > wallHitFlagSeconds) (dead ??= new List<Transform>()).Add(kv.Key);
         if (dead != null) for (int i = 0; i < dead.Count; i++) _wallHitAt.Remove(dead[i]);
+
+        dead?.Clear();
+        foreach (var kv in _lastWreckAt)
+            if (kv.Key == null) (dead ??= new List<Transform>()).Add(kv.Key);
+        if (dead != null)
+            for (int i = 0; i < dead.Count; i++)
+            {
+                _lastWreckAt.Remove(dead[i]);
+                _pvcOf.Remove(dead[i]);
+                _inputOf.Remove(dead[i]);
+            }
+        _wrecking.RemoveWhere(t => t == null);
     }
 }

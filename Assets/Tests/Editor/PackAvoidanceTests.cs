@@ -271,6 +271,25 @@ public class PackAvoidanceTests
     }
 
     [Test]
+    public void APairKeepsItsEdgeMarginOffTheLimits()
+    {
+        // Texas, Turn 4 (15.5 m road, AI limits +/-6.35): the trained line hugs the inside at -4.6. Fitted to the limits
+        // alone the inside car sat on -6.35 with 0.4 m of tarmac beside it, ran 1.5 m wide on the run to the green and
+        // went onto the grass. With a 1.5 m margin it stays at -4.85 and the pair keeps its 4.4 m.
+        const float lo = -6.35f, hi = 6.35f, line = -4.6f, column = 2.2f, margin = 1.5f;
+        float inside = line + FormationLanes.FitColumn(-column, line, lo, hi, margin);
+        float outside = line + FormationLanes.FitColumn(column, line, lo, hi, margin);
+        Assert.AreEqual(lo + margin, inside, 1e-4f, "the inside car is not held off the limit");
+        Assert.AreEqual(2f * column, outside - inside, 1e-4f, "the pair lost its spacing");
+
+        // A road too narrow for the pair and the margin: the margin gives way, the spacing does not.
+        float nIn = FormationLanes.FitColumn(-column, 0f, -3f, 3f, margin);
+        float nOut = FormationLanes.FitColumn(column, 0f, -3f, 3f, margin);
+        Assert.AreEqual(2f * column, nOut - nIn, 1e-4f, "the margin squeezed the pair");
+        Assert.GreaterOrEqual(nIn, -3f + 0.8f - 1e-4f);
+    }
+
+    [Test]
     public void TheCautionCatchUpClosesHardFromFarBackAndRunsOutAtTheTrain()
     {
         // Run out at the arrival point, capped far back, and never more than could be shed at the rate before the

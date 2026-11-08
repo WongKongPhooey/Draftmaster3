@@ -14,12 +14,16 @@ public class TrackBuilder : MonoBehaviour
     [Header("Pit Box Lane")]
     [Tooltip("Build a second lane alongside the pit lane where the pit boxes sit. Cars park on it; the pit lane proper stays clear for driving.")]
     public bool buildPitBoxLane = true;
-    [Tooltip("Put the box lane on the LEFT of pit-lane travel (-normal) instead of the right. The boxes belong on the paddock side, away from the racing surface: the right of travel on a clockwise lap like Watkins Glen, the left on an anticlockwise oval like Daytona.")]
-    public bool pitBoxLaneOnLeft = false;
+    // Renamed from pitBoxLaneOnLeft (whose default was the right) with no FormerlySerializedAs on purpose:
+    // every package drops its old saved value and comes up on the left, the default for most venues.
+    [Tooltip("Put the box lane on the RIGHT of pit-lane travel (+normal) instead of the left. Off (the left) suits most venues; tick it for the minority with the boxes on the right, like Watkins Glen.")]
+    public bool pitBoxLaneOnRight = false;
     [Tooltip("Width (m) of the box lane strip.")]
     public float pitBoxLaneWidth = 6f;
-    [Tooltip("Where the grey box-lane strip starts, metres from the pit lane's start. 0 = from the very start.")]
+    [Tooltip("Where the grey box-lane strip starts, metres from the pit lane's start. 0 = from the very start. Ignored while Pit Box First Offset is set.")]
     public float pitBoxLaneStartOffset = 0f;
+    [Tooltip("Where the first pit box (the one nearest the entry) starts, metres after the pit ENTRY line (TrackInfoV2.pitEntryLineDistance). The grey strip starts there too, and the boxes run from it toward the exit. Negative = off: the strip starts at Pit Box Lane Start Offset and the boxes are fitted back from the exit end.")]
+    public float pitBoxFirstOffset = -1f;
     [Tooltip("Where the grey box-lane strip ends, metres BEFORE the pit lane's end. 0 = all the way to the end.")]
     public float pitBoxLaneEndOffset = 0f;
     [Tooltip("Material for the box lane. Null = a flat grey tarmac is built automatically (pitBoxLaneColor).")]
@@ -47,14 +51,17 @@ public class TrackBuilder : MonoBehaviour
     // +1 when the box lane is on the right of pit-lane travel (+normal), -1 on the left. Every lateral below is
     // signed with it, so a consumer that parks, draws or measures at these laterals follows the boxes to
     // whichever side they are on; one that compares a distance against them wants Mathf.Abs.
-    public float PitBoxSide => pitBoxLaneOnLeft ? -1f : 1f;
+    public float PitBoxSide => pitBoxLaneOnRight ? 1f : -1f;
     public float PitBoxLaneCenterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth * 0.5f);
     public float PitBoxLaneOuterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth);
     // Inner edge of the strip = the pit lane's own edge, where a box's dividing line starts.
     public float PitBoxLaneInnerLateral => PitBoxSide * PitHalfWidth;
     // Span of the grey strip along the pit lane (distances from the pit-lane start), matching the mesh
     // built in BuildPitLane. GridSpawner fits the pit boxes inside this span.
-    public float PitBoxLaneFrom(float pitLen) => Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
+    public float PitBoxLaneFrom(float pitLen) =>
+        Mathf.Clamp(BoxesFromEntryLine ? track.PitEntryLineDistance + pitBoxFirstOffset : pitBoxLaneStartOffset, 0f, pitLen);
+    // The boxes are placed from the pit entry line (pitBoxFirstOffset) rather than fitted back from the exit.
+    public bool BoxesFromEntryLine => pitBoxFirstOffset >= 0f && track != null;
     public float PitBoxLaneTo(float pitLen) => Mathf.Clamp(pitLen - Mathf.Max(0f, pitBoxLaneEndOffset), 0f, pitLen);
 
     // How many boxes the strip is cut into. One answer for the painted lines, the gizmo and anything else
@@ -85,6 +92,8 @@ public class TrackBuilder : MonoBehaviour
 
     [Header("Racing Line Gizmo")]
     public bool drawRacingLineGizmo = true;
+    [Tooltip("Draw the yellow track centreline in the scene view.")]
+    public bool drawCenterlineGizmo = true;
     public Color idealLineColor = new Color(0.2f, 1f, 0.3f, 1f);
     public Color leftLineColor = new Color(0.3f, 0.5f, 1f, 0.7f);
     public Color rightLineColor = new Color(1f, 0.3f, 0.3f, 0.7f);
@@ -92,8 +101,12 @@ public class TrackBuilder : MonoBehaviour
     public float anchorMarkerRadius = 1.2f;
 
     [Header("Oval Lanes Gizmo")]
-    [Tooltip("On an oval, draw the two fixed lanes the AI race in (Draftmaster.Tracks.OvalLanes, Docs/Oval-Lanes.md).")]
+    [Tooltip("On an oval, draw the two lanes the AI race in when side by side (Draftmaster.Tracks.OvalLanes, Docs/Oval-Lanes.md).")]
     public bool drawOvalLanesGizmo = true;
+    [Tooltip("On an oval, the AI's inside and outside lanes (the lines two cars side by side take) are this track's authored leftmost and rightmost AI lines - the blue and red racing-line gizmo lines - kept off the edges and a car width plus clearance apart. Off: fixed grooves worked out from the road's width alone.")]
+    public bool ovalLanesFromAiLines = true;
+    [Tooltip("With Oval Lanes From AI Lines: take the lanes from the TRAINED leftmost / rightmost lines (Resources/RacingLines) instead of the authored anchors. Off by default - the trainer only pins the side lines at the anchors and they can wander far from the drawn lines between them.")]
+    public bool ovalLanesFromTrainedSideLines = false;
     public Color insideLaneColor = new Color(0.1f, 0.85f, 1f, 1f);
     public Color outsideLaneColor = new Color(1f, 0.35f, 0.9f, 1f);
 
@@ -149,7 +162,7 @@ public class TrackBuilder : MonoBehaviour
     // 150/100/50m brake boards on the barrier of any straight (>= minStraightForMarkers) that leads into a turn.
     void BuildMarkerBoards(List<Sample> samples)
     {
-        TearDownChild("BrakeMarkers");
+        if (!TearDownChild("BrakeMarkers")) return;
         if (!drawMarkerBoards || track.segments == null || samples == null || samples.Count < 2) return;
         if (markerDistances == null || markerDistances.Length == 0) return;
 
@@ -267,8 +280,8 @@ public class TrackBuilder : MonoBehaviour
 
     void BuildEdgeLines(List<Sample> samples)
     {
-        TearDownChild("LeftEdgeLine");
-        TearDownChild("RightEdgeLine");
+        bool left = TearDownChild("LeftEdgeLine"), right = TearDownChild("RightEdgeLine");
+        if (!left || !right) return;
 
         if (!track.drawEdgeLines || track.edgeLineMaterial == null) return;
         if (samples == null || samples.Count < 2) return;
@@ -333,24 +346,38 @@ public class TrackBuilder : MonoBehaviour
         mf.sharedMesh = mesh;
     }
 
-    void TearDownChild(string childName)
+    // Removes EVERY child called `childName`, not just the first. False when one can't be removed: in edit mode
+    // the pieces a track package was saved with are part of a prefab instance once the package sits in a scene,
+    // and Unity refuses to destroy those - the caller then keeps them and builds nothing new. Before, it built a
+    // new piece beside the locked one on every rebuild, and Texas's RaceScene copy had collected eight pit lanes
+    // and eight sets of brake boards; in play, which tears down only the first, the old box lines (fitted back
+    // from the exit) and the new ones (from the entry line) both showed.
+    bool TearDownChild(string childName)
     {
-        var existing = transform.Find(childName);
-        if (existing == null) return;
-        if (Application.isPlaying) Destroy(existing.gameObject);
-        else DestroyImmediate(existing.gameObject);
+        bool cleared = true;
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            var child = transform.GetChild(i);
+            if (child.name != childName) continue;
+            if (Application.isPlaying) { Destroy(child.gameObject); continue; }
+#if UNITY_EDITOR
+            if (UnityEditor.PrefabUtility.IsPartOfPrefabInstance(child.gameObject)
+                && !UnityEditor.PrefabUtility.IsAddedGameObjectOverride(child.gameObject))
+            {
+                cleared = false;
+                continue;
+            }
+#endif
+            DestroyImmediate(child.gameObject);
+        }
+        return cleared;
     }
 
     void BuildPitLane()
     {
-        // Tear down any previous pit child first.
-        var existing = transform.Find("PitLane");
-        if (existing != null)
-        {
-            if (Application.isPlaying) Destroy(existing.gameObject);
-            else DestroyImmediate(existing.gameObject);
-        }
+        // Tear down any previous pit child first (all of them; a package's own is kept in edit mode, see TearDownChild).
         _pitChild = null;
+        if (!TearDownChild("PitLane")) return;
         _pitMesh = null;
 
         if (!track.hasPitLane || track.pitSegments == null || track.pitSegments.Length == 0) return;
@@ -367,14 +394,14 @@ public class TrackBuilder : MonoBehaviour
                                    PixelArt.UvScale(mr.sharedMaterial));
         mf.sharedMesh = _pitMesh;
 
-        // Second lane on the wall side (+normal): the grey strip the pit boxes sit on. Shares its inner
+        // Second lane on the box side (PitBoxSide): the grey strip the pit boxes sit on. Shares its inner
         // edge with the pit ribbon so the two read as one paved surface. Its span is trimmed by the
-        // start/end offsets so the strip can begin after the pit entry and stop before the exit.
+        // start (or first-box) and end offsets so the strip can begin after the pit entry and stop before the exit.
         if (buildPitBoxLane && pitBoxLaneWidth > 0f)
         {
             float pitLen = pitSamples[pitSamples.Count - 1].distance;
-            float from = Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
-            float to = Mathf.Clamp(pitLen - Mathf.Max(0f, pitBoxLaneEndOffset), 0f, pitLen);
+            float from = PitBoxLaneFrom(pitLen);
+            float to = PitBoxLaneTo(pitLen);
             var bandSamples = SampleRange(pitSamples, from, to);
             if (bandSamples.Count >= 2)
             {
@@ -384,10 +411,10 @@ public class TrackBuilder : MonoBehaviour
                 var lmr = laneGo.AddComponent<MeshRenderer>();
                 lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
                 // Built from the lower lateral to the higher one whichever side it is on, so it winds the same way.
-                lmf.sharedMesh = pitBoxLaneOnLeft
-                    ? BuildBandMesh(bandSamples, s => -(s.width * 0.5f + pitBoxLaneWidth), s => -s.width * 0.5f,
+                lmf.sharedMesh = pitBoxLaneOnRight
+                    ? BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
                                     $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial))
-                    : BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
+                    : BuildBandMesh(bandSamples, s => -(s.width * 0.5f + pitBoxLaneWidth), s => -s.width * 0.5f,
                                     $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial));
             }
             BuildPitBoxLines(pitSamples, pitLen);
@@ -606,10 +633,38 @@ public class TrackBuilder : MonoBehaviour
     // The two oval lanes (Draftmaster.Tracks.OvalLanes) along these centreline samples, as lateral offsets
     // (m, + right of travel), one per sample. False on a road course, or on a track the dimensions table doesn't
     // know - those have no lanes.
+    //
+    // In Play Mode the lanes are built once per track shape and shared: every car's lane change used to rebuild
+    // them (~60 ms each at Texas, most of it BuildRacingLineAnchors). Callers must not write into the arrays.
     public bool TryGetOvalLanes(List<Sample> samples, out float[] inside, out float[] outside)
     {
         inside = outside = null;
         if (track == null || samples == null || samples.Count < 3) return false;
+        if (!Application.isPlaying) return BuildOvalLanes(samples, out inside, out outside);
+
+        var key = (track, track.RacingLineStamp, samples.Count, samples[samples.Count - 1].distance,
+                   ovalLanesFromAiLines, ovalLanesFromTrainedSideLines);
+        if (_ovalLanesBuilt && _ovalLanesKey.Equals(key))
+        {
+            inside = _ovalLanesInside;
+            outside = _ovalLanesOutside;
+            return _ovalLanesOk;
+        }
+        _ovalLanesOk = BuildOvalLanes(samples, out inside, out outside);
+        _ovalLanesInside = inside;
+        _ovalLanesOutside = outside;
+        _ovalLanesKey = key;
+        _ovalLanesBuilt = true;
+        return _ovalLanesOk;
+    }
+
+    [System.NonSerialized] bool _ovalLanesBuilt, _ovalLanesOk;
+    [System.NonSerialized] float[] _ovalLanesInside, _ovalLanesOutside;
+    [System.NonSerialized] (TrackInfoV2, long, int, float, bool, bool) _ovalLanesKey;
+
+    bool BuildOvalLanes(List<Sample> samples, out float[] inside, out float[] outside)
+    {
+        inside = outside = null;
         if (!Draftmaster.Tracks.OvalLanes.AppliesTo(track.name)) return false;
         int n = samples.Count;
         var distance = new float[n];
@@ -622,7 +677,47 @@ public class TrackBuilder : MonoBehaviour
             tangent[i] = samples[i].tangent;
         }
         float insideSide = Draftmaster.Tracks.OvalLanes.InsideSide(tangent);
-        Draftmaster.Tracks.OvalLanes.Build(distance, width, insideSide, track.closedLoop ? distance[n - 1] : 0f,
+        float loopLength = track.closedLoop ? distance[n - 1] : 0f;
+        // The front stretch (the trioval at Texas): the lanes from the AI lines open out and move up more there.
+        var frontStretch = Draftmaster.Tracks.OvalLanes.FrontStretchWeight(distance, tangent, loopLength);
+        // Trained leftmost / rightmost lines (Train Racing Lines Pinned To Anchors) only when asked for: the trainer
+        // pins them at the authored anchors but lets them wander between, and at Texas both dived to the inside
+        // edge through every corner (left == right for 150 m at a time, the outside lane swinging 13 m sideways
+        // mid-corner), nothing like the lines drawn. The authored anchors below are what the lanes follow.
+        var trained = ovalLanesFromAiLines && ovalLanesFromTrainedSideLines
+            ? Draftmaster.Tracks.TrainedRacingLines.For(track.name) : null;
+        if (trained != null && trained.HasSideLines && trained.MatchesLength(distance[n - 1]))
+        {
+            var left = new float[n];
+            var right = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                left[i] = trained.LeftAt(distance[i]);
+                right[i] = trained.RightAt(distance[i]);
+            }
+            var spec = Draftmaster.Tracks.OvalLanes.Default;
+            spec.insideEdgeMargin = spec.outsideEdgeMargin = SplineDriver.RoadEdgeMargin;
+            Draftmaster.Tracks.OvalLanes.BuildFromLines(distance, width, left, right, insideSide, loopLength, spec,
+                                                        out inside, out outside, 0f, frontStretch);
+            return true;
+        }
+        var anchors = ovalLanesFromAiLines ? track.BuildRacingLineAnchors() : null;
+        if (anchors != null && anchors.Count > 0)
+        {
+            float lapLen = distance[n - 1];
+            var left = new float[n];
+            var right = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                left[i] = track.GetLateralAt(distance[i], -1f, anchors, lapLen);
+                right[i] = track.GetLateralAt(distance[i], +1f, anchors, lapLen);
+            }
+            Draftmaster.Tracks.OvalLanes.BuildFromLines(distance, width, left, right, insideSide, loopLength,
+                                                        Draftmaster.Tracks.OvalLanes.Default, out inside, out outside,
+                                                        -1f, frontStretch);
+            return true;
+        }
+        Draftmaster.Tracks.OvalLanes.Build(distance, width, insideSide, loopLength,
                                            Draftmaster.Tracks.OvalLanes.Default, out inside, out outside);
         return true;
     }
@@ -1164,12 +1259,15 @@ public class TrackBuilder : MonoBehaviour
             DrawLaneGizmo(samples, outsideLane, outsideLaneColor);
         }
 
-        Gizmos.color = Color.yellow;
-        for (int i = 1; i < samples.Count; i++)
+        if (drawCenterlineGizmo)
         {
-            Vector3 a = transform.TransformPoint(new Vector3(samples[i - 1].position.x, samples[i - 1].position.y, 0));
-            Vector3 b = transform.TransformPoint(new Vector3(samples[i].position.x, samples[i].position.y, 0));
-            Gizmos.DrawLine(a, b);
+            Gizmos.color = Color.yellow;
+            for (int i = 1; i < samples.Count; i++)
+            {
+                Vector3 a = transform.TransformPoint(new Vector3(samples[i - 1].position.x, samples[i - 1].position.y, 0));
+                Vector3 b = transform.TransformPoint(new Vector3(samples[i].position.x, samples[i].position.y, 0));
+                Gizmos.DrawLine(a, b);
+            }
         }
 
         Gizmos.color = Color.green;

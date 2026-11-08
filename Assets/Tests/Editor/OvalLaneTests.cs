@@ -197,6 +197,88 @@ public class OvalLaneTests
         Assert.GreaterOrEqual(outside[n - 2] - inside[n - 2], spec.laneSpacing + spec.extraSpacing - 1e-3f);
     }
 
+    // Texas: the lanes against the lines as drawn (the spec with no spread or shift), on the front stretch / trioval
+    // and in the turns. Reports both; asserts they moved apart and up, more on the trioval.
+    [Test]
+    public void TexasLanesOpenOutAndMoveUpThroughTheTrioval()
+    {
+        SpawnTrack(TrackId);
+        var builderType = Runtime("TrackBuilder");
+        var builder = _package.GetComponentInChildren(builderType, true);
+        var samples = (System.Collections.IList)builderType.GetMethod("SampleCenterline", Type.EmptyTypes).Invoke(builder, null);
+        int n = samples.Count;
+        var sType = samples[0].GetType();
+        var dist = new float[n]; var width = new float[n]; var tan = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            dist[i] = (float)sType.GetField("distance").GetValue(samples[i]);
+            width[i] = (float)sType.GetField("width").GetValue(samples[i]);
+            tan[i] = (Vector2)sType.GetField("tangent").GetValue(samples[i]);
+        }
+        var args = new object[] { samples, null, null };
+        Assert.IsTrue((bool)builderType.GetMethod("TryGetOvalLanes").Invoke(builder, args), "Texas has no lanes.");
+        var inside = (float[])args[1]; var outside = (float[])args[2];
+
+        var track = builderType.GetField("track").GetValue(builder);
+        var anchors = track.GetType().GetMethod("BuildRacingLineAnchors").Invoke(track, null);
+        var lateralAt = track.GetType().GetMethod("GetLateralAt");
+        float lap = dist[n - 1];
+        var left = new float[n]; var right = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            left[i] = (float)lateralAt.Invoke(track, new object[] { dist[i], -1f, anchors, lap });
+            right[i] = (float)lateralAt.Invoke(track, new object[] { dist[i], +1f, anchors, lap });
+        }
+        float side = OvalLanes.InsideSide(tan);
+        var drawn = OvalLanes.Default;
+        drawn.extraSpacing = drawn.outwardShift = drawn.frontStretchExtraSpacing = drawn.frontStretchOutwardShift =
+            drawn.frontStretchOutsideEdgeRelief = 0f;
+        OvalLanes.BuildFromLines(dist, width, left, right, side, lap, drawn, out var inside0, out var outside0);
+        var front = OvalLanes.FrontStretchWeight(dist, tan, lap);
+
+        double fGap0 = 0, fGap = 0, fMid0 = 0, fMid = 0, tGap0 = 0, tGap = 0, tMid0 = 0, tMid = 0;
+        int fN = 0, tN = 0;
+        float frontFrom = float.NaN, frontTo = float.NaN;
+        for (int i = 0; i < n; i++)
+        {
+            // Height above the inside edge (m), of each lane and the pair's middle.
+            float gap0 = side * (inside0[i] - outside0[i]), gap = side * (inside[i] - outside[i]);
+            float mid0 = -side * (inside0[i] + outside0[i]) * 0.5f, mid = -side * (inside[i] + outside[i]) * 0.5f;
+            if (front[i] >= 0.999f)
+            {
+                fN++; fGap0 += gap0; fGap += gap; fMid0 += mid0; fMid += mid;
+                float s = dist[i] > lap * 0.5f ? dist[i] - lap : dist[i];
+                if (float.IsNaN(frontFrom) || s < frontFrom) frontFrom = s;
+                if (float.IsNaN(frontTo) || s > frontTo) frontTo = s;
+            }
+            else if (front[i] <= 0.001f) { tN++; tGap0 += gap0; tGap += gap; tMid0 += mid0; tMid += mid; }
+        }
+        var curve = new StringBuilder("\n  curvature (1/km, +/-30 m average) by 50 m:");
+        {
+            var k = new float[n];
+            for (int i = 0; i + 1 < n; i++)
+                k[i] = Mathf.Abs(Vector2.SignedAngle(tan[i], tan[i + 1]) * Mathf.Deg2Rad) / Mathf.Max(0.01f, dist[i + 1] - dist[i]);
+            k = OvalLanes.Smooth(dist, k, lap, 30f);
+            for (float x = 0f; x < lap; x += 50f)
+            {
+                int i = 0;
+                while (i + 1 < n && dist[i + 1] <= x) i++;
+                curve.Append($" {x:0}:{k[i] * 1000f:0.0}");
+            }
+        }
+        Assert.Greater(fN, 0, "No front stretch found at Texas." + curve);
+        string report = $"[OvalLanes] Texas front stretch (weight 1) {frontFrom:0} m to {frontTo:0} m of a {lap:0} m lap" +
+            "\n" + $"  front stretch: lanes apart {fGap0 / fN:0.00} -> {fGap / fN:0.00} m, pair's middle up the banking {(fMid - fMid0) / fN:+0.00} m" +
+            "\n" + $"  rest of the lap: lanes apart {tGap0 / tN:0.00} -> {tGap / tN:0.00} m, pair's middle up the banking {(tMid - tMid0) / tN:+0.00} m" + curve;
+        Debug.Log(report);
+        Assert.Greater(frontFrom, -1200f, report);
+        Assert.Less(frontTo, 600f, report);
+        Assert.Greater(fGap / fN - fGap0 / fN, 0.5, "The lanes should open out on the trioval. " + report);
+        Assert.Greater((fMid - fMid0) / fN, 0.5, "The lanes should move up on the trioval. " + report);
+        Assert.Greater(tGap / tN - tGap0 / tN, 0.1, "The lanes should open out round the lap. " + report);
+        Assert.Greater((fMid - fMid0) / fN, (tMid - tMid0) / tN, "More on the trioval than elsewhere. " + report);
+    }
+
     public class LaneResult
     {
         public readonly List<float> lapTimes = new List<float>();
@@ -608,7 +690,8 @@ public class OvalLaneTests
                 Mathf.RoundToInt(cons01 * statMax), Mathf.RoundToInt(agg01 * statMax), statMax,
                 UnityEngine.Random.value, UnityEngine.Random.value);
             paces[i] = Draftmaster.Sim.AIRatings.BasePace(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
-            commit[i] = Draftmaster.Sim.AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
+            commit[i] = Draftmaster.Sim.AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value,
+                (float)Runtime("TrackConditions").GetField("AiSpreadScale").GetValue(null));
         }
         var byPace = new int[cars];
         for (int i = 0; i < cars; i++) byPace[i] = i;
@@ -882,11 +965,14 @@ public class OvalLaneTests
         return lo;
     }
 
+    // A lane given by hand is the lane held: idealWhenSingleFile (single file on the ideal, side by side on the
+    // inside / outside lanes) is off, as the stages were measured. A test of that rule turns it back on.
     static void SetLane(object spline, string lane)
     {
         var f = spline.GetType().GetField("ovalLane");
         Assert.IsNotNull(f, "SplineDriver.ovalLane is gone.");
         f.SetValue(spline, Enum.Parse(f.FieldType, lane));
+        Set(spline, "idealWhenSingleFile", false);
     }
 
     static void Set(object target, string field, object value)

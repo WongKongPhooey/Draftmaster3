@@ -668,7 +668,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // On a plated superspeedway this is 1 and the AI runs the player's exact envelope (TrackConditions.AiParity).
         float aiPower = externalInput ? TrackConditions.AiPowerScale : 1f;
         float aiStretch = Mathf.Max(1f, aiPower);
-        float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
+        // This track's package (TrackConditions.PackageSpeedScale): every car's engine pull and top speed, together.
+        float pkgSpeed = Mathf.Max(0.1f, TrackConditions.PackageSpeedScale);
+        float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch * pkgSpeed;
         // Restrictor plate (superspeedways): the same solo top speed for every car, AI and human, under what the
         // banking holds (RestrictorPlate) - so the turns are flat out and the draft decides everything.
         if (TrackConditions.PlateMph > 0f)
@@ -677,12 +679,14 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (push > 0f) topMps *= 1f + RestrictorPlate.PushTopSpeedGain * push * TrackConditions.PushScale;
         // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
-        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow * cardDraftScale * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
+        // What the tow is worth goes with the drag it saves, so with speed (DraftAero.SpeedShare).
+        float towWorth = tow * DraftAero.SpeedShare(speedNow);
+        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * towWorth * cardDraftScale * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
         topMps *= cardPowerScale;
-        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * cardPowerScale * throttleIn;
+        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
-        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * cardDraftScale * TrackConditions.DraftScale * throttleIn;
+        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * towWorth * cardDraftScale * TrackConditions.DraftScale * throttleIn;
         if (push > 0f) accel += RestrictorPlate.PushAccel * push * TrackConditions.PushScale * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.

@@ -64,6 +64,13 @@ public class AIPaceCalibration : ScriptableObject
         TrackConditions.AiGripMultiplier = TrackConditions.DefaultAiGrip;
         TrackConditions.AiPaceMultiplier = TrackConditions.DefaultAiPace;
         TrackConditions.ApplyTrackTuning(trackId);   // the track type's draft and following distance
+        // The track's own default AI strength, where it has one (TrackTuning.aiGrip / aiPace).
+        if (!string.IsNullOrEmpty(trackId))
+        {
+            var tuning = TrackProfile.ForTrack(trackId);
+            if (tuning.aiGrip > 0f) TrackConditions.AiGripMultiplier = tuning.aiGrip;
+            if (tuning.aiPace > 0f) TrackConditions.AiPaceMultiplier = tuning.aiPace;
+        }
 
         var entry = Load() != null ? _loaded.Find(trackId) : null;
         if (entry == null) return;

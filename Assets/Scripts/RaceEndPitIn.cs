@@ -111,7 +111,8 @@ public class RaceEndPitIn : MonoBehaviour
                 HandToAI(car, spline);
             }
         }
-        _handedOverAtLine = spline.enabled && !car.enabled;
+        // The AI has it either way Auto drives: kinematically (car switched off) or on the dynamic model.
+        _handedOverAtLine = spline.enabled && !PlayerVehicleController.IsHuman(car);
     }
 
     // The kinematic hand-off, with the car's sprite/heading and track refs matched so the AI drives it correctly.

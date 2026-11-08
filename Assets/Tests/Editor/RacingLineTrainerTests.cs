@@ -219,6 +219,35 @@ public class RacingLineTrainerTests
             "a trained line that never leaves the centreline has not learned anything");
     }
 
+    // Anchor-pinned training: the line goes through every pinned point within its tolerance, and still finds time
+    // between them.
+    [Test]
+    public void PinnedTraining_GoesThroughItsPointsAndStillFindsTime()
+    {
+        var course = Hairpins();
+        int n = course.Count;
+        var dist = new float[n];
+        for (int i = 1; i < n; i++) dist[i] = dist[i - 1] + Vector2.Distance(course.centre[i - 1], course.centre[i]);
+        float loop = dist[n - 1] + Vector2.Distance(course.centre[n - 1], course.centre[0]);
+        var authored = new float[n];
+        for (int i = 0; i < n; i++) authored[i] = 2f * Mathf.Sin(2f * Mathf.PI * dist[i] / loop * 3f);
+        var anchors = new[] { loop * 0.1f, loop * 0.3f, loop * 0.55f, loop * 0.8f };
+        const float tol = 0.15f;
+        RacingLineTrainer.BuildPins(course, dist, authored, anchors, loop, tol, 0.03f, 15f);
+
+        var report = RacingLineTrainer.Train(course, (float[])authored.Clone(), Car(), RacingLineTrainer.Settings.For(851f));
+
+        Assert.That(report.improvements, Is.GreaterThan(0), "pinned training found nothing between the points");
+        Assert.That(report.trainedLapTime, Is.LessThan(report.seedLapTime), "pinned training made the lap slower");
+        foreach (float a in anchors)
+        {
+            int k = 0;
+            for (int i = 1; i < n; i++) if (Mathf.Abs(dist[i] - a) < Mathf.Abs(dist[k] - a)) k = i;
+            Assert.That(Mathf.Abs(report.lateral[k] - authored[k]), Is.LessThanOrEqualTo(tol + 1e-4f),
+                $"the line missed its point at {a:F0} m: {report.lateral[k]:F2} m against {authored[k]:F2} m");
+        }
+    }
+
     [Test]
     public void Training_StaysInsideTheCorridor()
     {

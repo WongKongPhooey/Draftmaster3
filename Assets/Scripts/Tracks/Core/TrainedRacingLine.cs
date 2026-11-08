@@ -43,6 +43,17 @@ namespace Draftmaster.Tracks
 
         public float[] lateral;
 
+        // Optional (anchor-pinned training): the leftmost and rightmost AI lines, trained the same way on the same
+        // grid, each pinned through its authored entry / apex / exit points. The oval AI's inside and outside lanes
+        // (TrackBuilder.TryGetOvalLanes) read these when they are present.
+        public bool anchorPinned;
+        public float[] leftLateral;
+        public float[] rightLateral;
+        public bool HasSideLines => lateral != null && leftLateral != null && rightLateral != null &&
+                                    leftLateral.Length == lateral.Length && rightLateral.Length == lateral.Length;
+        public float LeftAt(float distance) => GridAt(leftLateral, distance);
+        public float RightAt(float distance) => GridAt(rightLateral, distance);
+
         // Optional: the legal corridor this line was taken in, per sample on the same grid (m, + right). A line
         // copied from the player's lap uses tarmac run-off where they did, which is legal (LapTimingManager
         // counts paved run-off and kerbs) but outside the painted road the AI is normally held inside. When
@@ -97,7 +108,9 @@ namespace Draftmaster.Tracks
         // So the tool measures the line THROUGH THIS FUNCTION before writing it, quotes that lap time, and
         // keeps the previous line where the round trip cost more than the session found. See Docs/Tracks.md,
         // "What the storage grid costs".
-        public float LateralAt(float distance)
+        public float LateralAt(float distance) => GridAt(lateral, distance);
+
+        float GridAt(float[] lateral, float distance)
         {
             if (lateral == null || lateral.Length == 0 || spacing <= 0.01f) return 0f;
             int n = lateral.Length;
@@ -139,11 +152,18 @@ namespace Draftmaster.Tracks
         // Generated numbers do not need seven significant figures, and the JSON is checked in.
         public void RoundForStorage()
         {
-            if (lateral == null) return;
-            for (int i = 0; i < lateral.Length; i++)
+            Round(lateral);
+            Round(leftLateral);
+            Round(rightLateral);
+        }
+
+        static void Round(float[] values)
+        {
+            if (values == null) return;
+            for (int i = 0; i < values.Length; i++)
             {
-                float r = Mathf.Round(lateral[i] * 1000f) / 1000f;
-                lateral[i] = Mathf.Abs(r) < 1e-6f ? 0f : r;   // and no "-0"
+                float r = Mathf.Round(values[i] * 1000f) / 1000f;
+                values[i] = Mathf.Abs(r) < 1e-6f ? 0f : r;   // and no "-0"
             }
         }
 
@@ -171,6 +191,12 @@ namespace Draftmaster.Tracks
             sb.Append(",\"totalLapsSimulated\":").Append(totalLapsSimulated);
             sb.Append(",\"refinePasses\":").Append(refinePasses);
             Array(sb, "lateral", lateral);
+            if (anchorPinned) sb.Append(",\"anchorPinned\":true");
+            if (HasSideLines)
+            {
+                Array(sb, "leftLateral", leftLateral);
+                Array(sb, "rightLateral", rightLateral);
+            }
             if (HasCorridor)
             {
                 Array(sb, "minLateral", minLateral);

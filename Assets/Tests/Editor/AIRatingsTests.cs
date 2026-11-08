@@ -72,4 +72,45 @@ public class AIRatingsTests
         Assert.AreEqual(0f, low.consistency01, Tol);
         Assert.AreEqual(low.consistency01, high.consistency01, Tol);
     }
+    [Test]
+    public void TyreManagementStretchesASetEitherWay()
+    {
+        Assert.AreEqual(1.15f, AIRatings.TyreWearScale(0f), Tol);
+        Assert.AreEqual(1f, AIRatings.TyreWearScale(0.5f), Tol);
+        Assert.AreEqual(0.85f, AIRatings.TyreWearScale(1f), Tol);
+    }
+
+    [Test]
+    public void AnAwareDriverWantsMoreRoomBeforeTakingALane()
+    {
+        Assert.Greater(AIRatings.AwarenessMargin(1f), AIRatings.AwarenessMargin(0f));
+        Assert.AreEqual(1f, AIRatings.AwarenessMargin(0.5f), Tol);
+    }
+
+    [Test]
+    public void AdaptabilityOnlyCostsPaceEarlyInTheSession()
+    {
+        Assert.AreEqual(1f - AIRatings.AdaptPenalty, AIRatings.AdaptationPace(0f, 0f), Tol);
+        Assert.AreEqual(1f, AIRatings.AdaptationPace(0f, AIRatings.AdaptSeconds), Tol);
+        Assert.AreEqual(1f, AIRatings.AdaptationPace(1f, 0f), Tol);
+        Assert.Less(AIRatings.AdaptationPace(0.2f, 60f), AIRatings.AdaptationPace(0.8f, 60f));
+    }
+
+    [Test]
+    public void ATrackProneToCautionsMakesMoreMistakes()
+    {
+        Assert.AreEqual(1f, AIRatings.MistakeScale(0.5f), Tol);
+        Assert.Greater(AIRatings.MistakeScale(0.9f), AIRatings.MistakeScale(0.35f));
+    }
+
+    [Test]
+    public void TheAISlidersStepWithinTheirRangeAndCycleRound()
+    {
+        Assert.AreEqual(AIDifficultyRules.StrengthMax, AIDifficultyRules.StepStrength(AIDifficultyRules.StrengthMax, +1));
+        Assert.AreEqual(AIDifficultyRules.StrengthMin, AIDifficultyRules.CycleStrength(AIDifficultyRules.StrengthMax));
+        Assert.AreEqual(AIDifficultyRules.AggressionMin, AIDifficultyRules.StepAggression(AIDifficultyRules.AggressionMin, -1));
+        Assert.AreEqual(1f, AIDifficultyRules.StrengthScale(AIDifficultyRules.StrengthDefault), Tol);
+        Assert.AreEqual(0.6f, AIDifficultyRules.Aggression(0.6f, AIDifficultyRules.AggressionDefault), Tol);
+        Assert.AreEqual(1f, AIDifficultyRules.Aggression(0.8f, AIDifficultyRules.AggressionMax), Tol);
+    }
 }

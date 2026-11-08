@@ -1,5 +1,7 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using Draftmaster.Controls;
 
 // Driving vs Auto, the hand-off itself.
@@ -7,9 +9,10 @@ using Draftmaster.Controls;
 // - Driving OFF : Auto. The car is handed to the AI (kinematic SplineDriver) and the camera stays on it. Watching
 //                 the rest of the field is the crew chief's job (CrewChiefController). Flip back to resume control.
 //
-// This has no button of its own. Handing the car over is what happens when the player steps out of it, so it
-// is driven by whoever they step into — the crew chief's headset in the HUD corner (CrewChiefController), the
-// TEAM panel, co-op possession, the touch controls' AUTO button — plus the keyboard shortcut below.
+// Handing the car over is also what happens when the player steps out of it, so it is driven by whoever they
+// step into — the crew chief's headset in the HUD corner (CrewChiefController), the TEAM panel, co-op
+// possession — plus the keyboard shortcut below and an AUTO button: the touch controls' top row on a phone,
+// and on PC one of its own, stacked above the headset (reads DRIVE, lit red, while the AI has the car).
 public class DriveModeController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -31,6 +34,12 @@ public class DriveModeController : MonoBehaviour
     [Tooltip("When true, another system (e.g. CrewChiefController) owns the camera, so handing the car over won't retarget it.")]
     public bool suppressBroadcastCamera = false;
 
+    [Header("HUD (PC)")]
+    [Tooltip("Gap from the bottom-right corner to the AUTO button, in 640x360 UI pixels. The default stands it " +
+             "on top of the crew chief's headset (CrewChiefController.buttonCorner + buttonSize + 6), where the " +
+             "chief's TIMING stack goes — that only shows while the player is on foot, and this only in the car.")]
+    public Vector2 buttonCorner = new Vector2(92f, 50f);
+
     public bool IsDriving => _driving;
     public GameObject PlayerCar => playerCar;
 
@@ -38,6 +47,7 @@ public class DriveModeController : MonoBehaviour
     SplineDriver _spline;
     PitLaneStart _zoom;      // owns the camera ortho lerp; null on scenes without the pit-start flow
     bool _driving = true;
+    GameObject _inputAddedTo;   // the car Auto put a SplineInputDriver on, to take it off again on the way back
 
     bool _keyPrev;
 
@@ -58,6 +68,8 @@ public class DriveModeController : MonoBehaviour
         _zoom = FindFirstObjectByType<PitLaneStart>();
 
         if (startInBroadcast) SetDriving(false);
+        // A phone has the touch controls' own AUTO button in its top row.
+        if (!TouchDriveControls.TouchPlatform) BuildButton();
     }
 
     void Update()
@@ -72,6 +84,59 @@ public class DriveModeController : MonoBehaviour
         // On a pad it is a face button that means "back" everywhere else, so only from the seat and only
         // with nothing open over the race.
         if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
+
+        UpdateButton();
+    }
+
+    // ---- PC button ----
+
+    GameObject _buttonRoot;
+    Image _buttonFace;
+    TMP_Text _buttonLabel;
+    bool _buttonShowsDriving;
+
+    void BuildButton()
+    {
+        var canvas = PixelUI.CreateCanvas("AutoDriveCanvas", 111);
+        if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+        {
+            var es = new GameObject("EventSystem");
+            es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
+
+        var button = IronOvalUI.TabButton(canvas.transform, "AutoButton", "Auto", new Vector2(56f, UIButton.KitPx));
+        button.onClick.AddListener(Toggle);
+        var root = (RectTransform)button.transform.parent;   // TabButton returns the face; its root is the shadow
+        root.anchorMin = root.anchorMax = root.pivot = new Vector2(1f, 0f);
+        root.anchoredPosition = new Vector2(-buttonCorner.x, buttonCorner.y);
+        _buttonRoot = root.gameObject;
+        _buttonFace = button.GetComponent<Image>();
+        var label = button.transform.Find("Label");
+        _buttonLabel = label != null ? label.GetComponent<TMP_Text>() : null;
+        _buttonShowsDriving = !_driving;   // forces the first paint
+        UpdateButton();
+    }
+
+    // Up while the player is sat in their car (or has handed it to the AI) with nothing modal over the race, and
+    // the car is theirs to take back — the same moments V answers in.
+    void UpdateButton()
+    {
+        if (_buttonRoot == null) return;
+        bool show = !PadInput.OnFoot && !PadInput.ModalOpen &&
+                    (PlayerVehicleController.Human != null || !_driving) &&
+                    !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
+        if (_buttonRoot.activeSelf != show) _buttonRoot.SetActive(show);
+        if (_buttonShowsDriving == _driving) return;
+        _buttonShowsDriving = _driving;
+
+        // On Auto the plate goes alarm red, as the headset does on duty, and offers the way back.
+        if (_buttonFace != null) _buttonFace.color = _driving ? PixelGUI.PlateDeep : PixelGUI.Danger;
+        if (_buttonLabel != null)
+        {
+            _buttonLabel.text = _driving ? "Auto" : "Drive";
+            _buttonLabel.color = _driving ? PixelGUI.TextDim : PixelGUI.Text;
+        }
     }
 
     public void Toggle()
@@ -103,19 +168,18 @@ public class DriveModeController : MonoBehaviour
     {
         if (_pvc != null && _spline != null)
         {
-            // Match the player car's sprite/heading + track refs so the AI drives it correctly.
-            if (_spline.track == null) _spline.track = _pvc.track;
-            if (_spline.vehicleInfo == null) _spline.vehicleInfo = _pvc.vehicleInfo;
-            _spline.spriteFacesUp = _pvc.spriteFacesUp;
-            _spline.angleOffsetDeg = _pvc.angleOffsetDeg;
+            // Driven the way the field is: the car's own dynamic model, steered by SplineInputDriver, with
+            // AIRacingBehaviour's racecraft on top. A bare kinematic SplineDriver drove its speed profile blind —
+            // no follow distance, no idea anything was in front of it — and from the green it ran into the back
+            // of whatever was there. The brain is set up as GridSpawner sets up a field car's.
+            var spawner = FindFirstObjectByType<GridSpawner>();
+            if (spawner != null) _spline.cornerSpeedScale = spawner.aiCornerSpeedScale;
+            if (playerCar.GetComponent<SplineInputDriver>() == null) _inputAddedTo = playerCar;
+            AIHandover.ToAI(playerCar, spawner != null ? spawner.aiSteerGain : 1.5f, spawner != null ? spawner.aiSpeedGain : 2f);
 
-            float mph = _pvc.SpeedMph;
-            _spline.enabled = true;
-            _spline.EngageFromCurrentPose(mph);
-            _pvc.enabled = false;
-            // Before the green the car has to form up with the field, not drive its race pace into the back of
-            // it. No-op once racing.
-            FormationController.TakeOver(_spline, _pvc.GridPosition);
+            // In the train behind the safety car (formation lap, cautions) like every other car, and handed to the
+            // racing brain at the green.
+            FormationController.TakeOver(_spline, _pvc.GridPosition, dynamicModel: true);
         }
         // The camera stays on the player's car, at driving zoom — the on-foot flow may have left the camera at
         // walking zoom if the player never climbed into the car this session.
@@ -128,13 +192,16 @@ public class DriveModeController : MonoBehaviour
     {
         if (_pvc != null && _spline != null)
         {
-            float mph = _spline.CurrentMph;
-            float heading = _spline.CommandedHeadingDeg;
-            Vector3 pos = playerCar.transform.position;
             FormationController.HandBack(_spline);
-            _spline.enabled = false;
-            _pvc.enabled = true;
-            _pvc.SeedPose(pos, heading, mph / 2.237f);
+            AIHandover.ToHuman(playerCar);
+            // A car with an AI input driver on it is not the human's, enabled or not (PlayerVehicleController.IsHuman),
+            // so the one Auto added comes off again. A team car keeps the one it was built with.
+            if (_inputAddedTo == playerCar)
+            {
+                var input = playerCar.GetComponent<SplineInputDriver>();
+                if (input != null) Destroy(input);
+            }
+            _inputAddedTo = null;
         }
         if (cameraFollow != null && playerCar != null) cameraFollow.target = playerCar.transform;
     }
