@@ -16,7 +16,9 @@ using UnityEngine;
 // session ("Server no longer running; ending orphaned session.") and nothing ever starts it again.
 //
 // WHAT. Every few seconds, when the editor is idle: if there is no session but the local server answers a
-// connect with a sane timeout, start the session again. Backs off after a failed start. Logs each restart.
+// connect with a sane timeout, start the session again. If the server itself has gone (two checks running —
+// it was killed, crashed, or replaced by a package update), start it the way the window's Start Server button
+// does, wait for it, then start the session. Backs off after a failed start. Logs each restart.
 // Closing the MCP For Unity window also stops the false alarm at its source — the check only runs from it.
 [InitializeOnLoad]
 public static class McpSessionWatchdog
@@ -26,9 +28,12 @@ public static class McpSessionWatchdog
     const double CheckEverySeconds = 4.0;
     const double BackOffSeconds = 30.0;
     const int ConnectTimeoutMs = 1500;
+    const string ServerPrefKey = "Draftmaster.McpSessionWatchdog.StartServer";
+    const string ServerMenuPath = "Draftmaster/Tools/MCP Session Watchdog Starts The Server";
 
     static double _nextCheck;
     static bool _busy;
+    static int _serverDownChecks;
 
     public static bool Enabled
     {
@@ -54,6 +59,28 @@ public static class McpSessionWatchdog
     static bool ToggleValidate()
     {
         Menu.SetChecked(MenuPath, Enabled);
+        return true;
+    }
+
+    // Also bring the local server back when it is gone, not just the session. On by default; turn it off if
+    // you ever stop the server on purpose and want it to stay stopped.
+    public static bool StartsServer
+    {
+        get => EditorPrefs.GetBool(ServerPrefKey, true);
+        set => EditorPrefs.SetBool(ServerPrefKey, value);
+    }
+
+    [MenuItem(ServerMenuPath)]
+    static void ToggleServer()
+    {
+        StartsServer = !StartsServer;
+        Debug.Log($"[MCP watchdog] {(StartsServer ? "will" : "won't")} start the local MCP server when it is down.");
+    }
+
+    [MenuItem(ServerMenuPath, true)]
+    static bool ToggleServerValidate()
+    {
+        Menu.SetChecked(ServerMenuPath, StartsServer);
         return true;
     }
 
@@ -87,7 +114,32 @@ public static class McpSessionWatchdog
         {
             // Off the main thread: a slow connect must not hitch the editor.
             bool reachable = await Task.Run(() => CanConnect(host, port));
-            if (!reachable) return;   // the server really is down; starting a session would just fail
+            if (!reachable)
+            {
+                // Down twice running (not one slow answer): start it, as the window's Start Server button does.
+                if (!StartsServer || ++_serverDownChecks < 2) return;
+                _serverDownChecks = 0;
+                Debug.Log($"[MCP watchdog] No MCP server at {host}:{port} — starting one.");
+                if (!MCPServiceLocator.Server.StartLocalHttpServer(quiet: true))
+                {
+                    Debug.LogWarning("[MCP watchdog] Couldn't start the local MCP server; trying again in 30 s.");
+                    _nextCheck = EditorApplication.timeSinceStartup + BackOffSeconds;
+                    return;
+                }
+                // uvx may have to fetch a new server version first: give it up to two minutes.
+                for (int i = 0; i < 60 && !reachable; i++)
+                {
+                    await Task.Delay(2000);
+                    reachable = await Task.Run(() => CanConnect(host, port));
+                }
+                if (!reachable)
+                {
+                    Debug.LogWarning("[MCP watchdog] Started the MCP server but it never answered; trying again in 30 s.");
+                    _nextCheck = EditorApplication.timeSinceStartup + BackOffSeconds;
+                    return;
+                }
+            }
+            _serverDownChecks = 0;
             bool started = await MCPServiceLocator.Bridge.StartAsync();
             if (started) Debug.Log($"[MCP watchdog] Session had dropped with the server still up at {host}:{port} — restarted it.");
             else
