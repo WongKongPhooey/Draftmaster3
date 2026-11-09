@@ -186,7 +186,7 @@ outcome.
 | `  TeamRules.cs` | `MasterDraftTeam`, validation, rating, best driver, auto-build |
 | `  RaceHand.cs` | The in-race hand |
 | `  RaceEffects.cs` | `TeamEffects` (car / chief trims), `ActiveEffects` (timed cards, next-stop flag) |
-| `  MasterDraftProfile.cs` | Profile + JSON, `Economy`, `DraftResult`, `ProfileOps` transactions |
+| `  MasterDraftProfile.cs` | Profile + JSON (through `ProfileJson`, installed by the runtime), `Economy`, `DraftResult`, `ProfileOps` transactions |
 | `  TradeRules.cs` | `TradeOffer`, bot offers, accept / propose / cancel |
 | `  DraftRng.cs` | Seeded RNG + stable string hash |
 | `Assets/Scripts/MasterDraft/Runtime/` (Assembly-CSharp) | Runtime |
@@ -198,7 +198,13 @@ outcome.
 | `  MasterDraftRaceHost.cs` | In-race hand, effects, HUD strip, payout |
 | `Assets/Editor/MasterDraftSceneBuilder.cs` | Scene builder + profile menu items |
 | `Assets/Scenes/MasterDraft.unity` | Camera + `MasterDraftUI`; nothing hand-authored |
-| `Assets/Tests/Editor/MasterDraftRulesTests.cs` | Rules tests; `TitleScreenWiringTests.MasterDraftRowOpensTheMasterDraftMenu` |
+| `  MasterDraftJsonInstaller.cs` | Installs JsonUtility into `ProfileJson` (Core is engine-free) |
+| `Assets/Tests/Editor/MasterDraftRulesTests.cs` | Rules tests — also run headless by `Tools/HeadlessTests` (`dotnet test`, no Unity); `TitleScreenWiringTests.MasterDraftRowOpensTheMasterDraftMenu` |
+
+**Core has no engine references** (`noEngineReferences: true`), so its rules compile and test with plain
+`dotnet test Tools/HeadlessTests` — which is what lets overnight `code`-lane rows work on the rules in
+parallel without the Editor (Docs/Overnight-Lanes.md). Keep it that way: an engine service the rules need
+goes through a hook the runtime installs, the way the profile's JSON does.
 
 Touched outside the mode: `GameSession` (`Mode.MasterDraft` appended, `IsMasterDraft`, `IsOneOffRace`;
 `OnFootAllowed` = not a one-off race), `PlayerCarLivery` + `GridSpawner` (ask `IsOneOffRace`),

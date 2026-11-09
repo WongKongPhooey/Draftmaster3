@@ -735,6 +735,15 @@ with `AiGripMultiplier` / `AiPaceMultiplier` does not invalidate the line: it is
 round, just driven slower, and `SplineInputDriver`'s live grip governor caps commanded speed against
 whatever grip actually exists.
 
+## Paddock sidecars
+
+Venue markers and lot areas can also be placed as text: `Assets/Resources/Paddocks/<TrackId>.json`, built
+into the package by `PaddockSidecar` when `TrackSceneLoader` loads it. The package's own objects always win.
+Geometry to place against comes from `Draftmaster > Tracks > Export Geometry For Paddock Layout`, written to
+`Tools/TrackExports/<TrackId>.json`; `Tools/paddock_sidecar.py` validates and previews. This is how paddocks
+for the unauthored tracks get laid out in parallel overnight — format and workflow in
+`Docs/Overnight-Lanes.md`.
+
 ## Files
 
 | File | Role |

@@ -1,0 +1,45 @@
+{
+  "region": "Northeast",
+  "stops": [
+    {
+      "id": "liberty_speed",
+      "type": "EngineShop",
+      "name": "Liberty Speed Shop",
+      "road": [
+        "Dover",
+        "Richmond"
+      ],
+      "flavor": "Strip-mall storefront, serious back room. Honest work at honest prices.",
+      "stock": [
+        "engine_358",
+        "gearbox_tall",
+        "tires_hard"
+      ]
+    },
+    {
+      "id": "adirondack_salvage",
+      "type": "Junkyard",
+      "name": "Adirondack Auto Salvage",
+      "road": [
+        "WatkinsGlen",
+        "NewHampshire"
+      ],
+      "flavor": "Acres of rusting stock cars under the pines. Bring a flashlight and cash."
+    },
+    {
+      "id": "pitt_bros",
+      "type": "EngineShop",
+      "name": "Pitt Brothers Engine Builders",
+      "road": [
+        "LimeRock",
+        "NewHampshire"
+      ],
+      "flavor": "Two brothers, three dynos, zero patience. The best motors east of Charlotte — if you can find the place.",
+      "stock": [
+        "engine_r7",
+        "engine_hemi",
+        "gearbox_close"
+      ]
+    }
+  ]
+}

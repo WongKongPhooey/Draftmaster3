@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // The between-races road map of the USA: circuit nodes (one per racetrack scene) joined by highway edges,
-// with made-up minor locations (engine builders, junkyards) strung along them. Code-defined (DummyDrivers
-// pattern). Geography is FIXED — learning what lives where is the game. Junkyard STOCK rerolls weekly.
+// with made-up minor locations (engine builders, junkyards) strung along them. Circuits and the team factory
+// are code-defined (DummyDrivers pattern); the minor locations are DATA, one JSON file per region in
+// Resources/Travel/Stops/ (see "MINOR LOCATIONS" below). Geography is FIXED — learning what lives where is
+// the game. Junkyard STOCK rerolls weekly.
 //
 // CIRCUITS: every venue on the 2026 Cup / O'Reilly / Truck / ARCA Menards calendars, ARCA East and West
 // included, plus the two legacy scenes (Kentucky, Los Angeles) that are no longer raced.
@@ -29,9 +31,16 @@ using UnityEngine;
 // planar, neighbours joined, nothing hopping over a town in between. Anything left under three roads gets
 // its nearest missing neighbour. Deterministic, so the geography is still fixed and learnable.
 //
-// Minor locations are mounted ON a road (`ShopOn`/`YardOn`), sitting at its midpoint and splitting it
-// into two hops. So a route through a shop costs one stop more than the direct road beside it — that
-// trade is the point of the detour allowance.
+// Minor locations are mounted ON a road (`MountStop`), sitting at its midpoint and splitting it into two
+// hops. So a route through a shop costs one stop more than the direct road beside it — that trade is the
+// point of the detour allowance.
+//
+// MINOR LOCATIONS are read from Resources/Travel/Stops/<Region>.json (files in name order, stops in file
+// order), so they can be added without touching code — and by several people (or overnight agents) at
+// once, one region file each. A stop names the road it sits on (`road`: two circuit ids), or gives a real
+// `lat`/`lon` and is mounted on the nearest circuit road nothing else sits on yet. Schema, the part ids a
+// shop may stock and the validator (Tools/validate_travel_stops.py) are in Docs/Travel-Map.md. A new stop
+// also needs its marker on the map prefab: Draftmaster > Travel Map > Sync Node Markers.
 //
 // Coordinates are normalized map space: x 0=west..1=east, y 0=north..1=south (GUI y-down).
 
@@ -205,61 +214,8 @@ public static class TravelGraph
             "Your own shop. The fabricators keep building while you are away, and nothing gets posted " +
             "out — whatever they have finished is on the rack, waiting for you to come and get it.");
 
-        // --- Minor locations: each one sits ON a road, splitting it into two hops ---
-        YardOn("Portland", "Evergreen", "cascade_wrecking", "Cascade Auto Wrecking",
-            "Moss on the roofs, rain in the wiring loom. The engines have all been kept indoors.");
-        ShopOn("Sonoma", "AllAmerican", "sierra_speed", "Sierra Speed & Machine",
-            "Wine-country money, dirt-track know-how. They'll build whatever you can pay for.",
-            "engine_r7", "gearbox_close", "aero_kit");
-        // Between LA and Vegas, which is where the Mojave actually is — Bakersfield and Vegas are no
-        // longer joined now the map is real geography.
-        YardOn("Irwindale", "LasVegas", "mojave_yard", "Mojave Boneyard",
-            "Dry air keeps the sheet metal honest. Best-preserved junk in America.");
-        ShopOn("LosAngeles", "Irwindale", "socal_speed", "SoCal Speed Emporium",
-            "Land-speed royalty. Half the shop wall is Bonneville timing slips.",
-            "engine_hemi", "chassis_light", "aero_kit");
-        YardOn("Phoenix", "FortWorth", "route66_trading", "Route 66 Trading Post",
-            "Gas, jerky, and a barn of parts pulled off everything that ever broke down on the Mother Road.");
-        // Texas up to Colorado, i.e. through the panhandle it is named after. It used to hang off
-        // St Louis - Phoenix, a road the real map has no business drawing.
-        ShopOn("FortWorth", "ColoradoNational", "panhandle_speed", "Panhandle Speed & Custom",
-            "Big sky, big power. Everything's negotiable except the dyno numbers.",
-            "engine_358", "gearbox_tall", "tires_soft", "tires_hard");
-        ShopOn("ColoradoNational", "Kansas", "front_range_fab", "Front Range Fabrication",
-            "Thin air, thick welds. They chassis-jig by eye and have never been wrong yet.",
-            "chassis_light", "gearbox_tall", "engine_358");
-        YardOn("Iowa", "Kansas", "cornbelt", "Corn Belt Salvage",
-            "A thousand miles of flat road wears cars out. They all end up here.");
-        YardOn("Gateway", "Springfield", "ozark_salvage", "Ozark Hollow Salvage",
-            "Down a gravel track, past two dogs. Everything is for sale and nothing is priced.");
-        YardOn("Milwaukee", "Joliet", "lakeshore_salvage", "Lakeshore Auto Salvage",
-            "Lake wind has taken the paint off every shell in the yard. The mechanicals are immaculate.");
-        YardOn("Toledo", "FlatRock", "rustbelt", "Rust Belt Auto Graveyard",
-            "Rows of Detroit iron going back fifty years. The owner knows every casting number by heart.");
-        ShopOn("IRP", "Indianapolis", "brickyard_machine", "Brickyard Machine Werks",
-            "Ex-Indy fabricators who got bored of open wheels. Precision costs.",
-            "engine_r7", "gearbox_close", "chassis_light");
-        ShopOn("Kentucky", "Indianapolis", "bluegrass_machine", "Bluegrass Machine Co.",
-            "A horse barn with a dyno cell in it. They only work on motors they think are worth it.",
-            "engine_358", "engine_barnfind", "gearbox_close");
-        ShopOn("Bristol", "Kentucky", "moonshine_garage", "Copperhead Hollow Garage",
-            "They built engines to outrun the law long before anybody paid them to win races.",
-            "engine_bootleg", "engine_358", "tires_soft");
-        ShopOn("FiveFlags", "Talladega", "gulfcoast_gear", "Gulf Coast Gearworks",
-            "Salt air, shrimp boats, and the best gear cutter in three states.",
-            "gearbox_close", "gearbox_tall", "tires_hard");
-        YardOn("Charlotte", "NorthWilkesboro", "carolina_yard", "Tar Heel Salvage",
-            "Half the field's old wrecks end up here. So do their good parts.");
-        YardOn("NewSmyrna", "Miami", "gatorbone", "Gator Bone Salvage",
-            "Swamp air eats sheet metal, but the drivetrains keep. Watch where you step.");
-        ShopOn("Dover", "Richmond", "liberty_speed", "Liberty Speed Shop",
-            "Strip-mall storefront, serious back room. Honest work at honest prices.",
-            "engine_358", "gearbox_tall", "tires_hard");
-        YardOn("WatkinsGlen", "NewHampshire", "adirondack_salvage", "Adirondack Auto Salvage",
-            "Acres of rusting stock cars under the pines. Bring a flashlight and cash.");
-        ShopOn("LimeRock", "NewHampshire", "pitt_bros", "Pitt Brothers Engine Builders",
-            "Two brothers, three dynos, zero patience. The best motors east of Charlotte — if you can find the place.",
-            "engine_r7", "engine_hemi", "gearbox_close");
+        // --- Minor locations: data, one file per region; each one sits ON a road, splitting it in two ---
+        LoadStops();
     }
 
     // --- geography ---
@@ -475,25 +431,82 @@ public static class TravelGraph
         for (int i = 0; i < FactoryRoads && i < circuits.Count; i++) Edge(id, circuits[i].id);
     }
 
-    static void Shop(string id, string name, float x, float y, string flavor, params string[] stock) =>
-        AddNode(new TravelNode { id = id, name = name, pos = new Vector2(x, y), locationType = TravelLocationType.EngineShop, flavor = flavor, shopStock = stock });
+    // --- minor locations (data) ---
 
-    static void Yard(string id, string name, float x, float y, string flavor) =>
-        AddNode(new TravelNode { id = id, name = name, pos = new Vector2(x, y), locationType = TravelLocationType.Junkyard, flavor = flavor });
+    public const string StopsFolder = "Travel/Stops";
+
+    // One region file. JsonUtility ignores fields it doesn't know, so a file may carry research notes
+    // (`source`, `notes`, ...) alongside these.
+    [System.Serializable]
+    public class StopsFile
+    {
+        public string region;
+        public Stop[] stops;
+    }
+
+    [System.Serializable]
+    public class Stop
+    {
+        public string id;
+        public string type;      // "EngineShop" | "Junkyard"
+        public string name;
+        public string[] road;    // two circuit ids; the stop splits that road
+        public float lat, lon;   // used only when `road` is empty: mount on the nearest free road
+        public string flavor;
+        public string[] stock;   // EngineShop: PartCatalog ids for sale
+    }
+
+    static void LoadStops()
+    {
+        var files = Resources.LoadAll<TextAsset>(StopsFolder);
+        System.Array.Sort(files, (x, y) => string.CompareOrdinal(x.name, y.name));
+        if (files.Length == 0)
+            Debug.LogError($"TravelGraph: no stop files in Resources/{StopsFolder} — the map has no shops or yards.");
+        foreach (var file in files)
+        {
+            StopsFile data = null;
+            try { data = JsonUtility.FromJson<StopsFile>(file.text); }
+            catch (System.Exception e) { Debug.LogError($"TravelGraph: {file.name}.json is not valid JSON: {e.Message}"); }
+            if (data?.stops == null) continue;
+            foreach (var stop in data.stops) AddStop(stop, file.name);
+        }
+    }
+
+    static void AddStop(Stop s, string file)
+    {
+        if (s == null) return;
+        string where = $"TravelGraph: {file}.json stop '{s.id}'";
+        if (string.IsNullOrEmpty(s.id) || _byId.ContainsKey(s.id)) { Debug.LogError($"{where}: missing or duplicate id — skipped."); return; }
+        if (!System.Enum.TryParse(s.type, true, out TravelLocationType type)
+            || type == TravelLocationType.None || type == TravelLocationType.TeamFactory)
+        {
+            Debug.LogError($"{where}: type '{s.type}' must be EngineShop or Junkyard — skipped.");
+            return;
+        }
+
+        string a, b;
+        if (s.road != null && s.road.Length == 2) { a = s.road[0]; b = s.road[1]; }
+        else if (s.lat != 0f || s.lon != 0f)
+        {
+            Vector2 px = Pixels(s.lat, s.lon);
+            if (!NearestRoad(new Vector2(px.x / BoardW, px.y / BoardH), s.id, out a, out b))
+            {
+                Debug.LogError($"{where}: every road near ({s.lat}, {s.lon}) already has a stop — skipped.");
+                return;
+            }
+        }
+        else { Debug.LogError($"{where}: needs a `road` (two circuit ids) or a `lat`/`lon` — skipped."); return; }
+
+        AddNode(new TravelNode
+        {
+            id = s.id, name = string.IsNullOrEmpty(s.name) ? s.id : s.name, locationType = type, flavor = s.flavor,
+            shopStock = type == TravelLocationType.EngineShop ? (s.stock ?? System.Array.Empty<string>()) : null,
+        });
+        MountOn(a, b, s.id);
+    }
 
     // Mount a minor location halfway along the highway a..b: the road now runs a -> here -> b, and there
     // is no direct a..b edge, so stopping by costs the extra hop.
-    static void ShopOn(string a, string b, string id, string name, string flavor, params string[] stock)
-    {
-        Shop(id, name, 0f, 0f, flavor, stock);
-        MountOn(a, b, id);
-    }
-
-    static void YardOn(string a, string b, string id, string name, string flavor)
-    {
-        Yard(id, name, 0f, 0f, flavor);
-        MountOn(a, b, id);
-    }
 
     // Drop the location onto the middle of the a..b road: the road becomes a -> here -> b, so pulling in
     // costs the extra hop. The direct road is removed; if BuildRoads never drew one, we lay it here.
@@ -511,7 +524,13 @@ public static class TravelGraph
         _mounts[id] = (a, b);
 
         var na = Get(a); var nb = Get(b);
-        if (na == null || nb == null) { Debug.LogError($"TravelGraph: '{id}' mounts on unknown road {a} - {b}"); return; }
+        if (na == null || nb == null)
+        {
+            // Never leave a node with no roads: nothing could reach it, and the map would draw it at 0,0.
+            Debug.LogError($"TravelGraph: '{id}' mounts on unknown road {a} - {b} — dropped.");
+            RemoveNode(id);
+            return;
+        }
         if (!RemoveEdge(a, b))
             Debug.LogWarning($"TravelGraph: '{id}' mounts on {a} - {b}, which BuildRoads didn't draw — laying it anyway.");
         // A shop or yard is not placed, it is MOUNTED: its position is the middle of the road it splits,
@@ -578,6 +597,16 @@ public static class TravelGraph
         _adjacency[a].Remove(b);
         _adjacency[b].Remove(a);
         return true;
+    }
+
+    static void RemoveNode(string id)
+    {
+        if (!_byId.TryGetValue(id, out var n)) return;
+        _nodes.Remove(n);
+        _byId.Remove(id);
+        _adjacency.Remove(id);
+        _mounts.Remove(id);
+        _authoredMounts.Remove(id);
     }
 
     static void AddNode(TravelNode n)

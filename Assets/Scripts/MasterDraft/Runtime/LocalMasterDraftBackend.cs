@@ -38,6 +38,7 @@ public class LocalMasterDraftBackend : IMasterDraftBackend
 
     public Task<MasterDraftProfile> LoadProfile()
     {
+        MasterDraftJsonInstaller.Install();
         _profile = null;
         try
         {

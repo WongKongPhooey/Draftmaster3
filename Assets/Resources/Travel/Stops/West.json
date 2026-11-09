@@ -1,0 +1,65 @@
+{
+  "region": "West",
+  "stops": [
+    {
+      "id": "cascade_wrecking",
+      "type": "Junkyard",
+      "name": "Cascade Auto Wrecking",
+      "road": [
+        "Portland",
+        "Evergreen"
+      ],
+      "flavor": "Moss on the roofs, rain in the wiring loom. The engines have all been kept indoors."
+    },
+    {
+      "id": "sierra_speed",
+      "type": "EngineShop",
+      "name": "Sierra Speed & Machine",
+      "road": [
+        "Sonoma",
+        "AllAmerican"
+      ],
+      "flavor": "Wine-country money, dirt-track know-how. They'll build whatever you can pay for.",
+      "stock": [
+        "engine_r7",
+        "gearbox_close",
+        "aero_kit"
+      ]
+    },
+    {
+      "id": "mojave_yard",
+      "type": "Junkyard",
+      "name": "Mojave Boneyard",
+      "road": [
+        "Irwindale",
+        "LasVegas"
+      ],
+      "flavor": "Dry air keeps the sheet metal honest. Best-preserved junk in America."
+    },
+    {
+      "id": "socal_speed",
+      "type": "EngineShop",
+      "name": "SoCal Speed Emporium",
+      "road": [
+        "LosAngeles",
+        "Irwindale"
+      ],
+      "flavor": "Land-speed royalty. Half the shop wall is Bonneville timing slips.",
+      "stock": [
+        "engine_hemi",
+        "chassis_light",
+        "aero_kit"
+      ]
+    },
+    {
+      "id": "route66_trading",
+      "type": "Junkyard",
+      "name": "Route 66 Trading Post",
+      "road": [
+        "Phoenix",
+        "FortWorth"
+      ],
+      "flavor": "Gas, jerky, and a barn of parts pulled off everything that ever broke down on the Mother Road."
+    }
+  ]
+}

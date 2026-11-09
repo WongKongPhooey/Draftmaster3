@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tests that compile headless but can only pass inside the engine. Each needs a native Unity call
+     (JsonUtility, Application.dataPath, Mathf.PerlinNoise...) or depends on engine float behaviour.
+     They still run in Unity's Test Runner; this only keeps `dotnet test` honest. -->
+<RunSettings>
+  <NUnit>
+    <Where>
+      class != SceneryLayoutTests
+      and name != EveryTrainedLineOnDiskIsUsable
+      and name != StoredLine_RoundTripsThroughItsOwnJson
+      and name != PinnedTraining_GoesThroughItsPointsAndStillFindsTime
+    </Where>
+  </NUnit>
+</RunSettings>

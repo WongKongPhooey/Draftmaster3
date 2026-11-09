@@ -1,0 +1,46 @@
+{
+  "region": "Central",
+  "stops": [
+    {
+      "id": "panhandle_speed",
+      "type": "EngineShop",
+      "name": "Panhandle Speed & Custom",
+      "road": [
+        "FortWorth",
+        "ColoradoNational"
+      ],
+      "flavor": "Big sky, big power. Everything's negotiable except the dyno numbers.",
+      "stock": [
+        "engine_358",
+        "gearbox_tall",
+        "tires_soft",
+        "tires_hard"
+      ]
+    },
+    {
+      "id": "front_range_fab",
+      "type": "EngineShop",
+      "name": "Front Range Fabrication",
+      "road": [
+        "ColoradoNational",
+        "Kansas"
+      ],
+      "flavor": "Thin air, thick welds. They chassis-jig by eye and have never been wrong yet.",
+      "stock": [
+        "chassis_light",
+        "gearbox_tall",
+        "engine_358"
+      ]
+    },
+    {
+      "id": "cornbelt",
+      "type": "Junkyard",
+      "name": "Corn Belt Salvage",
+      "road": [
+        "Iowa",
+        "Kansas"
+      ],
+      "flavor": "A thousand miles of flat road wears cars out. They all end up here."
+    }
+  ]
+}

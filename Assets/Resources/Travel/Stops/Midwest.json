@@ -1,0 +1,65 @@
+{
+  "region": "Midwest",
+  "stops": [
+    {
+      "id": "ozark_salvage",
+      "type": "Junkyard",
+      "name": "Ozark Hollow Salvage",
+      "road": [
+        "Gateway",
+        "Springfield"
+      ],
+      "flavor": "Down a gravel track, past two dogs. Everything is for sale and nothing is priced."
+    },
+    {
+      "id": "lakeshore_salvage",
+      "type": "Junkyard",
+      "name": "Lakeshore Auto Salvage",
+      "road": [
+        "Milwaukee",
+        "Joliet"
+      ],
+      "flavor": "Lake wind has taken the paint off every shell in the yard. The mechanicals are immaculate."
+    },
+    {
+      "id": "rustbelt",
+      "type": "Junkyard",
+      "name": "Rust Belt Auto Graveyard",
+      "road": [
+        "Toledo",
+        "FlatRock"
+      ],
+      "flavor": "Rows of Detroit iron going back fifty years. The owner knows every casting number by heart."
+    },
+    {
+      "id": "brickyard_machine",
+      "type": "EngineShop",
+      "name": "Brickyard Machine Werks",
+      "road": [
+        "IRP",
+        "Indianapolis"
+      ],
+      "flavor": "Ex-Indy fabricators who got bored of open wheels. Precision costs.",
+      "stock": [
+        "engine_r7",
+        "gearbox_close",
+        "chassis_light"
+      ]
+    },
+    {
+      "id": "bluegrass_machine",
+      "type": "EngineShop",
+      "name": "Bluegrass Machine Co.",
+      "road": [
+        "Kentucky",
+        "Indianapolis"
+      ],
+      "flavor": "A horse barn with a dyno cell in it. They only work on motors they think are worth it.",
+      "stock": [
+        "engine_358",
+        "engine_barnfind",
+        "gearbox_close"
+      ]
+    }
+  ]
+}

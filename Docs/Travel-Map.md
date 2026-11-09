@@ -104,6 +104,11 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
     a domain load is dropped before it is pumped, and `RequestScriptCompilation` produces *two* reloads,
     so the pending flag is only cleared once the rebuild is actually running.
   - **Open (Play Mode)** — opens the map without the F9 key (automation convenience).
+- **Shops and junkyards are data** (since 2026-11-09): `Assets/Resources/Travel/Stops/<Region>.json`, one
+  file per region, read by `TravelGraph.LoadStops` in file-name order. A stop names its `road` (two circuit
+  ids) or gives `lat`/`lon` and is mounted on the nearest road with nothing on it. Validator:
+  `Tools/validate_travel_stops.py` (`--free-roads`). Format and workflow: `Docs/Overnight-Lanes.md`. The
+  team factory and the circuits stay in code.
 - `TravelGraph` remains the source of truth for **topology** (edges, BFS routing, shop stock) and now
   for **geography**: every circuit carries its real latitude and longitude, `ProjectCircuits` fits them
   to the board (equirectangular, longitude narrowed by cos of the mean latitude, one scale on both axes)

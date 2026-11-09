@@ -1,0 +1,55 @@
+{
+  "region": "Southeast",
+  "stops": [
+    {
+      "id": "moonshine_garage",
+      "type": "EngineShop",
+      "name": "Copperhead Hollow Garage",
+      "road": [
+        "Bristol",
+        "Kentucky"
+      ],
+      "flavor": "They built engines to outrun the law long before anybody paid them to win races.",
+      "stock": [
+        "engine_bootleg",
+        "engine_358",
+        "tires_soft"
+      ]
+    },
+    {
+      "id": "gulfcoast_gear",
+      "type": "EngineShop",
+      "name": "Gulf Coast Gearworks",
+      "road": [
+        "FiveFlags",
+        "Talladega"
+      ],
+      "flavor": "Salt air, shrimp boats, and the best gear cutter in three states.",
+      "stock": [
+        "gearbox_close",
+        "gearbox_tall",
+        "tires_hard"
+      ]
+    },
+    {
+      "id": "carolina_yard",
+      "type": "Junkyard",
+      "name": "Tar Heel Salvage",
+      "road": [
+        "Charlotte",
+        "NorthWilkesboro"
+      ],
+      "flavor": "Half the field's old wrecks end up here. So do their good parts."
+    },
+    {
+      "id": "gatorbone",
+      "type": "Junkyard",
+      "name": "Gator Bone Salvage",
+      "road": [
+        "NewSmyrna",
+        "Miami"
+      ],
+      "flavor": "Swamp air eats sheet metal, but the drivetrains keep. Watch where you step."
+    }
+  ]
+}

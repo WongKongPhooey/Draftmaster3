@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Draftmaster.MasterDraft
 {
@@ -69,15 +68,18 @@ namespace Draftmaster.MasterDraft
         // re-derived (and audited) from the profile id and the count.
         public long NextPackSeed() => DraftRng.Hash(playerId) ^ (long)(packsOpened + 1) * 0x5DEECE66DL;
 
-        public string ToJson(bool pretty = false) => JsonUtility.ToJson(this, pretty);
+        public string ToJson(bool pretty = false) => ProfileJson.Writer(this, pretty);
 
         // Null for empty or unreadable text. Lists JsonUtility left null are put back, and older schemas are
         // brought up to date here.
         public static MasterDraftProfile FromJson(string json)
         {
             if (string.IsNullOrWhiteSpace(json)) return null;
+            // Fetched outside the try: a missing serializer must throw, not read as "no profile" (which
+            // would start a fresh one over the saved file).
+            var read = ProfileJson.Reader;
             MasterDraftProfile p;
-            try { p = JsonUtility.FromJson<MasterDraftProfile>(json); }
+            try { p = read(json, typeof(MasterDraftProfile)) as MasterDraftProfile; }
             catch (Exception) { return null; }
             if (p == null) return null;
 
@@ -174,5 +176,20 @@ namespace Draftmaster.MasterDraft
             if (position == 1) profile.wins++;
             return new DraftResult { ok = true, awarded = coins, coins = profile.coins };
         }
+    }
+
+    // The one engine service Core needs. Core is compiled without UnityEngine (noEngineReferences) so the rules
+    // build and test with plain `dotnet test` (Tools/HeadlessTests); the game installs JsonUtility here
+    // (Runtime/MasterDraftJsonInstaller) and the headless tests install System.Text.Json. JsonUtility's rules
+    // apply either way: [Serializable] classes, public fields only.
+    public static class ProfileJson
+    {
+        public static Func<object, bool, string> Write;
+        public static Func<string, Type, object> Read;
+
+        internal static Func<object, bool, string> Writer =>
+            Write ?? throw new InvalidOperationException("No Master Draft JSON serializer installed (ProfileJson.Write).");
+        internal static Func<string, Type, object> Reader =>
+            Read ?? throw new InvalidOperationException("No Master Draft JSON serializer installed (ProfileJson.Read).");
     }
 }

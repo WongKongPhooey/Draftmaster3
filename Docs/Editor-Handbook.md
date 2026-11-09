@@ -4,6 +4,9 @@ The other docs in `Docs/` explain how each system *works*. This one is the opera
 click, in what order**, for the jobs that come up while making content. Every entry links out to the deep
 doc when there is one.
 
+**Overnight runs**: what Tokenmaxxer can do in parallel (worktree lanes, headless compile and tests), and
+the text formats that make it possible — satnav stops, paddock sidecars — are in `Docs/Overnight-Lanes.md`.
+
 `Docs/BuildBook.html` is the same material as a browsable page (the Build Book), styled with the
 project's own Iron Oval kit. Open it in a browser; keep the two in step when either changes.
 
@@ -397,6 +400,10 @@ Drag the `Node_*` markers where you want them, then `Save And Rebuild Markers An
 moved ones into `TravelMapLayout`, recompiles, and re-bakes markers and highways (it reads the open Prefab
 Mode stage, so unsaved drags count). `Open (Play Mode)` opens the map without the F9 key. Geography is
 real latitude/longitude in `TravelGraph`, projected onto the board. `Docs/Travel-Map.md`.
+
+The shops and junkyards are data: `Assets/Resources/Travel/Stops/<Region>.json`, checked by
+`python Tools/validate_travel_stops.py` (`--free-roads` lists roads with room for one). After adding stops,
+`Sync Node Markers` then `Save And Rebuild Markers And Routes`. Format: `Docs/Overnight-Lanes.md`.
 
 ## 13. Add an app to the phone
 

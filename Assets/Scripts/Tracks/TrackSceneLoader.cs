@@ -71,6 +71,7 @@ public static class TrackSceneLoader
                         $"{TrackCatalog.DisplayName(wanted)} has no package to swap in, so it is racing the " +
                         "baked one.");
                 existing.BindSceneReferences();
+                PaddockSidecar.Apply(existing);
                 return existing;
             }
 
@@ -116,6 +117,9 @@ public static class TrackSceneLoader
         if (string.IsNullOrEmpty(package.trackId)) package.trackId = id;
 
         int bound = package.BindSceneReferences(displaced);
+        // Text-authored paddock placements (Resources/Paddocks/<id>.json) fill whatever the package itself
+        // doesn't place, before the venues and lots look for them.
+        PaddockSidecar.Apply(package);
         Debug.Log($"TrackSceneLoader: loaded {TrackCatalog.DisplayName(id)} " +
                   $"({TrackCatalog.TypeOf(id)}, {TrackCatalog.LengthMiles(id):0.###} mi) and bound {bound} references.");
         return package;
