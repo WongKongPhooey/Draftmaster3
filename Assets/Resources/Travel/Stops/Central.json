@@ -41,6 +41,17 @@
         "Kansas"
       ],
       "flavor": "A thousand miles of flat road wears cars out. They all end up here."
+    },
+    {
+      "id": "red_river_fab",
+      "type": "Fabricator",
+      "name": "Red River Chassis & Body",
+      "road": [
+        "FortWorth",
+        "Kansas"
+      ],
+      "tier": 1,
+      "flavor": "Two bays, one jig, a radio stuck on the farm report. Honest work for teams that can't build their own."
     }
   ]
 }

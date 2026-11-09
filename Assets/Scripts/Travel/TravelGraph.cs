@@ -46,7 +46,9 @@ using UnityEngine;
 
 // TeamFactory is your own shop rather than somebody else's business — one node, near the middle of the
 // map, where the fabricators leave the parts they have built since the last time you called in.
-public enum TravelLocationType { None, EngineShop, Junkyard, TeamFactory }
+// EngineShop is the engine builder (the name predates fabricators; the data still says "EngineShop").
+// Fabricator: body shells and chassis. Appended, so saved ints keep their meaning.
+public enum TravelLocationType { None, EngineShop, Junkyard, TeamFactory, Fabricator }
 
 public class TravelNode
 {
@@ -57,6 +59,11 @@ public class TravelNode
     public TravelLocationType locationType;
     public string flavor;
     public string[] shopStock;   // EngineShop: fixed PartCatalog ids for sale
+    public int fabricatorTier;   // Fabricator: 1 standard .. 3 elite — sells shells and chassis up to it
+
+    public bool IsRoadsideShop => locationType == TravelLocationType.EngineShop ||
+                                  locationType == TravelLocationType.Junkyard ||
+                                  locationType == TravelLocationType.Fabricator;
 }
 
 public static class TravelGraph
@@ -448,12 +455,13 @@ public static class TravelGraph
     public class Stop
     {
         public string id;
-        public string type;      // "EngineShop" | "Junkyard"
+        public string type;      // "EngineShop" (engine builder) | "Fabricator" | "Junkyard"
         public string name;
         public string[] road;    // two circuit ids; the stop splits that road
         public float lat, lon;   // used only when `road` is empty: mount on the nearest free road
         public string flavor;
         public string[] stock;   // EngineShop: PartCatalog ids for sale
+        public int tier;         // Fabricator: 1-3 (Standard / Pro / Elite)
     }
 
     static void LoadStops()
@@ -480,7 +488,7 @@ public static class TravelGraph
         if (!System.Enum.TryParse(s.type, true, out TravelLocationType type)
             || type == TravelLocationType.None || type == TravelLocationType.TeamFactory)
         {
-            Debug.LogError($"{where}: type '{s.type}' must be EngineShop or Junkyard — skipped.");
+            Debug.LogError($"{where}: type '{s.type}' must be EngineShop, Fabricator or Junkyard — skipped.");
             return;
         }
 
@@ -501,6 +509,7 @@ public static class TravelGraph
         {
             id = s.id, name = string.IsNullOrEmpty(s.name) ? s.id : s.name, locationType = type, flavor = s.flavor,
             shopStock = type == TravelLocationType.EngineShop ? (s.stock ?? System.Array.Empty<string>()) : null,
+            fabricatorTier = type == TravelLocationType.Fabricator ? Mathf.Clamp(s.tier, 1, 3) : 0,
         });
         MountOn(a, b, s.id);
     }

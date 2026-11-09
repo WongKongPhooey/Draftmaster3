@@ -13,6 +13,10 @@ namespace Draftmaster.Garage
         public static string NewBuildName = "Gen-4 Prototype";
         public static int NewBuildProgress = 42;          // 0-100 fabrication progress
         public static int NewBuildEtaRaces = 4;
+        // How good your own fabricator's work is, 0-100, on the same scale as a roadside fabricator's tier
+        // (Draftmaster.Tracks.FabricatorTiers: Standard 62, Pro 78, Elite 94). Placeholder until the crew
+        // have real stats; the fabricator shop panel compares against it.
+        public static int FabricatorRating = 58;
 
         // ---- Engine (Engine Mechanic) ----
         public static string EngineSpec = "V8 358ci — Spec B";

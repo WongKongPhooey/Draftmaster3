@@ -60,6 +60,17 @@
         "FortWorth"
       ],
       "flavor": "Gas, jerky, and a barn of parts pulled off everything that ever broke down on the Mother Road."
+    },
+    {
+      "id": "valley_sheetmetal",
+      "type": "Fabricator",
+      "name": "Valley Sheetmetal Works",
+      "road": [
+        "KernCounty",
+        "Madera"
+      ],
+      "tier": 2,
+      "flavor": "A hangar off Highway 99 full of hung shells. They learned on crop-dusters and never lost the habit of measuring everything."
     }
   ]
 }

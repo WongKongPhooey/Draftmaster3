@@ -60,6 +60,17 @@
         "engine_barnfind",
         "gearbox_close"
       ]
+    },
+    {
+      "id": "hoosier_tube",
+      "type": "Fabricator",
+      "name": "Hoosier Tube & Panel",
+      "road": [
+        "Indianapolis",
+        "Winchester"
+      ],
+      "tier": 2,
+      "flavor": "Open-wheel people who took up stock cars. The welds are prettier than they need to be."
     }
   ]
 }

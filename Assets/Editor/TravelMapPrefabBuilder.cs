@@ -267,8 +267,7 @@ public static class TravelMapPrefabBuilder
                 // that road" — the nearest one to where it was dropped — and what gets saved is the road.
                 // Its position goes on being the midpoint, which is why it visibly snaps onto the highway
                 // when the rebuild runs.
-                if (n.locationType == TravelLocationType.EngineShop ||
-                    n.locationType == TravelLocationType.Junkyard)
+                if (n.IsRoadsideShop)
                 {
                     Vector2 mountDrift = new Vector2((dragged.x - n.pos.x) * MapW, (dragged.y - n.pos.y) * MapH);
                     if (mountDrift.magnitude < RemountedBy) { skipped++; continue; }
@@ -602,6 +601,7 @@ public static class TravelMapPrefabBuilder
     static readonly Color DeepTeal = new Color32(0x14, 0x45, 0x3d, 0xff);    // the plate under its wrench
     static readonly Color ShopBlue = new Color32(0x53, 0xa8, 0xff, 0xff);    // somebody's parts counter
     static readonly Color Rust = new Color32(0xe0, 0x91, 0x3a, 0xff);        // a yard full of salvage
+    static readonly Color Violet = new Color32(0xc7, 0x8b, 0xff, 0xff);      // shells and frames (fabricator)
     static readonly Color Red = new Color32(0xe5, 0x48, 0x4d, 0xff);         // the kit's one alarm colour
     // This week's race. Light blue, matching TravelMapScreen.DestHalo, which is what the live map paints
     // the halo and the flag with — red on this board reads as a warning rather than a destination.
@@ -891,7 +891,8 @@ public static class TravelMapPrefabBuilder
     {
         if (n.locationType == TravelLocationType.TeamFactory) return FactoryIcon;
         if (n.isCircuit) return Gold;
-        return n.locationType == TravelLocationType.Junkyard ? Rust : ShopBlue;
+        return n.locationType == TravelLocationType.Junkyard ? Rust
+             : n.locationType == TravelLocationType.Fabricator ? Violet : ShopBlue;
     }
 
     static Color LabelTint(TravelNode n) =>

@@ -40,8 +40,12 @@ public class LandmarkShopPanel : MonoBehaviour
 
     public bool IsOpen => _root != null && _root.activeSelf;
 
-    public void Show()
+    // What the person at the counter said when you walked up — shown above the place's own blurb.
+    string _greeting = "";
+
+    public void Show(string greeting = null)
     {
+        _greeting = greeting ?? "";
         _status.text = "";
         _hint.text = $"Press {InputGlyphs.Confirm} to close";
         Refresh();
@@ -62,7 +66,7 @@ public class LandmarkShopPanel : MonoBehaviour
 
         _title.text = loc.name;
         _cash.text = PlayerWallet.CashText;
-        _flavor.text = loc.flavor ?? "";
+        _flavor.text = string.IsNullOrEmpty(_greeting) ? (loc.flavor ?? "") : _greeting + "\n" + (loc.flavor ?? "");
 
         for (int i = _rows.childCount - 1; i >= 0; i--) Destroy(_rows.GetChild(i).gameObject);
 
@@ -78,6 +82,42 @@ public class LandmarkShopPanel : MonoBehaviour
                 any = true;
             }
             if (!any) y = AddHeading("Shelf's bare. Come back next week.", y);
+
+            // The yard itself: wrecks from the other ladders. Buy one and it goes on your project list,
+            // to be rebuilt into a way into that kind of racing.
+            y = AddHeading("In the yard - project cars", y);
+            bool anyWreck = false;
+            foreach (var w in Draftmaster.Tracks.AltSeriesCatalog.Wrecks(loc.id, TravelState.Week))
+            {
+                if (TravelState.WasBought(loc.id, w.id)) continue;
+                var wreck = w;
+                y = AddRow($"{w.series.name} — {w.damagePercent}% damaged",
+                           $"{w.condition}\nRebuild about {PlayerWallet.Format(w.repairCost)} · power tier {w.series.powerTier}",
+                           PlayerWallet.Format(w.price), y, () =>
+                {
+                    if (!PlayerWallet.TrySpend(wreck.price)) { _status.text = "Not enough cash."; return; }
+                    ProjectGarage.Add(wreck, loc.id, TravelState.Week);
+                    TravelState.MarkBought(loc.id, wreck.id);
+                    PlayerStatsLedger.Increment("projectcarsbought");
+                    _status.text = $"The {wreck.series.name} is yours. They'll drop it at the factory.";
+                });
+                anyWreck = true;
+            }
+            if (!anyWreck) y = AddHeading("Nothing worth towing this week.", y);
+            if (ProjectGarage.Count > 0) y = AddHeading($"You own {ProjectGarage.Count} project car(s).", y);
+        }
+        else if (loc.locationType == TravelLocationType.Fabricator)
+        {
+            int tier = Mathf.Max(1, loc.fabricatorTier);
+            int team = Draftmaster.Garage.TeamGarageData.FabricatorRating;
+            y = AddHeading($"{Draftmaster.Tracks.FabricatorTiers.Name(tier)} fabricator - shells and chassis", y);
+            foreach (var (part, price) in PartCatalog.FabricatorStock(tier))
+            {
+                string note = $"{Draftmaster.Tracks.FabricatorTiers.Name(part.fabricatorTier)} build, quality " +
+                              $"{Draftmaster.Tracks.FabricatorTiers.QualityOf(part.fabricatorTier)} " +
+                              $"({Draftmaster.Tracks.FabricatorTiers.VersusTeam(part.fabricatorTier, team)})";
+                y = AddStockRow(part, price, y, null, note: note);
+            }
         }
         else if (loc.locationType == TravelLocationType.TeamFactory)
         {
@@ -116,7 +156,7 @@ public class LandmarkShopPanel : MonoBehaviour
         return y + 36;
     }
 
-    float AddStockRow(PartDef part, int price, float y, System.Action onBought, bool free = false)
+    float AddStockRow(PartDef part, int price, float y, System.Action onBought, bool free = false, string note = null)
     {
         var row = new GameObject("Row", typeof(RectTransform));
         row.transform.SetParent(_rows, false);
@@ -137,7 +177,7 @@ public class LandmarkShopPanel : MonoBehaviour
         nrt.sizeDelta = new Vector2(0, 32);
 
         var effect = MakeText("Effect", row.transform, 20, FontStyle.Normal, TextAnchor.UpperLeft, new Color(0.8f, 0.8f, 0.85f));
-        effect.text = part.EffectSummary() + "\n" + PlayerCarBuild.DescribeSlot(part.slot);
+        effect.text = part.EffectSummary() + "\n" + (note ?? PlayerCarBuild.DescribeSlot(part.slot));
         var ert = effect.rectTransform;
         ert.anchorMin = new Vector2(0, 1); ert.anchorMax = new Vector2(1, 1); ert.pivot = new Vector2(0.5f, 1);
         ert.anchoredPosition = new Vector2(-95, -34);
@@ -175,6 +215,51 @@ public class LandmarkShopPanel : MonoBehaviour
                 Refresh();
             });
         }
+
+        return y + rowH + 4f;
+    }
+
+    // A row that isn't a car part: title, two lines of detail, a button. `onPress` does the buying and
+    // sets the status line; the panel refreshes after.
+    float AddRow(string title, string detail, string buttonText, float y, System.Action onPress)
+    {
+        var row = new GameObject("Row", typeof(RectTransform));
+        row.transform.SetParent(_rows, false);
+        var rrt = (RectTransform)row.transform;
+        rrt.anchorMin = new Vector2(0, 1); rrt.anchorMax = new Vector2(1, 1); rrt.pivot = new Vector2(0.5f, 1);
+        rrt.anchoredPosition = new Vector2(0, -y);
+        float buyH = IronOvalUI.ButtonHeight();
+        float rowH = Mathf.Max(92f, 34f + buyH + 4f);
+        rrt.sizeDelta = new Vector2(0, rowH);
+
+        var name = MakeText("Name", row.transform, 26, FontStyle.Bold, TextAnchor.MiddleLeft, Color.white);
+        name.text = title;
+        var nrt = name.rectTransform;
+        nrt.anchorMin = new Vector2(0, 1); nrt.anchorMax = new Vector2(1, 1); nrt.pivot = new Vector2(0.5f, 1);
+        nrt.anchoredPosition = Vector2.zero;
+        nrt.sizeDelta = new Vector2(0, 32);
+
+        var effect = MakeText("Detail", row.transform, 20, FontStyle.Normal, TextAnchor.UpperLeft, new Color(0.8f, 0.8f, 0.85f));
+        effect.text = detail;
+        var ert = effect.rectTransform;
+        ert.anchorMin = new Vector2(0, 1); ert.anchorMax = new Vector2(1, 1); ert.pivot = new Vector2(0.5f, 1);
+        ert.anchoredPosition = new Vector2(-95, -34);
+        ert.sizeDelta = new Vector2(-190, 54);
+
+        var btnGo = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button));
+        btnGo.transform.SetParent(row.transform, false);
+        var brt = (RectTransform)btnGo.transform;
+        brt.anchorMin = new Vector2(1, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(1, 1);
+        brt.anchoredPosition = new Vector2(0, -34);
+        brt.sizeDelta = new Vector2(170, buyH);
+        btnGo.GetComponent<Image>().color = new Color(0.18f, 0.42f, 0.80f);
+        var label = MakeText("Label", btnGo.transform, 24, FontStyle.Normal, TextAnchor.MiddleCenter, Color.white);
+        IronOvalUI.ButtonCaption(label, Color.white);
+        label.text = buttonText;
+        var lrt = label.rectTransform;
+        lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+        lrt.offsetMin = lrt.offsetMax = Vector2.zero;
+        btnGo.GetComponent<Button>().onClick.AddListener(() => { onPress(); Refresh(); });
 
         return y + rowH + 4f;
     }

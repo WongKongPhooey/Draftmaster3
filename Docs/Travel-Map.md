@@ -179,6 +179,40 @@ multiplies, so the bare dither could only ever be darker than the backdrop) insi
   `PayoutForPosition` (P1 $12,000 → floor $800) on final classification and shows it on the results
   headline.
 
+## Roadside shops (2026-11-09)
+
+Pulling in at a stop loads `Assets/Scenes/Landmark.unity` (made by `Draftmaster > Travel Map > Build Roadside Shop
+Scene`: camera, walking player, `LandmarkDirector`; nothing hand-authored). The director builds the interior with
+`RoadsideShopBuilder` from a **layout**, one of several per kind of shop, picked per visit
+(`Draftmaster.Tracks.ShopLayouts.Pick`: location + travel week, so it is fixed for the week and differs between
+places). Three kinds:
+
+- **Fabricator** (`TravelLocationType.Fabricator`, violet `[F]`, one per region): body shells and chassis.
+  The bays hold plain shells — `cup25blank` / `xfi25blank` / `cts25blank` / `arc25blank` tinted one flat
+  colour, no numbers or logos — and the mid-build ones a bare `cup25chassis` frame with a fabricator at it.
+  Stops have a `tier` (1 Standard, 2 Pro, 3 Elite) and sell `PartCatalog.FabricatorStock(tier)`: three shells
+  (new `PartSlot.Body`) and three chassis. The shop panel shows each tier's quality against your own fabricator
+  (`TeamGarageData.FabricatorRating`, a placeholder 58): worth it when your shop is weak, or for Elite work your
+  shop can't build at any price.
+- **Engine builder** (the old `EngineShop`, `[E]`): engines on stands, engineers at the ones being built.
+  Placeholder engine sprite (drawn in code) until the art exists. Fixed `stock` as before.
+- **Junkyard** (`[J]`): the weekly salvage shelf as before, plus **project cars** — this week's wrecks from
+  the other ladders (`AltSeriesCatalog`: Rookie Stocks, Dirt Stocks, Single-Make Sports Cars, Sprint Cars,
+  Indy Lights), 2-4 per yard per week, priced by damage with a rebuild estimate. Bought ones go on
+  `ProjectGarage` (PlayerPrefs). Rebuilding them and racing the result are the next step. Placeholder wreck
+  silhouettes (saloon / winged sprint car / open-wheeler) in each series' colour until the sprites exist.
+
+The person behind the counter is a `ShopCounterNPC`: walking up and talking opens the shop panel with their
+opening line at the top. Workers are paddock paper dolls you can chat to. The exit door goes back to the road.
+
+**Layouts** live in `Assets/Resources/Travel/Shops/<Kind>.json` (8 variants each), or `<locationId>.json` for a
+place with its own floor plans. `python Tools/shop_layouts.py generate|validate|preview` — generate keeps
+`authored` variants and fills the rest; the rules are `ShopLayouts.Problems` (no overlaps with a walkway
+between, on the floor, door clear, clerk at the counter, someone at every mid-build bay), checked headless by
+`RoadsideShopsTests`. **Author / tweak**: `Draftmaster > Travel Map > Shop Layouts` — open the Landmark scene,
+Load a variant (built exactly as the game builds it, as DontSave objects), move pieces, add bays/people/props,
+flip a bay between finished and mid-build, Save (marked `authored`). Force in Play pins one variant.
+
 ## Known limits / next steps
 
 - Only the physics side (PlayerVehicleController) reads the outfitted clone; SplineDriver /

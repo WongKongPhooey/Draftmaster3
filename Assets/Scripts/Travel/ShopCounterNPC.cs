@@ -26,7 +26,10 @@ public class ShopCounterNPC : NPCInteractable
         if (!_open)
         {
             _open = true;
-            panel.Show();
+            // The counter's opening line rides at the top of the shop panel: talking to them IS shopping.
+            string greeting = lines != null && lines.Length > 0
+                ? $"{speakerName}: \u201c{lines[Random.Range(0, lines.Length)]}\u201d" : null;
+            panel.Show(greeting);
             return true;  // keep focus so the player stays put while browsing
         }
         _open = false;

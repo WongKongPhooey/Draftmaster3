@@ -47,6 +47,7 @@ public class TravelMapScreen : MonoBehaviour
     static readonly Color CircuitColor = new Color32(0xf2, 0xc1, 0x4e, 0xff);    // gold - a racetrack
     static readonly Color JunkyardColor = new Color32(0xe0, 0x91, 0x3a, 0xff);   // rust - a yard full of it
     static readonly Color EngineShopColor = new Color32(0x53, 0xa8, 0xff, 0xff); // blue - somebody's business
+    static readonly Color FabricatorColor = new Color32(0xc7, 0x8b, 0xff, 0xff); // violet - shells and frames
     // The factory's colour is carried by the plate the builder puts under its wrench; the wrench itself
     // is drawn pale, or a steel spanner tinted teal on a teal plate is one dark blob.
     static readonly Color FactoryColor = new Color32(0xc6, 0xf7, 0xea, 0xff);    // the wrench on the plate
@@ -1046,7 +1047,9 @@ public class TravelMapScreen : MonoBehaviour
         if (n.isCircuit) return CircuitColor;
         if (n.locationType == TravelLocationType.TeamFactory) return FactoryColor;
         if (!TravelState.IsVisited(n.id)) return MysteryColor;
-        return n.locationType == TravelLocationType.Junkyard ? JunkyardColor : EngineShopColor;
+        return n.locationType == TravelLocationType.Junkyard ? JunkyardColor
+             : n.locationType == TravelLocationType.Fabricator ? FabricatorColor
+             : EngineShopColor;
     }
 
     // Names are painted in their dot's colour so a glance down the map matches a glance at the key —
@@ -1060,7 +1063,9 @@ public class TravelMapScreen : MonoBehaviour
     {
         if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name.ToUpperInvariant();
         if (!TravelState.IsVisited(n.id)) return "?";
-        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name.ToUpperInvariant();
+        string tag = n.locationType == TravelLocationType.Junkyard ? "[J] "
+                   : n.locationType == TravelLocationType.Fabricator ? "[F] " : "[E] ";
+        return tag + n.name.ToUpperInvariant();
     }
 
     // ---------------- footer buttons ----------------

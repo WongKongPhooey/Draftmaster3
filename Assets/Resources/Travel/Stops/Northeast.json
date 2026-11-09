@@ -40,6 +40,17 @@
         "engine_hemi",
         "gearbox_close"
       ]
+    },
+    {
+      "id": "pine_barrens_fab",
+      "type": "Fabricator",
+      "name": "Pine Barrens Fab Shop",
+      "road": [
+        "Dover",
+        "LimeRock"
+      ],
+      "tier": 1,
+      "flavor": "A pole barn in the pines with a surface plate older than the owner. Cheap, slow, straight."
     }
   ]
 }

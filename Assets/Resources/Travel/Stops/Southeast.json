@@ -50,6 +50,17 @@
         "Miami"
       ],
       "flavor": "Swamp air eats sheet metal, but the drivetrains keep. Watch where you step."
+    },
+    {
+      "id": "piedmont_fab",
+      "type": "Fabricator",
+      "name": "Piedmont Race Fabrication",
+      "road": [
+        "Atlanta",
+        "Charlotte"
+      ],
+      "tier": 3,
+      "flavor": "Ex-Cup fabricators with a wind tunnel booking every week. If you have to ask the price, the Standard rack is round the back."
     }
   ]
 }

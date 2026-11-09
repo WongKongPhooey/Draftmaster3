@@ -45,6 +45,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RacingLineTrainerTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\SceneryLayoutTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TrackDimensionsTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RoadsideShopsTests.cs" />
     <Compile Include="HeadlessSetup.cs" />
   </ItemGroup>
 

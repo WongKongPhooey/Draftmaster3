@@ -27,7 +27,7 @@ GRAPH = ROOT / "Assets" / "Scripts" / "Travel" / "TravelGraph.cs"
 LAYOUT = ROOT / "Assets" / "Scripts" / "Travel" / "TravelMapLayout.cs"
 PARTS = ROOT / "Assets" / "Scripts" / "Travel" / "PartCatalog.cs"
 
-TYPES = ("EngineShop", "Junkyard")
+TYPES = ("EngineShop", "Fabricator", "Junkyard")   # EngineShop = engine builder
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{2,40}$")
 BOARD_W, BOARD_H, EDGE_MARGIN = 1470.0, 950.0, 0.05
 
@@ -166,7 +166,12 @@ def main():
                     elif p.endswith("_team"):
                         errors.append(f"{where}: '{p}' is team-factory only")
             elif stock:
-                errors.append(f"{where}: only an EngineShop has `stock` (junkyard stock is rolled weekly)")
+                errors.append(f"{where}: only an EngineShop has `stock` (a fabricator sells by `tier`, a junkyard rolls weekly)")
+            if s.get("type") == "Fabricator":
+                if s.get("tier") not in (1, 2, 3):
+                    errors.append(f"{where}: a Fabricator needs `tier` 1 (Standard), 2 (Pro) or 3 (Elite)")
+            elif "tier" in s:
+                errors.append(f"{where}: only a Fabricator has a `tier`")
             road = s.get("road")
             lat, lon = s.get("lat"), s.get("lon")
             if lat is not None or lon is not None:

@@ -7,7 +7,8 @@ using UnityEngine;
 //
 // Stat model: additive top speed (mph), multiplicative acceleration scale, additive lateral grip (g),
 // multiplicative tyre-wear scale. Deliberately coarse — parts should read at a glance in a shop list.
-public enum PartSlot { Engine, Gearbox, Tires, Chassis }
+// Body: the shell hung on the chassis — bought from a fabricator (or built by your own one).
+public enum PartSlot { Engine, Gearbox, Tires, Chassis, Body }
 
 public class PartDef
 {
@@ -22,6 +23,7 @@ public class PartDef
     public float wearScale = 1f;
     public bool junkyardOnly;    // never in fixed shop stock; only turns up in salvage rolls
     public bool factoryOnly;     // your own team built it — never for sale anywhere, collected at the factory
+    public int fabricatorTier;   // 1-3: a fabricator's work (shells, chassis), sold by fabricators of that tier or above
 
     // One-line effect summary for shop rows, e.g. "+6 mph top speed, +10% accel".
     public string EffectSummary()
@@ -100,6 +102,28 @@ public static class PartCatalog
                 gripAdd = 0.01f, junkyardOnly = true,
                 blurb = "Straighter than they look. Mostly." },
 
+            // --- Fabricators: shells and chassis, by tier (Draftmaster.Tracks.FabricatorTiers) ---
+            // Standard is what a decent team builds for itself; Pro beats most teams' own shops; Elite is the
+            // bespoke work only money buys. The stat step between tiers is small and the price step is not.
+            new PartDef { id = "body_std", name = "Hand-Hung Steel Body", slot = PartSlot.Body, price = 5500,
+                topSpeedAdd = 1f, gripAdd = 0.01f, fabricatorTier = 1,
+                blurb = "Hung by eye on a surface plate. Straight, honest, heavy." },
+            new PartDef { id = "chassis_fab_std", name = "Jig-Built Chassis", slot = PartSlot.Chassis, price = 8000,
+                gripAdd = 0.03f, fabricatorTier = 1,
+                blurb = "Welded in a proper jig, which is more than some teams can say." },
+            new PartDef { id = "body_pro", name = "Composite Body (Pro)", slot = PartSlot.Body, price = 14000,
+                topSpeedAdd = 3f, gripAdd = 0.02f, fabricatorTier = 2,
+                blurb = "Composite panels, tunnel-checked gaps. Lighter where it doesn't show." },
+            new PartDef { id = "chassis_fab_pro", name = "Pro Chassis", slot = PartSlot.Chassis, price = 21000,
+                accelScale = 1.04f, gripAdd = 0.05f, fabricatorTier = 2,
+                blurb = "Seam-welded, stress-relieved, measured twice. Stiffer than it has any right to be." },
+            new PartDef { id = "body_elite", name = "Wind-Tunnel Composite Body", slot = PartSlot.Body, price = 38000,
+                topSpeedAdd = 5f, accelScale = 1.02f, gripAdd = 0.04f, fabricatorTier = 3,
+                blurb = "Forty hours in a rolling-road tunnel. You are paying for the hours." },
+            new PartDef { id = "chassis_fab_elite", name = "Bespoke Elite Chassis", slot = PartSlot.Chassis, price = 52000,
+                accelScale = 1.06f, gripAdd = 0.08f, fabricatorTier = 3,
+                blurb = "Built around your seat position and your corner speeds. Nobody else's car fits it." },
+
             // --- Team factory R&D: built by your own people, collected free at the factory ---
             // Order matters: this is the order the shop finishes them in (see FactoryStock). Each one
             // beats what the same money buys on the road, which is what makes the detour worth a stop.
@@ -128,7 +152,7 @@ public static class PartCatalog
         EnsureBuilt();
         var rng = new System.Random((locationId ?? "yard").GetHashCode() * 486187739 + week * 7919);
         var pool = new List<PartDef>();     // everything can wash up in a junkyard, including the good stuff
-        foreach (var p in _all) if (!p.factoryOnly) pool.Add(p); // except your own team's parts
+        foreach (var p in _all) if (!p.factoryOnly && p.fabricatorTier == 0) pool.Add(p); // not your team's, not a fabricator's
         var stock = new List<(PartDef, int)>();
         for (int i = 0; i < count && pool.Count > 0; i++)
         {
@@ -139,6 +163,18 @@ public static class PartCatalog
             stock.Add((pick, price));
         }
         return stock;
+    }
+
+    // A fabricator's racks: every shell and chassis up to its tier, cheapest first. Fixed stock (not a weekly
+    // roll): a fabricator is a business, not a scrapheap.
+    public static List<(PartDef part, int price)> FabricatorStock(int tier)
+    {
+        EnsureBuilt();
+        var list = new List<(PartDef, int)>();
+        foreach (var p in _all)
+            if (p.fabricatorTier > 0 && p.fabricatorTier <= tier) list.Add((p, p.price));
+        list.Sort((a, b) => a.Item2.CompareTo(b.Item2));
+        return list;
     }
 
     // The team factory's bench. Your shop finishes one upgraded part every FactoryWeeksPerPart weeks and
