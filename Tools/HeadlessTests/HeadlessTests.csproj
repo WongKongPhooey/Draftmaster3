@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Runs the pure-rules EditMode tests with plain `dotnet test`, no Unity Editor.
+
+    Compiles the engine-free Core assemblies straight from Assets/ (so a git worktree tests its own
+    sources) plus the test files that only touch them. UnityEngine.CoreModule is referenced for the
+    managed value types the rules use (Vector2, Mathf); anything that calls into the engine's native
+    side (Debug.Log, JsonUtility, Resources, GameObjects) cannot run here and stays Unity-only.
+
+    Adding a test file: it must reference only the assemblies compiled below. Run:
+        dotnet test Tools/HeadlessTests -nologo
+    Used by Tokenmaxxer's worktree lanes as a gate. See Docs/Headless-Testing.md.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)headless.runsettings</RunSettingsFilePath>
+    <NoWarn>$(NoWarn);CS0414;CS0649;CS0169;CS0168;CS0219;CS8632</NoWarn>
+    <ProjectRoot>$(MSBuildThisFileDirectory)..\..\</ProjectRoot>
+    <UnityVersion Condition="'$(UnityVersion)' == ''">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(ProjectRoot)ProjectSettings\ProjectVersion.txt')), 'm_EditorVersion: (\S+)').Groups[1].Value)</UnityVersion>
+    <UnityManaged Condition="'$(UnityManaged)' == ''">C:\Program Files\Unity\Hub\Editor\$(UnityVersion)\Editor\Data\Managed\UnityEngine</UnityManaged>
+  </PropertyGroup>
+
+  <!-- Engine-free rule assemblies, compiled from source. -->
+  <ItemGroup>
+    <Compile Include="$(ProjectRoot)Assets\Scripts\MasterDraft\Core\**\*.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Tracks\Core\**\*.cs" />
+  </ItemGroup>
+
+  <!-- Tests that only reach the assemblies above. -->
+  <ItemGroup>
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\MasterDraftRulesTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelRoutePlanTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelDaysTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelTutorialRouteTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OsmTrackGeometryTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OvalGeometryTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PitChordFitTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RacingLineTrainerTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\SceneryLayoutTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TrackDimensionsTests.cs" />
+    <Compile Include="HeadlessSetup.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(UnityManaged)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <!-- Compiles JsonUtility calls; they still throw at run time outside the engine. -->
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>$(UnityManaged)\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

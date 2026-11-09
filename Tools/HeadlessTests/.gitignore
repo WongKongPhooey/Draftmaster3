@@ -1,3 +1,5 @@
 bin/
 obj/
 TestResults/
+# The root .gitignore drops *.csproj (Unity regenerates its own); this one is hand-written.
+!HeadlessTests.csproj
