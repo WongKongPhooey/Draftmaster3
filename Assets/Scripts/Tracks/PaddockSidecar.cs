@@ -7,8 +7,12 @@ using UnityEngine;
 // Editor and one track at a time. A sidecar holds the same things as plain data — `*_Marker` venues
 // (WeekendMarker) and PaddockLotArea footprints — so they can be laid out for many tracks at once, by hand
 // or by overnight agents working from the exported track geometry (Tools/TrackExports/<id>.json), and checked
-// without Unity (Tools/paddock_sidecar.py validate / preview). Full workflow: Docs/Tracks.md, "Paddock
-// sidecars".
+// without Unity (Tools/paddock_sidecar.py validate / preview). Full workflow: Docs/Overnight-Lanes.md.
+//
+// VARIANTS. A sidecar can hold several alternative layouts (`variants`); one is picked per visit (PickVariant:
+// track id + travel week), so the paddock changes between visits but never mid-weekend. Tools/paddock_generate.py
+// writes randomised ones; Draftmaster > Tracks > Paddock Variants loads any of them into the Editor as real
+// markers and lot areas to tweak, and saves them back marked `authored`, which the generator never touches.
 //
 // WHEN. TrackSceneLoader applies it the moment a package is in the scene, before WeekendVenueSites adopts
 // `*_Marker` objects and before the lots lay out — to the game a sidecar object is indistinguishable from one
@@ -16,7 +20,7 @@ using UnityEngine;
 //
 // HAND-AUTHORED WINS. A marker whose name the package already has is skipped, and so is a lot area of a kind
 // the package already has one of (the lots only ever use the first area per kind). So a sidecar can never
-// override work done in the Editor — it only fills gaps.
+// override work done in the package — it only fills gaps.
 //
 // FRAME. Package-local metres: x/y as the package root sees them, rotation in degrees about z. The geometry
 // export is in the same frame, so a point copied from it lands on the same spot.
@@ -25,11 +29,16 @@ public static class PaddockSidecar
     public const string Folder = "Paddocks";
     public const string RootName = "PaddockSidecar";
 
+    // JsonUtility never leaves a [Serializable] class field null: a marker with no "seat" in its JSON still
+    // reads back with a Point. So a Point starts as NaN and only counts once the JSON gave it numbers —
+    // otherwise every marker would get a Seat at the package origin and teleport the player there.
     [System.Serializable]
     public class Point
     {
-        public float x, y;
+        public float x = float.NaN, y = float.NaN;
     }
+
+    public static bool Has(Point p) => p != null && !float.IsNaN(p.x) && !float.IsNaN(p.y);
 
     [System.Serializable]
     public class Marker
@@ -57,6 +66,8 @@ public static class PaddockSidecar
     [System.Serializable]
     public class Variant
     {
+        public string name;          // optional label, shown in the Paddock Variants window
+        public bool authored;        // hand-made or hand-tweaked: the generator keeps it as it is
         public Marker[] markers;
         public Lot[] lots;
     }
@@ -67,8 +78,8 @@ public static class PaddockSidecar
         public string trackId;
         public Marker[] markers;
         public Lot[] lots;
-        // Alternative layouts (Tools/paddock_generate.py writes four). When present, one is picked per visit
-        // — see PickVariant — and the top-level markers/lots are only the fallback.
+        // Alternative layouts. When present, one is picked per visit — see PickVariant — and the top-level
+        // markers/lots are only the fallback.
         public Variant[] variants;
     }
 
@@ -76,6 +87,18 @@ public static class PaddockSidecar
     // between sessions), different from one visit to the next. The travel week moves on once per trip
     // between races; the track id spreads tracks visited in the same week across different variants.
     public static System.Func<int> VisitSeed = () => TravelState.Week;
+
+    // Editor testing: the Paddock Variants window can force one variant for Play Mode. -1 = pick as normal.
+    public const string ForcedVariantKey = "PaddockSidecar.ForcedVariant";
+
+    static int ForcedVariant()
+    {
+#if UNITY_EDITOR
+        return UnityEditor.SessionState.GetInt(ForcedVariantKey, -1);
+#else
+        return -1;
+#endif
+    }
 
     public static int PickVariant(string trackId, int variantCount, int visitSeed)
     {
@@ -92,7 +115,9 @@ public static class PaddockSidecar
     // The markers and lots a visit builds: the picked variant, or the top-level layout.
     public static (Marker[] markers, Lot[] lots) LayoutFor(File data, string trackId, int visitSeed)
     {
-        int k = PickVariant(trackId, data.variants?.Length ?? 0, visitSeed);
+        int count = data.variants?.Length ?? 0;
+        int forced = ForcedVariant();
+        int k = forced >= 0 && forced < count ? forced : PickVariant(trackId, count, visitSeed);
         if (k >= 0 && data.variants[k] != null) return (data.variants[k].markers, data.variants[k].lots);
         return (data.markers, data.lots);
     }
@@ -145,19 +170,11 @@ public static class PaddockSidecar
         {
             if (m == null || !WeekendMarker.IsMarkerName(m.name)) continue;
             if (existingNames.Contains(m.name)) continue;          // authored in the package: it wins
-            if (WeekendMarker.VenueFromName(m.name) == Draftmaster.Weekend.WeekendVenue.None)
+            if (BuildMarker(root, Holder(), m) == null)
             {
                 Debug.LogWarning($"PaddockSidecar: {package.trackId}: '{m.name}' names no venue — skipped.");
                 continue;
             }
-            var go = Place(root, Holder(), m.name, m.x, m.y, m.rotation, m.width, m.height);
-            if (m.seat != null) Child(root, go.transform, "Seat", m.seat);
-            if (m.view != null) Child(root, go.transform, "View", m.view);
-            var marker = go.AddComponent<WeekendMarker>();
-            marker.venue = WeekendMarker.VenueFromName(m.name);
-            if (!string.IsNullOrEmpty(m.label)) marker.label = m.label;
-            marker.teleportTo = go.transform.Find("Seat");
-            marker.cameraView = go.transform.Find("View");
             existingNames.Add(m.name);
             added++;
         }
@@ -166,16 +183,7 @@ public static class PaddockSidecar
         {
             if (l == null || !System.Enum.TryParse(l.kind, true, out PaddockLotKind kind)) continue;
             if (existingKinds.Contains(kind)) continue;            // one area per kind; the package's wins
-            if (l.width <= 0f || l.height <= 0f) continue;
-            // The component's Awake/OnEnable runs inside AddComponent, so build it inactive and switch it on
-            // once its numbers are in.
-            var go = Place(root, Holder(), $"PaddockLotArea_{kind}", l.x, l.y, l.rotation, l.width, l.height);
-            go.SetActive(false);
-            var area = go.AddComponent<PaddockLotArea>();
-            area.kind = kind;
-            area.gap = l.gap > 0f ? l.gap : area.gap;
-            area.rowGap = l.rowGap > 0f ? l.rowGap : area.rowGap;
-            go.SetActive(true);
+            if (BuildLot(root, Holder(), l) == null) continue;
             existingKinds.Add(kind);
             added++;
         }
@@ -184,6 +192,92 @@ public static class PaddockSidecar
             Debug.Log($"PaddockSidecar: {package.trackId}: placed {added} object(s) from Resources/{Folder}/{package.trackId}.json.");
         return added;
     }
+
+    // ------------------------------------------------------------- building
+
+    // One venue marker as the game wants it: named object, trigger box perimeter, WeekendMarker, optional
+    // Seat / View children. Positions are package-local (`frame` = the package root, or any stand-in for it).
+    // Null when the name is no venue.
+    public static GameObject BuildMarker(Transform frame, Transform parent, Marker m)
+    {
+        var venue = WeekendMarker.VenueFromName(m.name);
+        if (venue == Draftmaster.Weekend.WeekendVenue.None) return null;
+        var go = Place(frame, parent, m.name, m.x, m.y, m.rotation, m.width, m.height);
+        if (Has(m.seat)) Child(frame, go.transform, "Seat", m.seat);
+        if (Has(m.view)) Child(frame, go.transform, "View", m.view);
+        var marker = go.AddComponent<WeekendMarker>();
+        marker.venue = venue;
+        if (!string.IsNullOrEmpty(m.label)) marker.label = m.label;
+        marker.teleportTo = go.transform.Find("Seat");
+        marker.cameraView = go.transform.Find("View");
+        return go;
+    }
+
+    public static GameObject BuildLot(Transform frame, Transform parent, Lot l)
+    {
+        if (!System.Enum.TryParse(l.kind, true, out PaddockLotKind kind) || l.width <= 0f || l.height <= 0f) return null;
+        // The component's Awake/OnEnable runs inside AddComponent, so build it inactive and switch it on once
+        // its numbers are in.
+        var go = Place(frame, parent, $"PaddockLotArea_{kind}", l.x, l.y, l.rotation, l.width, l.height);
+        go.SetActive(false);
+        var area = go.AddComponent<PaddockLotArea>();
+        area.kind = kind;
+        area.gap = l.gap > 0f ? l.gap : area.gap;
+        area.rowGap = l.rowGap > 0f ? l.rowGap : area.rowGap;
+        go.SetActive(true);
+        return go;
+    }
+
+    // ------------------------------------------------------------- reading back
+
+    // The layout under `root`, measured in `frame`'s space: every `*_Marker` (its box, Seat/View children,
+    // WeekendMarker label) and every PaddockLotArea. What the Paddock Variants window saves after a tweak —
+    // moving, rotating, resizing the box, or duplicating a piece all come through.
+    public static Variant ReadLayout(Transform frame, Transform root)
+    {
+        var markers = new List<Marker>();
+        var lots = new List<Lot>();
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (t == root) continue;
+            var area = t.GetComponent<PaddockLotArea>();
+            if (area != null)
+            {
+                var (x, y, rot, w, h) = Measure(frame, t);
+                lots.Add(new Lot { kind = area.kind.ToString(), x = x, y = y, rotation = rot, width = w, height = h,
+                                   gap = Round(area.gap), rowGap = Round(area.rowGap) });
+                continue;
+            }
+            if (!WeekendMarker.IsMarkerName(t.name)) continue;
+            var (mx, my, mrot, mw, mh) = Measure(frame, t);
+            var m = new Marker { name = t.name, x = mx, y = my, rotation = mrot, width = mw, height = mh };
+            var wm = t.GetComponent<WeekendMarker>();
+            if (wm != null && !string.IsNullOrEmpty(wm.label)) m.label = wm.label;
+            var seat = wm != null && wm.teleportTo != null ? wm.teleportTo : t.Find("Seat");
+            var view = wm != null && wm.cameraView != null ? wm.cameraView : t.Find("View");
+            if (seat != null) m.seat = PointOf(frame, seat);
+            if (view != null) m.view = PointOf(frame, view);
+            markers.Add(m);
+        }
+        return new Variant { markers = markers.ToArray(), lots = lots.ToArray() };
+    }
+
+    static (float x, float y, float rot, float w, float h) Measure(Transform frame, Transform t)
+    {
+        var box = t.GetComponent<BoxCollider2D>();
+        Vector2 size = box != null ? Vector2.Scale(box.size, (Vector2)t.lossyScale) : new Vector2(6f, 6f);
+        Vector3 c = frame.InverseTransformPoint(box != null ? t.TransformPoint(box.offset) : t.position);
+        float rot = (Quaternion.Inverse(frame.rotation) * t.rotation).eulerAngles.z;
+        return (Round(c.x), Round(c.y), Round(rot), Round(Mathf.Abs(size.x)), Round(Mathf.Abs(size.y)));
+    }
+
+    static Point PointOf(Transform frame, Transform t)
+    {
+        Vector3 p = frame.InverseTransformPoint(t.position);
+        return new Point { x = Round(p.x), y = Round(p.y) };
+    }
+
+    static float Round(float v) => Mathf.Round(v * 10f) / 10f;
 
     // Positions are package-local (`frame` = the package root) whatever the holder's own transform: the
     // holder is created at identity, but a package may already carry one that somebody moved.

@@ -454,6 +454,10 @@ it drifts again.
 
 ## 17. Paddock, spawns and the garage
 
+**Paddock layout variants** (tracks without a hand-built paddock): `Draftmaster > Tracks > Paddock Variants` —
+load a variant into the open package, drag the markers and lots, Save. Generator, per-track counts and
+Indianapolis-style hand-only tracks: `Docs/Overnight-Lanes.md`, "Paddock placements".
+
 - `GameObject > Draftmaster > Player Spawn Point` — where the on-foot player starts (labelled, weighted).
 - `GameObject > Draftmaster > Paddock Boundary` — the walkable pocket.
 - All four `GameObject > Draftmaster` items go through `PaddockAuthoringStage.Place`, which puts the new

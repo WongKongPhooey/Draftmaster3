@@ -1,8 +1,12 @@
 """Generate randomised paddock layouts (sidecars) from the exported track geometry.
 
-    python Tools/paddock_generate.py Dover                 # 4 variants -> Assets/Resources/Paddocks/Dover.json
+    python Tools/paddock_generate.py Dover                 # top up to 8 layouts -> Assets/Resources/Paddocks/Dover.json
     python Tools/paddock_generate.py --all                 # every exported track the package doesn't lay out itself
-    python Tools/paddock_generate.py Dover --variants 6 --seed 7 --preview
+    python Tools/paddock_generate.py Dover --regenerate --seed 7 --preview   # new generated ones, authored kept
+
+How many layouts a track gets, and whether any are generated at all (Indianapolis: hand-authored only), is in
+Tools/paddock_variants.json. Layouts saved from Draftmaster > Tracks > Paddock Variants are marked `authored`
+and are never replaced or reordered — they come first, generated ones fill the rest.
 
 Every variant has the full set of pieces — the team garages and the drivers' motorhome lot, the sponsor
 area (SponsorSuite), the fan zone (SigningFence), the drivers' room (MeetingRoom), the intro stage and a
@@ -208,7 +212,24 @@ def authored(export):
     return any(o.get("kind") in ("lot", "marker") for o in export["objects"])
 
 
-def generate(track_id, count, seed, log=print):
+CONFIG = Path(__file__).resolve().parent / "paddock_variants.json"
+
+
+def settings(track_id):
+    """(variants wanted in total, may generate) from Tools/paddock_variants.json."""
+    try:
+        cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cfg = {}
+    merged = dict({"variants": 8, "generate": True}, **(cfg.get("default") or {}))
+    merged.update((cfg.get("tracks") or {}).get(track_id) or {})
+    return int(merged["variants"]), bool(merged["generate"])
+
+
+def generate(track_id, count, seed, log=print, regenerate=False):
+    """Bring a track's sidecar up to `count` layouts. Variants marked `authored` (saved from the Paddock
+    Variants window) are always kept, first and untouched; generated ones fill the rest. Without
+    `regenerate`, generated variants already in the file are kept too, so a re-run only tops up."""
     export, err = ps.load(ps.EXPORTS / f"{track_id}.json")
     if err:
         log(f"{track_id}: no geometry export ({err})")
@@ -216,16 +237,36 @@ def generate(track_id, count, seed, log=print):
     if authored(export):
         log(f"{track_id}: the package lays out its own paddock — skipped")
         return False
-    variants, notes = [], []
-    attempt = 0
-    while len(variants) < count and attempt < count * 6:
-        rng = random.Random(stable_seed(track_id, seed * 1000 + attempt))
-        attempt += 1
-        v, why = variant(export, rng)
-        if v:
-            variants.append(v)
-        else:
-            notes.append(why)
+    want, may_generate = settings(track_id)
+    if count is not None:
+        want = count
+    existing, _ = ps.load(ps.SIDECARS / f"{track_id}.json")
+    old = (existing or {}).get("variants") or []
+    keep = [v for v in old if v.get("authored")]
+    if not regenerate:
+        keep += [v for v in old if not v.get("authored")]
+    if not may_generate:
+        if not old:
+            log(f"{track_id}: set to hand-authored only (Tools/paddock_variants.json) and has no layouts yet — "
+                "author one in Draftmaster > Tracks > Paddock Variants")
+            return False
+        keep = old if not regenerate else [v for v in old if v.get("authored")]
+        if not keep:
+            log(f"{track_id}: hand-authored only and nothing authored yet — left as it was")
+            return False
+        variants, notes = keep, []
+    else:
+        variants, notes = list(keep), []
+        attempt = 0
+        while len(variants) < want and attempt < want * 6:
+            rng = random.Random(stable_seed(track_id, seed * 1000 + attempt))
+            attempt += 1
+            v, why = variant(export, rng)
+            if v:
+                variants.append(v)
+            else:
+                notes.append(why)
+        variants = variants[:max(want, sum(1 for v in variants if v.get("authored")))]
     if not variants:
         log(f"{track_id}: FAILED — {', '.join(sorted(set(notes)))}")
         return False
@@ -235,8 +276,9 @@ def generate(track_id, count, seed, log=print):
             "variants": variants}
     ps.SIDECARS.mkdir(parents=True, exist_ok=True)
     (ps.SIDECARS / f"{track_id}.json").write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
-    log(f"{track_id}: {len(variants)} variant(s)" + (f" ({len(notes)} rejected: {', '.join(sorted(set(notes)))})"
-                                                   if notes else ""))
+    n_auth = sum(1 for v in variants if v.get("authored"))
+    log(f"{track_id}: {len(variants)} variant(s), {n_auth} authored"
+        + (f" ({len(notes)} rejected: {', '.join(sorted(set(notes)))})" if notes else ""))
     return True
 
 
@@ -244,7 +286,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("tracks", nargs="*")
     ap.add_argument("--all", action="store_true")
-    ap.add_argument("--variants", type=int, default=4)
+    ap.add_argument("--variants", type=int, default=None,
+                    help="layouts per track (default: Tools/paddock_variants.json, normally 8)")
+    ap.add_argument("--regenerate", action="store_true",
+                    help="replace the generated layouts (authored ones are always kept)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--preview", action="store_true", help="also render every variant's PNG")
     a = ap.parse_args()
@@ -253,10 +298,11 @@ def main():
         ap.error("name a track or pass --all")
     ok = 0
     for tid in ids:
-        if generate(tid, a.variants, a.seed):
+        if generate(tid, a.variants, a.seed, regenerate=a.regenerate):
             ok += 1
             if a.preview:
-                for k in range(a.variants):
+                n = len(json.loads((ps.SIDECARS / f"{tid}.json").read_text(encoding="utf-8"))["variants"])
+                for k in range(n):
                     ps.preview(tid, k)
     print(f"{ok}/{len(ids)} track(s) written")
 

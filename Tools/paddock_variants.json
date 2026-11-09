@@ -1,0 +1,7 @@
+{
+  "_doc": "Per-track settings for Tools/paddock_generate.py. 'variants' = how many layouts a track should have in total (authored ones count). 'generate': false = never add generated layouts; the track's layouts are only the ones authored in Draftmaster > Tracks > Paddock Variants (any generated ones already in the file are kept until you delete them there).",
+  "default": { "variants": 8, "generate": true },
+  "tracks": {
+    "Indianapolis": { "generate": false }
+  }
+}

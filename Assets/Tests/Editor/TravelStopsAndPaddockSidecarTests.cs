@@ -81,6 +81,7 @@ public class TravelStopsAndPaddockSidecarTests
             const string json = "{\"trackId\":\"Test\",\"markers\":[" +
                 "{\"name\":\"Grandstand_Marker\",\"x\":1,\"y\":1}," +
                 "{\"name\":\"PitBox_Marker\",\"x\":10,\"y\":0,\"rotation\":30,\"width\":4,\"height\":3,\"seat\":{\"x\":12,\"y\":2}}," +
+                "{\"name\":\"SigningFence_Marker\",\"x\":30,\"y\":5}," +
                 "{\"name\":\"Nonsense_Marker\",\"x\":0,\"y\":0}]," +
                 "\"lots\":[{\"kind\":\"Motorhomes\",\"x\":0,\"y\":-40,\"rotation\":15,\"width\":120,\"height\":50,\"gap\":3,\"rowGap\":7}," +
                 "{\"kind\":\"Motorhomes\",\"x\":0,\"y\":80,\"width\":50,\"height\":50}]}";
@@ -88,7 +89,7 @@ public class TravelStopsAndPaddockSidecarTests
             var apply = Sidecar.GetMethod("Apply", new[] { Package, SidecarFile });
 
             int added = (int)apply.Invoke(null, new[] { package, data });
-            Assert.AreEqual(2, added, "PitBox marker + one Motorhomes lot (Grandstand is authored, Nonsense names no venue, " +
+            Assert.AreEqual(3, added, "PitBox + SigningFence markers + one Motorhomes lot (Grandstand is authored, Nonsense names no venue, " +
                                       "and only the first lot of a kind counts)");
 
             var pit = root.transform.Find("PaddockSidecar/PitBox_Marker");
@@ -107,6 +108,12 @@ public class TravelStopsAndPaddockSidecarTests
             Vector3 seatLocal = root.transform.InverseTransformPoint(seat.position);
             Assert.AreEqual(12f, seatLocal.x, 1e-3f);
             Assert.AreEqual(2f, seatLocal.y, 1e-3f);
+
+            // No seat in the JSON = no teleport — JsonUtility hands back a Point anyway, which must not count.
+            var fence = root.transform.Find("PaddockSidecar/SigningFence_Marker");
+            Assert.IsNotNull(fence);
+            Assert.IsNull(Marker.GetField("teleportTo").GetValue(fence.GetComponent(Marker)) as Transform);
+            Assert.IsNull(fence.Find("Seat"));
 
             var lot = root.transform.Find("PaddockSidecar/PaddockLotArea_Motorhomes");
             Assert.IsNotNull(lot);
@@ -157,6 +164,53 @@ public class TravelStopsAndPaddockSidecarTests
                 foreach (var l in (Array)Field(v, "lots")) kinds.Add((string)Field(l, "kind"));
                 Assert.IsTrue(kinds.Contains("Motorhomes") && kinds.Contains("Garages"), $"{f.name}: a variant is missing a lot");
             }
+        }
+    }
+
+    [Test]
+    public void ALoadedVariantReadsBackTheSameInPackageSpace()
+    {
+        var frame = new GameObject("Frame");
+        var holder = new GameObject("Holder");
+        try
+        {
+            frame.transform.position = new Vector3(-30f, 12f, 0f);
+            frame.transform.rotation = Quaternion.Euler(0f, 0f, 40f);
+            const string json = "{\"markers\":[" +
+                "{\"name\":\"Grandstand_Marker\",\"x\":5,\"y\":6,\"rotation\":20,\"width\":10,\"height\":8,\"seat\":{\"x\":50,\"y\":-60},\"view\":{\"x\":30,\"y\":-20}}," +
+                "{\"name\":\"SponsorSuite_Marker\",\"x\":-15,\"y\":40,\"width\":14,\"height\":12}]," +
+                "\"lots\":[{\"kind\":\"Garages\",\"x\":100,\"y\":-20,\"rotation\":95,\"width\":150,\"height\":45,\"gap\":2.5,\"rowGap\":7}]}";
+            var variantType = Type.GetType("PaddockSidecar+Variant, Assembly-CSharp");
+            var v = JsonUtility.FromJson(json, variantType);
+            var buildMarker = Sidecar.GetMethod("BuildMarker");
+            var buildLot = Sidecar.GetMethod("BuildLot");
+            foreach (var m in (Array)Field(v, "markers")) buildMarker.Invoke(null, new[] { frame.transform, holder.transform, m });
+            foreach (var l in (Array)Field(v, "lots")) buildLot.Invoke(null, new[] { frame.transform, holder.transform, l });
+
+            var back = Sidecar.GetMethod("ReadLayout").Invoke(null, new object[] { frame.transform, holder.transform });
+            var markers = (Array)Field(back, "markers");
+            Assert.AreEqual(2, markers.Length);
+            var g = markers.GetValue(0);
+            Assert.AreEqual("Grandstand_Marker", Field(g, "name"));
+            Assert.AreEqual(5f, (float)Field(g, "x"), 0.06f);
+            Assert.AreEqual(6f, (float)Field(g, "y"), 0.06f);
+            Assert.AreEqual(20f, (float)Field(g, "rotation"), 0.06f);
+            Assert.AreEqual(10f, (float)Field(g, "width"), 0.06f);
+            Assert.AreEqual(50f, (float)Field(Field(g, "seat"), "x"), 0.06f);
+            Assert.AreEqual(-20f, (float)Field(Field(g, "view"), "y"), 0.06f);
+            var has = Sidecar.GetMethod("Has");
+            Assert.IsFalse((bool)has.Invoke(null, new[] { Field(markers.GetValue(1), "seat") }), "no seat stays no seat");
+            var lot = ((Array)Field(back, "lots")).GetValue(0);
+            Assert.AreEqual("Garages", Field(lot, "kind"));
+            Assert.AreEqual(100f, (float)Field(lot, "x"), 0.06f);
+            Assert.AreEqual(95f, (float)Field(lot, "rotation"), 0.06f);
+            Assert.AreEqual(45f, (float)Field(lot, "height"), 0.06f);
+            Assert.AreEqual(2.5f, (float)Field(lot, "gap"), 0.06f);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(frame);
+            UnityEngine.Object.DestroyImmediate(holder);
         }
     }
 }

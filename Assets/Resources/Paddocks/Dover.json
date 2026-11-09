@@ -369,6 +369,302 @@
      "rowGap": 5.7
     }
    ]
+  },
+  {
+   "markers": [
+    {
+     "name": "SigningFence_Marker",
+     "x": 246.5,
+     "y": -148.7,
+     "rotation": 359.7,
+     "width": 21.6,
+     "height": 3.9
+    },
+    {
+     "name": "IntroStage_Marker",
+     "x": 342.6,
+     "y": -42.9,
+     "rotation": 350.9,
+     "width": 10.3,
+     "height": 6.1
+    },
+    {
+     "name": "MeetingRoom_Marker",
+     "x": 294.6,
+     "y": -145.1,
+     "rotation": 356.3,
+     "width": 9.2,
+     "height": 10.9
+    },
+    {
+     "name": "SponsorSuite_Marker",
+     "x": 213.4,
+     "y": -70.8,
+     "rotation": 359.5,
+     "width": 13.0,
+     "height": 12.5
+    },
+    {
+     "name": "Grandstand_Marker",
+     "x": 215.5,
+     "y": -47.2,
+     "rotation": 357.4,
+     "width": 10,
+     "height": 10,
+     "seat": {
+      "x": 325.2,
+      "y": 281.2
+     },
+     "view": {
+      "x": 330.8,
+      "y": 330.4
+     }
+    }
+   ],
+   "lots": [
+    {
+     "kind": "Motorhomes",
+     "x": 162.9,
+     "y": -100.9,
+     "rotation": 351.6,
+     "width": 110.0,
+     "height": 42.6,
+     "gap": 2.8,
+     "rowGap": 5.4
+    },
+    {
+     "kind": "Garages",
+     "x": 339.8,
+     "y": -91.5,
+     "rotation": 354.2,
+     "width": 199.2,
+     "height": 43.0,
+     "gap": 2.7,
+     "rowGap": 5.6
+    }
+   ]
+  },
+  {
+   "markers": [
+    {
+     "name": "MeetingRoom_Marker",
+     "x": 294.9,
+     "y": -141.5,
+     "rotation": 354.6,
+     "width": 10.3,
+     "height": 8.2
+    },
+    {
+     "name": "SponsorSuite_Marker",
+     "x": 234.1,
+     "y": -106.6,
+     "rotation": 353.6,
+     "width": 13.6,
+     "height": 10.9
+    },
+    {
+     "name": "IntroStage_Marker",
+     "x": 295.6,
+     "y": -41.8,
+     "rotation": 349.6,
+     "width": 12.6,
+     "height": 7.2
+    },
+    {
+     "name": "SigningFence_Marker",
+     "x": 200.9,
+     "y": -122.4,
+     "rotation": 351.0,
+     "width": 16.5,
+     "height": 4.5
+    },
+    {
+     "name": "Grandstand_Marker",
+     "x": 135.5,
+     "y": -49.9,
+     "rotation": 349.9,
+     "width": 10,
+     "height": 10,
+     "seat": {
+      "x": 201.2,
+      "y": -25.1
+     },
+     "view": {
+      "x": 200.0,
+      "y": 2.5
+     }
+    }
+   ],
+   "lots": [
+    {
+     "kind": "Motorhomes",
+     "x": 307.7,
+     "y": -86.1,
+     "rotation": 354.7,
+     "width": 135.1,
+     "height": 27.1,
+     "gap": 2.1,
+     "rowGap": 5.2
+    },
+    {
+     "kind": "Garages",
+     "x": 90.3,
+     "y": -111.1,
+     "rotation": 357.8,
+     "width": 188.9,
+     "height": 62.1,
+     "gap": 2.9,
+     "rowGap": 6.8
+    }
+   ]
+  },
+  {
+   "markers": [
+    {
+     "name": "SigningFence_Marker",
+     "x": 176.6,
+     "y": -126.9,
+     "rotation": 353.0,
+     "width": 20.8,
+     "height": 4.0
+    },
+    {
+     "name": "IntroStage_Marker",
+     "x": 316.0,
+     "y": -82.2,
+     "rotation": 354.1,
+     "width": 12.4,
+     "height": 6.8
+    },
+    {
+     "name": "MeetingRoom_Marker",
+     "x": 119.7,
+     "y": -48.3,
+     "rotation": 357.1,
+     "width": 10.2,
+     "height": 11.9
+    },
+    {
+     "name": "SponsorSuite_Marker",
+     "x": 255.4,
+     "y": -46.4,
+     "rotation": 354.6,
+     "width": 14.8,
+     "height": 11.8
+    },
+    {
+     "name": "Grandstand_Marker",
+     "x": 12.7,
+     "y": -41.5,
+     "rotation": 1.7,
+     "width": 10,
+     "height": 10,
+     "seat": {
+      "x": 77.2,
+      "y": -25.1
+     },
+     "view": {
+      "x": 80.0,
+      "y": 0.4
+     }
+    }
+   ],
+   "lots": [
+    {
+     "kind": "Garages",
+     "x": 83.4,
+     "y": -98.2,
+     "rotation": 356.6,
+     "width": 116.8,
+     "height": 81.2,
+     "gap": 2.3,
+     "rowGap": 7.4
+    },
+    {
+     "kind": "Motorhomes",
+     "x": 297.8,
+     "y": -109.1,
+     "rotation": 351.9,
+     "width": 95.8,
+     "height": 42.2,
+     "gap": 2.3,
+     "rowGap": 5.2
+    }
+   ]
+  },
+  {
+   "markers": [
+    {
+     "name": "SigningFence_Marker",
+     "x": 277.9,
+     "y": -62.1,
+     "rotation": 350.4,
+     "width": 24.2,
+     "height": 4.7
+    },
+    {
+     "name": "IntroStage_Marker",
+     "x": 342.5,
+     "y": -44.0,
+     "rotation": 1.1,
+     "width": 11.9,
+     "height": 6.0
+    },
+    {
+     "name": "SponsorSuite_Marker",
+     "x": 200.8,
+     "y": -123.8,
+     "rotation": 355.1,
+     "width": 17.6,
+     "height": 12.5
+    },
+    {
+     "name": "MeetingRoom_Marker",
+     "x": 176.8,
+     "y": -124.8,
+     "rotation": 351.8,
+     "width": 9.2,
+     "height": 8.8
+    },
+    {
+     "name": "Grandstand_Marker",
+     "x": 239.5,
+     "y": -45.2,
+     "rotation": 0.9,
+     "width": 10,
+     "height": 10,
+     "seat": {
+      "x": 77.2,
+      "y": -25.1
+     },
+     "view": {
+      "x": 80.0,
+      "y": 0.4
+     }
+    }
+   ],
+   "lots": [
+    {
+     "kind": "Garages",
+     "x": 180.7,
+     "y": -80.1,
+     "rotation": 352.5,
+     "width": 204.4,
+     "height": 45.8,
+     "gap": 2.2,
+     "rowGap": 7.0
+    },
+    {
+     "kind": "Motorhomes",
+     "x": 24.2,
+     "y": -58.5,
+     "rotation": 352.2,
+     "width": 94.0,
+     "height": 42.0,
+     "gap": 1.8,
+     "rowGap": 5.1
+    }
+   ]
   }
  ]
 }
