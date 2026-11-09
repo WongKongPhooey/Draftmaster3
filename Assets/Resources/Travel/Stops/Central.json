@@ -45,9 +45,9 @@
     {
       "id": "red_river_fab",
       "type": "Fabricator",
-      "name": "Red River Chassis & Body",
+      "name": "Show-Me Chassis & Body",
       "road": [
-        "FortWorth",
+        "Gateway",
         "Kansas"
       ],
       "tier": 1,

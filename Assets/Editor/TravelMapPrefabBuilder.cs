@@ -900,7 +900,7 @@ public static class TravelMapPrefabBuilder
 
     // The key, pinned to the window's bottom-right corner — the Atlantic, on a board centred on the USA.
     // The board pans behind it, so no spot on the board stays clear of it; the corner is the one place a
-    // node is least likely to be under it. Seventy-five dots in five colours need saying out loud once.
+    // node is least likely to be under it. Eighty dots in six colours need saying out loud once.
     // Rows are Label type, the floor of the shared scale (UIType).
     const float LegendW = 380f, LegendRowH = 40f;
 
@@ -910,7 +910,7 @@ public static class TravelMapPrefabBuilder
         box.type = Image.Type.Sliced;
         box.pixelsPerUnitMultiplier = Slice2x;
         box.fillCenter = false;
-        Place(box.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-12f, 12f), new Vector2(LegendW, 12f + 5 * LegendRowH + 14f));
+        Place(box.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-12f, 12f), new Vector2(LegendW, 12f + 6 * LegendRowH + 14f));
 
         // Its own dark plate, or the highways run under the text.
         var fill = EnsureImage(box.transform, "Fill", PanelFillDeep, Ink);
@@ -921,10 +921,11 @@ public static class TravelMapPrefabBuilder
         // The chips are the dots themselves, at the size the map draws them, so the key is a sample of
         // the board rather than a second set of symbols to learn.
         LegendRow(box.transform, 0, "RACETRACK", Gold, 16f);
-        LegendRow(box.transform, 1, "PARTS SHOP", ShopBlue, 12f);
-        LegendRow(box.transform, 2, "SALVAGE YARD", Rust, 12f);
-        LegendRow(box.transform, 3, "YOUR FACTORY", Teal, 16f, chipFill: DeepTeal, ring: Gold);
-        LegendRow(box.transform, 4, "THIS WEEK'S RACE", NextRace, 10f, chipFill: Gold, ring: NextRace);
+        LegendRow(box.transform, 1, "ENGINE BUILDER", ShopBlue, 12f);
+        LegendRow(box.transform, 2, "FABRICATOR", Violet, 12f);
+        LegendRow(box.transform, 3, "SALVAGE YARD", Rust, 12f);
+        LegendRow(box.transform, 4, "YOUR FACTORY", Teal, 16f, chipFill: DeepTeal, ring: Gold);
+        LegendRow(box.transform, 5, "THIS WEEK'S RACE", NextRace, 10f, chipFill: Gold, ring: NextRace);
 
         // The key used to end on a note about the factory's free parts; the rows say enough.
         var note = box.transform.Find("Note");
