@@ -1,5 +1,7 @@
 # Master Draft
 
+> **Being reworked (2026-11-09)** to the Draftmaster 2 model — collect cars, level them, series with restrictions, challenges that unlock cars. Brief and row plan: `Docs/MasterDraft-Rework.md`. This page describes the card mode until that lands.
+
 The collectible-card mode, reached from the title screen's **MASTER DRAFT** row (between SINGLE RACE and
 MULTIPLAYER). Collect drivers, cars, crew chiefs and action cards from packs, build a team, race it, and
 play action cards from a hand during the race. Inspired by FIFA Ultimate Team (squad, packs, trading), the

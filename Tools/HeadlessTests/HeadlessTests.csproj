@@ -35,7 +35,9 @@
 
   <!-- Tests that only reach the assemblies above. -->
   <ItemGroup>
-    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\MasterDraftRulesTests.cs" />
+    <!-- Every MasterDraft*Tests.cs, so parallel overnight rows can each add a test file without editing this
+         list (two rows adding lines here would conflict at merge). Keep those files engine-free. -->
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\MasterDraft*Tests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelRoutePlanTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelDaysTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelTutorialRouteTests.cs" />
