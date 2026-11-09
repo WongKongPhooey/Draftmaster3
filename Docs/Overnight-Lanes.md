@@ -119,6 +119,15 @@ is skipped — so a sidecar only fills gaps and never undoes Editor work.
   which draws road, pit lane, existing objects and the sidecar to `Temp/PaddockPreview/Dover.png` — look at
   it. Real-world layouts (OSM: parking, campgrounds, infield buildings) are worth researching; see
   `Tools/osm/` and Docs/Tracks.md "Traced geometry" for the trace tooling.
+- **Randomised layouts**: `python Tools/paddock_generate.py --all` writes four `variants` per track (34
+  tracks; the four authored packages are skipped). Every variant has both lots and every venue —
+  SponsorSuite (sponsor area), SigningFence (fan zone), MeetingRoom, IntroStage (near the end of pit road),
+  Grandstand (seat in one of the package's own stands) — none overlapping each other, the road, the pit lane
+  or package objects, placed behind the pit lane on the side away from the track. What varies is which
+  stretch each piece sits behind, how far back, the order, the lot proportions and angle. The game picks a
+  variant per visit (`PaddockSidecar.PickVariant`: track id + `TravelState.Week`), so the paddock moves
+  between visits but never mid-weekend. `--seed N` rerolls; `preview <id> --variant k` draws one.
+  PitBox and the player's Motorhome markers are left to the game (pit box from the pit lane, RV from the lot).
 - Nobody has played a sidecar track yet: the first one deserves a `unity` row that loads it, walks the
   paddock and checks the RVs land where the box says.
 

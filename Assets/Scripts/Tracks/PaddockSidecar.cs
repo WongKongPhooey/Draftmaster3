@@ -55,11 +55,46 @@ public static class PaddockSidecar
     }
 
     [System.Serializable]
+    public class Variant
+    {
+        public Marker[] markers;
+        public Lot[] lots;
+    }
+
+    [System.Serializable]
     public class File
     {
         public string trackId;
         public Marker[] markers;
         public Lot[] lots;
+        // Alternative layouts (Tools/paddock_generate.py writes four). When present, one is picked per visit
+        // — see PickVariant — and the top-level markers/lots are only the fallback.
+        public Variant[] variants;
+    }
+
+    // Which variant a visit uses: stable for a whole race weekend (so the paddock never rearranges itself
+    // between sessions), different from one visit to the next. The travel week moves on once per trip
+    // between races; the track id spreads tracks visited in the same week across different variants.
+    public static System.Func<int> VisitSeed = () => TravelState.Week;
+
+    public static int PickVariant(string trackId, int variantCount, int visitSeed)
+    {
+        if (variantCount <= 0) return -1;
+        unchecked
+        {
+            int h = 17;
+            foreach (char c in trackId ?? "") h = h * 31 + c;
+            h = h * 31 + visitSeed;
+            return (int)((uint)h % (uint)variantCount);
+        }
+    }
+
+    // The markers and lots a visit builds: the picked variant, or the top-level layout.
+    public static (Marker[] markers, Lot[] lots) LayoutFor(File data, string trackId, int visitSeed)
+    {
+        int k = PickVariant(trackId, data.variants?.Length ?? 0, visitSeed);
+        if (k >= 0 && data.variants[k] != null) return (data.variants[k].markers, data.variants[k].lots);
+        return (data.markers, data.lots);
     }
 
     public static File Load(string trackId)
@@ -80,9 +115,13 @@ public static class PaddockSidecar
     public static int Apply(TrackPackage package) =>
         package == null ? 0 : Apply(package, Load(package.trackId));
 
-    public static int Apply(TrackPackage package, File data)
+    public static int Apply(TrackPackage package, File data) =>
+        Apply(package, data, data == null || data.variants == null || data.variants.Length == 0 ? 0 : VisitSeed());
+
+    public static int Apply(TrackPackage package, File data, int visitSeed)
     {
         if (package == null || data == null) return 0;
+        var (layoutMarkers, layoutLots) = LayoutFor(data, package.trackId, visitSeed);
 
         Transform root = package.transform;
         var existingNames = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
@@ -102,7 +141,7 @@ public static class PaddockSidecar
             return holder;
         }
 
-        foreach (var m in data.markers ?? System.Array.Empty<Marker>())
+        foreach (var m in layoutMarkers ?? System.Array.Empty<Marker>())
         {
             if (m == null || !WeekendMarker.IsMarkerName(m.name)) continue;
             if (existingNames.Contains(m.name)) continue;          // authored in the package: it wins
@@ -123,7 +162,7 @@ public static class PaddockSidecar
             added++;
         }
 
-        foreach (var l in data.lots ?? System.Array.Empty<Lot>())
+        foreach (var l in layoutLots ?? System.Array.Empty<Lot>())
         {
             if (l == null || !System.Enum.TryParse(l.kind, true, out PaddockLotKind kind)) continue;
             if (existingKinds.Contains(kind)) continue;            // one area per kind; the package's wins

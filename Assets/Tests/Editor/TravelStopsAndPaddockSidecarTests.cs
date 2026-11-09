@@ -124,4 +124,39 @@ public class TravelStopsAndPaddockSidecarTests
             UnityEngine.Object.DestroyImmediate(root);
         }
     }
+
+    [Test]
+    public void VariantIsStableForAVisitAndEveryVariantGetsUsed()
+    {
+        var pick = Sidecar.GetMethod("PickVariant");
+        int a = (int)pick.Invoke(null, new object[] { "Dover", 4, 7 });
+        Assert.AreEqual(a, (int)pick.Invoke(null, new object[] { "Dover", 4, 7 }), "same track, same week, same layout");
+        var seen = new HashSet<int>();
+        for (int week = 0; week < 40; week++) seen.Add((int)pick.Invoke(null, new object[] { "Dover", 4, week }));
+        Assert.AreEqual(4, seen.Count, "over a season every layout comes round");
+        Assert.AreEqual(-1, (int)pick.Invoke(null, new object[] { "Dover", 0, 3 }));
+    }
+
+    [Test]
+    public void EveryGeneratedSidecarHasTheFullPaddockInEveryVariant()
+    {
+        var files = Resources.LoadAll<TextAsset>((string)Sidecar.GetField("Folder").GetValue(null));
+        foreach (var f in files)
+        {
+            var data = JsonUtility.FromJson(f.text, SidecarFile);
+            var variants = (Array)Field(data, "variants");
+            if (variants == null) continue;
+            foreach (var v in variants)
+            {
+                var names = new HashSet<string>();
+                foreach (var m in (Array)Field(v, "markers")) names.Add((string)Field(m, "name"));
+                foreach (var want in new[] { "SponsorSuite_Marker", "SigningFence_Marker", "MeetingRoom_Marker",
+                                             "IntroStage_Marker", "Grandstand_Marker" })
+                    Assert.IsTrue(names.Contains(want), $"{f.name}: a variant has no {want}");
+                var kinds = new HashSet<string>();
+                foreach (var l in (Array)Field(v, "lots")) kinds.Add((string)Field(l, "kind"));
+                Assert.IsTrue(kinds.Contains("Motorhomes") && kinds.Contains("Garages"), $"{f.name}: a variant is missing a lot");
+            }
+        }
+    }
 }
