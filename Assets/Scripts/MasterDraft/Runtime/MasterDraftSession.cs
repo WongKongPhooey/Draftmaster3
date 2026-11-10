@@ -25,6 +25,7 @@ public class MasterDraftSession : MonoBehaviour
         public string trackId;
         public string driverUid;
         public SeriesRacePlan series;   // set for a championship round (no cards); null for a card Quick Race
+        public ChallengeRacePlan challenge;   // set for a challenge chapter (no cards)
     }
 
     // A championship round's result, for the Series screen to show on the way back.
@@ -32,6 +33,14 @@ public class MasterDraftSession : MonoBehaviour
     {
         public SeriesRacePlan plan;
         public RaceRewardSummary rewards;   // null if the round couldn't be scored
+        public string error = "";           // why not
+    }
+
+    // A challenge chapter's result, for the Challenges screen's prize reveal on the way back.
+    public class ChallengeOutcome
+    {
+        public ChallengeRacePlan plan;
+        public RaceRewardSummary rewards;   // null if the race couldn't be scored
         public string error = "";           // why not
     }
 
@@ -48,6 +57,7 @@ public class MasterDraftSession : MonoBehaviour
     public PendingRace Pending { get; set; }
     public RaceOutcome LastRace { get; set; }
     public SeriesOutcome LastSeries { get; set; }
+    public ChallengeOutcome LastChallenge { get; set; }
 
     // The car catalogue (Resources/MasterDraft/Cars.json): the local backend's copy, else loaded here. Null if missing.
     public CarCatalog Cars
@@ -81,8 +91,32 @@ public class MasterDraftSession : MonoBehaviour
         return text == null ? null : DraftSeriesCatalog.FromJson(text.text);
     }
 
+    // Every challenge event (Resources/MasterDraft/Challenges.json), loaded on first use. Null if missing.
+    public ChallengeCatalog Challenges
+    {
+        get
+        {
+            if (_challenges != null) return _challenges;
+            _challenges = LoadChallenges();
+            if (_challenges == null) Debug.LogWarning($"[MasterDraft] No challenges at Resources/{ChallengeCatalog.ResourcePath}.");
+            return _challenges;
+        }
+    }
+
+    public static ChallengeCatalog LoadChallenges()
+    {
+        MasterDraftJsonInstaller.Install();
+        var text = Resources.Load<TextAsset>(ChallengeCatalog.ResourcePath);
+        return text == null ? null : ChallengeCatalog.FromJson(text.text);
+    }
+
+    // This week of the challenge cycle (ChallengeRace.WeekAt the real date).
+    public static int ChallengeWeek(ChallengeCatalog challenges) =>
+        ChallengeRace.WeekAt(DateTime.UtcNow, challenges?.CycleWeeks ?? Draftmaster.MasterDraft.Challenges.DefaultCycleWeeks);
+
     CarCatalog _cars;
     DraftSeriesCatalog _series;
+    ChallengeCatalog _challenges;
 
     // True between GO and the return to the Master Draft menu.
     public bool InRace => Pending != null;

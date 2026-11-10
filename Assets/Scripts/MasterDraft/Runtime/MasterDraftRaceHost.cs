@@ -22,6 +22,10 @@ using UnityEngine.SceneManagement;
 // sets the race distance before the green, gives the player's car its class step (CarProgression.PowerScale /
 // GripScale through card*Scale), and at the flag scores the round (SeriesRace.RecordResult -> RaceRewards), saves
 // the profile and leaves the result for the Series screen.
+//
+// A challenge chapter (MasterDraftRaceLauncher.LaunchChallenge, session.Pending.challenge) runs the same way with
+// no cards, and at the flag records the chapter (ChallengeRace.RecordResult -> RaceRewards.Challenge, which pays the
+// prize when one is due) and leaves the result for the Challenges screen's prize reveal.
 public class MasterDraftRaceHost : MonoBehaviour
 {
     public static MasterDraftRaceHost Instance { get; private set; }
@@ -46,6 +50,8 @@ public class MasterDraftRaceHost : MonoBehaviour
     RaceHand _hand;
     SeriesRacePlan _series;
     MasterDraftSession.SeriesOutcome _seriesOutcome;
+    ChallengeRacePlan _challenge;
+    MasterDraftSession.ChallengeOutcome _challengeOutcome;
     readonly ActiveEffects _effects = new();
     MasterDraftSession _session;
     CardDefinition _carCard, _chiefCard, _driverCard;
@@ -73,6 +79,7 @@ public class MasterDraftRaceHost : MonoBehaviour
             var host = Instance;
             if (host == null) return "";
             if (host._series != null) return host.SeriesLine();
+            if (host._challenge != null) return host.ChallengeLine();
             if (host._coinsAwarded < 0) return "Paying out…";
             return $"Coins +{host._coinsAwarded}   Cards played {host._hand?.CardsPlayed ?? 0}";
         }
@@ -100,7 +107,8 @@ public class MasterDraftRaceHost : MonoBehaviour
         _session = MasterDraftSession.Instance;
         var profile = _session.Profile;
         _series = _session.Pending?.series;
-        if (_series != null) return;   // a championship round: no cards, no team
+        _challenge = _session.Pending?.challenge;
+        if (_series != null || _challenge != null) return;   // a championship round or a challenge: no cards, no team
         var team = profile.team;
         _driverCard = profile.Find(_session.Pending?.driverUid)?.def;
         _carCard = profile.Find(team.car)?.def;
@@ -134,17 +142,18 @@ public class MasterDraftRaceHost : MonoBehaviour
 
     void Update()
     {
-        if (_series != null)
+        if (_series != null || _challenge != null)
         {
             FindCar();
-            if (_car != null)
+            if (_car != null && !_awarded)
             {
-                _car.cardPowerScale = _series.powerScale;
-                _car.cardGripScale = _series.gripScale;
+                _car.cardPowerScale = _series != null ? _series.powerScale : _challenge.powerScale;
+                _car.cardGripScale = _series != null ? _series.gripScale : _challenge.gripScale;
                 _car.cardDraftScale = 1f;
             }
-            SetRaceDistance();
-            ScoreRoundAtTheFlag();
+            SetRaceDistance(_series != null ? _series.laps : _challenge.laps);
+            if (_series != null) ScoreRoundAtTheFlag();
+            else ScoreChallengeAtTheFlag();
             return;
         }
         if (_hand == null) return;
@@ -241,11 +250,11 @@ public class MasterDraftRaceHost : MonoBehaviour
     }
 
     // RaceDirector reads raceLaps once, at the green (as AIOnlyRaceWatch sets it).
-    void SetRaceDistance()
+    void SetRaceDistance(int laps)
     {
         var director = RaceDirector.Instance;
-        if (director != null && _series.laps > 0 && director.ScheduledLaps < 0 && director.raceLaps != _series.laps)
-            director.raceLaps = _series.laps;
+        if (director != null && laps > 0 && director.ScheduledLaps < 0 && director.raceLaps != laps)
+            director.raceLaps = laps;
     }
 
     async void ScoreRoundAtTheFlag()
@@ -269,6 +278,41 @@ public class MasterDraftRaceHost : MonoBehaviour
         _session.LastSeries = outcome;
         _seriesOutcome = outcome;
         if (outcome.rewards != null && _session.Backend != null) await _session.Backend.SaveProfile();
+    }
+
+    async void ScoreChallengeAtTheFlag()
+    {
+        if (_awarded || !RaceDirector.InResults || _session == null) return;
+        _awarded = true;
+        ReleaseCar();   // a victory lap after the flag runs stock
+
+        var outcome = new MasterDraftSession.ChallengeOutcome { plan = _challenge };
+        try
+        {
+            outcome.rewards = ChallengeRace.RecordResult(_session.Profile, _session.Challenges, _challenge,
+                RaceDirector.PlayerFinishPosition, _session.Cars);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            outcome.error = "This challenge couldn't be scored.";
+        }
+        _session.LastChallenge = outcome;
+        _challengeOutcome = outcome;
+        if (outcome.rewards != null && _session.Backend != null) await _session.Backend.SaveProfile();
+    }
+
+    string ChallengeLine()
+    {
+        var o = _challengeOutcome;
+        if (o == null) return $"{_challenge.eventName}: {_challenge.chapterName}";
+        if (o.rewards == null) return o.error;
+        var r = o.rewards;
+        string line = r.challenge.completed ? "Challenge complete!" : "Win to complete the challenge";
+        line += $"   XP +{r.xp}";
+        if (r.money > 0) line += $"   +{r.money:N0}";
+        if (r.prizes.Count > 0) line += "   Prize waiting in Master Draft";
+        return line;
     }
 
     string SeriesLine()

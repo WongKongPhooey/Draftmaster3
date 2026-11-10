@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // MASTER DRAFT's menu: Garage (the screen the mode opens on), Series (DM2's championships, raced in RaceScene),
-// then the card mode's Home, Go Race, My Team, Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
+// Challenges (this week's DM2 events and their chapters, raced the same way, with a prize reveal), then the card mode's Home, Go Race, My Team, Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
 // screens stay reachable until the rework retires them (Docs/MasterDraft-Rework.md, row 9). One scene (Assets/Scenes/MasterDraft.unity, built by
 // Draftmaster > Master Draft > Build Master Draft Scene), one component.
 //
@@ -24,17 +24,17 @@ using UnityEngine.UI;
 //
 // INPUT. One focus, moved spatially: arrows / WASD / d-pad step to the nearest item in that direction,
 // Enter / Space / E / pad South confirm, Esc / Backspace / pad East back out (overlay -> screen -> Garage ->
-// title). Tab / Shift+Tab, 1-7 or the shoulder buttons change screen. Every item is also a Button, so a tap
+// title). Tab / Shift+Tab, 1-8 or the shoulder buttons change screen. Every item is also a Button, so a tap
 // or a click picks it outright.
 public class MasterDraftUI : MonoBehaviour
 {
     [Tooltip("Scene BACK returns to from Home. Must be in the build settings.")]
     public string titleSceneName = "TitleScreen";
 
-    enum Tab { Garage, Series, Home, GoRace, MyTeam, Packs, Trades }
-    enum Overlay { None, Reveal, Detail, Picker, WantType, Result, SeriesResult }
+    enum Tab { Garage, Series, Challenges, Home, GoRace, MyTeam, Packs, Trades }
+    enum Overlay { None, Reveal, Detail, Picker, WantType, Result, SeriesResult, ChallengeResult }
 
-    static readonly string[] TabNames = { "Garage", "Series", "Home", "Go Race", "My Team", "Packs", "Trades" };
+    static readonly string[] TabNames = { "Garage", "Series", "Challenges", "Home", "Go Race", "My Team", "Packs", "Trades" };
 
     class Item
     {
@@ -133,6 +133,15 @@ public class MasterDraftUI : MonoBehaviour
             var played = session.Series?.Get(session.LastSeries.plan.seriesId);
             if (played != null) { _seriesMenu = played.menu; _seriesPick = played.id; }
         }
+        if (session.LastChallenge?.plan != null)
+        {
+            // Back from a challenge: its result (and the prize reveal) over the chapter it belongs to.
+            _tab = Tab.Challenges;
+            _overlay = Overlay.ChallengeResult;
+            _prizeRevealed = false;
+            _challengeEvent = session.LastChallenge.plan.eventId;
+            _challengeChapter = session.LastChallenge.plan.chapterId;
+        }
         SetStatus("");
         Rebuild();
     }
@@ -164,11 +173,12 @@ public class MasterDraftUI : MonoBehaviour
             if (kb.rKey.wasPressedThisFrame) Shortcut();
             if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Garage);
             if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Series);
-            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.Home);
-            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.GoRace);
-            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
-            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.Packs);
-            if (kb.digit7Key.wasPressedThisFrame) SetTab(Tab.Trades);
+            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.Challenges);
+            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.Home);
+            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.GoRace);
+            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
+            if (kb.digit7Key.wasPressedThisFrame) SetTab(Tab.Packs);
+            if (kb.digit8Key.wasPressedThisFrame) SetTab(Tab.Trades);
         }
 
         var pad = Gamepad.current;
@@ -230,6 +240,9 @@ public class MasterDraftUI : MonoBehaviour
                 return;
             case Overlay.SeriesResult:
                 CloseSeriesResult();
+                return;
+            case Overlay.ChallengeResult:
+                CloseChallengeResult();
                 return;
             case Overlay.Result:
                 if (S != null) S.LastRace = null;
@@ -367,11 +380,13 @@ public class MasterDraftUI : MonoBehaviour
             case Overlay.WantType: BuildWantType(); break;
             case Overlay.Result: BuildResult(); break;
             case Overlay.SeriesResult: BuildSeriesResult(); break;
+            case Overlay.ChallengeResult: BuildChallengeResult(); break;
             default:
                 switch (_tab)
                 {
                     case Tab.Garage: BuildGarage(); break;
                     case Tab.Series: BuildSeries(); break;
+                    case Tab.Challenges: BuildChallenges(); break;
                     case Tab.Home: BuildHome(); break;
                     case Tab.GoRace: BuildGoRace(); break;
                     case Tab.MyTeam: BuildMyTeam(); break;
@@ -1092,6 +1107,427 @@ public class MasterDraftUI : MonoBehaviour
         _tab = Tab.Series;
         _lastFocusKey = "se.go";
         PickSeries(id);
+    }
+
+    // ------------------------------------------------------------------ Challenges
+
+    // DM2's challenges ("Events"): the events down the left (this week's first, with their progress; the rest with
+    // when they're back), the picked event's chapters in the middle (won / locked / level), and the picked chapter
+    // on the right — track, laps, AI, prize, entry requirements, the garage car to race (or the car the chapter hands
+    // over), every reason it can't start, and Start Challenge (MasterDraftRaceLauncher.LaunchChallenge). A finished
+    // chapter comes back as the ChallengeResult overlay, which reveals the prize.
+    const int ChallengeRows = 11;
+    const float ChallengeEventW = 170f, ChallengeListX = 176f, ChallengeListW = 170f, ChallengePanelX = 352f, ChallengePanelW = 248f;
+    const float ChallengeRowStep = 19f, ChallengeRowH = 17f;
+
+    string _challengeEvent, _challengeChapter, _challengeEntry;
+    int _challengeWeekOverride;   // > 0: BuildOfflineChallenges' week instead of the calendar's
+    ChallengeCatalog _challengesOverride, _challengesLoaded;
+    MasterDraftSession.ChallengeOutcome _challengeOutcomeOverride;
+    bool _prizeRevealed;
+    int _prizeShown;
+
+    ChallengeCatalog ChallengeData =>
+        _challengesOverride ?? S?.Challenges ?? (_challengesLoaded ??= MasterDraftSession.LoadChallenges());
+
+    int ChallengeWeek => _challengeWeekOverride > 0 ? _challengeWeekOverride : MasterDraftSession.ChallengeWeek(ChallengeData);
+
+    MasterDraftSession.ChallengeOutcome ChallengeOutcome => _challengeOutcomeOverride ?? S?.LastChallenge;
+
+    // What the Challenges screen is showing, for EditMode tests (ChallengesScreenTests).
+    public string ChallengePickedEvent => _challengeEvent;
+    public string ChallengePickedChapter => _challengeChapter;
+    public string ChallengeEntryCar => _challengeEntry;
+    public int ChallengeShownWeek { get; private set; }
+    public int ChallengeLiveCount { get; private set; }
+    public bool ChallengeCanStart { get; private set; }
+    public string ChallengeReasons { get; private set; } = "";   // why it can't start, one per line; "" when it can
+    public string ChallengePrizeText { get; private set; } = "";  // the revealed prize's caption
+    public string ChallengePrizeSprite { get; private set; } = ""; // the revealed prize's livery sprite
+
+    // Draw the Challenges screen against a profile and catalogues with no session (EditMode tests). week = the
+    // cycle week to show; chapterId = the chapter to pick (null = the first live event's next chapter).
+    public void BuildOfflineChallenges(MasterDraftProfile profile, CarCatalog cars, ChallengeCatalog challenges, int week,
+        string chapterId = null)
+    {
+        _profileOverride = profile;
+        _carsOverride = cars;
+        _challengesOverride = challenges;
+        _challengeWeekOverride = week;
+        _busy = false;
+        if (_root == null) BuildChrome();
+        _tab = Tab.Challenges;
+        _overlay = Overlay.None;
+        PickChallenge(chapterId);
+    }
+
+    // Show a finished chapter's result over the screen (EditMode tests), as coming back from the race does.
+    public void BuildOfflineChallengeResult(MasterDraftProfile profile, CarCatalog cars, ChallengeCatalog challenges,
+        MasterDraftSession.ChallengeOutcome outcome)
+    {
+        _profileOverride = profile;
+        _carsOverride = cars;
+        _challengesOverride = challenges;
+        _challengeOutcomeOverride = outcome;
+        _busy = false;
+        if (_root == null) BuildChrome();
+        _tab = Tab.Challenges;
+        _overlay = Overlay.ChallengeResult;
+        _prizeRevealed = false;
+        _prizeShown = 0;
+        _challengeEvent = outcome?.plan?.eventId;
+        _challengeChapter = outcome?.plan?.chapterId;
+        Rebuild();
+    }
+
+    // Show a chapter (and its event); null = keep the current pick.
+    public void PickChallenge(string chapterId)
+    {
+        var chapter = ChallengeData?.GetChapter(chapterId);
+        if (chapter != null)
+        {
+            _challengeEvent = chapter.eventId;
+            _challengeChapter = chapter.id;
+            _challengeEntry = null;
+        }
+        if (_content != null) Rebuild();
+    }
+
+    void BuildChallenges()
+    {
+        var p = P;
+        var data = ChallengeData;
+        var cars = Cars;
+        ChallengeLiveCount = 0;
+        ChallengeCanStart = false;
+        ChallengeReasons = "";
+        if (data == null || data.Events.Count == 0 || cars == null)
+        {
+            Text(_content, data == null || data.Events.Count == 0
+                    ? $"No challenge data (Resources/{ChallengeCatalog.ResourcePath}.json)."
+                    : $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).",
+                 IronOvalUI.Role.Body, T.danger, Vector2.zero, new Vector2(600f, 20f));
+            return;
+        }
+
+        int week = ChallengeWeek;
+        ChallengeShownWeek = Draftmaster.MasterDraft.Challenges.CycleWeek(week, data.CycleWeeks);
+
+        // This week's events first, then the rest in catalogue order.
+        var live = Draftmaster.MasterDraft.Challenges.LiveEvents(data, week);
+        ChallengeLiveCount = live.Count;
+        var ordered = new List<ChallengeEvent>(live);
+        foreach (var e in data.Events) if (!ordered.Contains(e)) ordered.Add(e);
+
+        var ev = data.Get(_challengeEvent);
+        if (ev == null) ev = ordered[0];
+        _challengeEvent = ev.id;
+        var chapter = data.GetChapter(_challengeChapter);
+        if (chapter == null || chapter.eventId != ev.id)
+        {
+            // An event opens on its next chapter to win.
+            var progress = Draftmaster.MasterDraft.Challenges.Progress(ev, p.challengeRecords);
+            chapter = ev.chapters[Mathf.Clamp(progress.nextChapter, 0, ev.chapters.Count - 1)];
+            _challengeEntry = null;
+        }
+        _challengeChapter = chapter.id;
+
+        // Events.
+        Text(_content, $"Week {ChallengeShownWeek} of {data.CycleWeeks}", IronOvalUI.Role.Data, T.gold, Vector2.zero,
+             new Vector2(ChallengeEventW, 16f));
+        for (int i = 0; i < ordered.Count && i < ChallengeRows; i++)
+        {
+            var e = ordered[i];
+            bool isLive = live.Contains(e);
+            string right;
+            if (isLive)
+            {
+                var progress = Draftmaster.MasterDraft.Challenges.Progress(e, p.challengeRecords);
+                right = $"{progress.completed}/{progress.total}";
+            }
+            else
+            {
+                int ahead = Draftmaster.MasterDraft.Challenges.WeeksUntilLive(e, week, data.CycleWeeks);
+                right = ahead < 0 ? "Off" : ahead == 1 ? "Next wk" : $"In {ahead} wk";
+            }
+            string id = e.id;
+            var row = RowItem(_content, "ce" + i, e.name, new Vector2(0f, -18f - i * ChallengeRowStep), new Vector2(ChallengeEventW, ChallengeRowH), () =>
+            {
+                _challengeEvent = id;
+                _challengeChapter = null;
+                _challengeEntry = null;
+                _lastFocusKey = "ce" + ordered.FindIndex(x => x.id == id);
+                Rebuild();
+            }, e.id == ev.id, right);
+            if (!isLive)
+                foreach (var t in row.rect.GetComponentsInChildren<TMP_Text>(true)) if (t.color != T.gold) t.color = T.textDim;
+        }
+
+        // The event's chapters.
+        Text(_content, ev.name + (ev.IsProgression ? "" : "  (replay)"), IronOvalUI.Role.Data, T.gold,
+             new Vector2(ChallengeListX, 0f), new Vector2(ChallengeListW, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+        for (int i = 0; i < ev.chapters.Count && i < ChallengeRows; i++)
+        {
+            var c = ev.chapters[i];
+            var record = Draftmaster.MasterDraft.Challenges.FindRecord(p.challengeRecords, c.id);
+            bool unlocked = Draftmaster.MasterDraft.Challenges.ChapterUnlocked(ev, i, p.challengeRecords);
+            string right = record != null && record.Completed ? (record.completions > 1 && !ev.IsProgression ? $"Won x{record.completions}" : "Won")
+                : !unlocked ? "Locked"
+                : !Restrictions.LevelUnlocked(c.restriction, p.level) ? $"Lv{c.restriction.minLevel}"
+                : record != null && record.bestFinish > 0 ? $"P{record.bestFinish}" : "";
+            string id = c.id;
+            RowItem(_content, "cc" + i, $"{i + 1}. {c.name}", new Vector2(ChallengeListX, -18f - i * ChallengeRowStep),
+                new Vector2(ChallengeListW, ChallengeRowH), () =>
+                {
+                    _challengeChapter = id;
+                    _challengeEntry = null;
+                    _lastFocusKey = "ch.go";
+                    Rebuild();
+                }, c.id == chapter.id, right);
+        }
+
+        ChallengePanel(p, cars, data, ev, chapter, week);
+    }
+
+    void ChallengePanel(MasterDraftProfile p, CarCatalog cars, ChallengeCatalog data, ChallengeEvent ev, ChallengeChapter c, int week)
+    {
+        float x = ChallengePanelX, w = ChallengePanelW, y = 0f;
+        Text(_content, c.name, IronOvalUI.Role.Body, T.gold, new Vector2(x, y), new Vector2(w, 18f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 20f;
+        if (!string.IsNullOrEmpty(c.description))
+        {
+            Text(_content, c.description, IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+            y -= 34f;
+        }
+        Text(_content, $"{TrackName(c.track)}   {Draftmaster.MasterDraft.Challenges.LapsToRun(c)} laps   AI {SeriesRules.DifficultyPercent(c.aiLevel)}%",
+             IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 16f;
+        Text(_content, "Prize  " + ChallengePrizeLine(ev, c, p, cars), IronOvalUI.Role.Data, T.text, new Vector2(x, y),
+             new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 16f;
+        var reqs = c.ProvidesCar ? new List<string> { $"Level: {c.restriction.minLevel}+" } : Restrictions.Describe(c.restriction);
+        Text(_content, string.Join("   ", reqs), IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f))
+            .overflowMode = TextOverflowModes.Ellipsis;
+        y -= 16f;
+        string moment = ChallengeRace.MomentNote(c);
+        if (moment.Length > 0)
+        {
+            Text(_content, moment, IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+            y -= 32f;
+        }
+        y -= 4f;
+
+        // The car: the one the chapter hands over, else a garage car that can enter.
+        CarDef car;
+        if (c.ProvidesCar)
+        {
+            string providedId = Draftmaster.MasterDraft.Challenges.ProvidedCarId(c);
+            car = cars.Get(providedId);
+            string name = car != null ? $"#{car.number} {car.driver}" : $"#{providedId?.Substring(providedId.LastIndexOf('_') + 1)}";
+            Text(_content, $"You race the {name} (provided)", IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f))
+                .overflowMode = TextOverflowModes.Ellipsis;
+            y -= UIButton.KitPx + 2f;
+            _challengeEntry = null;
+        }
+        else
+        {
+            var eligible = Restrictions.EligibleGarage(c.restriction, cars, p.garage, p.level);
+            if (eligible.All(o => o.id != _challengeEntry)) _challengeEntry = ChallengeRace.DefaultEntry(c, p, cars)?.id;
+            car = cars.Get(_challengeEntry);
+            var owned = p.Car(_challengeEntry);
+            if (car != null && owned != null)
+            {
+                string caption = (eligible.Count > 1 ? "< " : "") + $"#{car.number} {car.driver}  C{owned.carClass}" + (eligible.Count > 1 ? " >" : "");
+                ButtonItem(_content, "ch.car", caption, new Vector2(x, y), w, () => CycleChallengeEntry(eligible));
+            }
+            else
+            {
+                // Nobody can enter: say why against the garage's picked car.
+                car = cars.Get(p.SelectedCar()?.id);
+                Text(_content, "No car in your garage can enter.", IronOvalUI.Role.Data, T.caution, new Vector2(x, y), new Vector2(w, 16f));
+            }
+            y -= UIButton.KitPx + 2f;
+        }
+
+        var entry = Draftmaster.MasterDraft.Challenges.CanEnter(ev, c, car, p.garage, p.level, week, p.challengeRecords, data.CycleWeeks);
+        ChallengeCanStart = entry.Eligible && (c.ProvidesCar || _challengeEntry != null);
+        if (!entry.Eligible)
+        {
+            var lines = new List<string>();
+            if (!entry.live)
+            {
+                int ahead = Draftmaster.MasterDraft.Challenges.WeeksUntilLive(ev, week, data.CycleWeeks);
+                lines.Add(ahead < 0 ? "This event isn't scheduled." : $"Not running this week. Back in {ahead} week{(ahead == 1 ? "" : "s")} (weeks {string.Join(", ", ev.weeks)}).");
+            }
+            if (!entry.chapterUnlocked) lines.Add("Win the previous chapter first.");
+            foreach (var r in entry.restriction.Reasons) lines.Add(r.message + ".");
+            ChallengeReasons = string.Join("\n", lines);
+            Text(_content, ChallengeReasons, IronOvalUI.Role.Data, T.caution, new Vector2(x, y), new Vector2(w, 34f), wrap: true);
+        }
+        y -= 36f;
+        // The chapter's record (won / best finish) is on its row in the list.
+        ButtonItem(_content, "ch.go", "Start Challenge", new Vector2(x, y), w, () => StartChallenge(c.id), ChallengeCanStart);
+    }
+
+    // The prize, in a line: the car (and its gears), "a one-star car", the alt paint — or that it's been paid.
+    static string ChallengePrizeLine(ChallengeEvent ev, ChallengeChapter c, MasterDraftProfile p, CarCatalog cars)
+    {
+        var prize = c.prize;
+        if (prize == null || prize.IsNone) return "none";
+        var record = Draftmaster.MasterDraft.Challenges.FindRecord(p.challengeRecords, c.id);
+        if (ev.IsProgression && record != null && record.PrizeCollected) return "collected";
+        string Name(string id)
+        {
+            var def = cars.Get(id);
+            return def != null ? $"#{def.number} {def.driver}" : id;
+        }
+        string first = prize.cars != null && prize.cars.Count > 0 ? prize.cars[0] : null;
+        switch (prize.kind)
+        {
+            case ChallengePrizeKind.Car:
+                return Name(first) + (prize.gears > 0 ? $"  ({prize.gears} gears)" : "");
+            case ChallengePrizeKind.AltPaint:
+                return $"Alt paint, {Name(first)}";
+            case ChallengePrizeKind.Category:
+                return prize.code == "1Star" ? "a one-star car" : $"a {prize.code} car";
+            default:
+                return prize.code;
+        }
+    }
+
+    void CycleChallengeEntry(List<OwnedCar> eligible)
+    {
+        if (eligible.Count == 0) return;
+        int i = eligible.FindIndex(o => o.id == _challengeEntry);
+        _challengeEntry = eligible[(i + 1) % eligible.Count].id;
+        _lastFocusKey = "ch.car";
+        Rebuild();
+    }
+
+    // The picked chapter's launch plan in the picked car, without launching (what Start Challenge would race);
+    // null and why when it can't.
+    public ChallengeRacePlan PlanPickedChallenge(out string error) =>
+        ChallengeRace.Plan(P, ChallengeData, _challengeChapter, _challengeEntry, Cars, ChallengeWeek, out error);
+
+    void StartChallenge(string chapterId)
+    {
+        if (PlanPickedChallenge(out string error) == null) { SetStatus(error); return; }
+        error = MasterDraftRaceLauncher.LaunchChallenge(chapterId, _challengeEntry);
+        if (error != null) { SetStatus(error); return; }
+        _leaving = true;
+    }
+
+    // What a finished chapter did, over the Challenges screen: the finish, completion, money and XP, then the prize
+    // behind a Reveal button — the car's livery with "New car!" or the gears it gained, or the alt paint.
+    void BuildChallengeResult()
+    {
+        var o = ChallengeOutcome;
+        if (o == null || o.plan == null) { _overlay = Overlay.None; BuildChallenges(); return; }
+
+        var win = IronOvalUI.Window(_content, "ChallengeResult", new Vector2(400f, 222f));
+        TopLeft(win, new Vector2(100f, -4f), new Vector2(400f, 222f));
+        Text(win, $"{o.plan.eventName}: {o.plan.chapterName}", IronOvalUI.Role.Header, T.gold,
+             new Vector2(14f, -10f), new Vector2(372f, 20f)).overflowMode = TextOverflowModes.Ellipsis;
+
+        var r = o.rewards;
+        var prizes = r?.prizes ?? new List<PrizeOutcome>();
+        if (_prizeRevealed && prizes.Count > 0)
+        {
+            BuildPrizeReveal(win, prizes[Mathf.Clamp(_prizeShown, 0, prizes.Count - 1)]);
+            bool more = _prizeShown + 1 < prizes.Count;
+            ButtonItem(win, more ? "res.next" : "res.ok", more ? "Next Prize" : "Continue", new Vector2(140f, -184f), 120f, () =>
+            {
+                if (more) { _prizeShown++; Rebuild(); }
+                else CloseChallengeResult();
+            });
+            return;
+        }
+
+        var lines = new List<string> { TrackName(o.plan.trackId) };
+        if (r == null) lines.Add(string.IsNullOrEmpty(o.error) ? "This challenge couldn't be scored." : o.error);
+        else
+        {
+            lines.Add(r.position > 0 ? $"Finished P{r.position}" : "Not classified");
+            lines.Add(r.challenge.completed
+                ? (r.challenge.firstCompletion ? "Challenge complete!" : "Challenge complete again!") + (r.money > 0 ? $"   +{r.money:N0} coins" : "")
+                : "Win to complete this challenge.");
+            lines.Add($"XP +{r.xp}" + (r.LevelsGained > 0 ? $"   Level up! Now level {r.levelAfter}" : ""));
+            if (prizes.Count > 0) lines.Add(prizes.Count == 1 ? "You've won a prize!" : $"You've won {prizes.Count} prizes!");
+            else if (r.challenge.completed && !r.challenge.prizeDue) lines.Add("This chapter's prize was already collected.");
+            lines.Add($"Coins  {r.coins:N0}");
+        }
+        Text(win, string.Join("\n", lines), IronOvalUI.Role.Data, T.text, new Vector2(14f, -36f), new Vector2(372f, 144f), wrap: true);
+        if (prizes.Count > 0)
+            ButtonItem(win, "res.reveal", "Reveal Prize", new Vector2(130f, -184f), 140f, () =>
+            {
+                _prizeRevealed = true;
+                _prizeShown = 0;
+                _lastFocusKey = "res.ok";
+                Rebuild();
+            });
+        else
+            ButtonItem(win, "res.ok", "Continue", new Vector2(140f, -184f), 120f, CloseChallengeResult);
+    }
+
+    void BuildPrizeReveal(RectTransform win, PrizeOutcome prize)
+    {
+        var cars = Cars;
+        var def = cars?.Get(prize.carId);
+        string sprite = prize.kind == ChallengePrizeKind.AltPaint ? prize.livery : def?.livery;
+        ChallengePrizeSprite = sprite ?? "";
+
+        var big = new GameObject("PrizeLivery", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        big.transform.SetParent(win, false);
+        TopLeft(big.rectTransform, new Vector2(14f, -44f), new Vector2(160f, 80f));
+        big.raycastTarget = false;
+        big.preserveAspect = true;
+        big.sprite = string.IsNullOrEmpty(sprite) ? null : Resources.Load<Sprite>(sprite);
+        big.color = big.sprite == null ? Color.clear : Color.white;
+
+        string name = def != null ? $"#{def.number} {def.driver}" : prize.carId;
+        var lines = new List<string>();
+        string headline;
+        if (prize.kind == ChallengePrizeKind.AltPaint)
+        {
+            headline = "Alt paint unlocked!";
+            lines.Add($"A new scheme for the {name}");
+        }
+        else if (prize.newCar)
+        {
+            headline = "New car!";
+            lines.Add(name);
+            if (def != null)
+            {
+                lines.Add($"{cars.GetCarset(def.carset)?.name ?? def.carset}  {def.team}  {def.manufacturer}");
+                lines.Add($"{def.rarity}-Star {def.type}");
+            }
+            lines.Add($"Joins your garage with {prize.gears} gears");
+        }
+        else
+        {
+            headline = $"+{prize.gears} gears";
+            lines.Add($"for the {name}");
+            var owned = P?.Car(prize.carId);
+            if (owned != null)
+                lines.Add(CarProgression.IsMaxClass(owned)
+                    ? $"Class {owned.carClass} (max)"
+                    : $"Class {owned.carClass}   {CarProgression.GearsToNextClass(owned)} to Class {owned.carClass + 1}");
+        }
+        ChallengePrizeText = headline + "\n" + string.Join("\n", lines);
+        Text(win, headline, IronOvalUI.Role.Header, T.gold, new Vector2(186f, -44f), new Vector2(200f, 20f));
+        Text(win, string.Join("\n", lines), IronOvalUI.Role.Data, T.text, new Vector2(186f, -70f), new Vector2(200f, 100f), wrap: true);
+    }
+
+    void CloseChallengeResult()
+    {
+        string chapter = ChallengeOutcome?.plan?.chapterId;
+        if (S != null) S.LastChallenge = null;
+        _challengeOutcomeOverride = null;
+        _overlay = Overlay.None;
+        _tab = Tab.Challenges;
+        _prizeRevealed = false;
+        _lastFocusKey = "ch.go";
+        PickChallenge(chapter);
     }
 
     // ------------------------------------------------------------------ Home
@@ -1895,7 +2331,7 @@ public class MasterDraftUI : MonoBehaviour
         }
     }
 
-    const float TabWidth = 82f;   // seven tabs across the 600 px content width
+    const float TabWidth = 71f;   // eight tabs across the 600 px content width
 
     void SetStatus(string message, float seconds = 4f)
     {
