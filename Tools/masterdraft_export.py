@@ -9,6 +9,7 @@ Stdlib only. Re-run whenever the DM2 source data or the livery sprites change:
 Parts (see Docs/MasterDraft-Rework.md for the row plan):
   cars    -> Assets/Resources/MasterDraft/Cars.json, from Assets/Scripts/DriverNames.cs
   series  -> Assets/Resources/MasterDraft/Series.json, from Assets/Scripts/SeriesData.cs
+  challenges -> Assets/Resources/MasterDraft/Challenges.json, from Assets/Scripts/EventData.cs
 
 Cars
 ----
@@ -53,6 +54,35 @@ Tracks: a tracklist is DM2 track ids ("1,2,4"). DM2_TRACKS below maps each id to
 (Assets/Scripts/Tracks/Core/TrackDimensions.cs); venues the catalogue doesn't have go to the nearest real track
 of the same kind, and the script refuses to write if a mapped id is missing or of another kind. Each round
 carries DM2's base laps (TrackData.loadTrackLaps) for SeriesRules.RaceLaps.
+
+Challenges
+----------
+EventData.loadEvents() fills [event] and [event, chapter] arrays the same literal-per-line way, so the same parser
+reads it (after dropping /* */ blocks: "All Stars" and "Austin As Moses" are commented out in DM2). An event is a
+top-level tile ("Ol' Seven-Time"), a chapter one race inside it. Only events with chapters are exported: "The
+Final 4" (event 9) existed only while a PlayerPrefs SpecialEvent flag was set and has no chapters, and the "Live
+Moment" chapter (4,9) was filled from PlayerPrefs a server pushed, so neither has data to export.
+
+Event fields: type "Progression" (chapters unlock in order, each chapter's prize is paid once) or "Replay" (every
+chapter open, prize paid on every completion), and the weeks of DM2's 13-week cycle it runs (offlineEventWeek
+"4,8,12"). Chapter fields: restriction (same shape as Series.json; offlineExactDriver feeds the Driver rule), AI
+level, one track (the tracklist is a single DM2 id, mapped through DM2_TRACKS like Series), raceLaps
+(offlineRaceLaps; 0 = the series formula) and a moment: startingLap (offlineStartingLap, the race starts on that
+lap), fieldOrder (offlineCustomFieldOrder split: grid slots front to back, two per row, a car number, "player", or
+"x" for an empty slot), the fixed field carset (offlineSeries), the field roster name (offlineCustomField), the car
+the player is handed (offlineCustomCar, a livery sprite) and the modifier/moment names (MomentsCriteria's win
+conditions, not ported here). A later assignment to the same field wins, as it did at runtime (Chastain's Wallride
+sets its starting lap twice).
+
+Prizes (offlinePrizes + offlineSetPrizes), by kind:
+  Car      -- a named driver's car (DM2 RaceRewardsUI.ListPrizeOptions' "Event Specific" cases: "Johnson" ->
+              cup20_48, "Earnhardt" -> cup20_3, "Harvick20/22/23" -> that carset's #4...), DRIVER_PRIZES below.
+              "Suarez" lists four cars, one drawn. gears = offlineSetPrizes.
+  Category -- a car filter like Series' prize ("Rookies", "Rarity1"-"Rarity4", "1Star"-"4Star", team, manufacturer,
+              carset); Core draws one car with a seed. "1Star" fell through DM2's ListRewards default (every car);
+              it is exported as what it says, one-star cars only.
+  AltPaint -- an alternate livery (offlineSetPrizes = its Resources sprite, "cup20livery48alt1") for the car it
+              belongs to (cars = ["cup20_48"]). The sprite must exist or the script refuses to write.
 """
 import argparse
 import collections
@@ -359,6 +389,7 @@ def restriction(values, key):
     value = {"Team": lambda: get("offlineMinTeam", ""),
              "Manufacturer": lambda: get("offlineMinManu", ""),
              "Car": lambda: str(get("offlineExactCar", "")),
+             "Driver": lambda: get("offlineExactDriver", ""),
              "Type": lambda: get("offlineMinDriverType", ""),
              "Rarity": lambda: str(get("offlineMinRarity", "")),
              }.get(rule, lambda: "")()
@@ -441,6 +472,221 @@ def build_series(log, cars):
             "tracks": [tracks[k] for k in sorted(tracks)], "menus": menus}
 
 
+# --- Challenges --------------------------------------------------------------------------------------------
+
+EVENT_DATA = os.path.join(ROOT, "Assets", "Scripts", "EventData.cs")
+EVENT_TYPES = ("Progression", "Replay")
+CYCLE_WEEKS = 13  # GameData.cs: the game week wraps after 13 (while(week > 13) week -= 13)
+
+# DM2 event prize code -> the car(s) it pays (RaceRewardsUI.ListPrizeOptions, "Event Specific" cases). Earnhardt is
+# the #3 of Cup '20 (A.Dillon's car in the catalogue; DM2 gave it Earnhardt alt paints).
+DRIVER_PRIZES = {
+    "Johnson": ["cup20_48"],
+    "Earnhardt": ["cup20_3"],
+    "Harvick20": ["cup20_4"],
+    "Harvick22": ["cup22_4"],
+    "Harvick23": ["cup23_4"],
+    "Logano": ["cup22_22"],
+    "Elliott": ["cup22_9"],
+    "Bell": ["cup22_20"],
+    "Chastain": ["cup22_1"],
+    "Suarez": ["cup20_96", "cup22_99", "cup23_99", "cup24_99"],
+}
+
+ALT_PAINT = re.compile(r"^([A-Za-z0-9]+?)livery(\d+)alt(\d+)$")
+LIVERY = re.compile(r"^([A-Za-z0-9]+?)livery(\d+)$")
+
+
+def strip_block_comments(text):
+    """Drop /* */ blocks (DM2 commented whole chapters out that way); keeps the line breaks."""
+    return re.sub(r"/\*.*?\*/", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
+
+
+def parse_event_data(path):
+    with open(path, encoding="utf-8-sig") as f:
+        text = strip_block_comments(f.read())
+    values = collections.defaultdict(dict)
+    overrides = []
+    for line in (strip_comment(l) for l in text.splitlines()):
+        m = ASSIGN_2D.match(line)
+        if not m:
+            continue
+        raw = m.group(4)
+        key = (int(m.group(2)),) if m.group(3) is None else (int(m.group(2)), int(m.group(3)))
+        value = json.loads(raw) if raw.startswith('"') else int(raw)
+        if key in values[m.group(1)] and values[m.group(1)][key] != value:
+            overrides.append("%s%s: %r -> %r" % (m.group(1), list(key), values[m.group(1)][key], value))
+        values[m.group(1)][key] = value
+    return values, overrides
+
+
+def sprite_exists(name):
+    return bool(name) and os.path.isfile(os.path.join(RESOURCES, name + ".png"))
+
+
+def challenge_prize(code, set_prize, cars_by_id, where):
+    """offlinePrizes / offlineSetPrizes -> {kind, code, cars, gears, livery, filter}."""
+    p = {"kind": "", "code": code, "cars": [], "gears": 0, "livery": "", "filter": prize_filter("")}
+    if code == "":
+        return p
+    if code == "AltPaint":
+        m = ALT_PAINT.match(set_prize or "")
+        if not m:
+            raise SystemExit("%s: AltPaint prize %r isn't a {carset}livery{n}alt{k} sprite name" % (where, set_prize))
+        if not sprite_exists(set_prize):
+            raise SystemExit("%s: alt paint sprite Assets/Resources/%s.png is missing" % (where, set_prize))
+        car = "%s_%s" % (m.group(1), m.group(2))
+        if car not in cars_by_id:
+            raise SystemExit("%s: alt paint %s belongs to %s, not in Cars.json" % (where, set_prize, car))
+        p.update(kind="AltPaint", livery=set_prize, cars=[car])
+        return p
+    gears = 0
+    if set_prize not in (None, ""):
+        if not re.fullmatch(r"\d+", str(set_prize)):
+            raise SystemExit("%s: set prize %r for %s isn't a gear count" % (where, set_prize, code))
+        gears = int(set_prize)
+    if code in DRIVER_PRIZES:
+        missing = [c for c in DRIVER_PRIZES[code] if c not in cars_by_id]
+        if missing:
+            raise SystemExit("%s: prize %s names %s, not in Cars.json" % (where, code, ", ".join(missing)))
+        p.update(kind="Car", cars=list(DRIVER_PRIZES[code]), gears=gears)
+        return p
+    m = re.fullmatch(r"([1-4])Star", code)
+    f = prize_filter("Rarity%s" % m.group(1)) if m else prize_filter(code)
+    f["code"] = code
+    p.update(kind="Category", gears=gears, filter=f)
+    return p
+
+
+def build_challenges(log, cars):
+    values, overrides = parse_event_data(EVENT_DATA)
+    for o in overrides:
+        log("  override (the later one wins): %s" % o)
+    cars_by_id = {c["id"]: c for c in cars}
+    kinds = catalogue_kinds(TRACK_DIMENSIONS)
+    tracks = {t[0]: t for t in DM2_TRACKS}
+    chapters_by_event = collections.defaultdict(list)
+    for (e, c) in values["offlineEventChapter"]:
+        chapters_by_event[e].append(c)
+
+    events = []
+    for (e,) in sorted(values["offlineEvent"]):
+        name = values["offlineEvent"][(e,)]
+        subs = sorted(chapters_by_event.get(e, []))
+        if not subs:
+            log("event %d %s: no chapters in DM2 (special/live data), skipped" % (e, name))
+            continue
+        etype = values["offlineEventType"].get((e,), "")
+        if etype not in EVENT_TYPES:
+            raise SystemExit("event %d %s: unknown type %r" % (e, name, etype))
+        weeks = [int(w) for w in values["offlineEventWeek"].get((e,), "").split(",") if w.strip()]
+        if not weeks or any(not 1 <= w <= CYCLE_WEEKS for w in weeks):
+            raise SystemExit("event %d %s: weeks %r outside 1-%d" % (e, name, weeks, CYCLE_WEEKS))
+        event = {"id": slug(name), "dm2Index": e, "name": name, "type": etype, "weeks": sorted(set(weeks)),
+                 "description": values.get("eventDescriptions", {}).get((e,), ""),
+                 "image": values.get("offlineEventImage", {}).get((e,), ""), "chapters": []}
+        log("%s (%s, weeks %s)" % (name, etype, ",".join(map(str, event["weeks"]))))
+        for c in subs:
+            key = (e, c)
+
+            def get(arr, default=None):
+                return values.get(arr, {}).get(key, default)
+
+            cname = get("offlineEventChapter")
+            where = "%s / %s" % (name, cname)
+            tl = str(get("offlineTracklists", "")).split(",")
+            if len(tl) != 1 or not tl[0].strip():
+                raise SystemExit("%s: a chapter is one race, tracklist is %r" % (where, get("offlineTracklists")))
+            dm2_id = int(tl[0])
+            if dm2_id not in tracks:
+                raise SystemExit("%s: DM2 track %d has no entry in DM2_TRACKS" % (where, dm2_id))
+            _, _, _, base_laps, track, kind, _ = tracks[dm2_id]
+            if kinds.get(track) != kind:
+                raise SystemExit("%s: DM2 track %d maps to %r, missing or not a %s" % (where, dm2_id, track, kind))
+            r = restriction(values, key)
+            prize = challenge_prize(get("offlinePrizes", ""), get("offlineSetPrizes", ""), cars_by_id, where)
+            order = get("offlineCustomFieldOrder", "")
+            field_order = [s.strip() for s in order.split(",")] if order else []
+            for slot in field_order:
+                if slot not in ("x", "player") and not re.fullmatch(r"\d+", slot):
+                    raise SystemExit("%s: field order slot %r is not a number, 'player' or 'x'" % (where, slot))
+            if field_order and field_order.count("player") != 1:
+                raise SystemExit("%s: field order needs exactly one 'player' slot" % where)
+            custom_car = get("offlineCustomCar", "")
+            if custom_car and not LIVERY.match(custom_car):
+                raise SystemExit("%s: custom car %r isn't a {carset}livery{n} sprite name" % (where, custom_car))
+            if custom_car and not sprite_exists(custom_car):
+                raise SystemExit("%s: custom car sprite Assets/Resources/%s.png is missing" % (where, custom_car))
+            image = get("offlineChapterImage", "")
+            if image and not sprite_exists(image):
+                log("  WARNING %s: chapter image %s.png not in Assets/Resources" % (where, image))
+            race_laps = get("offlineRaceLaps", 0)
+            starting_lap = get("offlineStartingLap", 0)
+            if race_laps and starting_lap > race_laps:
+                raise SystemExit("%s: starts on lap %d of %d" % (where, starting_lap, race_laps))
+            moment = {"name": get("offlineMoment", ""), "startingLap": starting_lap, "fieldOrder": field_order,
+                      "carset": get("offlineSeries", ""), "field": get("offlineCustomField", ""),
+                      "playerLivery": custom_car, "modifier": get("offlineModifier", "")}
+            eligible = restriction_matches(cars, r)
+            if prize["kind"] == "Category":
+                pool = [c["id"] for c in prize_pool(cars, prize["filter"])]
+            else:
+                pool = prize["cars"]
+            notes = ""
+            if not custom_car and not eligible:
+                notes += "  NO ELIGIBLE CARS"
+            if prize["kind"] and not pool:
+                notes += "  EMPTY PRIZE POOL"
+            log("  %-22s L%-2d C%d %-8s %-8s ai %-2d %-12s laps %3d from %3d  %-8s %-9s %3d cars%s%s" % (
+                cname, r["minLevel"], r["minClass"], r["rule"] or "-", r["value"] or "", get("offlineAILevel", 0),
+                track, race_laps, starting_lap, prize["kind"] or "-", prize["code"] or "", len(pool),
+                "  car " + custom_car if custom_car else "", notes))
+            event["chapters"].append({
+                "id": event["id"] + "_" + slug(cname),
+                "eventId": event["id"],
+                "dm2Index": [e, c],
+                "name": cname,
+                "description": get("eventChapterDescriptions", "").strip(),
+                "image": image,
+                "aiLevel": get("offlineAILevel", 0),
+                "restriction": r,
+                "track": track,
+                "dm2Track": dm2_id,
+                "baseLaps": base_laps,
+                "raceLaps": race_laps,
+                "moment": moment,
+                "prize": prize,
+            })
+        events.append(event)
+    ids = [ch["id"] for ev in events for ch in ev["chapters"]] + [ev["id"] for ev in events]
+    dupes = [i for i, n in collections.Counter(ids).items() if n > 1]
+    if dupes:
+        raise SystemExit("Duplicate challenge ids: %s" % ", ".join(dupes))
+    return {"version": 1, "source": "Tools/masterdraft_export.py from Assets/Scripts/EventData.cs",
+            "cycleWeeks": CYCLE_WEEKS, "events": events}
+
+
+def dump_challenges(obj):
+    # Events at the top level, one chapter per line inside each event.
+    out = ["{"]
+    for k in ("version", "source", "cycleWeeks"):
+        out.append('  "%s": %s,' % (k, json.dumps(obj[k], ensure_ascii=False)))
+    out.append('  "events": [')
+    for e_i, ev in enumerate(obj["events"]):
+        out.append("    {")
+        for k, v in ev.items():
+            if k != "chapters":
+                out.append('      "%s": %s,' % (k, json.dumps(v, ensure_ascii=False)))
+        out.append('      "chapters": [')
+        for i, ch in enumerate(ev["chapters"]):
+            out.append("        " + json.dumps(ch, ensure_ascii=False) + ("," if i < len(ev["chapters"]) - 1 else ""))
+        out.append("      ]")
+        out.append("    }" + ("," if e_i < len(obj["events"]) - 1 else ""))
+    out.append("  ]")
+    out.append("}")
+    return "\n".join(out) + "\n"
+
+
 def dump_series(obj):
     # Menus and track rows at the top level, one series per line inside each menu.
     out = ["{"]
@@ -513,6 +759,9 @@ def main():
     ok = write(os.path.join(OUT_DIR, "Cars.json"), dump(cars), args.check)
     log("Series")
     ok = write(os.path.join(OUT_DIR, "Series.json"), dump_series(build_series(log, cars["cars"])), args.check) and ok
+    log("Challenges")
+    ok = write(os.path.join(OUT_DIR, "Challenges.json"), dump_challenges(build_challenges(log, cars["cars"])),
+               args.check) and ok
     return 0 if ok else 1
 
 
