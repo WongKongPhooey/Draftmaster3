@@ -58,6 +58,15 @@ JSON, the way the rest of the project has moved.
 - **The card mode retires last**, after the new screens work: packs, action cards, trades and the in-race hand go out of
   the menu flow; delete code only when nothing references it.
 
+## Josh's calls after rows 1-5 (2026-11-10)
+
+- **"1Star" prizes are one-star cars only** (DM2 fell through to "any car"; not ported).
+- **Settled:** one currency — card coins and race money share `coins`, on DM2's scale (10,000 for a win); card trade-in
+  values 250 / 1,000 / 2,500 / 5,000 (`Economy`); a champion always gets a prize car; DM2's level-up rewards are not
+  ported; an unreadable save is kept as `masterdraft.unreadable.json`.
+- **Pending — don't change yet:** the "Earnhardt" prize (exported as `cup20_3`, A.Dillon's #3 in the catalogue) and
+  challenge prizes in general are being reworked. Josh will send instructions; a row will follow.
+
 ## How the overnight rows split it
 
 Two worktree slots run `code` rows in parallel; `unity` rows run one at a time in the main checkout. Rows with no After
