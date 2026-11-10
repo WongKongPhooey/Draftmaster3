@@ -5,7 +5,9 @@ using UnityEngine;
 // Full-course cautions on ovals. A yellow flag on an oval — a car stopped on the track (CautionWatch) — brings the
 // safety car back out and puts the race under caution (RaceStart.Phase.Caution):
 //
-//   * the safety car reappears on the track just ahead of the race leader and runs cruise pace (SafetyCar.DeployForCaution);
+//   * the safety car pulls out of where it parked at the top of pit road, drives out of the pit exit and crawls round
+//     on the inside while the field goes by on the outside, until the restart leader comes up behind it - then it
+//     moves up onto the line in front of the leader and runs cruise pace (SafetyCar.DeployForCaution, PickupLeader);
 //   * every AI car goes back on the formation brain, single file behind it (FormationController), and the player is
 //     held behind the car in front (PaceLapAssist);
 //   * pit road stays open — a damaged car comes in for repairs (PitStopController.cautionRepairDamage, PlayerPitService);
@@ -161,8 +163,10 @@ public class FullCourseCaution : MonoBehaviour
         float gap = CautionRules.CautionPickupGap(leaderMps, sc.cruiseMph / 2.237f, pickupGapM);
         float at = ClearSpot(Mathf.Repeat(leader + gap, lap), lap, scSpline);
 
+        // Out of the pits to pick up the leader (`at` only places a safety car that has no pit lane to come out of).
         sc.DeployForCaution(at, minCautionLaps);
         FreezeRestartOrder(Time.time);
+        sc.PickupLeader = RestartLeader();
         CautionSeconds = 0f;
         LapsRun = 0f;
         _clearFor = -1f;
@@ -217,6 +221,8 @@ public class FullCourseCaution : MonoBehaviour
         CautionLineup.Step(RacePositionTracker.Instance, Time.time);
         var sc = _director.SafetyCarInstance;
         if (sc == null) return;
+        // Who the safety car is out to pick up, for as long as it is looking: the leader may pit, or be caught out.
+        if (sc.PickingUp) sc.PickupLeader = RestartLeader();
         var spline = sc.GetComponent<SplineDriver>();
         float lap = spline != null ? spline.TrackLength : 0f;
         LapsRun = lap > 0f ? sc.Travelled / lap : 0f;
@@ -245,6 +251,24 @@ public class FullCourseCaution : MonoBehaviour
             return Mathf.Repeat(e.trackDistance, rt.TrackLength);
         }
         return -1f;
+    }
+
+    // The car the safety car picks up: the head of the restart order (RacePositionTracker sorts by CautionLineup under
+    // a caution) that is out on the track - not stopped, not on pit road, not caught up in the crash. Null for none.
+    Transform RestartLeader()
+    {
+        var rt = RacePositionTracker.Instance;
+        if (rt == null) return null;
+        var order = rt.Order;
+        for (int i = 0; i < order.Count; i++)
+        {
+            var e = order[i];
+            if (e == null || e.tf == null || _stoppedSince.ContainsKey(e.tf) || CautionLineup.IsCaught(e.tf)) continue;
+            bool inPits = e.spline != null && e.spline.enabled ? e.spline.IsOnPit
+                        : rt.track != null && rt.track.IsOnPitSurface(e.tf.position);
+            if (!inPits) return e.tf;
+        }
+        return null;
     }
 
     // `from`, or the first spot past it with the road clear behind and ahead, in 10 m steps up to a quarter lap on.

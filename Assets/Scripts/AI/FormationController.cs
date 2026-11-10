@@ -219,6 +219,7 @@ public class FormationController : MonoBehaviour
     SplineInputDriver _input;
     PitStopController _pit;
     readonly PackPlanner _planner = new PackPlanner();
+    SplineDriver _passSc;      // under a caution, the safety car while it is out picking up a leader that isn't me
     PackSettings _closeUpPack; // pack with the close-up headway and buffer
     PackSettings _cautionPack; // the close-up pack with the caution's gentle comfort braking
     float _prevLine;           // last step's racing-line lateral, for how fast the line is swinging across the road
@@ -441,6 +442,11 @@ public class FormationController : MonoBehaviour
         if (_spline == null || _spline.TrackLength <= 0f) return;
         if (!RaceStart.UnderSafetyCar) return;
         bool caution = RaceStart.IsCaution;
+        // Under a caution the safety car comes out of the pits and crawls round on the inside until the restart leader is
+        // up behind it (SafetyCar.PickingUp). Till then it is not the car to keep station off: every car but the leader
+        // drives past it on the outside.
+        var scNow = caution && FormationDirector.Instance != null ? FormationDirector.Instance.SafetyCarInstance : null;
+        _passSc = scNow != null && scNow.PassableBy(transform) ? scNow.Driver : null;
 
         float dt = Time.fixedDeltaTime;
 
@@ -620,13 +626,22 @@ public class FormationController : MonoBehaviour
                     makingWay = true;
                 }
             }
-            else if (infield != 0f && !CautionLineup.IsCaught(transform) && YieldingAhead(out float yLat))
+            else if (infield != 0f)
             {
-                float lineNow = _spline.UntacticalLateral;
-                float passLat = yLat - infield * cautionPassClearM;
-                float want = infield > 0f ? Mathf.Min(lineNow, passLat) : Mathf.Max(lineNow, passLat);
-                column = want - lineNow;
-                makingWay = true;
+                // Round a caught car moving over, or the safety car crawling on the inside: whichever needs me further
+                // out.
+                float yLat = 0f;
+                bool passCaught = !CautionLineup.IsCaught(transform) && YieldingAhead(out yLat);
+                bool passSc = SafetyCarToPass(out float scLat);
+                if (passSc && (!passCaught || (infield > 0f ? scLat < yLat : scLat > yLat))) yLat = scLat;
+                if (passCaught || passSc)
+                {
+                    float lineNow = _spline.UntacticalLateral;
+                    float passLat = yLat - infield * cautionPassClearM;
+                    float want = infield > 0f ? Mathf.Min(lineNow, passLat) : Mathf.Max(lineNow, passLat);
+                    column = want - lineNow;
+                    makingWay = true;
+                }
             }
         }
         CautionLineup.SetYielding(transform, yielding);
@@ -699,6 +714,7 @@ public class FormationController : MonoBehaviour
             {
                 var c = _cars[i];
                 if (c.IsPaceCar || c.Gap <= 0f || c.Gap > self.HalfLength + c.HalfLength + cautionFallInClearM) continue;
+                if (_passSc != null && c.Id == _passSc.GetInstanceID()) continue;   // going by it, not in behind it
                 if (Mathf.Abs(c.Lateral - self.Lateral) < self.HalfWidth + c.HalfWidth) continue; // in my lane: followed
                 float behind = Mathf.Max(minCapMph, c.SpeedMph - cautionFallInMph);
                 behind = Mathf.Max(behind, _spline.CurrentMph - cautionEaseDecelMps2 * PackAvoidance.MpsToMph * dt);
@@ -800,6 +816,7 @@ public class FormationController : MonoBehaviour
             if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
             if (passCaught && CautionLineup.IsYielding(d.transform)) continue;
             bool pace = d.qualifyingPosition == FormationOrder.SafetyCarGrid;
+            if (pace && d == _passSc) continue;   // picking up the leader: driven past, not closed up on
             Consider(Mathf.Repeat(d.CentreDistanceOnTrack - myC, len), pace, !pace && SlotOf(d) == partner, d.CurrentMph);
         }
         var humans = RaceObstacles.All;
@@ -861,6 +878,24 @@ public class FormationController : MonoBehaviour
             lateral = p.TrackLateral;
         }
         return best < float.MaxValue;
+    }
+
+    // The safety car out picking up the leader (_passSc), on the track from just alongside to as far up the road as the
+    // planner looks: where it is across the track, to go by on the outside of it. Looked for as far ahead as the planner
+    // scans - the field comes up to it at most of racing pace, and started round it only at cautionPassScanM it was
+    // already braking for it in its lane.
+    bool SafetyCarToPass(out float lateral)
+    {
+        lateral = 0f;
+        var d = _passSc;
+        if (d == null || !d.isActiveAndEnabled || d.IsOnPit) return false;
+        float len = _spline.TrackLength;
+        if (Mathf.Abs(d.TrackLength - len) > 0.5f) return false;
+        float g = PackAvoidance.SignedGap(d.CentreDistanceOnTrack, _spline.CentreDistanceOnTrack, len);
+        float scan = Mathf.Max(cautionPassScanM, _planner.ScanAheadM(_spline.CurrentMph, Mathf.Max(avoidScanRange, paceCarGap + 12f)));
+        if (g < -8f || g > scan) return false;
+        lateral = d.LateralOnTrack;
+        return true;
     }
 
     // This car's own track is an oval (its tuning races in lanes) - read from the track itself, once.
@@ -1150,7 +1185,8 @@ public class FormationController : MonoBehaviour
             HalfLength = hl,
             HalfWidth = hw,
             BrakeMphPerSec = BrakeAuthority(d),
-            IsPaceCar = d.qualifyingPosition == FormationOrder.SafetyCarGrid,
+            // The safety car out picking up the leader is just a slow car to drive round, in its own lane.
+            IsPaceCar = d.qualifyingPosition == FormationOrder.SafetyCarGrid && d != _passSc,
         };
     }
 
