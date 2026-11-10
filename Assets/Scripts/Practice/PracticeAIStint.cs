@@ -101,6 +101,10 @@ public class PracticeAIStint : MonoBehaviour
 
     float ActualSpeedMps => _pvc != null && _pvc.enabled ? _pvc.SpeedMps : _spline.speed;
 
+    // Lateral of a pit-road lane (Draftmaster.Sim.PitLanes): 0 on a road too narrow for two.
+    float PitRoadLane(int lane) =>
+        _spline.track != null ? Draftmaster.Sim.PitLanes.Lateral(lane, _spline.track.PitDrivingWidth, PitLane.ParkLateral) : 0f;
+
     void FixedUpdate()
     {
         if (_spline == null || _spline.TrackLength <= 0f) return;
@@ -109,11 +113,13 @@ public class PracticeAIStint : MonoBehaviour
         {
             case State.Leaving:
                 // SplineDriver drives the pit lane at the pit limit and auto-merges onto the main spline.
-                // Pull off the box lane onto the centerline first, so the run down the lane clears the
-                // cars still parked in the boxes ahead.
+                // Pull off the box lane first, so the run down the lane clears the cars still parked in the boxes
+                // ahead - into the far lane of a two-lane pit road (Draftmaster.Sim.PitLanes), clear of cars braking
+                // down the box-side lane for their boxes; the middle of a one-lane road.
                 if (_spline.IsOnPit)
                 {
-                    _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, laneChangeRate * Time.fixedDeltaTime);
+                    float outLat = PitRoadLane(Draftmaster.Sim.PitLanes.FarSide);
+                    _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, outLat, laneChangeRate * Time.fixedDeltaTime);
                 }
                 else
                 {
@@ -174,8 +180,9 @@ public class PracticeAIStint : MonoBehaviour
                 float latRemain = Mathf.Abs(PitLane.ParkLateral - _spline.lateralOffset);
                 float latTime = latRemain / Mathf.Max(0.1f, laneChangeRate);
                 float cutWindow = Mathf.Max(minCutWindow, 0.75f * Mathf.Max(0.5f, boxApproachDecel) * latTime * latTime);
-                if (remaining < cutWindow)
-                    _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, PitLane.ParkLateral, laneChangeRate * Time.fixedDeltaTime);
+                // Until then, down the box-side lane of a two-lane pit road (the middle of a one-lane one).
+                float target = remaining < cutWindow ? PitLane.ParkLateral : PitRoadLane(Draftmaster.Sim.PitLanes.BoxSide);
+                _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, target, laneChangeRate * Time.fixedDeltaTime);
                 // Brake FOR the box rather than at it, and pin a stop line there, so the car doesn't roll on
                 // into the next car's box.
                 float approachMph = Mathf.Sqrt(2f * Mathf.Max(0.5f, boxApproachDecel) * Mathf.Max(0f, remaining - 1f)) * 2.237f;

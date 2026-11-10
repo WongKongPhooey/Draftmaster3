@@ -39,6 +39,39 @@ namespace Draftmaster.Sim
             return UnityEngine.Mathf.Max(minGap, closing / (2f * UnityEngine.Mathf.Max(0.5f, decelMps2)) + minGap);
         }
 
+        // When the caution comes out, a car does not stamp on the brakes: it drives on round at this share of its
+        // racing pace until it reaches the train behind the safety car (or the car in front that already has).
+        public const float ApproachPace = 0.85f;
+        // The gentle lift (m/s^2) from racing pace down to ApproachPace, and from there down onto the train. A pace or
+        // speed cap under a caution never falls faster than this, unless a car right in front calls for more.
+        public const float ApproachDecelMps2 = 2f;
+
+        // How far (m) up the road from the race leader the safety car comes out under a caution: far enough for the
+        // leader, still at `leaderMps` as the flag comes out, to come down to the safety car's `cruiseMps` at a lift
+        // gentler than the field's own approach (ApproachDecelMps2), so it never arrives above its arrival envelope
+        // and has to brake harder. Placed off the leader's approach pace instead, the leader started out already over
+        // that envelope and ran up to the safety car too fast to stop behind it.
+        public static float CautionPickupGap(float leaderMps, float cruiseMps, float minGap)
+            => PickupGap(leaderMps, cruiseMps, ApproachDecelMps2 * 0.75f, minGap);
+
+        // The fastest (m/s) a car may run with `gapM` of road to the car in front, which is doing `aheadMps`, and
+        // wanting to settle `stationM` behind it: it can still come down to that car's speed at `decelMps2` by then.
+        // Off the car in front's ACTUAL speed - a car still running ApproachPace up the road holds nobody back.
+        public static float ApproachCapMps(float gapM, float stationM, float aheadMps, float decelMps2)
+        {
+            float room = UnityEngine.Mathf.Max(0f, gapM - stationM);
+            float v = UnityEngine.Mathf.Max(0f, aheadMps);
+            return UnityEngine.Mathf.Sqrt(v * v + 2f * UnityEngine.Mathf.Max(0.01f, decelMps2) * room);
+        }
+
+        // A cap `dt` seconds on from `previous`, heading for `target`: it may rise at once, but falls no faster than
+        // `easeMps2`. Infinity (no cap last step) takes the target straight away.
+        public static float EaseDown(float previous, float target, float easeMps2, float dt)
+        {
+            if (float.IsInfinity(previous) || float.IsNaN(previous) || target >= previous) return target;
+            return UnityEngine.Mathf.Max(target, previous - UnityEngine.Mathf.Max(0f, easeMps2) * UnityEngine.Mathf.Max(0f, dt));
+        }
+
         // Metres the safety car must cover, from where it came out, before it may take the pit entry. The green waves
         // as the leader reaches the line after it pits, so the run from the entry to the line counts towards `minLaps`
         // laps; the window it commits inside (`window`) is taken off so it is not a whole lap late. Never under half a

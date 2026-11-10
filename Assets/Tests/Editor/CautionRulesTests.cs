@@ -1,11 +1,41 @@
 using Draftmaster.Sim;
 using NUnit.Framework;
+using UnityEngine;
 
 // Full-course caution rules (FullCourseCaution / SafetyCar.DeployForCaution): when one comes out, when the safety car
 // is held out, and how far it must run before it may pit.
 public class CautionRulesTests
 {
     const float Lap = 4000f;
+
+    // The caution comes out: cars drive on at most of their racing pace and come down onto the train gently, off the
+    // speed of whatever is really in front of them.
+    [Test]
+    public void ApproachCap_AFarCarRunsOn_ACloseCarSettlesAtTheSpeedOfTheOneInFront()
+    {
+        // Right on station behind a car doing 30 m/s: its speed.
+        Assert.AreEqual(30f, CautionRules.ApproachCapMps(20f, 20f, 30f, 2f), 1e-4f);
+        Assert.AreEqual(30f, CautionRules.ApproachCapMps(5f, 20f, 30f, 2f), 1e-4f, "inside the station: no faster than it");
+        // 400 m of room behind a car at 27 m/s (60 mph), shedding 2 m/s^2: sqrt(27^2 + 1600) = 48 m/s.
+        Assert.AreEqual(Mathf.Sqrt(27f * 27f + 1600f), CautionRules.ApproachCapMps(420f, 20f, 27f, 2f), 1e-3f);
+        // A car in front still running 70 m/s 15 m up the road holds a car behind at 70 m/s, not at the train's pace.
+        Assert.GreaterOrEqual(CautionRules.ApproachCapMps(15f, 20f, 70f, 2f), 70f);
+    }
+
+    [Test]
+    public void EaseDown_RisesAtOnce_FallsNoFasterThanTheEase()
+    {
+        Assert.AreEqual(40f, CautionRules.EaseDown(float.PositiveInfinity, 40f, 2f, 0.02f), 1e-4f, "no cap before: straight to it");
+        Assert.AreEqual(60f, CautionRules.EaseDown(50f, 60f, 2f, 0.02f), 1e-4f, "rises at once");
+        Assert.AreEqual(80f - 0.04f, CautionRules.EaseDown(80f, 40f, 2f, 0.02f), 1e-4f, "falls 2 m/s^2");
+        Assert.AreEqual(40f, CautionRules.EaseDown(40.01f, 40f, 2f, 0.02f), 1e-4f, "never past the target");
+    }
+
+    [Test]
+    public void ApproachPace_IsEightyToNinetyPercent()
+    {
+        Assert.That(CautionRules.ApproachPace, Is.InRange(0.8f, 0.9f));
+    }
 
     [Test]
     public void ACarStoppedLongEnoughOnAnOvalBringsOutTheCaution()

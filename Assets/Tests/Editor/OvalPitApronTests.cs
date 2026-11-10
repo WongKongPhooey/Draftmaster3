@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using Draftmaster.Tracks;
@@ -85,6 +86,79 @@ public class OvalPitApronTests
                 Vector3 w2 = track.transform.TransformPoint(Pos(ms) + new Vector2(t.y, -t.x) * (Wid(ms) * 0.5f + 1.8f));
                 string s1 = Surface(w), s2 = Surface(w2);
                 sb.Append($"\n   {d,6:0} {Mathf.Atan2(t.y, t.x) * Mathf.Rad2Deg,7:0.0} L:{s1} R:{s2}");
+            }
+            Debug.Log(sb.ToString());
+        }
+        finally { UnityEngine.Object.DestroyImmediate(pkg); }
+    }
+
+    // What a car's tyres feel round the pit exit, as a map: one row per 5 m of the main lap, one column per 0.5 m
+    // across it (left = infield). R main road, P pit lane, A tarmac run-off (the apron), k kerb, v gravel,
+    // . grass. '|' marks the pit centreline where it crosses the row.
+    [Test]
+    [Explicit("Diagnostic: surface map round a venue's pit exit.")]
+    public void PitExitSurfaceMap([Values("FortWorth")] string id)
+    {
+        var pkg = SpawnPackage(id);
+        try
+        {
+            var trackType = Runtime("TrackBuilder");
+            var track = (Component)pkg.GetComponentInChildren(trackType, true);
+            var info = trackType.GetField("track").GetValue(track);
+            var infoType = info.GetType();
+            var main = (IList)trackType.GetMethod("SampleCenterline").Invoke(track, null);
+            var pit = (IList)trackType.GetMethod("SamplePitCenterline").Invoke(track, null);
+            var st = main[0].GetType();
+            Vector2 Pos(object s) => (Vector2)st.GetField("position").GetValue(s);
+            Vector2 Tan(object s) => (Vector2)st.GetField("tangent").GetValue(s);
+            float Wid(object s) => (float)st.GetField("width").GetValue(s);
+            float Dist(object s) => (float)st.GetField("distance").GetValue(s);
+            MethodInfo sampleAt = null;
+            foreach (var m in trackType.GetMethods())
+                if (m.Name == "SampleAt" && m.GetParameters().Length == 2) sampleAt = m;
+            var onSurface = trackType.GetMethod("IsOnSurface");
+            var onPit = trackType.GetMethod("IsOnPitSurface");
+            var nearest = trackType.GetMethod("NearestCenterlineDistance");
+
+            // Pit centreline projected onto the main lap: (main distance, lateral) for each pit sample.
+            var pitProj = new List<Vector2>();
+            foreach (var ps in pit)
+            {
+                Vector3 w = track.transform.TransformPoint(Pos(ps));
+                float md = (float)nearest.Invoke(track, new object[] { w });
+                var ms = sampleAt.Invoke(track, new object[] { md, main });
+                Vector2 t = Tan(ms);
+                pitProj.Add(new Vector2(md, Vector2.Dot(Pos(ps) - Pos(ms), new Vector2(t.y, -t.x))));
+            }
+            float lap = Dist(main[main.Count - 1]);
+            float exitD = pitProj[pitProj.Count - 1].x;
+            var sb = new StringBuilder($"[PitApron] {id} surface map: lap {lap:0}, pit {Dist(pit[pit.Count - 1]):0} m, " +
+                $"exit line {(float)infoType.GetProperty("PitExitLineDistance").GetValue(info):0}, pit ends at main {exitD:0} lat {pitProj[pitProj.Count - 1].y:0.0}" +
+                "\n  cols: lateral -35 .. +12 m, 0.5 m each");
+            const float latMin = -35f, latMax = 12f, latStep = 0.5f;
+            for (float d = Mathf.Max(0f, exitD - 400f); d <= exitD + 250f; d += 5f)
+            {
+                float dd = Mathf.Repeat(d, lap);
+                var ms = sampleAt.Invoke(track, new object[] { dd, main });
+                Vector2 t = Tan(ms), n = new Vector2(t.y, -t.x);
+                var row = new StringBuilder();
+                for (float lat = latMin; lat <= latMax + 0.01f; lat += latStep)
+                {
+                    Vector3 w = track.transform.TransformPoint(Pos(ms) + n * lat);
+                    var a = new object[] { w, 0f };
+                    char c;
+                    if ((bool)onSurface.Invoke(track, a)) c = (bool)onPit.Invoke(track, new object[] { w }) ? 'P' : 'R';
+                    else
+                    {
+                        string s = Surface(w);
+                        c = s == "TarmacRunoff" ? 'A' : s == "Kerb" ? 'k' : s == "Gravel" ? 'v' : '.';
+                    }
+                    foreach (var p in pitProj)
+                        if (Mathf.Abs(Mathf.DeltaAngle(p.x / lap * 360f, dd / lap * 360f)) * lap / 360f < 2.5f && Mathf.Abs(p.y - lat) < latStep * 0.5f)
+                            c = '|';
+                    row.Append(c);
+                }
+                sb.Append($"\n  {dd,5:0} w{Wid(ms),5:0.0} {row}");
             }
             Debug.Log(sb.ToString());
         }

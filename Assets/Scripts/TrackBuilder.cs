@@ -52,6 +52,8 @@ public class TrackBuilder : MonoBehaviour
     // signed with it, so a consumer that parks, draws or measures at these laterals follows the boxes to
     // whichever side they are on; one that compares a distance against them wants Mathf.Abs.
     public float PitBoxSide => pitBoxLaneOnRight ? 1f : -1f;
+    // Width (m) of the pit road cars drive down, kerb to kerb, not counting the box strip (Draftmaster.Sim.PitLanes).
+    public float PitDrivingWidth => PitHalfWidth * 2f;
     public float PitBoxLaneCenterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth * 0.5f);
     public float PitBoxLaneOuterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth);
     // Inner edge of the strip = the pit lane's own edge, where a box's dividing line starts.

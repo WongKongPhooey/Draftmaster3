@@ -804,7 +804,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Flat-out launch: a car holds the speed it had at the green until the car directly ahead of it (in its lane, or in its path) is pulling away, then goes - the accordion of a real restart. The leader, with nobody ahead, goes on the green, and each row follows a beat after the one in front, so the rows (6-7 m apart at the green) open out as the speed builds. Off = the whole field floors it at the same instant: the rows never open, and when the front row eases off at the trioval everyone behind has to lift (Texas 2026-11-06: 55% of the field off the throttle 5 s after the green, 0.02 m nose to tail).")]
     public bool staggeredLaunch = true;
     [Tooltip("Staggered launch: seconds after the car ahead goes before this one does - a driver's reaction, and the time gap each row opens on the one behind it (6.4 m at ~50 mph pace grows by ~15 m by racing speed).")]
-    public float launchReactSeconds = 0.25f;
+    public float launchReactSeconds = 0.1f;
     [Tooltip("Staggered launch, behind a free-driven human car: it counts as gone once it is this much (mph) quicker than the speed this car is holding.")]
     public float launchReactMph = 2f;
     [Tooltip("Staggered launch: a car ahead further than this (m, centre to centre) is not waited for.")]
@@ -2261,6 +2261,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     }
 
     float ProfileAt(float distance) => SampleAlongLine(_speedProfile, distance, 0f);
+
+    // What this car's speed plan asks for (mph) at `distance` round the main lap at a pace of 1 - full racing pace,
+    // whatever pace the plan is baked at right now (a formation lap or a caution runs it lower). Never over the grip
+    // limit. 0 with no plan. A reference for a car with no plan of its own - the human under a caution.
+    public float RacePaceMphAt(float distance)
+    {
+        if (_speedProfile == null || _speedProfile.Length == 0) return 0f;
+        return Mathf.Min(ProfileAt(distance) / Mathf.Max(0.1f, _profilePace), GripLimitAt(distance));
+    }
 
     // The braking the speed plan asks for over the next second (m/s²; 0 where it isn't slowing).
     public float PlannedDecelMps2()

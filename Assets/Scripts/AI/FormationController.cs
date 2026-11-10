@@ -149,14 +149,24 @@ public class FormationController : MonoBehaviour
     public float pitLaneHalfWidth = 7f;
 
     [Header("Closing up under a full-course caution")]
-    [Tooltip("Under a caution the field comes out at race gaps, strung round the lap, and must close up on the safety car quickly. Most a car may run over cruise (mph) while it has a long way to go to the car ahead (or to the safety car). The corner speed profile still caps it, and every car is kinematic behind the safety car. It was the formation lap's far catch-up (farCatchUpBonusMph, halved in what race-speed corner phases call a turn - most of an oval), and the back of the field took a lap and more to get back to the train.")]
-    public float cautionCatchUpMaxMph = 60f;
-    [Tooltip("Under a caution a car closing on the one ahead runs no faster than it could shed its closing speed at this rate (m/s^2) by the time it is cautionArriveMarginM behind its station — so it arrives at the train's pace, never as a much faster car the planner would take for a blockage and pass. Nobody passes under the caution.")]
+    [Tooltip("When the caution comes out a car drives on round at this share of its racing pace (its speed plan, corners and all) until it reaches the train behind the safety car. It used to be held at once to cruise plus a crawl allowance, and the whole field stood on the brakes at the flag.")]
+    [Range(0.5f, 1f)] public float cautionApproachPace = CautionRules.ApproachPace;
+    [Tooltip("The lift (m/s^2) from racing pace down to cautionApproachPace as the flag comes out, and the most the caution's own speed cap may fall by per second. The pack planner still brakes harder for a car right in front.")]
+    public float cautionEaseDecelMps2 = CautionRules.ApproachDecelMps2;
+    [Tooltip("Under a caution a car keeps station at the approach's short headway and gentle braking (CautionApproachPack) until its caution cap is down within this (mph) of cruise - at the train - and at the formation pack's spacing after, which leaves room in the train for a car still alongside to fall in.")]
+    public float cautionSingleFileMph = 15f;
+    [Tooltip("Falling in single file under a caution: with a car in another lane, level or up to this far (m) clear ahead of me, I drop back behind it. At least the pack planner's SideWindowAheadM (6): the planner only moves me across once the car ahead in the lane I am moving into is that far clear, and a car parked 3 m back from it ran the whole caution in the outside lane.")]
+    public float cautionFallInClearM = 7f;
+    [Tooltip("...running this much (mph) slower than it until its lane opens up.")]
+    public float cautionFallInMph = 6f;
+    [Tooltip("Under a caution a car closing on the one ahead runs no faster than it could shed its closing speed at this rate (m/s^2) by the time it is cautionArriveMarginM behind its station — so it arrives at that car's pace, never as a much faster car the planner would take for a blockage and pass. Off the car ahead's ACTUAL speed: one still running the approach pace up the road holds nobody back. Nobody passes under the caution.")]
     public float cautionCloseDecelMps2 = 2f;
-    [Tooltip("Metres beyond the station gap (targetGap off a car, paceCarGap off the safety car) by which the caution catch-up has run out.")]
+    [Tooltip("Metres beyond the station gap (targetGap off a car, paceCarGap off the safety car) by which a car closing up under a caution is down to the speed of the one ahead.")]
     public float cautionArriveMarginM = 16f;
-    [Tooltip("Under a caution the restart order was set when the flag came out (CautionLineup), so nobody gains a thing by hurrying back to the safety car: the field slows to a crawl. A car closing up runs no more than this (mph) over cruise - it caps cautionCatchUpMaxMph and the far catch-up.")]
-    public float cautionCrawlMaxMph = 20f;
+
+    // Caution approach state: the racing pace the car had when the flag came out (-1 = not under a caution), the pace
+    // its speed plan runs at now (eased down from that), and the caution's own speed cap (mph, eased).
+    float _racePace = -1f, _cautionPaceNow = 1f, _cautionCapMph = float.PositiveInfinity;
 
     [Header("Caught up in the crash (caution)")]
     [Tooltip("A car caught up in the crash goes to the tail of the restart order. While a car due ahead of it is this close behind it (m), it slows and moves down to the inside to be passed.")]
@@ -210,6 +220,7 @@ public class FormationController : MonoBehaviour
     PitStopController _pit;
     readonly PackPlanner _planner = new PackPlanner();
     PackSettings _closeUpPack; // pack with the close-up headway and buffer
+    PackSettings _cautionPack; // the close-up pack with the caution's gentle comfort braking
     float _prevLine;           // last step's racing-line lateral, for how fast the line is swinging across the road
     bool _hasPrevLine;
     int _ovalTrack = -1;   // -1 unknown, 0 road course, 1 oval: columnEdgeMarginM applies on ovals only
@@ -355,6 +366,9 @@ public class FormationController : MonoBehaviour
 
         bool underSafetyCar = phase == RaceStart.Phase.Formation || phase == RaceStart.Phase.Caution;
 
+        // Out of a caution, the next one starts again from whatever racing pace the car has then.
+        if (phase != RaceStart.Phase.Caution) _racePace = -1f;
+
         // A caution comes out with the car racing on its dynamic model, wherever that has put it (sliding, on the
         // apron, a lane over from its brain's point). Latch the spline onto where the car actually IS before it
         // takes the transform, or the switch teleports it back onto the brain's pose. The racing brain's lateral
@@ -445,7 +459,10 @@ public class FormationController : MonoBehaviour
 
         float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
         bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
-        _planner.Settings = closingUp && !_spline.usePitLane ? CloseUpPack() : pack;
+        _planner.Settings = closingUp && !_spline.usePitLane ? CloseUpPack()
+                          : caution && !_spline.usePitLane && _cautionCapMph > cruise + cautionSingleFileMph
+                              ? CautionApproachPack()   // still driving on round to the train
+                              : pack;                   // in the train: room between cars to fall in single file
 
         // Filing out of the pit lane: pull off the parked box strip onto the pit centreline once rolling, and keep
         // station off whatever is in front down the lane — including the cars that have already rejoined the
@@ -484,26 +501,53 @@ public class FormationController : MonoBehaviour
         // little faster, so the field concertinas up into rows behind it; each car also draws level with its row
         // partner (PairAlign).
         float far = FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace,
-                               out float frontGap, out int carsAhead);
+                               out float frontGap, out int carsAhead, out float aheadMph);
         float farBonus = farCatchUpBonusMph * far;
         float anchor = caution ? 0f : SlotAnchorMph();   // under caution the field is in running order, not grid order
-        // Under caution: close on the car in front (or the safety car) by how much road there is to it, hard from a
-        // long way back and easing off to arrive at its pace. In the close-up the close-up rules below take over.
-        float cautionBonus = caution && !closingUp && aheadGap < float.MaxValue
-            ? FormationLanes.CautionCatchUpMph(aheadGap, (aheadIsPace ? paceCarGap : targetGap) + cautionArriveMarginM,
-                                               cautionCloseDecelMps2, cautionCatchUpMaxMph)
-            : 0f;
-        // A crawl, not a race back to the safety car: the order is already set.
+        // Under caution: drive on round at most of racing pace (Apply runs the speed plan at _cautionPaceNow), and come
+        // down onto the car in front (or the safety car) only as the road to it runs out - off that car's own speed, so a
+        // car still running the approach pace up the road holds nobody back. In the close-up its rules take over.
+        bool cautionApproach = caution && !closingUp && !settling;
         if (caution)
         {
-            cautionBonus = Mathf.Min(cautionBonus, cautionCrawlMaxMph);
-            farBonus = Mathf.Min(farBonus, cautionCrawlMaxMph);
+            if (_racePace < 0f)
+            {
+                _racePace = Mathf.Max(0.1f, _spline.paceMultiplier);
+                _cautionPaceNow = _racePace;
+                _cautionCapMph = float.PositiveInfinity;
+                // Carry on from the lane the car is racing in (a kinematic field car's racing brain moved it; this
+                // controller's own lateral is whatever the last formation left), or Apply snaps it onto the line.
+                _lateral = _spline.tacticalLateralOffset;
+                // Nor carry the planner's last formation-lap cap into racing speed: its comfort braking would start
+                // from that and stamp the car down to it.
+                _planner.Reset(_spline.CurrentMph);
+            }
+            // Ease the pace down: the speed falls ~ cautionEaseDecelMps2 (speed scales with pace).
+            float v = Mathf.Max(_spline.CurrentMph * PackAvoidance.MphToMps, 10f);
+            _cautionPaceNow = Mathf.MoveTowards(_cautionPaceNow, _racePace * cautionApproachPace,
+                                                cautionEaseDecelMps2 * _cautionPaceNow / v * dt);
         }
+        float cautionBonus = 0f;
+        if (cautionApproach)
+        {
+            float capMph = aheadGap < float.MaxValue
+                ? CautionRules.ApproachCapMps(aheadGap, (aheadIsPace ? paceCarGap : targetGap) + cautionArriveMarginM,
+                                              aheadMph * PackAvoidance.MphToMps, cautionCloseDecelMps2) * PackAvoidance.MpsToMph
+                : 999f;
+            capMph = Mathf.Max(cruise, capMph);
+            // Never a stamp on the brakes from the caution itself: the cap falls no faster than the ease, starting
+            // from the car's own speed.
+            if (float.IsPositiveInfinity(_cautionCapMph)) _cautionCapMph = Mathf.Max(capMph, _spline.CurrentMph);
+            _cautionCapMph = CautionRules.EaseDown(_cautionCapMph * PackAvoidance.MphToMps, capMph * PackAvoidance.MphToMps,
+                                                   cautionEaseDecelMps2, dt) * PackAvoidance.MpsToMph;
+            cautionBonus = Mathf.Max(0f, _cautionCapMph - cruise);
+        }
+        else if (!caution) _cautionCapMph = float.PositiveInfinity;
         float baseCap;
         if (settling) baseCap = pitOutMph;
-        else if (caution && !closingUp)
-            // Kinematic behind the safety car, so the corner speed profile is the only corner limit it needs.
-            baseCap = cruise + Mathf.Max(corner ? 0f : catchUpBonusMph, cautionBonus);
+        else if (cautionApproach)
+            // Kinematic behind the safety car, so the speed plan (at the approach pace) is the corner limit.
+            baseCap = cruise + cautionBonus;
         else if (closingUp)
         {
             float frontRow = FormationDirector.Instance.CloseUpLeaderMph;
@@ -551,6 +595,7 @@ public class FormationController : MonoBehaviour
         _weaveEnv = FormationLanes.StepEnvelope(_weaveEnv, weaveOk, dt, weaveRampSeconds, weaveFadeOutSeconds);
         int slot = columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
         float column = caution ? 0f : FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
+
         float boundLo = float.NegativeInfinity, boundHi = float.PositiveInfinity;
         _spline.GetLateralBounds(out boundLo, out boundHi);
 
@@ -564,7 +609,10 @@ public class FormationController : MonoBehaviour
                                                  _spline.track, cautionYieldLookBehindM);
             if (yielding)
             {
-                baseCap = Mathf.Min(baseCap, Mathf.Max(minCapMph, cruise - cautionYieldSlowMph));
+                // Down to the let-by pace at the caution's gentle lift, not all at once from racing speed.
+                float yieldCap = Mathf.Max(minCapMph, cruise - cautionYieldSlowMph);
+                yieldCap = Mathf.Max(yieldCap, _spline.CurrentMph - cautionEaseDecelMps2 * PackAvoidance.MpsToMph * dt);
+                baseCap = Mathf.Min(baseCap, yieldCap);
                 if (infield != 0f && !float.IsInfinity(boundLo) && !float.IsInfinity(boundHi))
                 {
                     float yieldLat = infield > 0f ? boundHi - cautionYieldEdgeInsetM : boundLo + cautionYieldEdgeInsetM;
@@ -637,10 +685,30 @@ public class FormationController : MonoBehaviour
         var self = SelfState(merge);
         self.TrackLo = boundLo;
         self.TrackHi = boundHi;
+
+        // Falling in single file under the caution: a car in another lane, level or a little ahead, keeps its place
+        // and I drop back behind it - a few mph slower, at the caution's lift - so a hole opens in its lane for me to
+        // move into. The planner only waits for the lane to clear, and two cars that both waited ran on side by side
+        // the whole caution, the lanes drifting past each other. (All at once at the flag, a two- and three-wide pack
+        // collapsing onto one line stood on the brakes; this sorts it out a car at a time at a gentle lift.)
+        // Not a car going by one caught up in the crash, which is moving over to let it past.
+        bool singleFiling = caution && !settling && !yielding && !makingWay;
+        if (singleFiling)
+        {
+            for (int i = 0; i < _cars.Count; i++)
+            {
+                var c = _cars[i];
+                if (c.IsPaceCar || c.Gap <= 0f || c.Gap > self.HalfLength + c.HalfLength + cautionFallInClearM) continue;
+                if (Mathf.Abs(c.Lateral - self.Lateral) < self.HalfWidth + c.HalfWidth) continue; // in my lane: followed
+                float behind = Mathf.Max(minCapMph, c.SpeedMph - cautionFallInMph);
+                behind = Mathf.Max(behind, _spline.CurrentMph - cautionEaseDecelMps2 * PackAvoidance.MpsToMph * dt);
+                baseCap = Mathf.Min(baseCap, behind);
+            }
+        }
         var intent = new PackIntent
         {
             BaseCapMph = baseCap,
-            MaxCapMph = yielding ? baseCap
+            MaxCapMph = yielding || cautionApproach ? baseCap
                       : Mathf.Max(baseCap, cruise + Mathf.Max(catchUpBonusMph, Mathf.Max(farBonus, Mathf.Max(anchor, cautionBonus)))),
             FloorMph = minCapMph,
             WantGap = closingUp ? rowGap : targetGap,
@@ -650,7 +718,7 @@ public class FormationController : MonoBehaviour
             // on a human already running cruise behind it. The far catch-up lifts that ceiling for that car only.
             // Under caution the safety car can be a long way up the road from the car now leading the train (the
             // leader pitted): the caution catch-up lifts it the same way.
-            CruiseMph = yielding ? baseCap : cruise + Mathf.Max(farBonus, cautionBonus),
+            CruiseMph = yielding || cautionApproach ? baseCap : cruise + Mathf.Max(farBonus, cautionBonus),
             ColumnTactical = column + weave,
             // On a start lane the column is the gap from the racing line to a fixed line: it must keep up with the
             // racing line swinging across the road as the squeezed pair's does.
@@ -708,7 +776,8 @@ public class FormationController : MonoBehaviour
     // mistaken for the car ahead, and a car that pitted can come out more than half a lap behind the train.
     // `frontGap` / `carsAhead`: the road (m) to the front-most car of the field ahead of me (not the safety car) and
     // how many cars there are between it and me, it included — for the close-up's place in the stacked-up field.
-    float FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace, out float frontGap, out int carsAhead)
+    float FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace, out float frontGap, out int carsAhead,
+                     out float aheadMph)
     {
         float len = _spline.TrackLength;
         float myC = _spline.CentreDistanceOnTrack;
@@ -716,7 +785,7 @@ public class FormationController : MonoBehaviour
         int partner = MySlot() >= 0 && !RaceStart.IsCaution ? MySlot() ^ 1 : int.MinValue;
         bool scOut = RaceStart.IsCaution && FormationDirector.Instance != null && !FormationDirector.Instance.FieldClosingUp;
         float reach = scOut ? len : len * 0.5f;
-        float best = float.MaxValue, bestOther = float.MaxValue;
+        float best = float.MaxValue, bestOther = float.MaxValue, bestMph = 0f;
         bool bestIsPace = false, bestOtherIsPace = false;
         float front = 0f;
         int count = 0;
@@ -731,7 +800,7 @@ public class FormationController : MonoBehaviour
             if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
             if (passCaught && CautionLineup.IsYielding(d.transform)) continue;
             bool pace = d.qualifyingPosition == FormationOrder.SafetyCarGrid;
-            Consider(Mathf.Repeat(d.CentreDistanceOnTrack - myC, len), pace, !pace && SlotOf(d) == partner);
+            Consider(Mathf.Repeat(d.CentreDistanceOnTrack - myC, len), pace, !pace && SlotOf(d) == partner, d.CurrentMph);
         }
         var humans = RaceObstacles.All;
         for (int i = 0; i < humans.Count; i++)
@@ -739,21 +808,22 @@ public class FormationController : MonoBehaviour
             var p = humans[i];
             if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
             if (passCaught && CautionLineup.IsYielding(p.transform)) continue;
-            Consider(Mathf.Repeat(p.TrackDistance - myC, len), false, p.GridPosition >= 0 && p.GridPosition == partner);
+            Consider(Mathf.Repeat(p.TrackDistance - myC, len), false, p.GridPosition >= 0 && p.GridPosition == partner, p.SpeedMph);
         }
 
         leading = bestOther == float.MaxValue || bestOtherIsPace;
         aheadGap = best;
         aheadIsPace = bestIsPace;
+        aheadMph = bestMph;
         frontGap = count > 0 ? front : float.MaxValue;
         carsAhead = count;
         if (best == float.MaxValue || bestIsPace) return 0f;
         return Mathf.Clamp01((best - catchUpNearGap) / Mathf.Max(1f, catchUpFarGap - catchUpNearGap));
 
-        void Consider(float gap, bool pace, bool isPartner)
+        void Consider(float gap, bool pace, bool isPartner, float mph)
         {
             if (gap <= 0f || gap >= reach) return;
-            if (gap < best) { best = gap; bestIsPace = pace; }
+            if (gap < best) { best = gap; bestIsPace = pace; bestMph = mph; }
             if (!isPartner && gap < bestOther) { bestOther = gap; bestOtherIsPace = pace; }
             if (!pace) { count++; if (gap > front) front = gap; }
         }
@@ -876,6 +946,22 @@ public class FormationController : MonoBehaviour
         return _closeUpPack;
     }
 
+    // Under a caution, driving on round to the train: the field comes out of racing nose to tail, and the formation's
+    // 0.55 s headway (40 m at 170 mph) had every car in a draft line braking at the comfort limit to open the gap -
+    // the whole pack stood on the brakes at the flag. Station off the car in front at the close-up's short headway,
+    // and comfort braking no firmer than the caution's gentle lift. The safety law is untouched.
+    PackSettings CautionApproachPack()
+    {
+        if (_cautionPack != null) return _cautionPack;
+        _cautionPack = JsonUtility.FromJson<PackSettings>(JsonUtility.ToJson(CloseUpPack()));
+        _cautionPack.MaxBrakeMphPerSec = Mathf.Min(pack.MaxBrakeMphPerSec, cautionEaseDecelMps2 * PackAvoidance.MpsToMph);
+        // Behind the safety car every car is kinematic and answers its speed command the same step: no reaction
+        // distance to keep. At 170 mph even the close-up's 0.04 s was 3 m, and a draft line running a metre apart
+        // stood on the brakes the instant the flag came out to open it.
+        _cautionPack.ReactionSec = 0f;
+        return _cautionPack;
+    }
+
     // Down the pit lane: station keeping and the safety law only. No swerving, no columns.
     void PitLaneStep(float dt, float cruise)
     {
@@ -916,7 +1002,10 @@ public class FormationController : MonoBehaviour
     {
         _spline.aiMaxSpeedMph = cmd.CapMph;
         _spline.aiMinDecelMphPerSec = cmd.MinDecelMphPerSec; // brake authority only while the safety law acts
-        _spline.paceMultiplier = formationPace;
+        // Under a caution, until the field is closing up for the restart, the speed plan runs at the eased approach
+        // pace (most of the car's racing pace) rather than the formation lap's.
+        _spline.paceMultiplier = RaceStart.IsCaution && _racePace > 0f && !(FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp)
+            ? _cautionPaceNow : formationPace;
         _spline.aiSpeedBoostMph = 0f;
         _lateral = Mathf.MoveTowards(_lateral, cmd.TacticalTarget, cmd.Slew * dt);
         _spline.tacticalLateralOffset = _lateral;

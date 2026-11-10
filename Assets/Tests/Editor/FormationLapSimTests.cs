@@ -275,7 +275,14 @@ public class FormationLapSimTests
         // race pace for a while.
         // The last car limps round at 60 mph meanwhile, so it is far behind the field when the caution comes out and
         // has to close up on it.
-        for (int i = 1; i < n; i++) Set(cars[i], "aiMaxSpeedMph", i == n - 1 ? 60f : 200f);
+        // Racing two wide, as the rows came to the green: the hand-back at the green zeroed every car's lateral, which
+        // stacked each row's two cars on top of each other in one lane - no race ever looks like that.
+        for (int i = 1; i < n; i++)
+        {
+            Set(cars[i], "aiMaxSpeedMph", i == n - 1 ? 60f : 200f);
+            int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+            Set(cars[i], "tacticalLateralOffset", (slot & 1) == 0 ? -2.2f : 2.2f);
+        }
         for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
             foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
         float raceMph = 0f;
@@ -295,10 +302,17 @@ public class FormationLapSimTests
             ahead = nearest;
             if (ahead > best) { best = ahead; leader = d; leaderMph = (float)mphProp.GetValue(cars[i]); }
         }
-        float pickup = Draftmaster.Sim.CautionRules.PickupGap(leaderMph / 2.237f, 60f / 2.237f, 6f, 80f);   // FullCourseCaution's defaults
+        float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap(leaderMph / 2.237f, 60f / 2.237f, 80f);   // as FullCourseCaution.Declare
         scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup, 2f });
         currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
         var holdOut = scType.GetField("HoldOut");
+
+        // How the field slows as the flag comes out: each car's speed then, the field's mean speed 3 s on against it,
+        // and the hardest any car slowed over a second in the first 10 s (mph/s).
+        var mphSecondAgo = new float[n];
+        float meanAtFlag = 0f, meanAt3 = -1f, hardestSlowing = 0f;
+        string hardestWho = "";
+        for (int i = 1; i < n; i++) { mphSecondAgo[i] = (float)mphProp.GetValue(cars[i]); meanAtFlag += mphSecondAgo[i] / (n - 1); }
 
         var travelled = new float[n];
         var prevD = new float[n];
@@ -343,6 +357,20 @@ public class FormationLapSimTests
             if (scTravelAtPit < 0f && (bool)scType.GetProperty("Pitted").GetValue(sc))
                 scTravelAtPit = (float)scType.GetProperty("Travelled").GetValue(sc);
             green = Equals(currentProp.GetValue(null), greenPhase);
+
+            int perSecond = Mathf.RoundToInt(1f / dt);
+            if (t <= 10f + dt * 0.5f && (step + 1) % perSecond == 0)
+                for (int i = 1; i < n - 1; i++)   // not the straggler: it was limping at 60 mph
+                {
+                    float now = (float)mphProp.GetValue(cars[i]);
+                    if (mphSecondAgo[i] - now > hardestSlowing) { hardestSlowing = mphSecondAgo[i] - now; hardestWho = $"{cars[i].name} {mphSecondAgo[i]:0}->{now:0} mph at t{t:0}"; }
+                    mphSecondAgo[i] = now;
+                }
+            if (meanAt3 < 0f && t >= 3f)
+            {
+                meanAt3 = 0f;
+                for (int i = 1; i < n; i++) meanAt3 += (float)mphProp.GetValue(cars[i]) / (n - 1);
+            }
 
             for (int i = 0; i < n; i++)
             {
@@ -401,7 +429,8 @@ public class FormationLapSimTests
                          $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
                          $"tail {tailAtCaution:0} m behind the safety car (widest gap {widestAtCaution:0} m) as it came out, " +
                          $"{tailAtLap:0} m (widest {widestAtLap:0} m) after its first lap; closed up (all gaps < 40 m) at t{closedUpAt:0} s; " +
-                         $"{passes.Count} passes, {contacts.Count} contacts\n  " + string.Join("\n  ", passes) +
+                         $"{passes.Count} passes, {contacts.Count} contacts; field {meanAtFlag:0} mph at the flag, {meanAt3:0} mph 3 s on, " +
+                         $"hardest slowing {hardestSlowing:0} mph/s ({hardestWho})\n  " + string.Join("\n  ", passes) +
                          "\n  " + string.Join("\n  ", contacts);
         Debug.Log(summary);
         Assert.IsTrue(green, summary);
@@ -409,9 +438,12 @@ public class FormationLapSimTests
         Assert.GreaterOrEqual(leaderLaps, 1.95f, summary);
         Assert.IsEmpty(contacts, summary);
         Assert.IsEmpty(passes, summary);
-        // The field, straggler and all, has closed up on the safety car by the green. Not in a hurry: the restart order
-        // was set when the flag came out (CautionLineup), so it crawls back (FormationController.cautionCrawlMaxMph),
-        // and the safety car comes out far enough ahead of a leader at racing speed for it to slow (CautionRules.PickupGap).
+        // No stamp on the brakes at the flag: the field drives on round at most of its pace (CautionRules.ApproachPace)
+        // and lifts gently down onto the safety car, which comes out far enough up the road for that (PickupGap).
+        Assert.Greater(meanAt3, meanAtFlag * 0.8f, summary);
+        // (A car reaching a turn as the flag comes out still brakes for it - its own racing plan - so not zero.)
+        Assert.Less(hardestSlowing, 30f, summary);
+        // The field, straggler and all, has closed up on the safety car by the green.
         Assert.Greater(closedUpAt, 0f, summary);
         Assert.Less(closedUpAt, t, summary);
         Assert.Less(widestAtLap, 60f, summary);
@@ -453,7 +485,13 @@ public class FormationLapSimTests
         float dt = Time.fixedDeltaTime;
         int n = cars.Count;
 
-        for (int i = 1; i < n; i++) Set(cars[i], "aiMaxSpeedMph", 200f);
+        for (int i = 1; i < n; i++)
+        {
+            Set(cars[i], "aiMaxSpeedMph", 200f);
+            // Racing two wide (the hand-back at the green stacks each row's cars in one lane - see the caution test).
+            int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+            Set(cars[i], "tacticalLateralOffset", (slot & 1) == 0 ? -2.2f : 2.2f);
+        }
         for (int step = 0; step < Mathf.RoundToInt(15f / dt); step++)
             foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
 
@@ -472,8 +510,8 @@ public class FormationLapSimTests
         }
         Assert.Greater(leaderIdx, 0);
 
-        float pickup = Draftmaster.Sim.CautionRules.PickupGap((float)splineType.GetProperty("CurrentMph").GetValue(cars[leaderIdx]) / 2.237f,
-                                                              60f / 2.237f, 6f, 80f);   // FullCourseCaution's defaults
+        float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap((float)splineType.GetProperty("CurrentMph").GetValue(cars[leaderIdx]) / 2.237f,
+                                                                     60f / 2.237f, 80f);   // as FullCourseCaution.Declare
         scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leaderD + pickup, 2f });
         lineupType.GetMethod("Begin").Invoke(null, new object[]
         {

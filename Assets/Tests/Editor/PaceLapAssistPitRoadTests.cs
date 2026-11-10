@@ -40,6 +40,73 @@ public class PaceLapAssistPitRoadTests
         raceStart.GetProperty("Current").SetValue(null, Enum.Parse(phaseType, phase));
     }
 
+    // Texas, phone build 0.8.9: the player came off pit road ahead of the car they were due to follow. The hold capped
+    // them at 0.8x that car's speed - but it was behind them, following them, so it slowed too, and the two wound each
+    // other down to a standstill on the track until the AI swerved round. Out of position, the player holds a fixed
+    // let-by pace, whatever the car behind is doing.
+    [Test]
+    public void FormationHold_OutOfPosition_DoesNotStopThePlayerBehindTheCarFollowingThem()
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/TrackPackages/Daytona.prefab");
+        Assert.IsNotNull(prefab, "no Daytona package");
+        var pkg = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        var aiGo = new GameObject("SlotAheadAI");
+        var playerGo = new GameObject("Player");
+        try
+        {
+            SetPhase("Formation");
+
+            var trackType = Runtime("TrackBuilder");
+            var track = (Component)pkg.GetComponentInChildren(trackType, true);
+            var vehicleInfo = Resources.Load("Vehicles/Cup24");
+            Assert.IsNotNull(vehicleInfo);
+
+            // The car ahead in grid order, out on the track 8 m BEHIND the player and crawling (it is following them).
+            var spline = aiGo.AddComponent(Runtime("SplineDriver"));
+            Set(spline, "track", track);
+            Set(spline, "vehicleInfo", vehicleInfo);
+            Set(spline, "startDistance", 992f);
+            Set(spline, "speed", 3f / 2.237f);
+            Set(spline, "qualifyingPosition", 0);
+            Call(spline, "Awake");
+            Call(spline, "OnEnable");
+            Call(spline, "Start");
+            Assert.IsFalse((bool)spline.GetType().GetProperty("IsOnPit").GetValue(spline), "The AI car is on pit road.");
+
+            var mainSamples = trackType.GetMethod("SampleCenterline").Invoke(track, null);
+            var s = trackType.GetMethod("SampleAt").Invoke(track, new object[] { 1000f, mainSamples });
+            Vector2 local = (Vector2)s.GetType().GetField("position").GetValue(s);
+            Vector3 at = track.transform.TransformPoint(new Vector3(local.x, local.y, 0f));
+            playerGo.transform.position = at;
+
+            var pvcType = Runtime("PlayerVehicleController");
+            var pvc = playerGo.AddComponent(pvcType);
+            Set(pvc, "vehicleInfo", vehicleInfo);
+            Set(pvc, "track", track);
+            Call(pvc, "SetFormationGrid", 1);
+            float mainDistance = (float)trackType.GetMethod("NearestCenterlineDistance").Invoke(track, new object[] { at });
+            Set(pvc, "<TrackDistance>k__BackingField", mainDistance);
+
+            var assist = playerGo.AddComponent(Runtime("PaceLapAssist"));
+            Set(assist, "pvc", pvc);
+            Call(assist, "Update");
+
+            float governorMph = (float)pvcType.GetField("speedGovernorMps").GetValue(pvc) * 2.237f;
+            Assert.That(governorMph, Is.GreaterThan(30f),
+                $"Out of position ahead of a crawling car, the hold capped the player at {governorMph:0} mph.");
+            Assert.That(governorMph, Is.LessThan(60f), "Out of position, the player was not slowed to let the car by.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(playerGo);
+            var ai = aiGo.GetComponent(Runtime("SplineDriver"));
+            if (ai != null) Call(ai, "OnDisable");
+            UnityEngine.Object.DestroyImmediate(aiGo);
+            UnityEngine.Object.DestroyImmediate(pkg);
+            Runtime("RaceStart").GetMethod("ResetToDefault").Invoke(null, null);
+        }
+    }
+
     [TestCase(true, TestName = "PlayerOnPitRoad_IsLeftToThePitLimiter")]
     [TestCase(false, TestName = "CarAheadStillOnPitRoad_DoesNotHoldThePlayerOnTrack")]
     public void FormationHold_IgnoresPitRoad(bool playerOnPitRoad)

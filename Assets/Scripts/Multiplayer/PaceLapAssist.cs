@@ -33,10 +33,18 @@ public class PaceLapAssist : MonoBehaviour
     public float hardGap = 6f;
     [Tooltip("If our locked leader is more than this far ahead (m), prompt the player to close up.")]
     public float catchUpGap = 30f;
+    [Tooltip("Out of position on the formation lap - ahead of the car the player should be following - the player is held this far under formation cruise (mph) so that car can come back past. A fixed pace, never a fraction of that car's speed: it is following the player, so each capped the other lower until both stopped dead.")]
+    public float outOfPlaceLetBySlowMph = 15f;
 
     [Header("Caution")]
-    [Tooltip("Under a full-course caution the player is never let go faster than this (mph) — enough to catch the train up, not to race.")]
+    [Tooltip("Under a full-course caution the player drives on round at no more than this share of racing pace (the AI field's speed plan at their spot) until they reach the train - as the AI does.")]
+    [Range(0.5f, 1f)] public float cautionApproachPace = Draftmaster.Sim.CautionRules.ApproachPace;
+    [Tooltip("Under a caution, only if there is no AI speed plan to read: the most the player is let go (mph).")]
     public float cautionMaxMph = 90f;
+    [Tooltip("The caution's hold on the player never drops faster than this (m/s^2) - the governor is a hard limit on the car's speed, so a lower cap at the flag was an instant stamp on the brakes.")]
+    public float cautionEaseDecelMps2 = Draftmaster.Sim.CautionRules.ApproachDecelMps2;
+    [Tooltip("...unless the player is right up behind the car in front (inside holdGap): then it may drop this fast (m/s^2).")]
+    public float cautionFirmDecelMps2 = 6f;
     [Tooltip("Under a caution a car within this far (m) across from the player is in their lane: held behind if it is doing over cautionMovingMph.")]
     public float cautionLaneHalfWidth = 2.6f;
     [Tooltip("Under a caution a car slower than this (mph) is an obstacle to drive round, not a car to hold station behind.")]
@@ -57,6 +65,7 @@ public class PaceLapAssist : MonoBehaviour
     bool _leaderIsSafety;
     SafetyCar _safetyCar;
 
+    float _cautionGov = Mathf.Infinity;   // the caution hold (m/s), eased down; Infinity = not holding
     readonly Dictionary<int, Vector2> _prevPos = new();
     readonly Dictionary<int, float> _speedMps = new();
 
@@ -79,6 +88,7 @@ public class PaceLapAssist : MonoBehaviour
         {
             // Not the formation lap — drop our hold + prompt. NetworkedCarBindings owns PreGrid/Green governing.
             _leader = null; _showPrompt = false;
+            _cautionGov = Mathf.Infinity;
             _prevPos.Clear(); _speedMps.Clear();
             // Defensive: once green, make sure our last no-overtake cap is lifted so the player is never stranded
             // capped if nothing else releases the governor.
@@ -174,11 +184,13 @@ public class PaceLapAssist : MonoBehaviour
         if (track != null && track.IsOnPitSurface(transform.position) && !(RaceStart.IsCaution && PastPitExitLine(track)))
         {
             pvc.speedGovernorMps = Mathf.Infinity;
+            _cautionGov = Mathf.Infinity;
             _showPrompt = false;
             return;
         }
 
         if (RaceStart.IsCaution) { UpdateCaution(); return; }
+        _cautionGov = Mathf.Infinity;
         var field = RaceField.Drivers;
         float trackLen = 0f;
         for (int i = 0; i < field.Count; i++)
@@ -239,7 +251,16 @@ public class PaceLapAssist : MonoBehaviour
             // Nor is a car still filing out of the pit lane ahead of the player.
             bool scInPit = leaderPaceCar != null && leaderPaceCar.Pitted;
             bool noGap = scInPit || leaderOnPit;
-            if (!noGap && gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
+            // The car we should be behind is behind us (we came out of the pit lane ahead of it). It is following us,
+            // so a cap scaled off its speed fed back into itself - Texas, out of the pit exit: player at 0.8x the car
+            // behind, that car slowing to stay behind the player, round and round to a standstill on the track. Hold a
+            // fixed let-by pace instead; the car closes up on its slot and comes past.
+            if (!noGap && gap < -2f)
+            {
+                float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : 60f;
+                gov = Mathf.Max(5f, cruise - outOfPlaceLetBySlowMph) * MphToMps;
+            }
+            else if (!noGap && gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
             else if (!noGap && gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
             // The pace car peeling off for the pit in the close-up is not a car to chase: the leader holds formation
             // pace to the line, as the AI does. Chasing it ran the human away from the field just before the green.
@@ -297,7 +318,15 @@ public class PaceLapAssist : MonoBehaviour
             ahead = d;
         }
 
-        float gov = cautionMaxMph * MphToMps;
+        // Most of racing pace, read off the AI field's speed plan where the player is: drive on round until the train.
+        float raceMph = 0f;
+        for (int i = 0; i < field.Count && raceMph <= 0f; i++)
+        {
+            var d = field[i];
+            if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.GetComponent<SafetyCar>() != null) continue;
+            raceMph = d.RacePaceMphAt(playerDist);
+        }
+        float gov = raceMph > 0f ? raceMph * cautionApproachPace * MphToMps : cautionMaxMph * MphToMps;
         var paceCar = ahead != null ? ahead.GetComponent<SafetyCar>() : null;
         if (ahead != null)
         {
@@ -311,7 +340,12 @@ public class PaceLapAssist : MonoBehaviour
         if (sc != null && leading && (sc.ClosingUp || sc.Pitted))
             gov = Mathf.Min(gov, FormationDirector.Instance.CloseUpLeaderMph * MphToMps);
         if (letBy) gov = Mathf.Min(gov, Mathf.Max(5f, (FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : 60f) - cautionLetBySlowMph) * MphToMps);
-        pvc.speedGovernorMps = gov;
+        // The governor clamps the car's speed outright, so let it down gently: from the player's own speed as the flag
+        // comes out, then no faster than a lift - firmer only right up behind the car in front.
+        if (float.IsPositiveInfinity(_cautionGov)) _cautionGov = Mathf.Max(gov, pvc.SpeedMps);
+        float ease = ahead != null && gap < holdGap ? cautionFirmDecelMps2 : cautionEaseDecelMps2;
+        _cautionGov = Draftmaster.Sim.CautionRules.EaseDown(_cautionGov, gov, ease, Mathf.Max(Time.deltaTime, 1e-4f));
+        pvc.speedGovernorMps = _cautionGov;
 
         _showPrompt = true;
         _promptColor = new Color(1f, 0.85f, 0.2f);

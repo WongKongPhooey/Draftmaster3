@@ -395,6 +395,15 @@ namespace Draftmaster.Sim
             ClearSwerve();
         }
 
+        // Reset, carrying on from a car already running at `speedMph`: comfort braking eases down from there rather
+        // than starting from nothing (which lets the first step's cap drop straight to the follow law's answer).
+        public void Reset(float speedMph)
+        {
+            Reset();
+            _prevCap = Mathf.Max(0f, speedMph);
+            _hasPrevCap = true;
+        }
+
         void ClearSwerve()
         {
             _swerveId = NoCar;
@@ -503,12 +512,20 @@ namespace Draftmaster.Sim
             }
 
             // Nobody passes the pace car: whichever lane it is in, it is the car to keep station off unless
-            // something nearer is. (Only station keeping — the safety law still only brakes for what is in my lane.)
+            // something nearer is - and the safety law brakes for it in any lane too. Under a caution the field comes
+            // up to it two wide, and the car in the other lane ran on past it on comfort braking alone.
             for (int i = 0; i < n; i++)
             {
                 var c = cars[i];
                 if (!c.IsPaceCar || c.Gap <= 0f) continue;
                 if (c.Gap < leadGap) { leadGap = c.Gap; lead = i; }
+                float clear = c.Gap - me.HalfLength - c.HalfLength;
+                if (clear > 0f)
+                {
+                    float v = PackAvoidance.SafeSpeedMps(clear - s.StandstillClearM, c.SpeedMph * PackAvoidance.MphToMps,
+                        myBrake, LeadBrake(c), s.ReactionSec);
+                    if (v < safeMps) safeMps = v;
+                }
             }
 
             // --- Comfort law: hold station off the car in front, far enough back that the safety law stays quiet.

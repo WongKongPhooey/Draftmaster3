@@ -361,6 +361,40 @@ public class OvalPassingTests
         Assert.Greater(r.launchMinBumper, 1f, "The rows closed up nose to tail in the launch. " + report);
     }
 
+    // A restart after a caution: the field comes to the green single file, nose to tail behind the leader. Everyone
+    // has to be going within a couple of seconds of the green - a car-by-car accordion with a reaction each held the
+    // back of the train at pace speed for the best part of ten seconds (Josh, phone 2026-11-08: "nobody gets going on
+    // a restart, everyone is stacked up"). Nothing may touch, and the rows still have to open.
+    [Test]
+    public void ARestartSingleFile_GetsTheWholeFieldGoingWithinACoupleOfSeconds()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var raceStart = Runtime("RaceStart");
+        PassResult r;
+        try
+        {
+            calib.Invoke(null, new object[] { TrackId });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+            raceStart.GetMethod("GreenFlagNow").Invoke(null, null);
+            SpawnTrack(TrackId);
+            r = DriveField(raceStart, handOver: true, timedLaps: 1, carsPerLane: HandoverCarsPerLane, idealSingleFile: true,
+                           startSpeed: PaceGreenSpeed, rowGap: PaceGreenRowGap, traceLaunch: true, singleFile: true);
+        }
+        finally
+        {
+            calib.Invoke(null, new object[] { "" });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+        }
+        string report = r.Report();
+        Debug.Log(report);
+        Assert.AreEqual(0, r.launchContacts, "Cars touched in the launch. " + report);
+        Assert.AreEqual(0, r.wallHits, report);
+        Assert.AreEqual(0, r.spins, report);
+        Assert.Greater(r.lastWentAt, -0.5f, "Somebody never stopped holding. " + report);
+        Assert.Less(r.lastWentAt, 2.5f, "The back of the field sat at pace speed after the green. " + report);
+        Assert.Greater(r.launchMinBumper, 1f, "The field closed up nose to tail in the launch. " + report);
+    }
+
     PassResult DriveField(Type raceStart, bool handOver = false, int timedLaps = TimedLaps, int carsPerLane = CarsPerLane,
                           bool idealSingleFile = false, float startSpeed = 60f, float rowGap = HandoverRowGap,
                           bool flatOutLaunch = true, bool traceLaunch = false, float stagger = HandoverStagger,
@@ -428,7 +462,7 @@ public class OvalPassingTests
             Set(spline, "angleOffsetDeg", 180f);
             // The grid stagger (GridSpawner's lateralOffset): each row's pair either side of the racing line, the even
             // car toward the infield. Live handover only; the lane runs start on their lanes.
-            Set(spline, "lateralOffset", handOver ? (i % 2 == 0 ? 1f : -1f) * gridInside * stagger * 0.5f : 0f);
+            Set(spline, "lateralOffset", handOver && !singleFile ? (i % 2 == 0 ? 1f : -1f) * gridInside * stagger * 0.5f : 0f);
             Set(spline, "speed", startSpeed);
             Set(spline, "flatOutLaunch", flatOutLaunch);
             Set(spline, "staggeredLaunch", staggeredLaunch);
@@ -462,7 +496,8 @@ public class OvalPassingTests
             Call(spline, "Start");
             length = (float)splineType.GetProperty("TrackLength").GetValue(spline);
             Assert.Greater(length, 100f, "The AI brain never built its spline.");
-            Set(spline, "startDistance", Mathf.Repeat(handOver ? -row * rowGap : -row * RowGap - ln * RowGap * 0.5f, length));
+            // Single file (a restart after a caution): one car per row, nose to tail on the line.
+            Set(spline, "startDistance", Mathf.Repeat(singleFile ? -i * rowGap : handOver ? -row * rowGap : -row * RowGap - ln * RowGap * 0.5f, length));
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
             Set(spline, "startLanes", startLanes);
             if (startLanes && handOver && !singleFile)

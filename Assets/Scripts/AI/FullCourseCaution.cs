@@ -32,10 +32,8 @@ public class FullCourseCaution : MonoBehaviour
     public float minSecondsAfterGreen = 5f;
     [Tooltip("The track must have been clear of stopped cars this long (s) before the safety car may come in.")]
     public float clearSeconds = 3f;
-    [Tooltip("The safety car comes out at least this far (m) ahead of the race leader - further at racing speed, so the leader has room to come down to it (pickupDecelMps2).")]
+    [Tooltip("The safety car comes out at least this far (m) ahead of the race leader - further at racing speed, so the leader has room to come down to it gently (CautionRules.CautionPickupGap).")]
     public float pickupGapM = 80f;
-    [Tooltip("The braking (m/s^2) the safety car's pick-up spot allows the leader to come down from racing speed to its cruise - a firm lift, not a stamp on the brakes.")]
-    public float pickupDecelMps2 = 6f;
     [Tooltip("Road (m) the safety car must have to itself, behind and ahead, where it comes out. Pushed on up the road until it has it.")]
     public float clearRoadBehindM = 12f;
     public float clearRoadAheadM = 25f;
@@ -160,7 +158,7 @@ public class FullCourseCaution : MonoBehaviour
         float lap = scSpline.TrackLength;
         float leader = LeaderTrackDistance(out float leaderMps);
         if (leader < 0f) return;
-        float gap = CautionRules.PickupGap(leaderMps, sc.cruiseMph / 2.237f, pickupDecelMps2, pickupGapM);
+        float gap = CautionRules.CautionPickupGap(leaderMps, sc.cruiseMph / 2.237f, pickupGapM);
         float at = ClearSpot(Mathf.Repeat(leader + gap, lap), lap, scSpline);
 
         sc.DeployForCaution(at, minCautionLaps);
