@@ -51,6 +51,7 @@ public class FormationLapSimTests
 
         var directorType = Runtime("FormationDirector");
         directorType.GetProperty("Instance").GetSetMethod(true)?.Invoke(null, new object[] { null });
+        Runtime("OvalLaneDirector").GetProperty("Instance").GetSetMethod(true)?.Invoke(null, new object[] { null });
         Runtime("PitLane").GetMethod("Clear").Invoke(null, null);
         Runtime("RaceStart").GetMethod("ResetToDefault").Invoke(null, null);
     }
@@ -187,6 +188,7 @@ public class FormationLapSimTests
                                     "this ran clean, from rest the old lead-off touched twice, the new one grazes once at 0.00 m.")]
     [TestCase("Chicago")]
     [TestCase("SanDiego")]
+    [TestCase("FortWorth")]
     public void AFullFieldFormationLapHasNoContact(string trackId)
     {
         var r = Run(trackId, FieldSize);
@@ -204,6 +206,7 @@ public class FormationLapSimTests
     [TestCase("WatkinsGlen")]
     [TestCase("Daytona")]
     [TestCase("Darlington")]
+    [TestCase("FortWorth")]
     public void TheFieldGoesGreenTwoWideNearTheLine(string trackId)
     {
         var r = Run(trackId, FieldSize);
@@ -890,6 +893,16 @@ public class FormationLapSimTests
         var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var fcStep = fcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var scStep = scType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        // The oval lane director, as it bootstraps itself in the game (on, whatever this machine's PlayerPrefs say): on
+        // a lane-AI oval the pace lap runs two-wide on its start lanes (SplineDriver.startLanes).
+        var laneDirType = Runtime("OvalLaneDirector");
+        var laneDirGo = new GameObject("OvalLaneDirector");
+        _spawned.Add(laneDirGo);
+        var laneDir = laneDirGo.AddComponent(laneDirType);
+        Call(laneDir, "Awake");
+        laneDirType.GetField("_enabled", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, 1);
+        var laneDirStep = laneDirType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var posProp = splineType.GetProperty("CommandedLocalPos");
         var headProp = splineType.GetProperty("CommandedHeadingDeg");
         var onPitProp = splineType.GetProperty("IsOnPit");
@@ -928,6 +941,7 @@ public class FormationLapSimTests
         for (int step = 0; step < steps; step++)
         {
             if (playerAhead != null) DrivePlayerFree();
+            laneDirStep.Invoke(laneDir, null);   // execution order -60: first
             foreach (var fc in fcs) fcStep.Invoke(fc, null);
             scStep.Invoke(sc, null);
             directorStep?.Invoke(director, null);

@@ -153,7 +153,7 @@ public class GrandstandRaceSimTests
             fromLine[i] = -Draftmaster.Weekend.GrandstandRace.GridProgress(i, firstRow, start.spacing);
             Set(spline, "startDistance", Wrap(sf - fromLine[i], len));
             if (start.fromCorner)
-                Set(spline, "speed", (float)splineType.GetMethod("RacePaceMphAt").Invoke(spline, new object[] { Wrap(sf - fromLine[i], len), aiPace }) / 2.237f);
+                Set(spline, "speed", (float)splineType.GetMethod("RacePaceMphAt", new[] { typeof(float), typeof(float) }).Invoke(spline, new object[] { Wrap(sf - fromLine[i], len), aiPace }) / 2.237f);
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
             if (start.fromCorner)
             {
@@ -536,7 +536,7 @@ public class GrandstandRaceSimTests
         float startMph = float.MaxValue;
         foreach (var s in splines)
         {
-            float p = (float)splineType.GetMethod("RacePaceMphAt").Invoke(s, new object[] { (float)splineType.GetField("startDistance").GetValue(s), aiPace });
+            float p = (float)splineType.GetMethod("RacePaceMphAt", new[] { typeof(float), typeof(float) }).Invoke(s, new object[] { (float)splineType.GetField("startDistance").GetValue(s), aiPace });
             if (p > 1f) startMph = Mathf.Min(startMph, p);
         }
         for (int i = 0; i < cars; i++)

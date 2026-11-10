@@ -507,6 +507,33 @@ Measured by `OvalPassingTests.AGreenAtPaceSpeedRunsTheFieldFlatOutUpToSpeed`: Te
 The report carries a 2-second trace of every car (speed / plan, throttle / train brake, train gap, L launching, T the
 train binding, C changing lanes). Not play-tested.
 
+## Start lanes: two low lines for the pace lap and the launch (2026-11-10)
+
+The field still crashed into each other at Texas on the green. The pace lap's two columns sat either side of the
+racing line, which swings up the banking through every turn and the trioval, and at the green each pair was handed
+straight to the racing lanes - the outside car sent up toward the wall while the whole field was on the throttle
+together, the pairs closing wherever the drawn lines converge.
+
+Now, on a lane-AI oval (`OvalLaneDirector.Applies && Enabled`, so not the plate tracks):
+
+- **Two start lanes**, `OvalLanes.Start` built by `TrackBuilder.TryGetOvalStartLanes`: low = 2.4 m above the inside
+  edge (inside tyres 1.4 m off the apron), high = 4.4 m above that (2.4 m door to door). A fixed height all the way
+  round, so they never swing up the track.
+- **Pace lap**: `FormationController` puts each column on one (the column toward the infield on the low line),
+  `SplineDriver.SetStartLane(-1 / +1)`. The pair is fitted inside the car-centre limits (`FitColumn`) where those
+  pinch (Daytona's pit exit). Weave and close-up run on top as before. Cautions are untouched (single file).
+- **After the green**: the director gives low -> Inside, high -> Outside, and the car keeps to its start lane on top
+  of that lane (`StartLaneShiftAt`, folded into `LaneShiftAt`) with no lane changes, until its flat-out launch is over
+  (up to speed). Then it eases onto its racing lane over `startLaneReleaseSeconds` (3 s, smoothstep). A low car waits
+  while a high car beside it (`startLanePartnerMetres`, 9 m) still holds, so the pair never closes. Hard cap
+  `startLaneMaxHoldSeconds` (20 s). `SplineDriver.startLanes` off = the racing lanes from the green.
+
+Measured (EditMode sims): `FormationLapSimTests` now steps an `OvalLaneDirector` (as the game does) and has FortWorth
+cases - Texas door to door at the green 2.40 m (was 1.07 m), tyres to grass 1.36 m, 0 contacts; Daytona, Darlington,
+Martinsville, WG, Chicago, San Diego all clean. `OvalPassingTests.AGreenAtPaceSpeedRunsTheFieldFlatOutUpToSpeed(True,True)`
+(start lanes; `(True,False)` is the old grid-stagger handover, Explicit): 0 contacts / walls / spins / offs, closest
+door to door 2.09 m (1.50 m before), cars off their start lanes 14-17 s after the green. Not play-tested.
+
 ## Not done yet
 
 - **Live races not yet play-tested.** The director has only been run in the sim.

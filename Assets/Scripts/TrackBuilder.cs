@@ -658,6 +658,47 @@ public class TrackBuilder : MonoBehaviour
         return _ovalLanesOk;
     }
 
+    // The two start lanes on an oval (OvalLanes.Start): low and high, both a fixed height above the inside edge of the
+    // road, laterals per sample of `samples`. What the field runs two-wide on through the pace lap and the launch off
+    // the green (FormationController, SplineDriver.startLane). False on a road course.
+    public bool TryGetOvalStartLanes(List<Sample> samples, out float[] low, out float[] high)
+    {
+        low = high = null;
+        if (track == null || samples == null || samples.Count < 3) return false;
+        if (!Draftmaster.Tracks.OvalLanes.AppliesTo(track.name)) return false;
+        var key = (track, samples.Count, samples[samples.Count - 1].distance);
+        if (Application.isPlaying && _startLanesLow != null && _startLanesKey.Equals(key))
+        {
+            low = _startLanesLow;
+            high = _startLanesHigh;
+            return true;
+        }
+        int n = samples.Count;
+        var distance = new float[n];
+        var width = new float[n];
+        var tangent = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            distance[i] = samples[i].distance;
+            width[i] = samples[i].width;
+            tangent[i] = samples[i].tangent;
+        }
+        float insideSide = Draftmaster.Tracks.OvalLanes.InsideSide(tangent);
+        float loopLength = track.closedLoop ? distance[n - 1] : 0f;
+        Draftmaster.Tracks.OvalLanes.Build(distance, width, insideSide, loopLength, Draftmaster.Tracks.OvalLanes.Start,
+                                           out low, out high);
+        if (Application.isPlaying)
+        {
+            _startLanesKey = key;
+            _startLanesLow = low;
+            _startLanesHigh = high;
+        }
+        return true;
+    }
+
+    [System.NonSerialized] (TrackInfoV2, int, float) _startLanesKey;
+    [System.NonSerialized] float[] _startLanesLow, _startLanesHigh;
+
     [System.NonSerialized] bool _ovalLanesBuilt, _ovalLanesOk;
     [System.NonSerialized] float[] _ovalLanesInside, _ovalLanesOutside;
     [System.NonSerialized] (TrackInfoV2, long, int, float, bool, bool) _ovalLanesKey;

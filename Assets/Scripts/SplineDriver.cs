@@ -810,7 +810,130 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Staggered launch: a car ahead further than this (m, centre to centre) is not waited for.")]
     public float launchWaitGapM = 30f;
     [Tooltip("Staggered launch: the longest (s) any car holds after the green, whatever the car ahead does.")]
-    public float launchMaxHoldSeconds = 6f;
+    public float launchMaxHoldSeconds = 2.5f;
+
+    [Tooltip("Start lanes (oval lane AI): the pace lap runs two-wide on two LOW lines (OvalLanes.Start: a fixed height above the inside edge, well apart), and after the green each car keeps to its start lane - given the matching racing lane, low = inside, high = outside, with no lane changes - until it is up to speed (its flat-out launch is over), then eases onto its racing lane over startLaneReleaseSeconds. Before (Texas 2026-11-10) the green handed the pair straight to the racing lanes while the whole field was on the throttle together: the outside car was sent up toward the wall through the trioval and pairs closed on each other where the drawn lines converge. Off = the racing lanes from the green.")]
+    public bool startLanes = true;
+    [Tooltip("Start lanes: seconds to ease from the start lane onto the racing lane once up to speed (a smoothstep, so no sideways kick at either end).")]
+    public float startLaneReleaseSeconds = 3f;
+    [Tooltip("Start lanes: the longest (s) any car keeps to its start lane after the green, up to speed or not.")]
+    public float startLaneMaxHoldSeconds = 20f;
+    [Tooltip("Start lanes: a car in the low lane waits to ease off it while a car in the high lane within this (m, along the track) still holds - the low lane eases UP onto the inside racing lane, toward the car beside it.")]
+    public float startLanePartnerMetres = 9f;
+    // Which start lane FormationController has this car in on the pace lap: -1 low, +1 high, 0 none. Written every
+    // formation step and latched as the green falls (StepStartLane).
+    [System.NonSerialized] public int startLane;
+    int _startSide;                 // the start lane being held (-1 low, +1 high, 0 none)
+    float _startWeight;             // 1 holding, easing to 0 on release
+    bool _startReleasing;
+    float _startReleaseP, _startHeldSeconds;
+    float[] _startLow, _startHigh;
+    List<TrackBuilder.Sample> _startLanesFor;
+    // The start lane this car is in (-1 low, +1 high) on the pace lap and after the green until it has eased off it.
+    public int StartLaneSide => _startSide;
+    // Still on its start lane after the green (not yet easing off it).
+    public bool StartLaneHolding => _startSide != 0 && !_startReleasing;
+
+    // Puts the car in a start lane (-1 low, +1 high, 0 none) for the pace lap - FormationController, every formation
+    // step - or, in a sim that drops the green on a field already two-wide on the start lanes, as the green falls.
+    // Taken now, so the lane director handing out lanes before this car's own step sees it.
+    public void SetStartLane(int side)
+    {
+        side = System.Math.Sign(side);
+        startLane = side;
+        if (!startLanes || _onPit) side = 0;
+        if (_startSide == side && (side == 0 || !_startReleasing)) return;
+        if (RaceStart.IsGreen && _startHeldSeconds > 0f) return;   // after the green: only the next pace lap moves it
+        _startSide = side;
+        _startWeight = side != 0 ? 1f : 0f;
+        _startReleasing = false;
+        _startReleaseP = 0f;
+        _startHeldSeconds = 0f;
+    }
+
+    // Lateral (m, + right of travel) of a start lane (-1 low, +1 high) at `distance`. False off an oval.
+    public bool TryStartLaneLateralAt(int side, float distance, out float lateral)
+    {
+        lateral = 0f;
+        if (side == 0 || track == null || _mainSamples == null || _mainSamples.Count < 3) return false;
+        if (_startLanesFor != _mainSamples)
+        {
+            _startLanesFor = _mainSamples;
+            if (!track.TryGetOvalStartLanes(_mainSamples, out _startLow, out _startHigh)) _startLow = _startHigh = null;
+        }
+        var line = side < 0 ? _startLow : _startHigh;
+        if (line == null || line.Length != _mainSamples.Count) return false;
+        lateral = SampleAlongLine(line, distance, 0f);
+        return true;
+    }
+
+    // What holding the start lane adds on top of the lane line at `distance`.
+    float StartLaneShiftAt(float distance)
+    {
+        if (_startSide == 0 || !(_startWeight > 0f) || !LaneFollowing || _onPit) return 0f;
+        if (!TryStartLaneLateralAt(_startSide, distance, out float lat)) return 0f;
+        return _startWeight * (lat - LaneLateralAt(ovalLane, distance));
+    }
+
+    // Start lanes: on the pace lap, follow the lane FormationController has put the car in; after the green hold it
+    // until up to speed, then ease off it.
+    void StepStartLane()
+    {
+        float dt = Time.fixedDeltaTime;
+        if (!RaceStart.IsGreen)
+        {
+            _startSide = startLanes && !_onPit ? startLane : 0;
+            _startWeight = _startSide != 0 ? 1f : 0f;
+            _startReleasing = false;
+            _startReleaseP = 0f;
+            _startHeldSeconds = 0f;
+            return;
+        }
+        startLane = 0;   // consumed: the next pace lap sets it again
+        if (_startSide == 0) return;
+        if (!startLanes || _onPit || usePitLane)
+        {
+            _startSide = 0;
+            _startWeight = 0f;
+            return;
+        }
+        _startHeldSeconds += dt;
+        if (!_startReleasing)
+        {
+            // (Not on the green's first steps: the launch flags are only set as the train's step sees the green.)
+            bool upToSpeed = _startHeldSeconds > 0.5f && LaneFollowing && !_launchHold && !_trainLaunching && SecondsSinceLaunch >= 0f;
+            if (_startHeldSeconds > startLaneMaxHoldSeconds || upToSpeed && !(_startSide < 0 && HighLaneHeldBeside()))
+                _startReleasing = true;
+        }
+        if (_startReleasing)
+        {
+            _startReleaseP = Mathf.MoveTowards(_startReleaseP, 1f, dt / Mathf.Max(0.1f, startLaneReleaseSeconds));
+            float p = _startReleaseP;
+            _startWeight = 1f - p * p * (3f - 2f * p);
+            if (_startReleaseP >= 1f)
+            {
+                _startSide = 0;
+                _startWeight = 0f;
+            }
+        }
+    }
+
+    // A car in the high start lane, still holding it, within startLanePartnerMetres along the track.
+    bool HighLaneHeldBeside()
+    {
+        float len = _mainLength;
+        if (!(len > 0f)) return false;
+        float myD = CentreDistanceOnTrack;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var o = drivers[i];
+            if (o == null || o == this || !o.isActiveAndEnabled || o._startSide <= 0 || !o.StartLaneHolding) continue;
+            float along = Mathf.Abs(Mathf.Repeat(o.CentreDistanceOnTrack - myD + len * 0.5f, len) - len * 0.5f);
+            if (along <= startLanePartnerMetres) return true;
+        }
+        return false;
+    }
     bool _launchHold;          // holding the green speed until the car ahead goes (staggeredLaunch)
     // Whether this car is still holding its speed for the car ahead to go (staggeredLaunch).
     public bool LaunchHolding => _launchHold;
@@ -965,7 +1088,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // What a lane change adds on top of the line (ovalLane's lane) at `distance`: the rest of the way back to the old
     // lane, (old - new) x (1 - progress). Read ahead of the brain's point, the progress is projected at the move's
     // current rate, so the steering aims at where the blend will be when the car gets there.
-    float LaneShiftAt(float distance)
+    float LaneShiftAt(float distance) => LaneChangeShiftAt(distance) + StartLaneShiftAt(distance);
+
+    float LaneChangeShiftAt(float distance)
     {
         if (!LaneChanging || _onPit) return 0f;
         float p = _laneP;
@@ -1015,8 +1140,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         _laneCooldown -= dt;
+        // Nor while still on (or easing off) a start lane: the field stays two-wide in its start lanes until up to speed.
         if (!LaneFollowing || !lanePassing || _onPit || usePitLane || _pitApproachBlend > 0f || _apronEntryActive || _apronExitBlend > 0f
-            || !RaceStart.IsGreen)
+            || !RaceStart.IsGreen || _startSide != 0)
         {
             _passAdvantage = 0f;
             return;
@@ -2315,6 +2441,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (_mainSamples == null || _mainSamples.Count < 2) return;
 
+        // Start lanes: the pace lap's low two-wide lines, held after the green until up to speed.
+        StepStartLane();
         // Passing by lane change (lanePassing): may set a new ovalLane, re-laid just below on this same step.
         StepLaneChange();
         // A new oval lane assignment: re-lay the line, and the curvature and speed plan built on it.

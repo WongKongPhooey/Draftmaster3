@@ -597,6 +597,31 @@ public class FormationController : MonoBehaviour
         // swinging across a corner — at the gentle weave slew the inside car lagged into its partner alongside. Only
         // in the close-up, where the rows are drawn level side by side; the staggered train before it never needed it.
         bool squeezed = Mathf.Abs(fitted - column) > 0.05f;
+        // Start lanes (lane-AI ovals): the two columns run the two low start lines instead - a fixed height above the
+        // inside edge and well apart, not offsets either side of the racing line, which swings up the banking through
+        // every turn and the trioval. The column toward the infield takes the low line. The car keeps to it after the
+        // green until up to speed (SplineDriver.startLanes).
+        int startSide = 0;
+        if (!caution && !settling && !makingWay && !_spline.usePitLane && column != 0f && _spline.startLanes
+            && OvalLaneDirector.Applies && OvalLaneDirector.Enabled)
+        {
+            float infield = _spline.InfieldSide;
+            int side = infield == 0f ? 0 : column * infield > 0f ? -1 : 1;
+            float at = _spline.CentreDistanceOnTrack;
+            if (side != 0 && _spline.TryStartLaneLateralAt(-1, at, out float lowLat) && _spline.TryStartLaneLateralAt(1, at, out float highLat))
+            {
+                startSide = side;
+                // The pair fitted inside the car-centre limits as the columns are (FitColumn): the limits pinch in
+                // under the road's width in places (Daytona's pit exit), and clamped there the low car was pushed up
+                // into its partner.
+                float mid = 0.5f * (lowLat + highLat), half = 0.5f * Mathf.Abs(highLat - lowLat);
+                float mine = (side < 0 ? lowLat : highLat) - mid;
+                // No columnEdgeMarginM: the start lanes keep their own room from the edges.
+                float fit = FormationLanes.FitColumn(mine >= 0f ? half : -half, mid, boundLo, boundHi);
+                fitted = mid + fit - _spline.UntacticalLateral;
+            }
+        }
+        _spline.SetStartLane(startSide);
         column = fitted;
         float line = _spline.UntacticalLateral;
         float lineRate = _hasPrevLine ? Mathf.Min(Mathf.Abs(line - _prevLine) / Mathf.Max(dt, 1e-4f), MaxLineRate) : 0f;
@@ -627,7 +652,9 @@ public class FormationController : MonoBehaviour
             // leader pitted): the caution catch-up lifts it the same way.
             CruiseMph = yielding ? baseCap : cruise + Mathf.Max(farBonus, cautionBonus),
             ColumnTactical = column + weave,
-            ColumnSlew = squeezed && closingUp ? Mathf.Max(weaveSlewPerSec, pack.SwerveSlewPerSec) + lineRate
+            // On a start lane the column is the gap from the racing line to a fixed line: it must keep up with the
+            // racing line swinging across the road as the squeezed pair's does.
+            ColumnSlew = (squeezed && closingUp) || startSide != 0 ? Mathf.Max(weaveSlewPerSec, pack.SwerveSlewPerSec) + lineRate
                        : makingWay ? Mathf.Max(weaveSlewPerSec, cautionYieldSlewPerSec) : weaveSlewPerSec,
             // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.
             AllowSwerve = !settling,

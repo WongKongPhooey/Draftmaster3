@@ -113,7 +113,8 @@ public class OvalLaneDirector : MonoBehaviour
             if (lane == OvalLanes.Lane.None) continue;
             d.ovalLane = lane;
             d.RelayLaneNow();   // lay the lane now, to hand it over from where the car is relative to its line
-            float off = d.CarLateral - d.LaneLateralAt(lane, d.CentreDistanceOnTrack);
+            // Off the line it is meant to be on now: its start lane while it holds one (SplineDriver.startLanes).
+            float off = d.CarLateral - d.LaneTargetLateralAt(d.CentreDistanceOnTrack);
             d.lateralOffset = Mathf.Clamp(off, -maxHandoverOffset, maxHandoverOffset);
             _given.Add(d);
             if (d.TryGetComponent<PracticeAIStint>(out _)) _easing.Add(d);
@@ -169,6 +170,10 @@ public class OvalLaneDirector : MonoBehaviour
 
     OvalLanes.Lane Choose(SplineDriver self, IReadOnlyList<SplineDriver> drivers)
     {
+        // Off the pace lap's start lanes: low takes the inside lane, high the outside, and the car keeps to its start
+        // lane on top of it until up to speed.
+        if (self.StartLaneSide < 0) return OvalLanes.Lane.Inside;
+        if (self.StartLaneSide > 0) return OvalLanes.Lane.Outside;
         float myD = self.CentreDistanceOnTrack, myLat = self.CarLateral;
         float myIn = myLat * _insideSide;   // how far toward the infield
         bool besideInner = false, besideOuter = false;

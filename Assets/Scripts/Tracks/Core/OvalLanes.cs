@@ -65,6 +65,23 @@ namespace Draftmaster.Tracks
             frontStretchOutsideEdgeRelief = 0.4f,
         };
 
+        // The two start lanes (Build with this spec): where the field runs two-wide on the pace lap and through the
+        // launch off the green, until it is up to speed (SplineDriver.startLane). Both low on the banking at a fixed
+        // height above the inside edge all the way round, so they never swing up the track with the racing lines
+        // through the turns and the trioval, and never come near the wall: the low lane's centre 2.4 m up (inside
+        // tyres 1.4 m off the apron - a dynamic car can run a metre wide of its target under braking at the green),
+        // the high lane 4.4 m above it - 2.4 m between the doors, so the pace lap's weave (+-0.45 m each) still
+        // leaves 1.5 m. On the racing lanes at the green (Texas 2026-11-10) the outside
+        // car was run up toward the wall through the trioval while the field was still on the throttle together,
+        // and the pairs closed on each other wherever the drawn lines converged.
+        public static readonly Spec Start = new Spec
+        {
+            insideEdgeMargin = 2.4f,
+            laneSpacing = 4.4f,
+            outsideEdgeMargin = 1.8f,
+            smoothingMetres = 40f,
+        };
+
         // Whether the track with this id is raced in lanes: any kind but a road course, from the published
         // dimensions table. An unknown id (a test track, a hand-built scene) is never an oval.
         public static bool AppliesTo(string trackId) =>

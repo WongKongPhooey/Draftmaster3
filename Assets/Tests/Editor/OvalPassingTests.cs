@@ -121,6 +121,12 @@ public class OvalPassingTests
     [TearDown]
     public void Despawn()
     {
+        // Out of RaceField / FormationOrder first (the cars' OnEnable was called by hand, so destroying them in edit
+        // mode never runs OnDisable): left in, the next fixture's code walked into destroyed SplineDrivers
+        // (PaceLapAssistPitRoadTests, run after this one).
+        var splineType = Runtime("SplineDriver");
+        foreach (var c in _cars)
+            if (c != null && c.TryGetComponent(splineType, out var sd)) Call(sd, "OnDisable");
         foreach (var c in _cars) if (c != null) UnityEngine.Object.DestroyImmediate(c);
         _cars.Clear();
         if (_package != null) UnityEngine.Object.DestroyImmediate(_package);
@@ -161,6 +167,8 @@ public class OvalPassingTests
         public readonly StringBuilder launchTrace = new StringBuilder();
         public float LaunchMeanThrottle => launchAllSteps > 0 ? (float)(launchThrottleSum / launchAllSteps) : 0f;
         public float lastUpToSpeed = -1f, fieldLengthAtGreen, fieldLengthAfterLaunch;
+        public float lastWentAt = -1f;   // s after the green the last car stopped holding for the one ahead (staggeredLaunch)
+        public float firstStartLaneOffAt = -1f, lastStartLaneOffAt = -1f;   // s after the green the first / last car was off its start lane (SplineDriver.startLanes)
         public float LaunchLiftShare => launchSteps > 0 ? launchLifted / (float)launchSteps : 0f;
         public int[] changesByCar;
         public readonly StringBuilder incidents = new StringBuilder();
@@ -178,7 +186,7 @@ public class OvalPassingTests
             if (singleSteps > 0 || pairSteps > 0)
                 sb.Append($"\n  single file on the ideal {SingleOnIdealShare:P1} of {singleSteps} car-steps; side by side split inside/outside {PairSplitShare:P1} of {pairSteps} pair-steps");
             if (launchSteps > 0)
-                sb.Append($"\n  launch: off full throttle {LaunchLiftShare:P1} of {launchSteps} car-steps short of speed ({launchLiftedByTrain} of them the train; {launchHoldSteps} more holding for the restart line); until the first car is up to speed ({flatSeconds:0.0} s) mean throttle {FlatMeanThrottle:0.000}; every car: mean throttle {LaunchMeanThrottle:0.000}, closest nose to tail {launchMinBumper:0.00} m at {launchMinBumperAt:0.0} s, braking for the car ahead {launchBrakeSteps} of {launchAllSteps} car-steps, contacts {launchContacts}; last car up to speed {lastUpToSpeed:0.0} s; field length {fieldLengthAtGreen:0} m at the green, {fieldLengthAfterLaunch:0} m at {LaunchWindowSeconds:0} s");
+                sb.Append($"\n  launch: off full throttle {LaunchLiftShare:P1} of {launchSteps} car-steps short of speed ({launchLiftedByTrain} of them the train; {launchHoldSteps} more holding for the restart line); until the first car is up to speed ({flatSeconds:0.0} s) mean throttle {FlatMeanThrottle:0.000}; every car: mean throttle {LaunchMeanThrottle:0.000}, closest nose to tail {launchMinBumper:0.00} m at {launchMinBumperAt:0.0} s, braking for the car ahead {launchBrakeSteps} of {launchAllSteps} car-steps, contacts {launchContacts}; last car got going {lastWentAt:0.0} s, up to speed {lastUpToSpeed:0.0} s; start lanes: first car off {firstStartLaneOffAt:0.0} s, last {lastStartLaneOffAt:0.0} s; closest door to door {launchMinDoor:0.00} m at {launchMinDoorAt:0.0} s; field length {fieldLengthAtGreen:0} m at the green, {fieldLengthAfterLaunch:0} m at {LaunchWindowSeconds:0} s");
             if (changesByCar != null) sb.Append($"\n  lane changes by car (start order): {string.Join(" ", Array.ConvertAll(changesByCar, c => c.ToString()))}");
             sb.Append(incidents);
             sb.Append(launchTrace);
@@ -307,9 +315,10 @@ public class OvalPassingTests
     // FormationController brings them to the line). Every car should be flat out until it is up to speed (the train's
     // flat-out launch), and nothing may touch. The Explicit false case is the comparison: the time-gap law from the
     // green (SplineDriver.flatOutLaunch off), reported, not asserted.
-    [TestCase(true)]
-    [TestCase(false, Explicit = true, Reason = "Comparison only: the old time-gap law from the green.")]
-    public void AGreenAtPaceSpeedRunsTheFieldFlatOutUpToSpeed(bool flatOutLaunch)
+    [TestCase(true, true)]
+    [TestCase(true, false, Explicit = true, Reason = "Comparison only: the grid stagger either side of the racing line, handed the racing lanes at the green (before the start lanes).")]
+    [TestCase(false, false, Explicit = true, Reason = "Comparison only: the old time-gap law from the green.")]
+    public void AGreenAtPaceSpeedRunsTheFieldFlatOutUpToSpeed(bool flatOutLaunch, bool startLanes)
     {
         var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
         var raceStart = Runtime("RaceStart");
@@ -321,7 +330,8 @@ public class OvalPassingTests
             raceStart.GetMethod("GreenFlagNow").Invoke(null, null);
             SpawnTrack(TrackId);
             r = DriveField(raceStart, handOver: true, timedLaps: PaceGreenLaps, carsPerLane: HandoverCarsPerLane, idealSingleFile: true,
-                           startSpeed: PaceGreenSpeed, rowGap: PaceGreenRowGap, flatOutLaunch: flatOutLaunch, traceLaunch: true);
+                           startSpeed: PaceGreenSpeed, rowGap: PaceGreenRowGap, flatOutLaunch: flatOutLaunch, traceLaunch: true,
+                           startLanes: startLanes);
         }
         finally
         {
@@ -331,7 +341,12 @@ public class OvalPassingTests
 
         string report = r.Report();
         Debug.Log(report);
-        if (!flatOutLaunch) return;
+        if (!flatOutLaunch || !startLanes) return;
+        // On the start lanes the pairs keep well apart until up to speed (2.4 m between the doors less the dynamic
+        // cars' wander), where on the racing lanes they closed on each other wherever the drawn lines converge.
+        Assert.Greater(r.launchMinDoor, 1f, "The pairs closed on each other in the launch. " + report);
+        // ...and once up to speed they go on to the racing lanes.
+        Assert.Greater(r.lastStartLaneOffAt, 0f, "Somebody never left their start lane. " + report);
         Assert.AreEqual(PaceGreenLaps, r.laps, "The field didn't finish its laps. " + report);
         // Contacts in the launch only: the lane-change contacts at ~1545 m that the other Texas sims also hit (a known,
         // separate problem) fall after it.
@@ -349,7 +364,7 @@ public class OvalPassingTests
     PassResult DriveField(Type raceStart, bool handOver = false, int timedLaps = TimedLaps, int carsPerLane = CarsPerLane,
                           bool idealSingleFile = false, float startSpeed = 60f, float rowGap = HandoverRowGap,
                           bool flatOutLaunch = true, bool traceLaunch = false, float stagger = HandoverStagger,
-                          bool staggeredLaunch = true)
+                          bool staggeredLaunch = true, bool singleFile = false, bool startLanes = false)
     {
         var trackType = Runtime("TrackBuilder");
         var track = (Component)_package.GetComponentInChildren(trackType, true);
@@ -449,6 +464,21 @@ public class OvalPassingTests
             Assert.Greater(length, 100f, "The AI brain never built its spline.");
             Set(spline, "startDistance", Mathf.Repeat(handOver ? -row * rowGap : -row * RowGap - ln * RowGap * 0.5f, length));
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+            Set(spline, "startLanes", startLanes);
+            if (startLanes && handOver && !singleFile)
+            {
+                // Two-wide on the start lanes as the pace lap brings them to the line (FormationController): the even
+                // car (toward the infield) low, the odd car high.
+                int side = i % 2 == 0 ? -1 : 1;
+                splineType.GetMethod("SetStartLane").Invoke(spline, new object[] { side });
+                float at = (float)splineType.GetProperty("CentreDistanceOnTrack").GetValue(spline);
+                var args = new object[] { side, at, 0f };
+                Assert.IsTrue((bool)splineType.GetMethod("TryStartLaneLateralAt").Invoke(spline, args), "No start lanes at Texas.");
+                float lineLat = (float)splineType.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(float) }, null)
+                                                 .Invoke(spline, new object[] { at });
+                Set(spline, "lateralOffset", (float)args[2] - lineLat);
+                splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+            }
             Call(input, "OnEnable");
             if (!handOver)
                 Assert.IsTrue((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "A car isn't following its lane.");
@@ -517,6 +547,7 @@ public class OvalPassingTests
         var trainLaunching = splineType.GetProperty("TrainLaunching");
         var desiredMph = splineType.GetProperty("DesiredMph");
         var holding = splineType.GetProperty("LaunchHolding");
+        var startSide = splineType.GetProperty("StartLaneSide");
         var upToSpeed = new bool[cars];
         var onLegal = Runtime("LapTimingManager").GetMethod("OnLegalSurface", BindingFlags.Public | BindingFlags.Static);
 
@@ -630,6 +661,19 @@ public class OvalPassingTests
                     }
                 }
                 if (allUp && r.lastUpToSpeed < 0f) r.lastUpToSpeed = clock;
+                if (r.lastStartLaneOffAt < 0f)
+                {
+                    int onStart = 0;
+                    for (int i = 0; i < cars; i++) if ((int)startSide.GetValue(splines[i]) != 0) onStart++;
+                    if (onStart < cars && r.firstStartLaneOffAt < 0f) r.firstStartLaneOffAt = clock;
+                    if (onStart == 0) r.lastStartLaneOffAt = clock;
+                }
+                if (r.lastWentAt < 0f)
+                {
+                    bool anyHolding = false;
+                    for (int i = 0; i < cars; i++) anyHolding |= (bool)holding.GetValue(splines[i]);
+                    if (!anyHolding) r.lastWentAt = clock;
+                }
                 if (traceLaunch && (step % Mathf.Max(1, Mathf.RoundToInt(2f / dt)) == 0))
                 {
                     // Each car in start order: speed / plan (m/s), throttle, train brake, train gap (m), L = launching,
