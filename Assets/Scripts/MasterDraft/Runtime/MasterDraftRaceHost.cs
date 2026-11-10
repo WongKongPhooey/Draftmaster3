@@ -17,6 +17,11 @@ using UnityEngine.SceneManagement;
 //    (TeamEffects).
 //  * The flag: when the results go up, coins are paid through the backend by finishing position plus a bonus
 //    per card played, and the results screen offers the way back to the Master Draft menu (RaceDirector).
+//
+// A championship round (MasterDraftRaceLauncher.LaunchSeriesRound, session.Pending.series) has no cards: the host
+// sets the race distance before the green, gives the player's car its class step (CarProgression.PowerScale /
+// GripScale through card*Scale), and at the flag scores the round (SeriesRace.RecordResult -> RaceRewards), saves
+// the profile and leaves the result for the Series screen.
 public class MasterDraftRaceHost : MonoBehaviour
 {
     public static MasterDraftRaceHost Instance { get; private set; }
@@ -39,6 +44,8 @@ public class MasterDraftRaceHost : MonoBehaviour
     }
 
     RaceHand _hand;
+    SeriesRacePlan _series;
+    MasterDraftSession.SeriesOutcome _seriesOutcome;
     readonly ActiveEffects _effects = new();
     MasterDraftSession _session;
     CardDefinition _carCard, _chiefCard, _driverCard;
@@ -65,6 +72,7 @@ public class MasterDraftRaceHost : MonoBehaviour
         {
             var host = Instance;
             if (host == null) return "";
+            if (host._series != null) return host.SeriesLine();
             if (host._coinsAwarded < 0) return "Paying out…";
             return $"Coins +{host._coinsAwarded}   Cards played {host._hand?.CardsPlayed ?? 0}";
         }
@@ -91,6 +99,8 @@ public class MasterDraftRaceHost : MonoBehaviour
     {
         _session = MasterDraftSession.Instance;
         var profile = _session.Profile;
+        _series = _session.Pending?.series;
+        if (_series != null) return;   // a championship round: no cards, no team
         var team = profile.team;
         _driverCard = profile.Find(_session.Pending?.driverUid)?.def;
         _carCard = profile.Find(team.car)?.def;
@@ -124,6 +134,19 @@ public class MasterDraftRaceHost : MonoBehaviour
 
     void Update()
     {
+        if (_series != null)
+        {
+            FindCar();
+            if (_car != null)
+            {
+                _car.cardPowerScale = _series.powerScale;
+                _car.cardGripScale = _series.gripScale;
+                _car.cardDraftScale = 1f;
+            }
+            SetRaceDistance();
+            ScoreRoundAtTheFlag();
+            return;
+        }
         if (_hand == null) return;
         FindCar();
         ApplyTeamAndEffects();
@@ -215,6 +238,48 @@ public class MasterDraftRaceHost : MonoBehaviour
             var drawn = _hand.OnStartFinishCrossed();
             Toast(drawn != null ? $"Drew {drawn.name}" : _hand.Hand.Count >= RaceHand.HandCap ? "Hand full — no card drawn" : "Deck empty");
         }
+    }
+
+    // RaceDirector reads raceLaps once, at the green (as AIOnlyRaceWatch sets it).
+    void SetRaceDistance()
+    {
+        var director = RaceDirector.Instance;
+        if (director != null && _series.laps > 0 && director.ScheduledLaps < 0 && director.raceLaps != _series.laps)
+            director.raceLaps = _series.laps;
+    }
+
+    async void ScoreRoundAtTheFlag()
+    {
+        if (_awarded || !RaceDirector.InResults || _session == null) return;
+        _awarded = true;
+        ReleaseCar();   // a victory lap after the flag runs stock
+
+        var outcome = new MasterDraftSession.SeriesOutcome { plan = _series };
+        try
+        {
+            var def = _session.Series?.Get(_series.seriesId);
+            outcome.rewards = SeriesRace.RecordResult(_session.Profile, def, _series.seriesId,
+                RaceDirector.ClassifiedCarNumbers(), RaceDirector.PlayerFinishPosition, _session.Cars);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            outcome.error = "This round couldn't be scored.";
+        }
+        _session.LastSeries = outcome;
+        _seriesOutcome = outcome;
+        if (outcome.rewards != null && _session.Backend != null) await _session.Backend.SaveProfile();
+    }
+
+    string SeriesLine()
+    {
+        var o = _seriesOutcome;
+        if (o == null) return $"{_series.seriesName}  Round {_series.round}/{_series.rounds}";
+        if (o.rewards == null) return o.error;
+        var r = o.rewards;
+        string line = $"Round {r.round.round}/{_series.rounds}  +{r.round.playerPoints} pts  XP +{r.xp}";
+        if (r.championshipOver) line += $"   Champ P{r.championshipPosition}  +{r.money:N0}";
+        return line;
     }
 
     async void PayOutAtTheFlag()

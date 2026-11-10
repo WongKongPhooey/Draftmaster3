@@ -21,10 +21,17 @@ public static class AIDifficulty
         set { PlayerPrefs.SetInt(KeyAggression, AIDifficultyRules.ClampAggression(value)); PlayerPrefs.Save(); }
     }
 
+    // A Master Draft championship round sets the field's strength from the series' AI level
+    // (Draftmaster.MasterDraft.SeriesRace.AiStrength), in place of the saved setting. Set by MasterDraftRaceLauncher
+    // before the race scene loads; only read in GameSession.Mode.MasterDraft. 0 = none (use the setting).
+    public static float MasterDraftStrengthScale;
+
     // On top of AIPaceCalibration.ApplyFor: the field's grip and power, together.
     public static void ApplyStrength()
     {
-        float s = AIDifficultyRules.StrengthScale(StrengthPercent);
+        float s = GameSession.IsMasterDraft && MasterDraftStrengthScale > 0f
+            ? MasterDraftStrengthScale
+            : AIDifficultyRules.StrengthScale(StrengthPercent);
         TrackConditions.AiGripMultiplier *= s;
         TrackConditions.AiPaceMultiplier *= s;
     }

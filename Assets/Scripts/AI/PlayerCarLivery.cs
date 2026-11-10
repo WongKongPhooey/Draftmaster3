@@ -13,6 +13,10 @@ using UnityEngine.SceneManagement;
 // Single race only. The career keeps the scene's car; the saved number means something else there.
 public static class PlayerCarLivery
 {
+    // The livery sprite a Master Draft championship round races in ("cup22livery24"), set by
+    // MasterDraftRaceLauncher before the race scene loads; only read in GameSession.Mode.MasterDraft. Null = none.
+    public static string MasterDraftLivery;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void Install()
     {
@@ -23,6 +27,14 @@ public static class PlayerCarLivery
     static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (!GameSession.IsOneOffRace) return;
+
+        // A Master Draft championship round names the whole livery: its car can come from any carset.
+        if (GameSession.IsMasterDraft && !string.IsNullOrEmpty(MasterDraftLivery))
+        {
+            var mdCar = CarIdentity.FindPlayerCar();
+            if (mdCar != null && mdCar.scene == scene) ApplySprite(mdCar, MasterDraftLivery);
+            return;
+        }
 
         int number = PlayerPrefs.GetInt(PlayerDriver.NumberKey, 0);
         if (number <= 0) return;
@@ -49,6 +61,22 @@ public static class PlayerCarLivery
 
         string name = LiveryName(current.name, number);
         if (name == null) return false;
+
+        return ApplySprite(car, name);
+    }
+
+    // Repaint `car` in the livery sprite `name` from Resources. False (car untouched) when it already wears it or
+    // the sprite isn't there.
+    public static bool ApplySprite(GameObject car, string name)
+    {
+        if (car == null || string.IsNullOrEmpty(name)) return false;
+
+        var damage = car.GetComponentInChildren<VehicleDamage>();
+        var sr = car.GetComponentInChildren<SpriteRenderer>();
+        Sprite current = damage != null && damage.sourceSprite != null ? damage.sourceSprite
+                       : (sr != null ? sr.sprite : null);
+        if (current == null) return false;
+        if (string.Equals(current.name, name, System.StringComparison.OrdinalIgnoreCase)) return false;
 
         var livery = Resources.Load<Sprite>(name);
         if (livery == null)

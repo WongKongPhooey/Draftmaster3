@@ -24,6 +24,15 @@ public class MasterDraftSession : MonoBehaviour
     {
         public string trackId;
         public string driverUid;
+        public SeriesRacePlan series;   // set for a championship round (no cards); null for a card Quick Race
+    }
+
+    // A championship round's result, for the Series screen to show on the way back.
+    public class SeriesOutcome
+    {
+        public SeriesRacePlan plan;
+        public RaceRewardSummary rewards;   // null if the round couldn't be scored
+        public string error = "";           // why not
     }
 
     [Serializable]
@@ -38,6 +47,42 @@ public class MasterDraftSession : MonoBehaviour
 
     public PendingRace Pending { get; set; }
     public RaceOutcome LastRace { get; set; }
+    public SeriesOutcome LastSeries { get; set; }
+
+    // The car catalogue (Resources/MasterDraft/Cars.json): the local backend's copy, else loaded here. Null if missing.
+    public CarCatalog Cars
+    {
+        get
+        {
+            if (Backend is LocalMasterDraftBackend local && local.Cars != null) return local.Cars;
+            if (_cars != null) return _cars;
+            MasterDraftJsonInstaller.Install();
+            var text = Resources.Load<TextAsset>(CarCatalog.ResourcePath);
+            return _cars = text == null ? null : CarCatalog.FromJson(text.text);
+        }
+    }
+
+    // Every series (Resources/MasterDraft/Series.json), loaded on first use. Null if missing.
+    public DraftSeriesCatalog Series
+    {
+        get
+        {
+            if (_series != null) return _series;
+            _series = LoadSeries();
+            if (_series == null) Debug.LogWarning($"[MasterDraft] No series at Resources/{DraftSeriesCatalog.ResourcePath}.");
+            return _series;
+        }
+    }
+
+    public static DraftSeriesCatalog LoadSeries()
+    {
+        MasterDraftJsonInstaller.Install();
+        var text = Resources.Load<TextAsset>(DraftSeriesCatalog.ResourcePath);
+        return text == null ? null : DraftSeriesCatalog.FromJson(text.text);
+    }
+
+    CarCatalog _cars;
+    DraftSeriesCatalog _series;
 
     // True between GO and the return to the Master Draft menu.
     public bool InRace => Pending != null;

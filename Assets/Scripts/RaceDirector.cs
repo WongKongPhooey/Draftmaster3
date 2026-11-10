@@ -55,6 +55,16 @@ public class RaceDirector : MonoBehaviour
 
     public static int ClassifiedCount => Instance != null && Instance._phase >= Phase.Results ? Instance._results.Count : 0;
 
+    // The classification's car numbers, winner first, the player's included; empty before the results are up.
+    // Read by MasterDraftRaceHost to score a Master Draft championship round.
+    public static List<int> ClassifiedCarNumbers()
+    {
+        var list = new List<int>();
+        if (Instance == null || Instance._phase < Phase.Results) return list;
+        foreach (var r in Instance._results) list.Add(r.carNumber);
+        return list;
+    }
+
     // How far through the race the leader is, 0 at the green and 1 at the checkered, counted in whole
     // laps plus the leader's fraction of the current one. The AI reads this to settle in early and charge
     // over the closing laps (Draftmaster.Sim.RaceCraft).

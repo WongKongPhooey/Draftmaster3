@@ -2,13 +2,17 @@ using Draftmaster.MasterDraft;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// GO on the Go Race screen: hands a Quick Race to the shared race scene the way SINGLE RACE does, but in
-// GameSession.Mode.MasterDraft, so the race scene spawns a MasterDraftRaceHost (action hand, team effects,
-// coins at the flag) and its results screen offers the way back to the Master Draft menu.
+// Hands a Master Draft race to the shared race scene the way SINGLE RACE does, but in GameSession.Mode.MasterDraft,
+// so the race scene spawns a MasterDraftRaceHost and its results screen offers the way back to the Master Draft menu.
 //
-// The race reads which track, which driver and whether the session is live from the career's own
-// PlayerPrefs keys, so those are parked first (OneOffRacePrefs) and put back when the Master Draft menu or
-// the title screen next opens.
+//  * LaunchSeriesRound (the Series screen): the next round of a championship in progress — its track, laps, the
+//    championship car's livery, number and name, the series' AI level as the field's strength
+//    (AIDifficulty.MasterDraftStrengthScale) and the car's class step (applied by the host). No cards.
+//  * Launch (Go Race, the card mode until it retires): a Quick Race with the action hand and team effects.
+//
+// The race reads which track, which driver and whether the session is live from the career's own PlayerPrefs
+// keys, so those are parked first (OneOffRacePrefs) and put back when the Master Draft menu or the title screen
+// next opens.
 public static class MasterDraftRaceLauncher
 {
     public const string RaceScene = "RaceScene";
@@ -34,15 +38,60 @@ public static class MasterDraftRaceLauncher
         if (!string.IsNullOrWhiteSpace(driver.def.name)) PlayerPrefs.SetString(PlayerDriver.NameKey, driver.def.name);
         PlayerPrefs.Save();
 
+        // A card race runs the field at the OPTIONS strength in the scene's own paint scheme family.
+        AIDifficulty.MasterDraftStrengthScale = 0f;
+        PlayerCarLivery.MasterDraftLivery = null;
+
         session.Pending = new MasterDraftSession.PendingRace { trackId = trackId, driverUid = driver.uid };
         session.LastRace = null;
+        session.LastSeries = null;
 
-        // One race, live the moment the scene loads, no career around it — the SINGLE RACE shape.
+        GoLive();
+        return null;
+    }
+
+    // The next round of the championship in progress for seriesId. Null on success (the scene is loading),
+    // otherwise why not.
+    public static string LaunchSeriesRound(string seriesId)
+    {
+        var session = MasterDraftSession.Instance;
+        if (session == null || session.Profile == null) return "Your garage isn't loaded.";
+
+        var series = session.Series?.Get(seriesId);
+        var plan = SeriesRace.Plan(session.Profile, seriesId, session.Cars, out string error, series);
+        if (plan == null) return error;
+        if (!TrackCatalog.HasGeometry(plan.trackId)) return $"{TrackCatalog.DisplayName(plan.trackId)} has no layout built.";
+        if (!Application.CanStreamedLevelBeLoaded(RaceScene)) return $"{RaceScene} isn't in the build settings.";
+
+        OneOffRacePrefs.Capture();
+        if (!TrackSelection.Select(plan.trackId)) return $"Couldn't select {plan.trackId}.";
+        Stage(plan);
+
+        session.Pending = new MasterDraftSession.PendingRace { trackId = plan.trackId, series = plan };
+        session.LastRace = null;
+        session.LastSeries = null;
+
+        GoLive();
+        return null;
+    }
+
+    // What the race scene reads before anything in it starts: who the player is, the paint, the field's strength.
+    // Laps and the class step are the host's (MasterDraftRaceHost), from session.Pending.series.
+    public static void Stage(SeriesRacePlan plan)
+    {
+        if (plan.number > 0) PlayerPrefs.SetInt(PlayerDriver.NumberKey, plan.number);
+        if (!string.IsNullOrWhiteSpace(plan.driver)) PlayerPrefs.SetString(PlayerDriver.NameKey, plan.driver);
+        PlayerPrefs.Save();
+        PlayerCarLivery.MasterDraftLivery = plan.livery;
+        AIDifficulty.MasterDraftStrengthScale = plan.aiStrength;
+    }
+
+    // One race, live the moment the scene loads, no career around it — the SINGLE RACE shape.
+    static void GoLive()
+    {
         GameSession.CurrentMode = GameSession.Mode.MasterDraft;
         RaceWeekend.Current = RaceWeekend.Session.Race;
         RaceWeekend.SessionLive = true;
-
         SceneManager.LoadScene(RaceScene);
-        return null;
     }
 }

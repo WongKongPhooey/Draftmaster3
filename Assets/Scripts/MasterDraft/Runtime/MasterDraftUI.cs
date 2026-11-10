@@ -12,8 +12,8 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// MASTER DRAFT's menu: Garage (the screen the mode opens on), then the card mode's Home, Go Race, My Team,
-// Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
+// MASTER DRAFT's menu: Garage (the screen the mode opens on), Series (DM2's championships, raced in RaceScene),
+// then the card mode's Home, Go Race, My Team, Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
 // screens stay reachable until the rework retires them (Docs/MasterDraft-Rework.md, row 9). One scene (Assets/Scenes/MasterDraft.unity, built by
 // Draftmaster > Master Draft > Build Master Draft Scene), one component.
 //
@@ -24,17 +24,17 @@ using UnityEngine.UI;
 //
 // INPUT. One focus, moved spatially: arrows / WASD / d-pad step to the nearest item in that direction,
 // Enter / Space / E / pad South confirm, Esc / Backspace / pad East back out (overlay -> screen -> Garage ->
-// title). Tab / Shift+Tab, 1-6 or the shoulder buttons change screen. Every item is also a Button, so a tap
+// title). Tab / Shift+Tab, 1-7 or the shoulder buttons change screen. Every item is also a Button, so a tap
 // or a click picks it outright.
 public class MasterDraftUI : MonoBehaviour
 {
     [Tooltip("Scene BACK returns to from Home. Must be in the build settings.")]
     public string titleSceneName = "TitleScreen";
 
-    enum Tab { Garage, Home, GoRace, MyTeam, Packs, Trades }
-    enum Overlay { None, Reveal, Detail, Picker, WantType, Result }
+    enum Tab { Garage, Series, Home, GoRace, MyTeam, Packs, Trades }
+    enum Overlay { None, Reveal, Detail, Picker, WantType, Result, SeriesResult }
 
-    static readonly string[] TabNames = { "Garage", "Home", "Go Race", "My Team", "Packs", "Trades" };
+    static readonly string[] TabNames = { "Garage", "Series", "Home", "Go Race", "My Team", "Packs", "Trades" };
 
     class Item
     {
@@ -104,6 +104,8 @@ public class MasterDraftUI : MonoBehaviour
         // mode stops claiming a race is on.
         OneOffRacePrefs.Restore();
         if (GameSession.CurrentMode == GameSession.Mode.MasterDraft) GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
+        AIDifficulty.MasterDraftStrengthScale = 0f;
+        PlayerCarLivery.MasterDraftLivery = null;
 
         BuildChrome();
         SetStatus("Loading your collection…", 0f);
@@ -123,6 +125,14 @@ public class MasterDraftUI : MonoBehaviour
 
         session.Pending = null;
         if (session.LastRace != null) _overlay = Overlay.Result;
+        if (session.LastSeries?.plan != null)
+        {
+            // Back from a championship round: its result over the series it belongs to.
+            _tab = Tab.Series;
+            _overlay = Overlay.SeriesResult;
+            var played = session.Series?.Get(session.LastSeries.plan.seriesId);
+            if (played != null) { _seriesMenu = played.menu; _seriesPick = played.id; }
+        }
         SetStatus("");
         Rebuild();
     }
@@ -153,11 +163,12 @@ public class MasterDraftUI : MonoBehaviour
             if (kb.tabKey.wasPressedThisFrame) StepTab(kb.shiftKey.isPressed ? -1 : 1);
             if (kb.rKey.wasPressedThisFrame) Shortcut();
             if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Garage);
-            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Home);
-            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.GoRace);
-            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
-            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.Packs);
-            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.Trades);
+            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Series);
+            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.Home);
+            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.GoRace);
+            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
+            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.Packs);
+            if (kb.digit7Key.wasPressedThisFrame) SetTab(Tab.Trades);
         }
 
         var pad = Gamepad.current;
@@ -216,6 +227,9 @@ public class MasterDraftUI : MonoBehaviour
         {
             case Overlay.Detail:
                 CloseDetail();
+                return;
+            case Overlay.SeriesResult:
+                CloseSeriesResult();
                 return;
             case Overlay.Result:
                 if (S != null) S.LastRace = null;
@@ -352,10 +366,12 @@ public class MasterDraftUI : MonoBehaviour
             case Overlay.Picker: BuildPicker(); break;
             case Overlay.WantType: BuildWantType(); break;
             case Overlay.Result: BuildResult(); break;
+            case Overlay.SeriesResult: BuildSeriesResult(); break;
             default:
                 switch (_tab)
                 {
                     case Tab.Garage: BuildGarage(); break;
+                    case Tab.Series: BuildSeries(); break;
                     case Tab.Home: BuildHome(); break;
                     case Tab.GoRace: BuildGoRace(); break;
                     case Tab.MyTeam: BuildMyTeam(); break;
@@ -739,6 +755,343 @@ public class MasterDraftUI : MonoBehaviour
         if (check != UpgradeCheck.Ok && !max)
             Text(_content, UpgradeReason(owned, check, P.coins), IronOvalUI.Role.Data, T.caution,
                  new Vector2(x, y - UIButton.KitPx - 2f), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+    }
+
+    // ------------------------------------------------------------------ Series
+
+    // DM2's series: the menus down the left, the picked menu's series in the middle, the picked series on the
+    // right — entry requirements, its tracks, the garage cars that can enter, and Start Championship / Race Round N
+    // (MasterDraftRaceLauncher.LaunchSeriesRound). A finished round comes back here as the SeriesResult overlay.
+    const int SeriesRows = 10;
+    const float SeriesMenuW = 130f, SeriesListX = 136f, SeriesListW = 200f, SeriesPanelX = 342f, SeriesPanelW = 258f;
+
+    string _seriesMenu, _seriesPick, _seriesEntry, _seriesQuitArmed;
+    int _seriesScroll;
+    DraftSeriesCatalog _seriesOverride, _seriesLoaded;
+
+    DraftSeriesCatalog SeriesData =>
+        _seriesOverride ?? S?.Series ?? (_seriesLoaded ??= MasterDraftSession.LoadSeries());
+
+    // What the Series screen is showing, for EditMode tests (SeriesScreenTests).
+    public string SeriesPicked => _seriesPick;
+    public string SeriesEntryCar => _seriesEntry;
+    public int SeriesEligibleCount { get; private set; }
+    public bool SeriesCanStart { get; private set; }
+    public bool SeriesInProgress { get; private set; }
+
+    // Draw the Series screen against a profile and catalogues with no session (EditMode tests).
+    public void BuildOfflineSeries(MasterDraftProfile profile, CarCatalog cars, DraftSeriesCatalog series, string seriesId = null)
+    {
+        _profileOverride = profile;
+        _carsOverride = cars;
+        _seriesOverride = series;
+        _busy = false;
+        if (_root == null) BuildChrome();
+        _tab = Tab.Series;
+        _overlay = Overlay.None;
+        PickSeries(seriesId);
+    }
+
+    // Show a series (and its menu); null = keep the current pick.
+    public void PickSeries(string seriesId)
+    {
+        var data = SeriesData;
+        var def = data?.Get(seriesId);
+        if (def != null)
+        {
+            _seriesMenu = def.menu;
+            _seriesPick = def.id;
+            _seriesEntry = null;
+            _seriesQuitArmed = null;
+            var menu = data.GetMenu(def.menu);
+            int at = menu == null ? 0 : menu.series.FindIndex(x => x.id == def.id);
+            if (at < _seriesScroll || at >= _seriesScroll + SeriesRows) _seriesScroll = Mathf.Max(0, at - SeriesRows + 1);
+        }
+        if (_content != null) Rebuild();
+    }
+
+    void BuildSeries()
+    {
+        var p = P;
+        var data = SeriesData;
+        var cars = Cars;
+        SeriesEligibleCount = 0;
+        SeriesCanStart = SeriesInProgress = false;
+        if (data == null || data.Menus.Count == 0 || cars == null)
+        {
+            Text(_content, data == null || data.Menus.Count == 0
+                    ? $"No series data (Resources/{DraftSeriesCatalog.ResourcePath}.json)."
+                    : $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).",
+                 IronOvalUI.Role.Body, T.danger, Vector2.zero, new Vector2(600f, 20f));
+            return;
+        }
+
+        var menu = data.GetMenu(_seriesMenu) ?? data.Menus[0];
+        _seriesMenu = menu.id;
+        var series = data.Get(_seriesPick);
+        if (series == null || series.menu != menu.id) series = menu.series[0];
+        _seriesPick = series.id;
+
+        // Menus.
+        Text(_content, "Series", IronOvalUI.Role.Data, T.gold, Vector2.zero, new Vector2(SeriesMenuW, 16f));
+        for (int i = 0; i < data.Menus.Count && i < SeriesRows; i++)
+        {
+            var m = data.Menus[i];
+            bool open = DraftSeriesCatalog.MenuUnlocked(m, p.level);
+            string id = m.id;
+            RowItem(_content, "sm." + id, m.name, new Vector2(0f, -18f - i * 20f), new Vector2(SeriesMenuW, 18f), () =>
+            {
+                _seriesMenu = id;
+                _seriesPick = null;
+                _seriesEntry = null;
+                _seriesScroll = 0;
+                _lastFocusKey = "sm." + id;
+                Rebuild();
+            }, id == menu.id, open ? m.series.Count.ToString() : $"Lv{DraftSeriesCatalog.MenuMinLevel(m)}");
+        }
+
+        // The menu's series, scrolled.
+        int count = menu.series.Count;
+        int pickAt = menu.series.FindIndex(x => x.id == series.id);
+        if (pickAt < _seriesScroll) _seriesScroll = pickAt;
+        if (pickAt >= _seriesScroll + SeriesRows) _seriesScroll = pickAt - SeriesRows + 1;
+        _seriesScroll = Mathf.Clamp(_seriesScroll, 0, Mathf.Max(0, count - SeriesRows));
+        Text(_content, menu.name + (count > SeriesRows ? $"  {pickAt + 1}/{count}" : ""), IronOvalUI.Role.Data, T.gold,
+             new Vector2(SeriesListX, 0f), new Vector2(SeriesListW, 16f));
+        for (int i = 0; i < SeriesRows; i++)
+        {
+            int index = _seriesScroll + i;
+            if (index >= count) break;
+            var s = menu.series[index];
+            var running = p.Championship(s.id);
+            string right = running != null ? $"R{running.round + 1}/{running.Length}"
+                : !Restrictions.LevelUnlocked(s.restriction, p.level) ? $"Lv{s.restriction.minLevel}"
+                : (p.SeriesRecord(s.id)?.titles ?? 0) > 0 ? "Won" : "";
+            string id = s.id;
+            RowItem(_content, "sr" + i, s.name, new Vector2(SeriesListX, -18f - i * 20f), new Vector2(SeriesListW, 18f), () =>
+            {
+                _seriesPick = id;
+                _seriesEntry = null;
+                _seriesQuitArmed = null;
+                _lastFocusKey = "se.go";
+                Rebuild();
+            }, s.id == series.id, right);
+        }
+
+        // Up/down on the list walks every series of the menu, not just the visible ones.
+        _navOverride = dir =>
+        {
+            string key = FocusKey;
+            if (key == null || !key.StartsWith("sr") || Mathf.Abs(dir.y) < 0.5f) return false;
+            int row = int.Parse(key.Substring(2));
+            int target = _seriesScroll + row + (dir.y > 0f ? -1 : 1);
+            if (target < 0 || target >= count) return dir.y < 0f;
+            if (target < _seriesScroll) _seriesScroll = target;
+            if (target >= _seriesScroll + SeriesRows) _seriesScroll = target - SeriesRows + 1;
+            _seriesPick = menu.series[target].id;
+            _seriesEntry = null;
+            _seriesQuitArmed = null;
+            _lastFocusKey = "sr" + (target - _seriesScroll);
+            Rebuild();
+            return true;
+        };
+
+        SeriesPanel(p, cars, series);
+    }
+
+    void SeriesPanel(MasterDraftProfile p, CarCatalog cars, SeriesDef s)
+    {
+        float x = SeriesPanelX, w = SeriesPanelW, y = 0f;
+        Text(_content, s.name, IronOvalUI.Role.Body, T.gold, new Vector2(x, y), new Vector2(w, 18f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 20f;
+        string prize = s.prize == null || s.prize.IsNone ? "none" : s.prize.code;
+        Text(_content, $"{s.RoundCount} rounds   AI {SeriesRules.DifficultyPercent(s.aiLevel)}%   Prize {prize}", IronOvalUI.Role.Data,
+             T.text, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 16f;
+        Text(_content, string.Join("   ", Restrictions.Describe(s.restriction)), IronOvalUI.Role.Data, T.text,
+             new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+        y -= 32f;
+        var tracks = s.rounds.Select(r => TrackCatalog.Nicify(r.track)).ToList();   // short: five rounds fit two lines
+        Text(_content, string.Join(", ", tracks), IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+        y -= 34f;
+
+        var running = p.Championship(s.id);
+        SeriesInProgress = running != null;
+        if (running != null)
+        {
+            var def = cars.Get(running.carId);
+            var owned = p.Car(running.carId);
+            int place = SeriesRules.Position(running);
+            int points = SeriesRules.Standings(running).FirstOrDefault(e => e.carId == running.carId)?.points ?? 0;
+            Text(_content, $"Round {running.round + 1}/{running.Length}   P{place} of {running.table.Count}   {points} pts",
+                 IronOvalUI.Role.Data, T.gold, new Vector2(x, y), new Vector2(w, 16f));
+            y -= 16f;
+            string car = def == null ? running.carId : $"#{def.number} {def.driver}";
+            Text(_content, owned == null ? $"{car}  (no longer owned)" : $"{car}   Class {owned.carClass}", IronOvalUI.Role.Data,
+                 owned == null ? T.danger : T.text, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+            y -= 16f;
+            var next = SeriesRules.NextRound(running);
+            if (next != null)
+                Text(_content, $"Next  {TrackName(next.track)}   {SeriesRules.NextRaceLaps(running)} laps   AI {SeriesRules.DifficultyPercent(running.aiLevel)}%",
+                     IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+            y -= 22f;
+            ButtonItem(_content, "se.go", $"Race Round {running.round + 1}", new Vector2(x, y), 164f, () => RaceSeriesRound(s.id), owned != null && next != null);
+            ButtonItem(_content, "se.quit", _seriesQuitArmed == s.id ? "Sure?" : "Quit", new Vector2(x + 170f, y), w - 170f, () => QuitChampionship(s.id));
+            SeriesRecordLine(p, s, x, w);
+            return;
+        }
+
+        // Not running: pick a garage car that can enter.
+        var eligible = Restrictions.EligibleGarage(s.restriction, cars, p.garage, p.level);
+        SeriesEligibleCount = eligible.Count;
+        if (eligible.All(c => c.id != _seriesEntry)) _seriesEntry = SeriesRace.DefaultEntry(s, p, cars)?.id;
+        var entry = cars.Get(_seriesEntry);
+        var ownedEntry = p.Car(_seriesEntry);
+        if (entry != null && ownedEntry != null)
+        {
+            string caption = (eligible.Count > 1 ? "< " : "") + $"#{entry.number} {entry.driver}  C{ownedEntry.carClass}" + (eligible.Count > 1 ? " >" : "");
+            ButtonItem(_content, "se.car", caption, new Vector2(x, y), w, () => CycleSeriesEntry(eligible));
+            y -= UIButton.KitPx + 2f;
+            Text(_content, $"{eligible.Count} of {p.garage.Count} garage cars can enter", IronOvalUI.Role.Data, T.textDim,
+                 new Vector2(x, y), new Vector2(w, 16f));
+        }
+        else
+        {
+            // Why not: the level, else the selected garage car's first reason.
+            string why = !Restrictions.LevelUnlocked(s.restriction, p.level)
+                ? $"Reach level {s.restriction.minLevel} (you're level {p.level})."
+                : "No car in your garage can enter: " + FirstReason(s, p, cars);
+            Text(_content, why, IronOvalUI.Role.Data, T.caution, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+            y -= UIButton.KitPx + 2f;
+        }
+        y -= 22f;
+        SeriesCanStart = entry != null && SeriesRules.CanEnter(s, entry, p.garage, p.level).Eligible;
+        ButtonItem(_content, "se.go", "Start Championship", new Vector2(x, y), w, () => StartChampionship(s), SeriesCanStart);
+        SeriesRecordLine(p, s, x, w);
+    }
+
+    void SeriesRecordLine(MasterDraftProfile p, SeriesDef s, float x, float w)
+    {
+        var rec = p.SeriesRecord(s.id);
+        if (rec == null || rec.championships == 0) return;
+        Text(_content, $"Run {rec.championships}   Titles {rec.titles}   Best P{rec.bestFinish}", IronOvalUI.Role.Data, T.textDim,
+             new Vector2(x, -220f), new Vector2(w, 16f));
+    }
+
+    static string TrackName(string trackId)
+    {
+        string name = TrackCatalog.DisplayName(trackId);
+        return string.IsNullOrEmpty(name) ? trackId : name;
+    }
+
+    // The first thing stopping the profile's selected car from entering.
+    static string FirstReason(SeriesDef s, MasterDraftProfile p, CarCatalog cars)
+    {
+        var car = cars.Get(p.SelectedCar()?.id);
+        if (car == null) return "your garage is empty.";
+        var check = SeriesRules.CanEnter(s, car, p.garage, p.level);
+        return check.Eligible ? "" : check.Reasons[0].message + ".";
+    }
+
+    void CycleSeriesEntry(List<OwnedCar> eligible)
+    {
+        if (eligible.Count == 0) return;
+        int i = eligible.FindIndex(c => c.id == _seriesEntry);
+        _seriesEntry = eligible[(i + 1) % eligible.Count].id;
+        _lastFocusKey = "se.car";
+        Rebuild();
+    }
+
+    // Start the picked series in the picked car (DM2: lock in the car, reset the points) and stay on the screen
+    // with Race Round 1 under the cursor. False (and why, on the status line) if the car can't enter.
+    public bool StartPickedChampionship()
+    {
+        var s = SeriesData?.Get(_seriesPick);
+        return s != null && StartChampionship(s);
+    }
+
+    bool StartChampionship(SeriesDef s)
+    {
+        var p = P;
+        var cars = Cars;
+        var car = cars?.Get(_seriesEntry);
+        var check = SeriesRules.CanEnter(s, car, p.garage, p.level);
+        if (!check.Eligible) { SetStatus(check.Reasons.Count > 0 ? check.Reasons[0].message : "Can't enter."); return false; }
+        p.StartChampionship(s, car, cars);
+        _lastFocusKey = "se.go";
+        SaveTeam($"{s.name}: championship started in the #{car.number}.");
+        return true;
+    }
+
+    void QuitChampionship(string seriesId)
+    {
+        if (_seriesQuitArmed != seriesId)
+        {
+            _seriesQuitArmed = seriesId;
+            _lastFocusKey = "se.quit";
+            SetStatus("Press again to quit this championship. Its points are lost.");
+            Rebuild();
+            return;
+        }
+        _seriesQuitArmed = null;
+        P.AbandonChampionship(seriesId);
+        _lastFocusKey = "se.go";
+        SaveTeam("Championship abandoned.");
+    }
+
+    void RaceSeriesRound(string seriesId)
+    {
+        string error = MasterDraftRaceLauncher.LaunchSeriesRound(seriesId);
+        if (error != null) { SetStatus(error); return; }
+        _leaving = true;
+    }
+
+    // What a finished round paid, over the Series screen.
+    void BuildSeriesResult()
+    {
+        var o = S?.LastSeries;
+        if (o == null || o.plan == null) { _overlay = Overlay.None; BuildSeries(); return; }
+
+        var win = IronOvalUI.Window(_content, "SeriesResult", new Vector2(400f, 222f));
+        TopLeft(win, new Vector2(100f, -4f), new Vector2(400f, 222f));
+        Text(win, $"{o.plan.seriesName}  Round {o.plan.round}/{o.plan.rounds}", IronOvalUI.Role.Header, T.gold,
+             new Vector2(14f, -10f), new Vector2(372f, 20f)).overflowMode = TextOverflowModes.Ellipsis;
+
+        var lines = new List<string> { TrackName(o.plan.trackId) };
+        var r = o.rewards;
+        if (r == null) lines.Add(string.IsNullOrEmpty(o.error) ? "This round couldn't be scored." : o.error);
+        else
+        {
+            lines.Add((r.position > 0 ? $"Finished P{r.position}" : "Not classified") + $"   +{r.round.playerPoints} pts");
+            if (r.championshipOver)
+                lines.Add($"Championship over: P{r.championshipPosition}   +{r.money:N0} coins");
+            else
+            {
+                var running = P.Championship(o.plan.seriesId);
+                if (running != null) lines.Add($"Championship P{SeriesRules.Position(running)} after {running.round} of {running.Length}");
+            }
+            lines.Add($"XP +{r.xp}" + (r.LevelsGained > 0 ? $"   Level up! Now level {r.levelAfter}" : ""));
+            if (r.gears > 0) lines.Add($"+{r.gears} gears to the #{o.plan.number}");
+            foreach (var prize in r.prizes)
+            {
+                var car = Cars?.Get(prize.carId);
+                string name = car != null ? $"#{car.number} {car.driver}" : prize.carId;
+                lines.Add(prize.newCar ? $"Prize car: {name}!" : $"Prize: +{prize.gears} gears for the {name}");
+            }
+            lines.Add($"Coins  {r.coins:N0}");
+        }
+        Text(win, string.Join("\n", lines), IronOvalUI.Role.Data, T.text, new Vector2(14f, -36f), new Vector2(372f, 144f), wrap: true);
+        ButtonItem(win, "res.ok", "Continue", new Vector2(140f, -184f), 120f, CloseSeriesResult);
+    }
+
+    void CloseSeriesResult()
+    {
+        string id = S?.LastSeries?.plan?.seriesId;
+        if (S != null) S.LastSeries = null;
+        _overlay = Overlay.None;
+        _tab = Tab.Series;
+        _lastFocusKey = "se.go";
+        PickSeries(id);
     }
 
     // ------------------------------------------------------------------ Home
@@ -1542,7 +1895,7 @@ public class MasterDraftUI : MonoBehaviour
         }
     }
 
-    const float TabWidth = 96f;   // six tabs across the 600 px content width
+    const float TabWidth = 82f;   // seven tabs across the 600 px content width
 
     void SetStatus(string message, float seconds = 4f)
     {
