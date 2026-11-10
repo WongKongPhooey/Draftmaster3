@@ -113,10 +113,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public bool autoPitExit = true;
     [Tooltip("On an AI takeover (EngageFromCurrentPose), the car engages on the PIT lane instead of the racing line if it's within this many metres of the pit centerline. Stops a handover in the pit driving through the pit wall onto the track.")]
     public float pitEngageLateralMax = 6f;
-    [Tooltip("After rejoining the main spline at pit exit, how fast (m/s) the car eases from its pit-exit line onto the racing line. Stops the merge being an instant sideways pop.")]
-    public float pitMergeEaseSpeed = 2.5f;
-    [Tooltip("How fast (deg/sec) the car's heading eases from its pit-exit facing onto the main-spline tangent. The pit exit isn't geometrically locked to the main spline, so without this the heading SNAPS on rejoin (a visible rotation pop). Lower = longer, smoother turn-in.")]
-    public float pitMergeHeadingEaseDegPerSec = 25f;
+    [Tooltip("Crossing between pit road and the track (either way), the car carries on from where it really is and the way it is really pointing, and runs onto the new lane's line along one smooth S-curve laid along the road - the steering aims along the same curve, so neither the car nor its aim point ever jumps. This is the steepest (deg) the curve is allowed to cut across the new lane: the merge is made long enough for the offset it has to make up.")]
+    public float pitMergeMaxAngleDeg = 8f;
+    [Tooltip("The shortest run (m) a pit-road / track merge is laid over, however little offset there is to make up.")]
+    public float pitMergeMinMetres = 30f;
 
     [Header("Formation Start")]
     [Tooltip("Hold this car perfectly still (parked in its box / at pit exit) while RaceStart.Current is PreGrid. Released automatically once the phase advances to Formation.")]
@@ -1377,8 +1377,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _lineLatSmoothed;   // low-passed racing-line lateral, so the rear axle doesn't snap at segment boundaries
     bool _hasLineSmoothed;    // false until the first smoothed sample / after a lane change, so it seeds from raw
     float _pathYawSmoothed;   // low-passed turn-in yaw (deg), so the body doesn't snap pointing onto its path
-    float _mergeLatBias; // lateral carried across the pit→main merge, eased out so the rejoin isn't a sideways pop
-    float _mergeHeadingBias; // heading (deg) carried across the merge, eased out so the rejoin isn't a rotation snap
+    // The lane merge (pit road <-> track): the lateral (m) the car carries across the join, relative to the new
+    // lane's line, run out to nothing along a Hermite S-curve by distance travelled on the new lane - starting at the
+    // car's real offset AND at the slope it arrives with, so the path has no step and no kink. _mergeLatBias is its
+    // value this step (MergeBiasAt), _mergeLength 0 = no merge running.
+    float _mergeLatBias;
+    float _mergeFrom;       // bias (m) at the join
+    float _mergeTangent;    // Hermite start tangent: the bias's slope (m per m) at the join times _mergeLength
+    float _mergeLength;     // m along the new lane the merge runs over
+    float _mergeStart;      // lane distance of the join
+    bool _mergeOnPit;       // which lane the merge runs on
+    bool _mergeJustJoined;  // the join's own step: the turn-in yaw stays as seeded (the car has not moved on the lane yet)
 
     EngineGearbox _gearbox; // optional: shapes acceleration (gear torque + shift drive-cut) and feeds engine audio
 
@@ -1493,7 +1502,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         lateralOffset = lateral;
         tacticalLateralOffset = 0f;
         _collisionLateral = _collisionLongitudinal = 0f;
-        _mergeLatBias = _mergeHeadingBias = 0f;
+        ClearMerge();
         _pitApproachBlend = 0f;
         _apronEntryActive = false;
         _apronExitBlend = 0f;
@@ -2772,21 +2781,38 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     }
 
     // Land on the current lane (_onPit must already be set) at the point nearest worldNow — no teleport to the
-    // lane start. Carries the car's current lateral as a bias that eases onto the lane line, and clears the lean
-    // so the switch can't spike a phantom 360. Used by both the pit-entry and pit-exit transitions.
+    // lane start. The car carries on from where it really is AND the way it is really pointing: the gap to the new
+    // lane's line becomes a merge (MergeBiasAt) that runs out along the road on an S-curve starting at the car's own
+    // slope across the lane, and the turn-in yaw is seeded with its arriving facing. Used by both the pit-entry and
+    // pit-exit transitions (and an AI takeover).
+    //
+    // Before (Texas 2026-11-10): the bias eased out at a fixed 2.5 m/s and the heading at 25 deg/s, so the path
+    // kinked at the join (a kinematic car swung 18 m/s sideways in one step), and PathPointAhead - where the dynamic
+    // AI steers - left the bias out altogether: at Texas's hand-drawn pit exit, 14 m below the racing line, the aim
+    // point jumped 14 m up the track and the car darted across the road onto the line in about a second.
     void RejoinSplineContinuous(Vector3 worldNow)
     {
         if (track == null || _mainSamples == null || _mainSamples.Count < 2) { _distance = 0f; return; }
         Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
+
+        // The facing the car arrives with, in the track's frame. A dynamic car is wherever its own model put it,
+        // pointing where that left it - not where the brain's last commanded pose said.
+        bool hasFacing = _hasPrevLateral;
+        float arrivingHeadingDeg = CommandedHeadingDeg;
+        if (externalMotionController)
+        {
+            arrivingHeadingDeg = transform.eulerAngles.z - angleOffsetDeg + (spriteFacesUp ? 90f : 0f) - track.transform.eulerAngles.z;
+            hasFacing = true;
+        }
 
         // worldNow is the car CENTRE, but _distance indexes the REAR-AXLE sample point — Place() builds the centre as
         // rearAxle + forward*rearAxleToCenter. Snapping _distance to the centre's nearest point makes the very next
         // Place() shove the centre back by |rearAxleToCenter| (~2.4m): the small backward jump seen on the pit-exit
         // merge. Resolve the rear-axle point from the arriving heading and snap _distance to THAT instead.
         Vector2 rearAxleLocal = localNow;
-        if (_hasPrevLateral)
+        if (hasFacing)
         {
-            float hr = CommandedHeadingDeg * Mathf.Deg2Rad;
+            float hr = arrivingHeadingDeg * Mathf.Deg2Rad;
             rearAxleLocal = localNow - new Vector2(Mathf.Cos(hr), Mathf.Sin(hr)) * rearAxleToCenter;
         }
         Vector3 rearAxleWorld = track.transform.TransformPoint(new Vector3(rearAxleLocal.x, rearAxleLocal.y, 0f));
@@ -2804,38 +2830,120 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         float actualLat = Vector2.Dot(rearAxleLocal - s.position, s.normal);
-        // The base lateral exactly as Place() will build it on the new lane, bounds clamp included. The line may
-        // run outside the road bounds (a player-lap line uses its run-off corridor — Watkins Glen's sits 14 m
-        // off the road at the pit rejoin); Place clamps it back, and a bias measured against the unclamped value
-        // came out that much too big — every car rejoining at Watkins Glen landed 12 m right, past the barrier.
-        float baseLat = lateralOffset + TacticalLateral + _collisionLateral;
-        if (!_onPit)
-        {
-            baseLat += LateralAt(_distance) + LaneShiftAt(_distance);
-            if (_leftBoundProfile != null && _rightBoundProfile != null)
-            {
-                BoundsAt(_distance, out float boundLo, out float boundHi);
-                baseLat = Mathf.Clamp(baseLat, boundLo, boundHi);
-            }
-            // Leaving pit road onto the apron: Place holds the apron lane, so that is what the bias carries to.
-            if (_apronExitBlend > 0f) baseLat = Mathf.Lerp(baseLat, ApronLaneAt(_distance), _apronExitBlend);
-        }
-        _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -20f, 20f);
+        float baseLat = MergeBaseLateralAt(_distance);
 
-        // Heading bias: the new lane's tangent vs the facing the car arrives with. CommandedHeadingDeg is in the
-        // same track-local frame as the sample tangent (both atan2 of a local-space direction), so the delta is
-        // the kink at the join. Eased to 0 in Place() so the car turns smoothly onto the new tangent instead of
-        // snapping. Only when we have a valid arriving pose (_hasPrevLateral); a cold engage has no facing to keep.
-        if (_hasPrevLateral)
+        // The slope (m across per m along) the car arrives with across the new lane, and the slope of the line it
+        // is joining: the merge starts at their difference, so the path carries straight on through the join.
+        float arrivingSlope = 0f, delta = 0f;
+        if (hasFacing)
         {
             float newHeadingDeg = Mathf.Atan2(s.tangent.y, s.tangent.x) * Mathf.Rad2Deg;
-            _mergeHeadingBias = Mathf.Clamp(Mathf.DeltaAngle(newHeadingDeg, CommandedHeadingDeg), -90f, 90f);
+            delta = Mathf.Clamp(Mathf.DeltaAngle(newHeadingDeg, arrivingHeadingDeg), -MergeMaxArrivingDeg, MergeMaxArrivingDeg);
+            arrivingSlope = -Mathf.Tan(delta * Mathf.Deg2Rad);   // + lateral is right of travel, + heading is left
         }
-        else _mergeHeadingBias = 0f;
+        const float slopeProbe = 2f;
+        float baseSlope = (MergeBaseLateralAt(_distance + slopeProbe) - MergeBaseLateralAt(_distance - slopeProbe)) / (2f * slopeProbe);
+        BeginMerge(actualLat - baseLat, arrivingSlope - baseSlope);
 
-        _hasPrevLateral = false;
         _hasLineSmoothed = false; // reseed the line low-pass from the new lane's raw offset (no stale drag)
+        if (hasFacing)
+        {
+            // The car's lateral and turn-in yaw on the new lane as it arrives, so Place's first step on it moves on
+            // from here at the arriving slope instead of a cold start pointing it down the new tangent.
+            _prevLateral = actualLat;
+            _pathYawSmoothed = delta;
+            _hasPrevLateral = true;
+            _mergeJustJoined = true;
+        }
+        else _hasPrevLateral = false;
     }
+
+    const float MergeMaxArrivingDeg = 45f;
+
+    // The lateral Place() builds on the current lane before the merge is added, bounds clamp included. The line may
+    // run outside the road bounds (a player-lap line uses its run-off corridor — Watkins Glen's sits 14 m off the
+    // road at the pit rejoin); Place clamps it back, and a bias measured against the unclamped value came out that
+    // much too big — every car rejoining at Watkins Glen landed 12 m right, past the barrier.
+    float MergeBaseLateralAt(float distance)
+    {
+        float baseLat = lateralOffset + TacticalLateral + _collisionLateral;
+        if (_onPit) return baseLat;
+        if (_mainLength > 0f) distance = Mathf.Repeat(distance, _mainLength);
+        float line = LateralAt(distance) + LaneShiftAt(distance);
+        baseLat += line;
+        if (_leftBoundProfile != null && _rightBoundProfile != null)
+        {
+            BoundsAt(distance, out float boundLo, out float boundHi);
+            float onLine = lateralOffset + line;
+            baseLat = Mathf.Clamp(baseLat, Mathf.Min(boundLo, onLine), Mathf.Max(boundHi, onLine));
+        }
+        // Leaving pit road onto the apron: Place holds the apron lane, so that is what the merge carries to.
+        if (_apronExitBlend > 0f)
+        {
+            float b = _apronExitBlend * _apronExitBlend * (3f - 2f * _apronExitBlend);
+            baseLat = Mathf.Lerp(baseLat, ApronLaneAt(distance), b);
+        }
+        return baseLat;
+    }
+
+    // Start a merge on the current lane from `offset` (m off its line) moving across it at `slope` (m per m).
+    void BeginMerge(float offset, float slope)
+    {
+        // A sanity bound only: whatever is left over beyond it would be a teleport, and nothing real is this far off.
+        offset = Mathf.Clamp(offset, -100f, 100f);
+        float maxSlope = Mathf.Tan(Mathf.Clamp(pitMergeMaxAngleDeg, 1f, 45f) * Mathf.Deg2Rad);
+        // The quintic run-out from a standing offset is steepest mid-way, at 1.875x the mean slope.
+        float length = Mathf.Max(Mathf.Max(1f, pitMergeMinMetres), 1.875f * Mathf.Abs(offset) / maxSlope);
+        _mergeFrom = offset;
+        _mergeTangent = Mathf.Clamp(slope, -1f, 1f) * length;
+        _mergeLength = length;
+        _mergeStart = _distance;
+        _mergeOnPit = _onPit;
+        _mergeLatBias = offset;
+    }
+
+    void ClearMerge()
+    {
+        _mergeLatBias = _mergeFrom = _mergeTangent = 0f;
+        _mergeLength = 0f;
+        _mergeJustJoined = false;
+    }
+
+    // The merge's lateral (m) at a distance on the current lane: the quintic Hermite curve from (offset, slope, no
+    // bend) at the join to (0, flat, no bend) _mergeLength further on - level in slope AND curvature at both ends, so
+    // it neither kinks nor starts turning the instant the car comes off one lane onto the other. Read at the car
+    // (Place) and at the steering aim point (PathPointAhead), so the two always lie on the same curve.
+    float MergeBiasAt(float distance)
+    {
+        if (!(_mergeLength > 0f) || _mergeOnPit != _onPit) return 0f;
+        float t = Mathf.Clamp01(MergeRun(distance) / _mergeLength);
+        float t3 = t * t * t, t4 = t3 * t, t5 = t4 * t;
+        return _mergeFrom * (1f - 10f * t3 + 15f * t4 - 6f * t5) + _mergeTangent * (t - 6f * t3 + 8f * t4 - 3f * t5);
+    }
+
+    // Metres run along the current lane since the merge's join.
+    float MergeRun(float distance)
+    {
+        float run = distance - _mergeStart;
+        if (!_onPit && _mainLength > 0f) run = Mathf.Repeat(run + _mainLength * 0.5f, _mainLength) - _mainLength * 0.5f;
+        return run;
+    }
+
+    // Lay `extra` metres more onto the merge still running, from where it is now and at the slope it has now, so a
+    // change to the line under a merging car (a lane handed out the moment it is off pit road) moves the line the
+    // merge runs out to, not the car. No merge running: nothing.
+    public void AddToMerge(float extra)
+    {
+        if (!(_mergeLength > 0f) || _mergeOnPit != _onPit || Mathf.Abs(extra) < 1e-4f) return;
+        float now = MergeBiasAt(_distance);
+        float slope = (MergeBiasAt(_distance + 1f) - MergeBiasAt(_distance - 1f)) * 0.5f;
+        bool joined = _mergeJustJoined;
+        BeginMerge(now + extra, slope);
+        _mergeJustJoined = joined;
+    }
+
+    // True while a merge between pit road and the track is still running out.
+    public bool Merging => _mergeLength > 0f;
 
     // Pull the brain's track distance back onto where the car physically is.
     //
@@ -2927,10 +3035,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         if (_onPit && _pitSamples != null && _pitSamples.Count >= 2)
         {
-            float dp = Mathf.Clamp(_distance + aheadMeters, 0f, _pitLength);
+            float want = _distance + aheadMeters;
+            float dp = Mathf.Clamp(want, 0f, _pitLength);
             var sp = track.SamplePitAt(dp, _pitSamples);
             Vector2 rp = new Vector2(sp.tangent.y, -sp.tangent.x);
-            return sp.position + rp * (lateralOffset + tacticalLateralOffset);
+            // Past the end of the lane, straight on along its last heading - the way the car leaves it - rather than
+            // pinned to the end: a pinned aim point closed in on the car as it neared the exit, then leapt out to the
+            // full look-ahead on the track the step it left pit road.
+            Vector2 beyond = sp.tangent * Mathf.Max(0f, want - _pitLength);
+            // On the same merge curve as Place lays the car (pit entry: carried in from the track).
+            return sp.position + beyond + rp * (lateralOffset + tacticalLateralOffset + MergeBiasAt(dp));
         }
 
         float d = _distance + aheadMeters;
@@ -2954,6 +3068,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             float b = _apronExitBlend * _apronExitBlend * (3f - 2f * _apronExitBlend);
             lat = Mathf.Lerp(lat, ApronLaneAt(d), b);
         }
+        // The pit-road merge, read off the same curve Place lays the car on at the aim point's distance: the aim
+        // carries on from where the car came off pit road instead of jumping straight up onto the racing line.
+        lat += MergeBiasAt(_distance + aheadMeters);
         return s.position + right * lat;
     }
 
@@ -3008,12 +3125,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
             _collisionLongitudinal = Mathf.MoveTowards(_collisionLongitudinal, 0f, 6f * Time.fixedDeltaTime);
         }
-        // Ease the pit-merge lateral + heading biases out so the car drifts from its pit-exit line/facing onto the
-        // racing line and tangent — a continuous turn-in instead of a sideways pop or a rotation snap.
-        _mergeLatBias = Mathf.MoveTowards(_mergeLatBias, 0f, pitMergeEaseSpeed * Time.fixedDeltaTime);
-        _mergeHeadingBias = Mathf.MoveTowards(_mergeHeadingBias, 0f, pitMergeHeadingEaseDegPerSec * Time.fixedDeltaTime);
-
         float placeDistance = _distance + _collisionLongitudinal;
+        // The pit-road / track merge, read off its curve at the car (RejoinSplineContinuous, MergeBiasAt).
+        _mergeLatBias = MergeBiasAt(placeDistance);
+        if (_mergeLength > 0f && (_mergeOnPit != _onPit || Mathf.Abs(_mergeLatBias) < 1e-4f && MergeRun(_distance) >= _mergeLength))
+            ClearMerge();
 
         TrackBuilder.Sample sample;
         float length;
@@ -3058,7 +3174,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // The pit-merge bias carries the car from its REAL pit-exit position onto the racing line. It must NOT be
         // bounds-clamped, or the car snaps (warps) onto the track edge the instant it leaves the pit lane — the
         // pit lane sits laterally outside the track, so clamping deletes the offset. Added after the clamp and
-        // eased to zero (pitMergeEaseSpeed) so the car slides smoothly onto the line instead of teleporting.
+        // run out along its S-curve so the car slides smoothly onto the line instead of teleporting.
         float totalLateral = baseLateral + _mergeLatBias;
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
         if (track != null)
@@ -3079,14 +3195,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float pathYawRaw = Mathf.Atan2(-lateralRate, forwardMps) * Mathf.Rad2Deg;
         // Smooth the turn-in yaw too (same generous filter), so the body doesn't snap as the car points onto its
         // path at corner entry/exit. Cold first frame takes the raw angle so there's no start-up swing.
-        _pathYawSmoothed = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
+        if (_mergeJustJoined) _mergeJustJoined = false;   // keep the arriving facing RejoinSplineContinuous seeded
+        else _pathYawSmoothed = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
         // No cosmetic lean on top: a top-down car shows body roll as nothing at all, so extra yaw for "leaning
         // into the turn" only pointed the car off its own path — up to 5° on a weave, more than twice the real
         // turn-in, and it read as the car rocking side to side through every line change.
         LateralRate = lateralRate;
         _prevLateral = totalLateral;
         _hasPrevLateral = true;
-        float carHeadingDeg = angleDeg + _pathYawSmoothed + _mergeHeadingBias;
+        float carHeadingDeg = angleDeg + _pathYawSmoothed;
         float carHeadingRad = carHeadingDeg * Mathf.Deg2Rad;
         Vector2 carForward = new Vector2(Mathf.Cos(carHeadingRad), Mathf.Sin(carHeadingRad));
         Vector2 finalPos = rearAxle + carForward * rearAxleToCenter;

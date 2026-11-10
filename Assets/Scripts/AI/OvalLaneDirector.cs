@@ -114,8 +114,13 @@ public class OvalLaneDirector : MonoBehaviour
             d.ovalLane = lane;
             d.RelayLaneNow();   // lay the lane now, to hand it over from where the car is relative to its line
             // Off the line it is meant to be on now: its start lane while it holds one (SplineDriver.startLanes).
-            float off = d.CarLateral - d.LaneTargetLateralAt(d.CentreDistanceOnTrack);
+            // Not counting a pit-road merge still running out (SplineDriver.MergeLateralBias): that is already
+            // carried on top of whatever line the car is given, and counted here too it doubled - a car just off
+            // pit road was handed its whole merge again and stepped that far further off the track.
+            float off = d.CarLateral - d.MergeLateralBias - d.LaneTargetLateralAt(d.CentreDistanceOnTrack);
             d.lateralOffset = Mathf.Clamp(off, -maxHandoverOffset, maxHandoverOffset);
+            // Merging, what the handover cannot hold goes onto the merge, so the new line never steps the car across.
+            if (d.Merging) d.AddToMerge(off - d.lateralOffset);
             _given.Add(d);
             if (d.TryGetComponent<PracticeAIStint>(out _)) _easing.Add(d);
             budget--;

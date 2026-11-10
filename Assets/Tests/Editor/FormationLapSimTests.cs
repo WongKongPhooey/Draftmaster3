@@ -18,6 +18,7 @@ using UnityEngine;
 // Everything is by reflection: the runtime types live in Assembly-CSharp, which a test assembly can't reference.
 public class FormationLapSimTests
 {
+    const float SidewaysPopMps = 8f;   // faster across its own heading than this in one step = a lateral snap
     const float HalfLength = 2.4f; // GridSpawner.collisionHalfExtents — what FormationController assumes too
     const float HalfWidth = 1f;
     const int FieldSize = 43; // RaceScene's GridSpawner.count — the AI field the game really spawns
@@ -79,6 +80,12 @@ public class FormationLapSimTests
         // main track: one line per car, the first time it happens.
         public readonly List<string> jumps = new List<string>();
         public readonly List<string> offRoad = new List<string>();
+        // A car moving sideways (across its own previous heading) faster than any steer or merge does - the pop of
+        // a lateral snap too small per step to read as a teleport. First time per car; and the worst sideways speed
+        // (m/s) seen within 3 s of a car leaving pit road, with who and where.
+        public readonly List<string> pops = new List<string>();
+        public float worstPitOutSideways;
+        public string worstPitOutSidewaysWho = "";
         // Free-driven player only: how far (m, centre to centre) the nearest car behind the player was at the
         // green, and the most it ever was once the whole field was out on the track.
         public float playerLeadAtGreen = -1f;
@@ -732,17 +739,21 @@ public class FormationLapSimTests
     [Explicit("Diagnostic: every car's teleports and road exits from the pit boxes to the green.")]
     [TestCase("WatkinsGlen")]
     [TestCase("Daytona")]
+    [TestCase("FortWorth")]
     public void Seams(string trackId)
     {
         var r = Run(trackId, FieldSize);
-        var sb = new StringBuilder($"[FormationSim] seams {trackId} [{r.setup}]: {r.jumps.Count} jumps, {r.offRoad.Count} off road");
+        var sb = new StringBuilder($"[FormationSim] seams {trackId} [{r.setup}]: {r.jumps.Count} jumps, {r.pops.Count} sideways pops, " +
+                                   $"{r.offRoad.Count} off road, worst sideways off pit road {r.worstPitOutSideways:0.0} m/s ({r.worstPitOutSidewaysWho})");
         foreach (var j in r.jumps) sb.Append("\n  JUMP ").Append(j);
+        foreach (var p in r.pops) sb.Append("\n  POP ").Append(p);
         foreach (var o in r.offRoad) sb.Append("\n  OFF ").Append(o);
         // The line and bounds either side of the pit rejoin, off the first AI car.
         var car = _lastCars[1];
         var t = car.GetType();
         var latAt = t.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic);
-        var boundsAt = t.GetMethod("BoundsAt", BindingFlags.Instance | BindingFlags.NonPublic);
+        var boundsAt = t.GetMethod("BoundsAt", BindingFlags.Instance | BindingFlags.NonPublic, null,
+            new[] { typeof(float), typeof(float).MakeByRefType(), typeof(float).MakeByRefType() }, null);
         var exitArgs = new object[] { 0f, 0f, 0f };
         t.GetMethod("TryGetPitExit").Invoke(car, exitArgs);
         for (float d = (float)exitArgs[0] - 60f; d <= (float)exitArgs[0] + 120f; d += 10f)
@@ -968,9 +979,19 @@ public class FormationLapSimTests
         var touching = new HashSet<long>();
         var prevPos = new Vector2[n];
         var prevOnPit = new bool[n];
+        var prevFwd = new Vector2[n];
+        var leftPitAt = new float[n];
+        var popped = new HashSet<int>();
         var jumped = new HashSet<int>();
         var wentOff = new HashSet<int>();
-        for (int i = 0; i < n; i++) { prevPos[i] = (Vector2)posProp.GetValue(cars[i]); prevOnPit[i] = (bool)onPitProp.GetValue(cars[i]); }
+        for (int i = 0; i < n; i++)
+        {
+            prevPos[i] = (Vector2)posProp.GetValue(cars[i]);
+            prevOnPit[i] = (bool)onPitProp.GetValue(cars[i]);
+            float h0 = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
+            prevFwd[i] = new Vector2(Mathf.Cos(h0), Mathf.Sin(h0));
+            leftPitAt[i] = -1f;
+        }
 
         Component playerAhead = playerSpline != null && playerDrivesFree ? cars[playerBox == 0 ? 0 : playerBox] : null;
         float lenSum = 0f, outSum = 0f; int shapeN = 0;
@@ -1046,6 +1067,19 @@ public class FormationLapSimTests
                 if (moved > mps * dt * 1.5f + 0.25f && jumped.Add(i))
                     result.jumps.Add($"t{result.seconds:0.00} {names[i]} moved {moved:0.00} m in one step at {mps * 2.237f:0} mph " +
                                      $"({(prevOnPit[i] ? "pit" : "main")}->{(onPit ? "pit" : "main")}) from {prevPos[i]} to {pos[i]}: {Describe(cars[i])}");
+                if (prevOnPit[i] && !onPit) leftPitAt[i] = result.seconds;
+                Vector2 stepMove = pos[i] - prevPos[i];
+                float sideways = Mathf.Abs(stepMove.x * prevFwd[i].y - stepMove.y * prevFwd[i].x) / Mathf.Max(dt, 1e-4f);
+                if (sideways > SidewaysPopMps && popped.Add(i))
+                    result.pops.Add($"t{result.seconds:0.00} {names[i]} slid {sideways:0.0} m/s sideways " +
+                                    $"({(prevOnPit[i] ? "pit" : "main")}->{(onPit ? "pit" : "main")}" +
+                                    $"{(leftPitAt[i] >= 0f ? $", {result.seconds - leftPitAt[i]:0.00}s off pit road" : "")}): {Describe(cars[i])}");
+                if (leftPitAt[i] >= 0f && result.seconds - leftPitAt[i] <= 3f && sideways > result.worstPitOutSideways)
+                {
+                    result.worstPitOutSideways = sideways;
+                    result.worstPitOutSidewaysWho = $"t{result.seconds:0.00} {names[i]} {result.seconds - leftPitAt[i]:0.00}s off pit road: {Describe(cars[i])}";
+                }
+                prevFwd[i] = fwd[i];
                 if (!onPit)
                 {
                     var lb = new object[] { 0f, 0f };
