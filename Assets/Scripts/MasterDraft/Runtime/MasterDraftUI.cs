@@ -12,8 +12,9 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// MASTER DRAFT's menu: Home, Go Race, My Team, Packs, Trades — and the pack-opening, card-detail,
-// card-picker and race-result views over them. One scene (Assets/Scenes/MasterDraft.unity, built by
+// MASTER DRAFT's menu: Garage (the screen the mode opens on), then the card mode's Home, Go Race, My Team,
+// Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
+// screens stay reachable until the rework retires them (Docs/MasterDraft-Rework.md, row 9). One scene (Assets/Scenes/MasterDraft.unity, built by
 // Draftmaster > Master Draft > Build Master Draft Scene), one component.
 //
 // WHY THE UI IS BUILT IN CODE. Same reasoning as SingleRaceUI: almost everything here is a generated list
@@ -22,18 +23,18 @@ using UnityEngine.UI;
 // IronOvalUI kit pieces and type roles as the authored screens, on the kit's 640x360 grid.
 //
 // INPUT. One focus, moved spatially: arrows / WASD / d-pad step to the nearest item in that direction,
-// Enter / Space / E / pad South confirm, Esc / Backspace / pad East back out (overlay -> screen -> Home ->
-// title). Tab / Shift+Tab, 1-5 or the shoulder buttons change screen. Every item is also a Button, so a tap
+// Enter / Space / E / pad South confirm, Esc / Backspace / pad East back out (overlay -> screen -> Garage ->
+// title). Tab / Shift+Tab, 1-6 or the shoulder buttons change screen. Every item is also a Button, so a tap
 // or a click picks it outright.
 public class MasterDraftUI : MonoBehaviour
 {
     [Tooltip("Scene BACK returns to from Home. Must be in the build settings.")]
     public string titleSceneName = "TitleScreen";
 
-    enum Tab { Home, GoRace, MyTeam, Packs, Trades }
+    enum Tab { Garage, Home, GoRace, MyTeam, Packs, Trades }
     enum Overlay { None, Reveal, Detail, Picker, WantType, Result }
 
-    static readonly string[] TabNames = { "Home", "Go Race", "My Team", "Packs", "Trades" };
+    static readonly string[] TabNames = { "Garage", "Home", "Go Race", "My Team", "Packs", "Trades" };
 
     class Item
     {
@@ -56,7 +57,7 @@ public class MasterDraftUI : MonoBehaviour
     Func<Vector2, bool> _navOverride;
 
     // ---- state
-    Tab _tab = Tab.Home;
+    Tab _tab = Tab.Garage;
     Overlay _overlay = Overlay.None;
     bool _busy = true, _leaving;
 
@@ -83,8 +84,12 @@ public class MasterDraftUI : MonoBehaviour
     int _pickPage;
     CardInstance _listing;
 
+    // Set by BuildOffline (EditMode tests): draw against this profile and catalogue with no session.
+    MasterDraftProfile _profileOverride;
+    CarCatalog _carsOverride;
+
     MasterDraftSession S => MasterDraftSession.Instance;
-    MasterDraftProfile P => S != null ? S.Profile : null;
+    MasterDraftProfile P => _profileOverride ?? (S != null ? S.Profile : null);
     static PixelUITheme T => PixelUITheme.Instance;
 
     // ------------------------------------------------------------------ lifecycle
@@ -147,11 +152,12 @@ public class MasterDraftUI : MonoBehaviour
             if (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame) Back();
             if (kb.tabKey.wasPressedThisFrame) StepTab(kb.shiftKey.isPressed ? -1 : 1);
             if (kb.rKey.wasPressedThisFrame) Shortcut();
-            if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Home);
-            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.GoRace);
-            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
-            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.Packs);
-            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.Trades);
+            if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Garage);
+            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Home);
+            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.GoRace);
+            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
+            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.Packs);
+            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.Trades);
         }
 
         var pad = Gamepad.current;
@@ -171,7 +177,10 @@ public class MasterDraftUI : MonoBehaviour
 
     string HelpText()
     {
-        string shortcut = _overlay == Overlay.Reveal ? "Reveal All" : _tab == Tab.MyTeam && _overlay == Overlay.None ? "Auto Pick" : "";
+        string shortcut = _overlay == Overlay.Reveal ? "Reveal All"
+            : _overlay != Overlay.None ? ""
+            : _tab == Tab.MyTeam ? "Auto Pick"
+            : _tab == Tab.Garage ? "Upgrade" : "";
         if (InputGlyphs.UsingGamepad)
             return $"D-Pad  Move     {InputGlyphs.PadName(PadBindings.Confirm)}  Select     {InputGlyphs.PadName(PadBindings.Back)}  Back" +
                    $"     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  Screen" +
@@ -225,7 +234,7 @@ public class MasterDraftUI : MonoBehaviour
                 return;
         }
 
-        if (_tab != Tab.Home) { SetTab(Tab.Home); return; }
+        if (_tab != Tab.Garage) { SetTab(Tab.Garage); return; }
         LeaveToTitle();
     }
 
@@ -239,12 +248,14 @@ public class MasterDraftUI : MonoBehaviour
         else SetStatus($"{titleSceneName} isn't in the build settings.");
     }
 
-    // The screen's one extra button: Reveal All while opening a pack, Auto Pick on My Team.
+    // The screen's one extra button: Reveal All while opening a pack, Auto Pick on My Team, Upgrade in the
+    // Garage.
     void Shortcut()
     {
         if (_busy) return;
         if (_overlay == Overlay.Reveal) { RevealAll(); return; }
         if (_tab == Tab.MyTeam && _overlay == Overlay.None) AutoPick();
+        if (_tab == Tab.Garage && _overlay == Overlay.None) UpgradeSelectedCar();
     }
 
     void Confirm()
@@ -303,7 +314,7 @@ public class MasterDraftUI : MonoBehaviour
 
     void ApplyFocus()
     {
-        if (_focusFrame != null) Destroy(_focusFrame.gameObject);
+        if (_focusFrame != null) Discard(_focusFrame.gameObject);
         _focusFrame = null;
         if (_items.Count == 0) return;
         _focus = Mathf.Clamp(_focus, 0, _items.Count - 1);
@@ -320,7 +331,7 @@ public class MasterDraftUI : MonoBehaviour
     void Rebuild()
     {
         string keep = _lastFocusKey;
-        foreach (Transform child in _content) Destroy(child.gameObject);
+        ClearChildren(_content);
         _items.Clear();
         _focusFrame = null;
         _navOverride = null;
@@ -344,6 +355,7 @@ public class MasterDraftUI : MonoBehaviour
             default:
                 switch (_tab)
                 {
+                    case Tab.Garage: BuildGarage(); break;
                     case Tab.Home: BuildHome(); break;
                     case Tab.GoRace: BuildGoRace(); break;
                     case Tab.MyTeam: BuildMyTeam(); break;
@@ -355,6 +367,378 @@ public class MasterDraftUI : MonoBehaviour
 
         _helpVersion = -1;
         FocusKeyOrFirst(keep);
+    }
+
+    // ------------------------------------------------------------------ Garage
+
+    // The collection: every catalogue car as its livery, owned cars with their class stars and locked ones
+    // greyed out, filtered by carset / stars / team / manufacturer. The panel on the right is the picked car:
+    // class, gears bar to the next class and the paid upgrade (CarProgression).
+    const int GarageCols = 5, GarageRows = 3;
+    const float GarageTileW = 76f, GarageTileH = 52f, GarageStepX = 80f, GarageStepY = 56f, GarageGridTop = -30f;
+    const float GaragePanelX = 410f, GaragePanelW = 190f;
+    static readonly Color LockedTint = new Color(0.3f, 0.3f, 0.3f, 0.75f);
+
+    string _garageCarset, _garageTeam, _garageMake;   // null = all
+    int _garageRarity;                                  // 0 = all
+    string _garageCar;                                  // the car the panel shows
+    int _garagePage;
+
+    CarCatalog _carsLoaded;
+    readonly Dictionary<string, Sprite> _liveries = new();
+
+    // The car catalogue: the test override, the local backend's copy, or Resources/MasterDraft/Cars.json.
+    CarCatalog Cars
+    {
+        get
+        {
+            if (_carsOverride != null) return _carsOverride;
+            if (S?.Backend is LocalMasterDraftBackend local && local.Cars != null) return local.Cars;
+            if (_carsLoaded != null) return _carsLoaded;
+            MasterDraftJsonInstaller.Install();
+            var text = Resources.Load<TextAsset>(CarCatalog.ResourcePath);
+            _carsLoaded = text == null ? null : CarCatalog.FromJson(text.text);
+            return _carsLoaded;
+        }
+    }
+
+    Sprite Livery(CarDef car)
+    {
+        if (car == null || string.IsNullOrEmpty(car.livery)) return null;
+        if (!_liveries.TryGetValue(car.livery, out var sprite))
+            _liveries[car.livery] = sprite = Resources.Load<Sprite>(car.livery);
+        return sprite;
+    }
+
+    // What the garage is showing, for the screen and for EditMode tests (GarageScreenTests).
+    public int GarageFilteredCount { get; private set; }   // cars passing the filters, all pages
+    public int GarageOwnedCount { get; private set; }      // of those, owned
+    public int GarageLockedCount { get; private set; }     // of those, not owned
+    public int GaragePageCount { get; private set; }
+    public int GarageTilesShown { get; private set; }      // tiles on this page
+    public string GarageSelectedCar => _garageCar;
+
+    // Draw the screens against a profile and catalogue with no session, backend or scene — the EditMode tests'
+    // way in (Start never runs in edit mode). Opens on the Garage.
+    public void BuildOffline(MasterDraftProfile profile, CarCatalog cars)
+    {
+        _profileOverride = profile;
+        _carsOverride = cars;
+        _busy = false;
+        if (_root == null) BuildChrome();
+        _tab = Tab.Garage;
+        _overlay = Overlay.None;
+        Rebuild();
+    }
+
+    public void SetGarageFilter(string carset, int rarity, string team, string manufacturer)
+    {
+        _garageCarset = string.IsNullOrEmpty(carset) ? null : carset;
+        _garageRarity = Mathf.Clamp(rarity, 0, CarCatalog.MaxRarity);
+        _garageTeam = string.IsNullOrEmpty(team) ? null : team;
+        _garageMake = string.IsNullOrEmpty(manufacturer) ? null : manufacturer;
+        _garagePage = 0;
+        if (_content != null) Rebuild();
+    }
+
+    public void SetGaragePage(int page)
+    {
+        _garagePage = page;
+        if (_content != null) Rebuild();
+    }
+
+    // Show a car in the panel; an owned one also becomes the profile's selected car (saved).
+    public void SelectGarageCar(string carId)
+    {
+        _garageCar = carId;
+        var owned = P?.Car(carId);
+        if (owned != null && P.selectedCar != carId)
+        {
+            P.selectedCar = carId;
+            SaveTeam();
+            return;
+        }
+        if (_content != null) Rebuild();
+    }
+
+    // Class up the picked car, paying coins (CarProgression.TryUpgrade). Returns why not when it can't.
+    // Offline-only, like the rest of the garage: online this has to become a backend operation so a client
+    // can't spend coins it hasn't got.
+    public UpgradeCheck UpgradeSelectedCar()
+    {
+        var p = P;
+        var owned = p?.Car(_garageCar);
+        if (owned == null) { SetStatus("You don't own this car yet."); return UpgradeCheck.NeedGears; }
+        var check = CarProgression.TryUpgrade(owned, ref p.coins);
+        var def = Cars?.Get(owned.id);
+        string name = def != null ? $"#{def.number} {def.driver}" : owned.id;
+        if (check == UpgradeCheck.Ok) SaveTeam($"{name} is now Class {owned.carClass}.");
+        else SetStatus(UpgradeReason(owned, check, p.coins));
+        return check;
+    }
+
+    static string UpgradeReason(OwnedCar car, UpgradeCheck check, int coins) => check switch
+    {
+        UpgradeCheck.MaxClass => "Max class.",
+        UpgradeCheck.NeedGears => $"{CarProgression.GearsToNextClass(car)} more gears to Class {car.carClass + 1}.",
+        UpgradeCheck.NeedCoins => $"Class {car.carClass + 1} costs {CarProgression.UpgradeCost(car.carClass):N0} coins, you have {coins:N0}.",
+        _ => "",
+    };
+
+    static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    // Does a car pass the filters? skip names one filter to ignore (for building that filter's options).
+    bool GarageMatch(CarDef c, string skip = null) =>
+        (skip == "set" || _garageCarset == null || Same(c.carset, _garageCarset))
+        && (skip == "stars" || _garageRarity == 0 || c.rarity == _garageRarity)
+        && (skip == "team" || _garageTeam == null || Same(c.team, _garageTeam))
+        && (skip == "make" || _garageMake == null || Same(c.manufacturer, _garageMake));
+
+    // Owned first, then catalogue order (carset, number).
+    List<CarDef> GarageList(CarCatalog cars)
+    {
+        var p = P;
+        var owned = new List<CarDef>();
+        var locked = new List<CarDef>();
+        foreach (var c in cars.Cars)
+            if (GarageMatch(c)) (p.Owns(c.id) ? owned : locked).Add(c);
+        owned.AddRange(locked);
+        return owned;
+    }
+
+    // The values the team / manufacturer buttons step through: what the other filters leave, so a press
+    // never lands on an empty grid.
+    List<string> FilterOptions(CarCatalog cars, string which, Func<CarDef, string> value) => cars.Cars
+        .Where(c => GarageMatch(c, which))
+        .Select(value).Where(v => !string.IsNullOrEmpty(v)).Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(v => v, StringComparer.Ordinal).ToList();
+
+    static string NextOption(List<string> options, string current)
+    {
+        if (options.Count == 0) return null;
+        int i = current == null ? -1 : options.FindIndex(o => Same(o, current));
+        return i + 1 >= options.Count ? null : options[i + 1];
+    }
+
+    void CycleGarageFilter(string which)
+    {
+        var cars = Cars;
+        if (cars == null) return;
+        switch (which)
+        {
+            case "set": _garageCarset = NextOption(cars.Carsets.Select(s => s.id).ToList(), _garageCarset); break;
+            case "stars": _garageRarity = _garageRarity >= CarCatalog.MaxRarity ? 0 : _garageRarity + 1; break;
+            case "team": _garageTeam = NextOption(FilterOptions(cars, "team", c => c.team), _garageTeam); break;
+            case "make": _garageMake = NextOption(FilterOptions(cars, "make", c => c.manufacturer), _garageMake); break;
+        }
+        // A carset or stars change can strand the team / make picked: drop those back to All.
+        if (_garageTeam != null && !FilterOptions(cars, "team", c => c.team).Any(t => Same(t, _garageTeam))) _garageTeam = null;
+        if (_garageMake != null && !FilterOptions(cars, "make", c => c.manufacturer).Any(m => Same(m, _garageMake))) _garageMake = null;
+        _garagePage = 0;
+        _lastFocusKey = "gf." + which;
+        Rebuild();
+    }
+
+    void BuildGarage()
+    {
+        var p = P;
+        var cars = Cars;
+        GarageFilteredCount = GarageOwnedCount = GarageLockedCount = GarageTilesShown = 0;
+        GaragePageCount = 1;
+        if (cars == null || cars.Count == 0)
+        {
+            Text(_content, $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).", IronOvalUI.Role.Body, T.danger,
+                 Vector2.zero, new Vector2(600f, 20f));
+            return;
+        }
+
+        // Filters along the top: each press steps to the next value, then back round to All.
+        string setName = _garageCarset == null ? "All" : cars.GetCarset(_garageCarset)?.name ?? _garageCarset;
+        var filters = new (string key, string caption)[]
+        {
+            ("set", "Set " + setName),
+            ("stars", "Stars " + (_garageRarity == 0 ? "All" : _garageRarity.ToString())),
+            ("team", "Team " + (_garageTeam ?? "All")),
+            ("make", "Make " + (_garageMake ?? "All")),
+        };
+        for (int i = 0; i < filters.Length; i++)
+        {
+            string which = filters[i].key;
+            ButtonItem(_content, "gf." + which, filters[i].caption, new Vector2(i * 100f, 0f), 96f, () => CycleGarageFilter(which));
+        }
+
+        var list = GarageList(cars);
+        int perPage = GarageCols * GarageRows;
+        int pages = Mathf.Max(1, (list.Count + perPage - 1) / perPage);
+        _garagePage = Mathf.Clamp(_garagePage, 0, pages - 1);
+        GarageFilteredCount = list.Count;
+        GarageOwnedCount = list.Count(c => p.Owns(c.id));
+        GarageLockedCount = list.Count - GarageOwnedCount;
+        GaragePageCount = pages;
+
+        var prev = IronOvalUI.Button(_content, "GaragePrev", "<", new Vector2(26f, 0f));
+        TopLeft((RectTransform)prev.transform, new Vector2(GaragePanelX + 100f, 0f), new Vector2(26f, UIButton.KitPx));
+        AddItem((RectTransform)prev.transform, "gp.prev", () => GaragePage(-1, list), _garagePage > 0);
+        var next = IronOvalUI.Button(_content, "GarageNext", ">", new Vector2(26f, 0f));
+        TopLeft((RectTransform)next.transform, new Vector2(GaragePanelX + 130f, 0f), new Vector2(26f, UIButton.KitPx));
+        AddItem((RectTransform)next.transform, "gp.next", () => GaragePage(1, list), _garagePage < pages - 1);
+        var pageText = Text(_content, $"{_garagePage + 1}/{pages}", IronOvalUI.Role.Data, T.textDim,
+                            new Vector2(GaragePanelX + 156f, -4f), new Vector2(34f, 16f));
+        pageText.alignment = TextAlignmentOptions.TopRight;
+
+        // The picked car: kept while it's in the catalogue, else the profile's selected car, else the first tile.
+        if (cars.Get(_garageCar) == null) _garageCar = p.SelectedCar()?.id;
+        if (cars.Get(_garageCar) == null) _garageCar = list.Count > 0 ? list[0].id : null;
+
+        for (int i = 0; i < perPage; i++)
+        {
+            int index = _garagePage * perPage + i;
+            if (index >= list.Count) break;
+            var def = list[index];
+            var tile = GarageTile(def, p.Car(def.id),
+                                  new Vector2((i % GarageCols) * GarageStepX, GarageGridTop - (i / GarageCols) * GarageStepY));
+            if (def.id == p.selectedCar) MasterDraftCardView.Outline(tile, T.confirm, 1f, 0f);
+            string id = def.id;
+            AddItem(tile, "car." + id, () => { _lastFocusKey = "car." + id; SelectGarageCar(id); });
+            GarageTilesShown++;
+        }
+
+        if (list.Count == 0)
+            Text(_content, "No cars match these filters.", IronOvalUI.Role.Data, T.textDim, new Vector2(0f, GarageGridTop - 10f),
+                 new Vector2(390f, 18f));
+
+        Text(_content, $"{list.Count} cars   {GarageOwnedCount} owned   {GarageLockedCount} locked", IronOvalUI.Role.Data, T.textDim,
+             new Vector2(0f, GarageGridTop - GarageRows * GarageStepY - 2f), new Vector2(396f, 16f));
+
+        GaragePanel(cars, cars.Get(_garageCar), p.Car(_garageCar));
+
+        // Stepping off the side of the grid turns the page.
+        _navOverride = dir =>
+        {
+            string key = FocusKey;
+            if (key == null || !key.StartsWith("car.") || Mathf.Abs(dir.x) < 0.5f) return false;
+            int at = list.FindIndex(c => "car." + c.id == key) - _garagePage * perPage;
+            if (at < 0) return false;
+            int col = at % GarageCols;
+            if (dir.x > 0f && col == GarageCols - 1 && _garagePage < pages - 1) { GaragePage(1, list); return true; }
+            if (dir.x < 0f && col == 0 && _garagePage > 0) { GaragePage(-1, list); return true; }
+            return false;
+        };
+    }
+
+    void GaragePage(int by, List<CarDef> list)
+    {
+        int perPage = GarageCols * GarageRows;
+        int pages = Mathf.Max(1, (list.Count + perPage - 1) / perPage);
+        _garagePage = Mathf.Clamp(_garagePage + by, 0, pages - 1);
+        int index = Mathf.Clamp(_garagePage * perPage, 0, Mathf.Max(0, list.Count - 1));
+        _lastFocusKey = list.Count > 0 ? "car." + list[index].id : null;
+        Rebuild();
+    }
+
+    // One car: its livery (greyed when locked) with class stars under it, or "Locked".
+    RectTransform GarageTile(CarDef def, OwnedCar owned, Vector2 pos)
+    {
+        var go = new GameObject("Car_" + def.id, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(_content, false);
+        var rt = (RectTransform)go.transform;
+        TopLeft(rt, pos, new Vector2(GarageTileW, GarageTileH));
+        go.GetComponent<Image>().color = def.id == _garageCar ? T.plate : owned != null ? T.plateDeep : T.ink;
+
+        var livery = new GameObject("Livery", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        livery.transform.SetParent(rt, false);
+        TopLeft(livery.rectTransform, new Vector2((GarageTileW - 64f) / 2f, -4f), new Vector2(64f, 32f));
+        livery.raycastTarget = false;
+        livery.preserveAspect = true;
+        livery.sprite = Livery(def);
+        if (livery.sprite == null)
+        {
+            livery.color = Color.clear;
+            Text(livery.rectTransform, "#" + def.number, IronOvalUI.Role.Data, T.textDim, new Vector2(4f, -8f), new Vector2(56f, 16f));
+        }
+        else livery.color = owned != null ? Color.white : LockedTint;
+
+        if (owned != null)
+        {
+            float w = CarProgression.MaxClass * 10f - 2f;
+            var stars = IronOvalUI.StatCells(rt, "Class", owned.carClass, CarProgression.MaxClass);
+            TopLeft(stars, new Vector2((GarageTileW - w) / 2f, -39f), new Vector2(w, 10f));
+        }
+        else
+        {
+            var locked = Text(rt, "Locked", IronOvalUI.Role.Data, T.textDisabled, new Vector2(0f, -36f), new Vector2(GarageTileW, 16f));
+            locked.name = "Locked";
+            locked.alignment = TextAlignmentOptions.Top;
+        }
+        return rt;
+    }
+
+    // The picked car: big livery, who and what it is, class, gears bar and the upgrade.
+    void GaragePanel(CarCatalog cars, CarDef def, OwnedCar owned)
+    {
+        float x = GaragePanelX, w = GaragePanelW;
+        if (def == null)
+        {
+            Text(_content, "Pick a car.", IronOvalUI.Role.Data, T.textDim, new Vector2(x, GarageGridTop), new Vector2(w, 16f));
+            return;
+        }
+
+        var big = new GameObject("PanelLivery", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        big.transform.SetParent(_content, false);
+        TopLeft(big.rectTransform, new Vector2(x + (w - 128f) / 2f, GarageGridTop), new Vector2(128f, 64f));
+        big.raycastTarget = false;
+        big.preserveAspect = true;
+        big.sprite = Livery(def);
+        big.color = big.sprite == null ? Color.clear : owned != null ? Color.white : LockedTint;
+
+        float y = GarageGridTop - 68f;
+        Text(_content, $"#{def.number} {def.driver}", IronOvalUI.Role.Body, owned != null ? T.gold : T.textDim,
+             new Vector2(x, y), new Vector2(w, 18f)).overflowMode = TextOverflowModes.Ellipsis;
+        y -= 18f;
+        string set = cars.GetCarset(def.carset)?.name ?? def.carset;
+        Text(_content, $"{set}  {def.team}  {def.manufacturer}", IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f));
+        y -= 16f;
+        Text(_content, $"{def.rarity}-Star {def.type}", IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f));
+        y -= 18f;
+
+        if (owned == null)
+        {
+            Text(_content, "Locked. Win it in a challenge or series to add it to your garage.", IronOvalUI.Role.Data, T.textDim,
+                 new Vector2(x, y), new Vector2(w, 48f), wrap: true);
+            return;
+        }
+
+        float starsW = CarProgression.MaxClass * 10f - 2f;
+        Text(_content, $"Class {owned.carClass}", IronOvalUI.Role.Data, T.gold, new Vector2(x, y), new Vector2(w - starsW - 4f, 16f));
+        var stars = IronOvalUI.StatCells(_content, "PanelClass", owned.carClass, CarProgression.MaxClass);
+        TopLeft(stars, new Vector2(x + w - starsW, y - 3f), new Vector2(starsW, 10f));
+        y -= 18f;
+
+        // Gears bar to the next class.
+        var bar = new GameObject("GearsBar", typeof(RectTransform), typeof(Image));
+        bar.transform.SetParent(_content, false);
+        var barRt = (RectTransform)bar.transform;
+        TopLeft(barRt, new Vector2(x, y), new Vector2(w, 8f));
+        var barImage = bar.GetComponent<Image>();
+        barImage.color = T.plateDeep;
+        barImage.raycastTarget = false;
+        var fill = MasterDraftCardView.Box(barRt, "Fill", T.gold, 1f);
+        fill.anchorMax = new Vector2(CarProgression.ClassProgress(owned), 1f);
+        y -= 10f;
+
+        bool max = CarProgression.IsMaxClass(owned);
+        string gears = max
+            ? $"Max class   {owned.gears} gears"
+            : $"{owned.gears}/{CarProgression.ClassGears(owned.carClass)} gears to Class {owned.carClass + 1}";
+        Text(_content, gears, IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 16f));
+        y -= 20f;
+
+        var check = CarProgression.CanUpgrade(owned, P.coins);
+        string caption = max ? "Max Class" : $"Upgrade  {CarProgression.UpgradeCost(owned.carClass):N0}";
+        ButtonItem(_content, "g.upgrade", caption, new Vector2(x, y), w, () => UpgradeSelectedCar(), check == UpgradeCheck.Ok);
+        if (check != UpgradeCheck.Ok && !max)
+            Text(_content, UpgradeReason(owned, check, P.coins), IronOvalUI.Role.Data, T.caution,
+                 new Vector2(x, y - UIButton.KitPx - 2f), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
     }
 
     // ------------------------------------------------------------------ Home
@@ -653,7 +1037,13 @@ public class MasterDraftUI : MonoBehaviour
 
     async void SaveTeam(string message = null)
     {
-        if (S?.Backend == null) return;
+        if (S?.Backend == null)
+        {
+            // No backend: a BuildOffline (test) profile. Nothing to save; just show the change.
+            if (!string.IsNullOrEmpty(message)) SetStatus(message);
+            if (_content != null) Rebuild();
+            return;
+        }
         _busy = true;
         await S.Backend.SaveProfile();
         if (this == null) return;
@@ -1136,13 +1526,13 @@ public class MasterDraftUI : MonoBehaviour
         _badge.color = MasterDraftOnline.Enabled ? T.confirm : T.caution;
         _coins.text = P != null ? $"Coins  {P.coins}" : "";
 
-        foreach (Transform child in _tabsRow) Destroy(child.gameObject);
+        ClearChildren(_tabsRow);
         for (int i = 0; i < TabNames.Length; i++)
         {
             var tab = (Tab)i;
-            var face = IronOvalUI.TabButton(_tabsRow, "Tab_" + TabNames[i], TabNames[i], new Vector2(110f, 0f),
+            var face = IronOvalUI.TabButton(_tabsRow, "Tab_" + TabNames[i], TabNames[i], new Vector2(TabWidth, 0f),
                                             tab == _tab && _overlay == Overlay.None);
-            TopLeft((RectTransform)face.transform.parent, new Vector2(i * 118f, 0f), new Vector2(110f, UIButton.KitPx));
+            TopLeft((RectTransform)face.transform.parent, new Vector2(i * (TabWidth + 4f), 0f), new Vector2(TabWidth, UIButton.KitPx));
             face.navigation = new Navigation { mode = Navigation.Mode.None };
             face.onClick.AddListener(() =>
             {
@@ -1151,6 +1541,8 @@ public class MasterDraftUI : MonoBehaviour
             });
         }
     }
+
+    const float TabWidth = 96f;   // six tabs across the 600 px content width
 
     void SetStatus(string message, float seconds = 4f)
     {
@@ -1224,6 +1616,19 @@ public class MasterDraftUI : MonoBehaviour
         label.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
         label.overflowMode = wrap ? TextOverflowModes.Truncate : TextOverflowModes.Overflow;
         return label;
+    }
+
+    // Destroy works only in Play Mode; BuildOffline runs in the editor (EditMode tests).
+    static void Discard(UnityEngine.Object victim)
+    {
+        if (victim == null) return;
+        if (Application.isPlaying) Destroy(victim);
+        else DestroyImmediate(victim);
+    }
+
+    static void ClearChildren(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--) Discard(parent.GetChild(i).gameObject);
     }
 
     static void TopLeft(RectTransform rt, Vector2 pos, Vector2 size)
