@@ -41,10 +41,12 @@ public class RVExterior : MonoBehaviour
         get
         {
             if (!Application.isPlaying) return Search(out _);
-            if (_cached != null && !_cachedIsRoom) return _cached;
+            if (_cached != null && !_cachedIsRoom && _cached.gameObject.activeInHierarchy) return _cached;
             if (_cached != null && Time.unscaledTime < _nextRetry) return _cached;
 
             _cached = Search(out _cachedIsRoom);
+            // A rig found switched off is only ever a stopgap (see Search): look again next time.
+            if (_cached != null && !_cached.gameObject.activeInHierarchy) _cachedIsRoom = true;
             _nextRetry = Time.unscaledTime + RoomRetrySeconds;
             return _cached;
         }
@@ -59,14 +61,22 @@ public class RVExterior : MonoBehaviour
     {
         var all = FindObjectsByType<RVExterior>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
-        RVExterior room = null;
+        // A switched-off rig is only taken when there is no live one. The race scene can open with another
+        // track's package saved into it; TrackSceneLoader switches that package off and destroys it at the end
+        // of the frame - and outside a session the motorhome lot is built in that same frame. Inactive objects
+        // included, the search handed it the outgoing track's RV: it parked that one, which was then destroyed,
+        // and the player's real RV was left standing on the grass outside the lot (Watkins Glen, 2026-11-11,
+        // with the Texas package saved into RaceScene).
+        RVExterior room = null, inactive = null;
         for (int i = 0; i < all.Length; i++)
         {
             if (all[i] == null) continue;
             if (all[i].GetComponentInParent<RVInterior>() != null) { room ??= all[i]; continue; }
+            if (!all[i].gameObject.activeInHierarchy) { inactive ??= all[i]; continue; }
             isRoom = false;
             return all[i];
         }
+        if (inactive != null) { isRoom = false; return inactive; }
 
         // Nothing but the room: better than nothing for anything that only needs a doorway to face.
         isRoom = room != null;

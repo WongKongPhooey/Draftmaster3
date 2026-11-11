@@ -74,6 +74,20 @@ public class DriverMotorhomeLot : MonoBehaviour
     public bool stackRowsForward = true;
     [Tooltip("Which place in the lot the player's own motorhome takes, counting along the first line and then on to the next. 0 = the head of the front line. The player's authored RV never moves — the lot's start slides to suit, so the field parks around them.")]
     public int playerLineIndex = 0;
+    [Tooltip("The player's motorhome takes a random place among the field's instead of playerLineIndex - " +
+             "somewhere in amongst the other drivers, not always at the head of the line. Seeded by the weekend, " +
+             "so it keeps the same place every time the paddock is reloaded that weekend. A motorhome authored " +
+             "inside a lot rectangle still keeps the place it was put in.")]
+    public bool randomPlayerPlace = true;
+
+    // The place the player's motorhome takes when it is parked into the lot (not when it was authored inside it).
+    int ChoosePlayerPlace(int places)
+    {
+        int filled = Mathf.Max(1, Mathf.Min(places, _slots.Count));   // only places the field fills - never alone at the end
+        if (!randomPlayerPlace) return Mathf.Clamp(playerLineIndex, 0, filled - 1);
+        var rng = new System.Random(unchecked(RaceWeekend.WeekendId * 7919 + 1013));
+        return rng.Next(filled);
+    }
 
     [Header("Sorting")]
     [Tooltip("Sorting layer for the motorhome bodies.")]
@@ -478,7 +492,7 @@ public class DriverMotorhomeLot : MonoBehaviour
             return;
         }
 
-        int playerPlace = Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1);
+        int playerPlace = ChoosePlayerPlace(_slots.Count);
 
         // A whole entry list in two lines is a quarter-mile row. Add lines instead, so the lot stays a lot
         // rather than a street.
@@ -512,7 +526,7 @@ public class DriverMotorhomeLot : MonoBehaviour
         int playerPlace = playerRv == null ? -1
             : area.Contains(playerRv.transform.position)
                 ? PaddockLotArea.NearestPlace(line, places, playerRv.transform.position)
-                : Mathf.Clamp(playerLineIndex, 0, places - 1);
+                : ChoosePlayerPlace(places);
 
         if (tight)
             Debug.LogWarning($"DriverMotorhomeLot: {_slots.Count} motorhomes do not fit '{area.name}' at its " +
