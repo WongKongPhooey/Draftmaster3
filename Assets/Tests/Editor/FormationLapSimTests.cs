@@ -132,6 +132,7 @@ public class FormationLapSimTests
     }
 
     static bool s_snapshotAtPitIn, s_timeline;
+    static float s_runOnAfterGreen;
 
     [Explicit("Diagnostic: slots 5-15 and the player once a second from the pit boxes, the player starting mid-field.")]
     [TestCase("WatkinsGlen", 12)]
@@ -210,6 +211,21 @@ public class FormationLapSimTests
     // Before, the green waved the moment the pace car pitted (at Daytona 2.5 km from the line), the field held
     // cruise in the close-up so nothing closed up, and each column kept its own gaps — pairs 13-16 m apart, rows
     // ~30 m apart, the field 600 m long.
+    // The green as it falls live at Texas, run on 4 s: the 2026-11-11 phone/editor crash came ~1 s after the green with
+    // the back half of the field still in the trioval. Diagnostic: prints the mid-field's line state and contacts.
+    [Explicit("Diagnostic: Texas green, run on past it.")]
+    [Test]
+    public void TexasRunOnPastTheGreen()
+    {
+        s_runOnAfterGreen = 4f;
+        try
+        {
+            var r = Run("FortWorth", FieldSize);
+            Debug.Log(Report("[FormationSim] FortWorth run on past the green", r, 40) + "\n" + r.trace);
+        }
+        finally { s_runOnAfterGreen = 0f; }
+    }
+
     [TestCase("WatkinsGlen")]
     [TestCase("Daytona")]
     [TestCase("Darlington")]
@@ -1027,6 +1043,7 @@ public class FormationLapSimTests
         var directorStep = directorType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         var greenPhase = Enum.Parse(phaseType, "Green");
         float pitInAt = -1f;
+        float greenAt = -1f;
 
         var result = new Result();
 
@@ -1086,7 +1103,12 @@ public class FormationLapSimTests
             }
             // The race goes green when the director waves it (or, with no director step, as the safety car pits).
             if (pitInAt >= 0f && !Equals(currentProp.GetValue(null), greenPhase)) MeasureTight(tightPrev);
-            if (Equals(currentProp.GetValue(null), greenPhase) || (directorStep == null && pitInAt >= 0f))
+            if (greenAt >= 0f)
+            {
+                if (result.seconds > greenAt + s_runOnAfterGreen) break;
+                if (step % 10 == 0) TraceAfterGreen(result.seconds - greenAt);
+            }
+            else if (Equals(currentProp.GetValue(null), greenPhase) || (directorStep == null && pitInAt >= 0f))
             {
                 result.minRowGapAtGreen = tightPrev.minRowGapAtGreen; result.minDoorAtGreen = tightPrev.minDoorAtGreen;
                 result.minEdgeAtGreen = tightPrev.minEdgeAtGreen; result.minEdgeAtGreenWho = tightPrev.minEdgeAtGreenWho;
@@ -1096,6 +1118,7 @@ public class FormationLapSimTests
                 if (playerAhead != null) result.playerLeadAtGreen = PlayerLead(out _);
                 foreach (var c in cars) if (!(bool)onPitProp.GetValue(c)) result.carsOnTrackAtGreen++;
                 MeasureBunching();
+                if (s_runOnAfterGreen > 0f) { greenAt = result.seconds; TraceAfterGreen(0f); continue; }
                 break;
             }
             if (shapeN > 0) { result.fieldLengthMean = lenSum / shapeN; result.outOfPlaceMean = outSum / shapeN; }
@@ -1341,6 +1364,22 @@ public class FormationLapSimTests
                 var fc = cars[i].GetComponent(fcType);
                 result.trace.Append($" | {(cars[i] == playerSpline ? "P" : "s")}{slot} {((bool)onPitProp.GetValue(cars[i]) ? "pit" : "")}d{(float)distProp.GetValue(cars[i]):0} " +
                                     $"{(float)mphProp.GetValue(cars[i]):0}{(fc != null ? " " + modeProp.GetValue(fc) : "")}");
+            }
+            result.trace.Append('\n');
+        }
+
+        // After the green (s_runOnAfterGreen): the mid-field's line state, every 0.2 s.
+        void TraceAfterGreen(float t)
+        {
+            if (t > 3.01f) return;
+            result.trace.Append($"AG t={t:0.00}");
+            var ovalLaneF = splineType.GetField("ovalLane");
+            for (int i = 1; i < n; i++)
+            {
+                int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+                if (slot < 16 || slot > 27) continue;
+                var sd = cars[i];
+                result.trace.Append($" [{slot} d{(float)distProp.GetValue(sd):0} lat{(float)latProp.GetValue(sd):0.0} {(float)mphProp.GetValue(sd):0}mph ln{(int)ovalLaneF.GetValue(sd)} lf{((bool)splineType.GetProperty("LaneFollowing").GetValue(sd) ? 1 : 0)} ss{splineType.GetProperty("StartLaneSide").GetValue(sd)} off{(float)splineType.GetField("lateralOffset").GetValue(sd):0.0} tac{(float)splineType.GetField("tacticalLateralOffset").GetValue(sd):0.0} br{splineType.GetProperty("StartLaneBridging", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(sd)} sh{(float)splineType.GetMethod("StartLaneShiftAt", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(sd, new object[] { (float)distProp.GetValue(sd) }):0.0} ln{(float)splineType.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(float) }, null).Invoke(sd, new object[] { (float)distProp.GetValue(sd) }):0.0} app{Runtime("OvalLaneDirector").GetProperty("Applies").GetValue(null)}]");
             }
             result.trace.Append('\n');
         }

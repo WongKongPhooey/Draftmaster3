@@ -176,7 +176,8 @@ public class FormationDirector : MonoBehaviour
                 var rb = e.tf != null ? e.tf.GetComponent<AIRacingBehaviour>() : null;
                 sb.Append($"  P{e.position,2} {e.name}{(e.isPlayer ? " (YOU)" : "")} lap {e.lap} prog {e.progress:0} trackD {e.trackDistance:0} {e.speedMps * 2.237f:0} mph");
                 if (sd != null && sd.enabled)
-                    sb.Append($" | slot {sd.qualifyingPosition} brain d {sd.DistanceOnTrack:0} lat {sd.LateralOnTrack:0.0} tac {sd.tacticalLateralOffset:0.0} off {sd.lateralOffset:0.0} {sd.CurrentMph:0} mph ext {sd.externalMotionController}");
+                    sb.Append($" | slot {sd.qualifyingPosition} brain d {sd.DistanceOnTrack:0} lat {sd.LateralOnTrack:0.0} tac {sd.tacticalLateralOffset:0.0} off {sd.lateralOffset:0.0} {sd.CurrentMph:0} mph ext {sd.externalMotionController}" +
+                              $" oval {sd.ovalLane}{(sd.LaneFollowing ? "" : "(not following)")} start {sd.StartLaneSide}{(sd.LaunchHolding ? " holding" : "")}");
                 if (rb != null) sb.Append($" lane {rb.PackLane}{(rb.PackMoving ? "->" : "")}");
                 sb.Append('\n');
             }

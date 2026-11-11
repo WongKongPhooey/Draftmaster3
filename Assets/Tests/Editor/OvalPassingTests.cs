@@ -116,6 +116,7 @@ public class OvalPassingTests
     const float UpToSpeedShare = 0.97f;    // a car at this share of its speed plan is up to speed
 
     GameObject _package;
+    static bool s_latTrace;   // per-car line state for the first 3 s after the green (debugging aid)
     readonly List<GameObject> _cars = new List<GameObject>();
 
     [TearDown]
@@ -361,6 +362,40 @@ public class OvalPassingTests
         Assert.Greater(r.launchMinBumper, 1f, "The rows closed up nose to tail in the launch. " + report);
     }
 
+    // The green as it really fell at Texas (Josh, 2026-11-11 19:43, Editor.log GreenDiag): a full 44-car field two-wide
+    // on the start lanes at ~50 mph, rows 6.5 m apart, the leader 38 m short of the line - so the back half of the
+    // field is still 100-180 m back in the trioval. Contacts started ~1 s after the green at 2245-2290 m, rows 11-15,
+    // with every car tracking its line within 0.5 m: the inside car's line swung 3.5 m out while the outside car's
+    // moved 1 m. The 16-car sim above starts the field at the line, so it never ran that stretch.
+    [Test]
+    public void AFullFieldGreenDeepInTheTriovalFansOutWithoutContact()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var raceStart = Runtime("RaceStart");
+        PassResult r;
+        try
+        {
+            calib.Invoke(null, new object[] { TrackId });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+            raceStart.GetMethod("GreenFlagNow").Invoke(null, null);
+            SpawnTrack(TrackId);
+            r = DriveField(raceStart, handOver: true, timedLaps: 1, carsPerLane: 22, idealSingleFile: true,
+                           startSpeed: 50f / 2.237f, rowGap: 6.5f, traceLaunch: false, startLanes: true, leaderAt: -38f);
+        }
+        finally
+        {
+            calib.Invoke(null, new object[] { "" });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+        }
+        string report = r.Report();
+        Debug.Log(report);
+        Assert.AreEqual(0, r.launchContacts, "Cars touched in the launch. " + report);
+        Assert.Greater(r.launchMinDoor, 1f, "The pairs closed on each other in the launch. " + report);
+        Assert.AreEqual(0, r.wallHits, report);
+        Assert.AreEqual(0, r.spins, report);
+        Assert.Greater(r.FlatMeanThrottle, 0.95f, "The field wasn't flat out until it was up to speed. " + report);
+    }
+
     // A restart after a caution: the field comes to the green single file, nose to tail behind the leader. Everyone
     // has to be going within a couple of seconds of the green - a car-by-car accordion with a reaction each held the
     // back of the train at pace speed for the best part of ten seconds (Josh, phone 2026-11-08: "nobody gets going on
@@ -398,7 +433,8 @@ public class OvalPassingTests
     PassResult DriveField(Type raceStart, bool handOver = false, int timedLaps = TimedLaps, int carsPerLane = CarsPerLane,
                           bool idealSingleFile = false, float startSpeed = 60f, float rowGap = HandoverRowGap,
                           bool flatOutLaunch = true, bool traceLaunch = false, float stagger = HandoverStagger,
-                          bool staggeredLaunch = true, bool singleFile = false, bool startLanes = false)
+                          bool staggeredLaunch = true, bool singleFile = false, bool startLanes = false,
+                          float leaderAt = 0f)
     {
         var trackType = Runtime("TrackBuilder");
         var track = (Component)_package.GetComponentInChildren(trackType, true);
@@ -497,7 +533,7 @@ public class OvalPassingTests
             length = (float)splineType.GetProperty("TrackLength").GetValue(spline);
             Assert.Greater(length, 100f, "The AI brain never built its spline.");
             // Single file (a restart after a caution): one car per row, nose to tail on the line.
-            Set(spline, "startDistance", Mathf.Repeat(singleFile ? -i * rowGap : handOver ? -row * rowGap : -row * RowGap - ln * RowGap * 0.5f, length));
+            Set(spline, "startDistance", Mathf.Repeat(leaderAt + (singleFile ? -i * rowGap : handOver ? -row * rowGap : -row * RowGap - ln * RowGap * 0.5f), length));
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
             Set(spline, "startLanes", startLanes);
             if (startLanes && handOver && !singleFile)
@@ -506,13 +542,29 @@ public class OvalPassingTests
                 // car (toward the infield) low, the odd car high.
                 int side = i % 2 == 0 ? -1 : 1;
                 splineType.GetMethod("SetStartLane").Invoke(spline, new object[] { side });
-                float at = (float)splineType.GetProperty("CentreDistanceOnTrack").GetValue(spline);
+                float at = Mathf.Repeat((float)splineType.GetProperty("CentreDistanceOnTrack").GetValue(spline), length);
                 var args = new object[] { side, at, 0f };
                 Assert.IsTrue((bool)splineType.GetMethod("TryStartLaneLateralAt").Invoke(spline, args), "No start lanes at Texas.");
                 float lineLat = (float)splineType.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(float) }, null)
                                                  .Invoke(spline, new object[] { at });
                 Set(spline, "lateralOffset", (float)args[2] - lineLat);
                 splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+                // Wherever the field starts (leaderAt), land the car ON its start lane: correct by where it really is.
+                for (int k = 0; k < 2; k++)
+                {
+                    float miss = (float)args[2] - (float)splineType.GetProperty("CarLateral").GetValue(spline);
+                    if (Mathf.Abs(miss) < 0.05f) break;
+                    Set(spline, "lateralOffset", (float)splineType.GetField("lateralOffset").GetValue(spline) + miss);
+                    splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+                }
+                // Live, the pace lap holds a car on its start lane through its TACTICAL offset (FormationController),
+                // which the green drops - the path that collapsed every pair at Texas (2026-11-11). Hand it over the
+                // same way here.
+                if (leaderAt != 0f)
+                {
+                    Set(spline, "tacticalLateralOffset", (float)splineType.GetField("lateralOffset").GetValue(spline));
+                    Set(spline, "lateralOffset", 0f);
+                }
             }
             Call(input, "OnEnable");
             if (!handOver)
@@ -548,6 +600,9 @@ public class OvalPassingTests
             var en = dirType.GetField("_enabled", BindingFlags.Static | BindingFlags.NonPublic);
             Assert.IsNotNull(en, "OvalLaneDirector._enabled is gone.");
             en.SetValue(null, 1);   // on, whatever this machine's PlayerPrefs say, without writing them
+            // A green behind the line: lanes handed out one a step, so the field runs ~1 s without them - the gap
+            // the start lanes have to bridge (live, no car got a lane at all; FormationLapSimTests.TexasRunOnPastTheGreen).
+            if (leaderAt != 0f) Set(dir, "maxAssignPerStep", 1);
             directorStep = Step(dir);
         }
 
@@ -708,6 +763,17 @@ public class OvalPassingTests
                     bool anyHolding = false;
                     for (int i = 0; i < cars; i++) anyHolding |= (bool)holding.GetValue(splines[i]);
                     if (!anyHolding) r.lastWentAt = clock;
+                }
+                if (s_latTrace && clock <= 3f && step % 10 == 0)
+                {
+                    r.launchTrace.Append($"\n  LAT t={clock:0.00}");
+                    for (int i = 18; i < Mathf.Min(cars, 28); i++)
+                    {
+                        float tgt = (float)targetLat.Invoke(splines[i], new object[] { cd[i] });
+                        r.launchTrace.Append($" [{i} d{cd[i]:0} lat{lat[i]:0.0} tgt{tgt:0.0} ln{lane[i]} ss{startSide.GetValue(splines[i])}" +
+                            $" off{(float)splineType.GetField("lateralOffset").GetValue(splines[i]):0.0} tac{(float)splineType.GetField("tacticalLateralOffset").GetValue(splines[i]):0.0}" +
+                            $" av{(float)splineType.GetField("laneAvoidLateral").GetValue(splines[i]):0.0} lf{((bool)splineType.GetProperty("LaneFollowing").GetValue(splines[i]) ? 1 : 0)}]");
+                    }
                 }
                 if (traceLaunch && (step % Mathf.Max(1, Mathf.RoundToInt(2f / dt)) == 0))
                 {

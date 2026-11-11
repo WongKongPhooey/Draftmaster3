@@ -101,7 +101,13 @@ public class OvalLaneDirector : MonoBehaviour
         if (!live)
         {
             ReleaseAll();
+            if (!RaceStart.IsGreen) _greenReported = false;
             return;
+        }
+        if (!_greenReported && RaceStart.SecondsSinceGreen >= 1f)
+        {
+            _greenReported = true;
+            ReportHandover(drivers);
         }
 
         int budget = Mathf.Max(1, maxAssignPerStep);
@@ -157,6 +163,33 @@ public class OvalLaneDirector : MonoBehaviour
             _easing.Remove(d);
             if (d != null) d.ovalLane = OvalLanes.Lane.None;
         }
+    }
+
+    // A second after each green: how many cars hold a lane, and why any that don't were passed over. Texas
+    // 2026-11-11: live, no car in a 44-car field was ever lane-following after the green (the sims hand every lane
+    // out in ~0.1 s), and nothing in the log said why.
+    bool _greenReported;
+    void ReportHandover(IReadOnlyList<SplineDriver> drivers)
+    {
+        int laned = 0, following = 0;
+        var why = new Dictionary<string, int>();
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || !d.isActiveAndEnabled) continue;
+            if (d.ovalLane != OvalLanes.Lane.None) { laned++; if (d.LaneFollowing) following++; continue; }
+            string r = d == _safetyCarDriver || d.TryGetComponent<SafetyCar>(out _) ? "safety car"
+                     : d.track != _lanesFor ? $"other track ({(d.track != null ? d.track.name : "null")} vs {_lanesFor.name})"
+                     : d.IsOnPit ? "on pit road"
+                     : d.IsHeldStill ? "held still"
+                     : d.TrackLength <= 0f || Mathf.Abs(d.TrackLength - _lapLength) > 1f ? $"lap length {d.TrackLength:0.0} vs {_lapLength:0.0}"
+                     : "eligible, not yet given";
+            why.TryGetValue(r, out int c);
+            why[r] = c + 1;
+        }
+        var sb = new System.Text.StringBuilder($"[OvalLanes] 1 s after the green: {laned} cars have a lane ({following} following it)");
+        foreach (var kv in why) sb.Append($"; {kv.Value} without: {kv.Key}");
+        Debug.Log(sb.ToString());
     }
 
     bool Eligible(SplineDriver d)

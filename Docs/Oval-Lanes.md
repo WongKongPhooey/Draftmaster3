@@ -534,6 +534,28 @@ Martinsville, WG, Chicago, San Diego all clean. `OvalPassingTests.AGreenAtPaceSp
 (start lanes; `(True,False)` is the old grid-stagger handover, Explicit): 0 contacts / walls / spins / offs, closest
 door to door 2.09 m (1.50 m before), cars off their start lanes 14-17 s after the green. Not play-tested.
 
+### The green-step gap (2026-11-11)
+
+Still crashing live at Texas: 44 cars, contacts from ~1 s after the green in rows 11-15, 2245-2290 m - the back half
+of the field is still 100-180 m back in the trioval when the green falls, a stretch the 16-car launch sim (which
+starts the field at the line) never ran. In the log every car tracked its target within 0.5 m, but the high car's
+target dove 5 m down onto the low car.
+
+The pace lap holds a car on its start lane through `FormationController`'s **tactical** offset, which the green
+drops; `StartLaneShiftAt` only applied to a car already following a lane; and the director hands lanes out
+`maxAssignPerStep` (8) a step. So between the green and its lane every car ran its own racing line plus the brain's
+tactical offset, both columns onto the same line at once. Now `SplineDriver.StartLaneBridging`: under green, a car
+holding a start lane with no lane yet keeps to the start lane itself (tactical offset ignored, the kinematic line
+low-pass reseeded so nothing lags). Live, no car got a lane at all (front row off its start lanes 3 s after the
+green); why is not known yet - the director now logs `[OvalLanes] 1 s after the green: ...` with the reason each car
+was passed over, and `[GreenDiag]` prints each car's oval lane and start lane.
+
+Measured: `FormationLapSimTests.TexasRunOnPastTheGreen` (Explicit; runs the real formation lap on 4 s past the
+green, prints the mid-field's line state) 50 contacts on the green step -> 0, pairs at -5.4 / -1.0 through the
+handover. `OvalPassingTests.AFullFieldGreenDeepInTheTriovalFansOutWithoutContact`: 44 dynamic cars two-wide on the
+start lanes at 50 mph, leader 38 m short of the line, pace-lap offset in the tactical term, director throttled to
+one lane a step.
+
 ## Not done yet
 
 - **Live races not yet play-tested.** The director has only been run in the sim.

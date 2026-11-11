@@ -769,7 +769,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _laneSwapAiLanes, _laneSwapPack;
     // The tactical offset as it applies here: a car holding an oval lane on the main track takes none - except the
     // swerve round a stopped car (laneAvoidLateral), which a lane car takes on top of its lane.
-    float TacticalLateral => LaneFollowing && !_onPit ? laneAvoidLateral : tacticalLateralOffset;
+    float TacticalLateral => (LaneFollowing || StartLaneBridging) && !_onPit ? laneAvoidLateral : tacticalLateralOffset;
+
+    // Under green, a car still on its start lane that the lane director has not handed a lane yet (it hands out
+    // maxAssignPerStep a step, so a 44-car field takes ~6 steps). The pace lap held it on its start lane through
+    // FormationController's tactical offset, which the green drops; with no lane yet the car fell back to its own
+    // racing line - every pair of the two-wide field steering onto the same line at once (Texas 2026-11-11: the high
+    // car moved 5 m down onto the low one in the trioval, 50 contacts on the green step in FormationLapSimTests).
+    // It keeps to the start lane itself until the lane arrives.
+    bool StartLaneBridging => _startSide != 0 && !LaneFollowing && !_onPit && RaceStart.IsGreen
+                              && OvalLaneDirector.Enabled && OvalLaneDirector.Applies;
 
     // A lane car's swerve round a stopped car (AIRacingBehaviour), metres off its lane line. The lane owns the line,
     // so the brain's tactical offset is ignored while LaneFollowing - which left a car on an oval no way round a
@@ -870,9 +879,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // What holding the start lane adds on top of the lane line at `distance`.
     float StartLaneShiftAt(float distance)
     {
-        if (_startSide == 0 || !(_startWeight > 0f) || !LaneFollowing || _onPit) return 0f;
+        if (_startSide == 0 || !(_startWeight > 0f) || _onPit) return 0f;
+        if (!LaneFollowing && !StartLaneBridging) return 0f;
         if (!TryStartLaneLateralAt(_startSide, distance, out float lat)) return 0f;
-        return _startWeight * (lat - LaneLateralAt(ovalLane, distance));
+        return _startWeight * (lat - (LaneFollowing ? LaneLateralAt(ovalLane, distance) : LateralAt(distance)));
     }
 
     // Start lanes: on the pace lap, follow the lane FormationController has put the car in; after the green hold it
@@ -1375,6 +1385,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _hasPrevLateral;
     float _currentMph;
     float _lineLatSmoothed;   // low-passed racing-line lateral, so the rear axle doesn't snap at segment boundaries
+    bool _wasStartLaneBridging;
     bool _hasLineSmoothed;    // false until the first smoothed sample / after a lane change, so it seeds from raw
     float _pathYawSmoothed;   // low-passed turn-in yaw (deg), so the body doesn't snap pointing onto its path
     // The lane merge (pit road <-> track): the lateral (m) the car carries across the join, relative to the new
@@ -3149,6 +3160,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // of turns. A generous low-pass rounds those kinks so the car flows through the corner. Reset on a lane
         // change (RejoinSplineContinuous clears _hasLineSmoothed) so it doesn't drag a stale value across the merge.
         float rawLineLateral = !_onPit ? LateralAt(placeDistance) + LaneShiftAt(placeDistance) : 0f;
+        // The green's start-lane bridge moves the pace lap's offset out of the tactical term and into the line in
+        // one step: reseed, or the low-pass drags the car toward its own racing line and back.
+        bool bridging = StartLaneBridging;
+        if (bridging && !_wasStartLaneBridging) _hasLineSmoothed = false;
+        _wasStartLaneBridging = bridging;
         _lineLatSmoothed = _hasLineSmoothed ? Mathf.Lerp(rawLineLateral, _lineLatSmoothed, cornerSmoothing) : rawLineLateral;
         _hasLineSmoothed = true;
         float lineLateral = _lineLatSmoothed;
