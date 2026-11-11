@@ -81,6 +81,8 @@ public class GarageScreenUI : MonoBehaviour
     public List<TextMeshProUGUI> accoladeLines = new();
     [Tooltip("Trait lines, filled top-down.")]
     public List<TextMeshProUGUI> traitLines = new();
+    [Tooltip("The coloured square in front of each trait line, same order as traitLines.")]
+    public List<Image> traitBullets = new();
     [Tooltip("Two relationship rows (standing, score): label, value.")]
     public List<TextPair> relationshipRows = new();
     [Tooltip("What the relationship means, or N/A on the player's own sheet.")]
@@ -99,6 +101,9 @@ public class GarageScreenUI : MonoBehaviour
         public TextMeshProUGUI value;
         [Tooltip("Cell colour. Gold for the driver's stats, as the sheet has it.")]
         public Color tint = new Color(0.91f, 0.69f, 0.24f, 1f);
+        [Tooltip("The top of the stat's scale (20 for a skill, 100 for an ability rating). A skill at " +
+                 "DriveScoutStyle.StandoutSkill or above has its number drawn in gold.")]
+        public int max = 20;
     }
 
     [System.Serializable]
@@ -494,7 +499,7 @@ public class GarageScreenUI : MonoBehaviour
             if (i < lines.Count)
             {
                 label.text = lines[i].text;
-                if (theme != null) label.color = lines[i].gold ? theme.gold : theme.textDim;
+                label.color = lines[i].gold ? DriveScoutStyle.Gold : DriveScoutStyle.Meta;
                 label.gameObject.SetActive(true);
             }
             else label.gameObject.SetActive(false);
@@ -522,7 +527,7 @@ public class GarageScreenUI : MonoBehaviour
         if (driverAge == null) return;
         bool known = row != null && row.Age > 0;
         driverAge.text = known ? row.Age.ToString() : "—";
-        if (theme != null) driverAge.color = known ? theme.text : theme.textDisabled;
+        driverAge.color = known ? DriveScoutStyle.Text : DriveScoutStyle.Meta;
     }
 
     // Every attribute the Drivers table rates this driver on, in DriverAttributeSheet order — the same
@@ -543,8 +548,10 @@ public class GarageScreenUI : MonoBehaviour
             SetStat(driverStats, i, attribute.Name,
                     value >= 0 ? value / (float)Mathf.Max(1, attribute.Max) : 0f,
                     value >= 0 ? value.ToString() : known ? "—" : "??");
-            if (theme != null && driverStats[i].value != null)
-                driverStats[i].value.color = value >= 0 ? theme.text : theme.textDisabled;
+            if (driverStats[i].value != null)
+                driverStats[i].value.color = value < 0 ? DriveScoutStyle.Meta
+                    : driverStats[i].max <= 20 && value >= DriveScoutStyle.StandoutSkill ? DriveScoutStyle.Gold
+                    : DriveScoutStyle.Text;
         }
 
         if (scoutingLabel == null) return;
@@ -563,20 +570,31 @@ public class GarageScreenUI : MonoBehaviour
         for (int i = 0; i < traitLines.Count; i++)
         {
             var line = traitLines[i];
+            var bullet = i < traitBullets.Count ? traitBullets[i] : null;
             if (line == null) continue;
             if (i < traits.Count)
             {
                 line.text = DriverTraits.Label(traits[i]);
-                if (theme != null) line.color = theme.text;
+                line.color = DriveScoutStyle.Text;
+                if (bullet != null) { bullet.enabled = true; bullet.color = TraitColour(traits[i]); }
             }
-            else if (i == 0 && traits.Count == 0)
+            else
             {
-                line.text = "None known";
-                if (theme != null) line.color = theme.textDisabled;
+                line.text = i == 0 && traits.Count == 0 ? "None known" : "";
+                line.color = DriveScoutStyle.Meta;
+                if (bullet != null) bullet.enabled = false;
             }
-            else line.text = "";
         }
     }
+
+    // The square in front of a trait, as the design colours them: what a driver is admired for in gold, what
+    // the fans love in green, how they race in red.
+    static Color TraitColour(DriverTrait trait) => trait switch
+    {
+        DriverTrait.FanFavourite => DriveScoutStyle.Good,
+        DriverTrait.Aggressive => DriveScoutStyle.Bad,
+        _ => DriveScoutStyle.Gold,
+    };
 
     // The rivalry score between this driver and the player, as the racing keeps it — keyed by the name the
     // player's car carries on track, which is their career name.
@@ -593,25 +611,29 @@ public class GarageScreenUI : MonoBehaviour
             if (pair.label != null)
             {
                 pair.label.text = mine ? (i == 0 ? "N/A" : "") : !known ? "" : i == 0 ? "Standing" : "Score";
-                if (theme != null) pair.label.color = mine ? theme.text : theme.textDim;
+                pair.label.color = mine ? DriveScoutStyle.Meta : DriveScoutStyle.Label;
             }
             if (pair.value == null) continue;
             pair.value.text = !known ? "" : i == 0 ? standing.ToString()
                                                    : (score > 0f ? "+" : "") + Mathf.RoundToInt(score);
-            if (theme != null && i == 0)
-                pair.value.color = standing == DriverRelationships.Standing.Ally ? theme.confirm
-                                 : standing == DriverRelationships.Standing.Neutral ? theme.text : theme.danger;
+            pair.value.color = i != 0 ? DriveScoutStyle.Text
+                             : standing == DriverRelationships.Standing.Ally ? DriveScoutStyle.Good
+                             : standing == DriverRelationships.Standing.Neutral ? DriveScoutStyle.Text
+                             : DriveScoutStyle.Bad;
         }
 
+        // The footnote at the foot of the block, in the small tracked capitals the design sets it in. The
+        // player's own sheet carries the design's line on how a relationship is made.
         if (relationshipNote == null) return;
-        relationshipNote.text = !known ? "" : standing switch
+        string note = mine ? "Race together to build a rapport." : !known ? "" : standing switch
         {
             DriverRelationships.Standing.Ally => "Friendly. Will work with you in the draft.",
             DriverRelationships.Standing.Rival => "A declared rivalry. Expect no favours.",
             DriverRelationships.Standing.Furious => "Out for payback. Watch your mirrors.",
-            _ => score == 0f ? "No history between you yet." : "Nothing either way.",
+            _ => score == 0f ? "No history yet. Race together to build a rapport." : "Nothing either way.",
         };
-        if (theme != null) relationshipNote.color = theme.textDim;
+        relationshipNote.text = note.TrimEnd('.').ToUpperInvariant();
+        relationshipNote.color = DriveScoutStyle.Meta;
     }
 
     // ------------------------------------------------------------------ helpers
@@ -633,8 +655,18 @@ public class GarageScreenUI : MonoBehaviour
         var row = rows[index];
         if (row.label != null) row.label.text = label;
         if (row.value != null) row.value.text = value;
-        if (row.cells != null)
-            IronOvalUI.SetCells(row.cells, Mathf.RoundToInt(Mathf.Clamp01(fill01) * 10f), 10, row.tint);
+        if (row.cells == null) return;
+        int filled = Mathf.RoundToInt(Mathf.Clamp01(fill01) * 10f);
+        // The DriveScout sheet's bar is ten flat cells the builder lays out once; they are only recoloured
+        // here — gold up to the value, the edge colour past it. A bar from an older build has none, so it
+        // falls back to the kit's rebuilt cells.
+        var cells = row.cells.GetComponentsInChildren<Image>(true);
+        if (cells.Length == 10 && row.cells.GetComponent<HorizontalLayoutGroup>() == null)
+        {
+            for (int i = 0; i < cells.Length; i++)
+                cells[i].color = i < filled ? DriveScoutStyle.Gold : DriveScoutStyle.Edge;
+        }
+        else IronOvalUI.SetCells(row.cells, filled, 10, row.tint);
     }
 
     static void SetPair(List<TextPair> rows, int index, string label, string value)

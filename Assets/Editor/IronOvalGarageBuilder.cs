@@ -7,65 +7,64 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Builds Assets/Scenes/GarageScreen.unity from the Iron Oval design file's GARAGE screen (the updated
-// pass: car slot + career + accolades left, driver stats in the middle, traits over the driver's
-// relationship with the player right). The design's XP meter is gone: fan appeal is a stat row now.
+// Builds Assets/Scenes/GarageScreen.unity — the laptop's DriveScout sheet — to the Draftmaster3_UI_Unity
+// design handoff (Designs/.../Layout/DriveScout_PC.json and Reference/DriveScout_PC@3x.png, 2026-11-11):
 //
 //   Draftmaster > Art > Build Garage Screen Scene
 //
-// The sheet is 844x390; this is the project's 640x360 canvas at roughly the same proportions — left column 208
-// becomes 136 (the car slot's width, so the car fills it), right 212 becomes about the same (as wide as its
-// Silkscreen headings need), and the middle takes the rest. The canvas matches height, so a
-// screen wider than 16:9 (a phone) is more than 640 wide: the left column holds the left edge, the right
-// column the right edge, and the middle stretches between them so the whole width is used. Driver-stat cells are gold, car-stat
-// cells telemetry blue, exactly as the sheet separates the two.
+// Every position, size and colour below is the design's, on the same 640x360 canvas: a 30px header band
+// (title, the series and driver pickers, the [ESC] X close box), then three columns 8px in from every edge
+// and 8px apart — car slot over Personal / Career / Accolades on the left (150 wide), Driver Stats in the
+// middle (whatever is left), Traits over Relationship on the right (156 wide). Panels are a navy plate with
+// a 3px cream border outside it; everything you read is monogram Bold 16 (headings in gold capitals, labels
+// sand, values cream), with Silkscreen 8 only for the ESC keycap and the relationship footnote.
 //
-// The middle block is every attribute the Drivers table keeps, in DriverAttributeSheet order: the two
-// 0-100 ability ratings full width, then the sixteen 0-20 skills in two grouped columns. GarageScreenUI
-// fills those rows by index, so the order rows are added in here is the order that sheet declares.
+// Wider than 16:9 (a phone), the side columns hold their edges and the middle and the pickers stretch,
+// exactly as the design's anchors do. On a phone the ESC keycap drops out of the close box and the box
+// narrows to the X (KeyboardLegend), as DriveScout_Mobile draws it.
 //
-// What each field is bound to (and why nothing is faked) is in GarageScreenUI's class comment. The one
-// deliberate departure: the sheet's bottom strip switches between four team drivers, and this game has
-// one car, so there is no strip — the screen is a laptop window, and its only way out is the red X close
-// box in the top bar.
+// The design is one static state; the sheet is live. The middle block is every attribute the Drivers table
+// keeps, in DriverAttributeSheet order (GarageScreenUI fills the rows by index), and the parts with no
+// place in the design keep one that disturbs it least: the scouting count sits right-aligned on the
+// Driver Stats heading's line, a rival's standing and score sit where the design's N/A is, and the
+// relationship's line of explanation is the design's footnote at the foot of that panel.
 //
-// The top bar carries the sheet's two pickers — series, then the field entered in that series — which is
-// where the design's roster switching ended up: one bar that reaches every driver in the world rather
-// than a strip that reaches four.
-//
-// Generated, not hand-authored: re-running rebuilds it.
+// Generated, not hand-authored: re-running rebuilds it. GarageScreenUI's class comment says what each
+// field is bound to.
 public static class IronOvalGarageBuilder
 {
     const string kScenePath = "Assets/Scenes/GarageScreen.unity";
+    const string kStripesPath = "Assets/UI/IronOval/stripes-slot_16x16.png";
+    const string kMonogramPath = "Assets/Resources/Fonts/Monogram Pixel.asset";
+    const string kSilkscreenPath = "Assets/Resources/Fonts/Silkscreen Pixel.asset";
 
-    // Row metrics follow the row FACE. The sheet's text is the type scale's Data role (Fixedsys, a 16px
-    // cell) rather than the 8px Silkscreen captions it was first authored in, so it reads at twice the
-    // size and fills the screen it has: a row box is 18px and every pitch follows it. Expressed as
-    // metrics rather than literals so the screen re-flows if the face changes again.
-    const IronOvalUI.Role Text = IronOvalUI.Role.Data;
-    static float LabelH => IronOvalUI.Snap(PixelUITheme.Instance != null ? PixelUITheme.Instance.data : null,
-                                           UIType.KitPx(TypeRole.Data)) + 2f;
-    // One text row to the next, in a list of plain text rows.
-    // A pixel under the box: Fixedsys draws its glyphs inside the top 16 of the 18, so rows can share one.
-    static float TextPitch => LabelH - 1f;
-    // A heading to the first row under it.
-    static float HeadPitch => LabelH + 1f;
-    // The stats block's side margins: as narrow as reads cleanly, since its rows are the tightest fit.
-    const float Inset = 6f;
+    // monogram's native size, and the box every line of it is set in: the design's 16px row, with the
+    // glyphs' own 13px line placed 1px down inside it.
+    const float Px = 16f;
+    const float RowPitch = 17f;     // one stat / career row to the next
+    const float TraitPitch = 19f;   // trait lines are a touch looser
+    const float HeadToRow = 21f;    // a gold heading to the first row under it
+    const float GroupGap = 9f;      // after a group's last row, before the next heading
+    const int ScanlineAlpha = 41;   // the design's scanline tile, out of 255
+
+    static TMP_FontAsset s_mono, s_silk;
 
     [MenuItem("Draftmaster/Art/Build Garage Screen Scene", priority = 126)]
     public static void Build()
     {
         var theme = PixelUITheme.Instance;
-        if (theme == null || theme.body == null)
+        s_mono = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(kMonogramPath);
+        s_silk = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(kSilkscreenPath);
+        if (theme == null || s_mono == null || s_silk == null)
         {
-            EditorUtility.DisplayDialog("Iron Oval",
-                "The theme has no Iron Oval fonts yet. Run Draftmaster > Art > Set Up Iron Oval Kit first.", "OK");
+            EditorUtility.DisplayDialog("DriveScout",
+                "The Monogram / Silkscreen pixel fonts or the theme are missing. Run Draftmaster > Art > " +
+                "Set Up Iron Oval Kit first.", "OK");
             return;
         }
+        var stripes = StripesSprite();
 
         int H = PixelUITheme.ReferenceHeight;
-
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var camGo = new GameObject("GarageCamera", typeof(Camera));
@@ -73,7 +72,7 @@ public static class IronOvalGarageBuilder
         cam.orthographic = true;
         cam.orthographicSize = H / 2f / PixelUITheme.ReferencePixelsPerUnit;
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = theme.screenBase;
+        cam.backgroundColor = DriveScoutStyle.Background;
         camGo.transform.position = new Vector3(0f, 0f, -10f);
 
         var canvasGo = new GameObject("GarageCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -86,262 +85,51 @@ public static class IronOvalGarageBuilder
 
         var ui = canvasGo.AddComponent<GarageScreenUI>();
 
+        var background = Box(root, "Background", DriveScoutStyle.Background);
+        Fill(background, 0f, 0f, 0f, 0f);
+
         // --- header band ------------------------------------------------------------------------------
-        // The pickers are the standard button's height (UIButton, every screen's), and the band is a picker
-        // plus 1px of air either side.
-        float pickerH = UIButton.KitPx;
-        var band = Plate(root, "HeaderBand", theme.plateLight);
+        var band = Box(root, "HeaderBand", DriveScoutStyle.HeaderBand);
         band.anchorMin = new Vector2(0f, 1f);
         band.anchorMax = new Vector2(1f, 1f);
         band.pivot = new Vector2(0.5f, 1f);
-        band.sizeDelta = new Vector2(0f, pickerH + 2f);
+        band.sizeDelta = new Vector2(0f, 30f);
         band.anchoredPosition = Vector2.zero;
+        var bandRule = Box(band, "HeaderRule", DriveScoutStyle.HeaderRule);
+        StretchTop(bandRule, 0f, 0f, 27f, 3f);
 
-        // The window's title bar: the sheet is a driver-tracking program on the laptop, not a garage.
-        const string programName = "DriveScout v3.1";
-        var title = IronOvalUI.Label(band, "Title", programName, IronOvalUI.Role.Header, theme.text);
-        title.textWrappingMode = TextWrappingModes.NoWrap;
-        float titleW = Mathf.Ceil(title.GetPreferredValues(programName).x);
-        Place(title.rectTransform, 8f, -(band.sizeDelta.y - LabelH) / 2f, titleW, LabelH);
+        Text(band, "Title", "DRIVESCOUT", 10f, 7f, 72f, DriveScoutStyle.Text);
+        Text(band, "Version", "v3.1", 88f, 7f, 30f, DriveScoutStyle.Meta);
 
-        // The two pickers: which championship, and which of its entries the sheet is drawn for. The
-        // driver list is the longer one — a stock-car field is 38 cars — so it gets the wider plate and
-        // the deeper list. GarageScreenUI fills both and redraws the sheet when either changes. They start
-        // where the title ends, so a longer program name pushes them along rather than under it.
-        float pickerY = -(band.sizeDelta.y - pickerH) / 2f;
-        float seriesX = Mathf.Max(100f, 8f + titleW + 12f);
-        var seriesPicker = IronOvalUI.Dropdown(band, "SeriesPicker", new Vector2(196f, pickerH), visibleItems: 7);
-        Place((RectTransform)seriesPicker.transform, seriesX, pickerY, 196f, pickerH);
+        // The two pickers: which championship, and which of its entries the sheet is drawn for. The series
+        // picker runs from x128 to 27px past the middle, the driver picker from 35px past the middle to
+        // 66px short of the right edge, so on a wider screen both grow.
+        var seriesPicker = Picker(band, "SeriesPicker", visibleItems: 7);
+        Span((RectTransform)seriesPicker.transform, 0f, 0.5f, 128f, 27f, 3f, 22f);
         ui.seriesDropdown = seriesPicker;
 
-        var driverPicker = IronOvalUI.Dropdown(band, "DriverPicker", new Vector2(220f, pickerH), visibleItems: 8);
-        Place((RectTransform)driverPicker.transform, seriesX + 204f, pickerY, 220f, pickerH);
+        var driverPicker = Picker(band, "DriverPicker", visibleItems: 8);
+        Span((RectTransform)driverPicker.transform, 0.5f, 1f, 35f, -66f, 3f, 22f);
         ui.driverDropdown = driverPicker;
 
-        // The way out is a window's close box: the standard red button, square, an X on it, in the band's
-        // top-right corner over the right column's edge. Esc / Back on a pad do the same (GarageScreenUI).
-        // GarageScreenUI wires it by this name — a builder-time AddListener does not survive the save.
-        float closeW = UIButton.KitPx;
-        var close = IronOvalUI.Button(band, "Close", "X", new Vector2(closeW, closeW));
-        Anchor((RectTransform)close.transform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f),
-               new Vector2(closeW, UIButton.KitPx), pivot: new Vector2(1f, 0.5f));
+        BuildCloseBox(band, (RectTransform)driverPicker.transform);
 
-        float top = -(band.sizeDelta.y + 4f);
-        // Band above, nothing below: the columns run to the screen's foot, with the same 8px margin as its sides.
-        float colH = H + top - 8f;
+        // --- the three columns ---------------------------------------------------------------------------
+        var body = new GameObject("Body", typeof(RectTransform)).transform as RectTransform;
+        body.SetParent(root, false);
+        Fill(body, 0f, 0f, 0f, 30f);
 
-        // --- left: the car, then who is driving it -----------------------------------------------------
-        // The column is the car slot's width: a 64x32 car at 2x with 4px round it (the 2px keyline and 2px
-        // of plate), the same on every side, so the car fills the box. GarageScreenUI picks the largest
-        // whole-pixel scale that leaves those 4px, which at this size is 2x.
-        const float carSlotH = 72f;
-        float leftW = 2f * 64f + 8f;
-        // Text inside the column sits at the stats block's inset rather than the car's, so a name has room.
-        const float idPad = Inset;
-        var carSlot = IronOvalUI.ArtSlot(root, "CarSlot", new Vector2(leftW, carSlotH),
-                                         "[ No car ]", keyline: true);
-        Place(carSlot, 8f, top, leftW, carSlotH);
-        // A real car sits in it now, so the inside is a plain deep plate rather than the placeholder hatch.
-        var hatch = carSlot.Find("Hatch");
-        if (hatch != null && hatch.TryGetComponent<Image>(out var hatchImage))
-        {
-            hatchImage.sprite = null;
-            hatchImage.type = Image.Type.Simple;
-            hatchImage.color = theme.plateDeep;
-        }
-        // The viewed driver's car, centred; GarageScreenUI sizes it to a whole-pixel scale of its sprite.
-        var carGo = new GameObject("Car", typeof(RectTransform), typeof(Image));
-        carGo.transform.SetParent(carSlot, false);
-        var carRt = (RectTransform)carGo.transform;
-        carRt.anchorMin = carRt.anchorMax = carRt.pivot = new Vector2(0.5f, 0.5f);
-        carRt.anchoredPosition = Vector2.zero;
-        carRt.sizeDelta = new Vector2(64f, 32f);
-        var carImage = carGo.GetComponent<Image>();
-        carImage.raycastTarget = false;
-        carImage.preserveAspect = true;
-        carImage.enabled = false;
-        ui.carImage = carImage;
-        var caption = carSlot.Find("Caption");
-        if (caption != null) ui.carSlotCaption = caption.GetComponent<TextMeshProUGUI>();
-
-        var identity = Plate(root, "Identity", theme.plate);
-        Place(identity, 8f, top - carSlotH - 4f, leftW, colH - carSlotH - 4f);
-
-        // The block runs off one cursor so a taller label face pushes everything below it down
-        // instead of landing on top of the next line.
-        float iy = -6f;
-
-        // Personal: who the driver is, as label / value rows like the career block under it.
-        var personalHead = IronOvalUI.Label(identity, "PersonalHead", "Personal", Text, theme.gold);
-        Place(personalHead.rectTransform, idPad, iy, leftW - 2f * idPad, LabelH);
-        personalHead.textWrappingMode = TextWrappingModes.NoWrap;
-        iy -= HeadPitch;
-
-        // "Name" is the longer of the two labels, and its box is just that wide; the value takes the rest of
-        // the line, right-aligned. A name too long for it is shortened by GarageScreenUI (GarageScreenUI.FitName).
-        const float personalLabelW = 34f;
-        ui.driverName = PersonalRow(identity, theme, "Name", idPad, personalLabelW, iy);
-        iy -= TextPitch;
-        ui.driverAge = PersonalRow(identity, theme, "Age", idPad, personalLabelW, iy);
-        iy -= TextPitch;
-
-        iy -= 2f;
-        Place(Plate(identity, "Rule0", theme.plateLight), idPad, iy, leftW - 2f * idPad, 1f);
-        iy -= 4f;
-
-        var careerHead = IronOvalUI.Label(identity, "CareerHead", "Career", Text, theme.gold);
-        Place(careerHead.rectTransform, idPad, iy, leftW - 2f * idPad, LabelH);
-        careerHead.textWrappingMode = TextWrappingModes.NoWrap;
-        iy -= HeadPitch;
-
-        for (int i = 0; i < 3; i++)
-        {
-            var label = IronOvalUI.Label(identity, "CareerLabel_" + i, "-", Text, theme.textDim);
-            Place(label.rectTransform, idPad, iy, leftW - 2f * idPad - 40f, LabelH);
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-
-            var value = IronOvalUI.Label(identity, "CareerValue_" + i, "0", Text, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-idPad, iy), new Vector2(40f, LabelH));
-            value.alignment = TextAlignmentOptions.Right;
-
-            ui.careerRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
-            iy -= TextPitch;
-        }
-
-        iy -= 2f;
-        Place(Plate(identity, "Rule1", theme.plateLight), idPad, iy, leftW - 2f * idPad, 1f);
-        iy -= 4f;
-
-        var accHead = IronOvalUI.Label(identity, "AccoladesHead", "Accolades", Text, theme.gold);
-        Place(accHead.rectTransform, idPad, iy, leftW - 2f * idPad, LabelH);
-        accHead.textWrappingMode = TextWrappingModes.NoWrap;
-        iy -= HeadPitch;
-
-        // As many lines as the block has room for under the heading, up to three.
-        float identityH = colH - carSlotH - 4f;
-        int accolades = Mathf.Clamp(Mathf.FloorToInt((identityH + iy - 2f) / TextPitch), 1, 3);
-        for (int i = 0; i < accolades; i++)
-        {
-            var line = IronOvalUI.Label(identity, "Accolade_" + i, "", Text, theme.textDim);
-            Place(line.rectTransform, idPad, iy, leftW - 2f * idPad, LabelH);
-            line.textWrappingMode = TextWrappingModes.NoWrap;
-            ui.accoladeLines.Add(line);
-            iy -= TextPitch;
-        }
-
-        // --- middle: the driver ------------------------------------------------------------------------
-        // Traits and relationship read in one short column, and the stats need the width more: the left
-        // column's width, or just enough for the widest heading ("Relationship", Silkscreen) if that is wider
-        // — which it is, so that heading is what sets this column. Text sits at the same inset as the left's.
-        const float rPad = Inset;
-        float rightW = Mathf.Max(leftW, HeadingWidth(theme, "Relationship") + 2f * rPad);
-        float midX = 8f + leftW + 8f;
-        float midRight = rightW + 16f;
-        var middle = Plate(root, "DriverStats", theme.plate);
-        Stretch(middle, midX, midRight, top, colH);
-
-        var statsHead = IronOvalUI.Label(middle, "Head", "Driver Stats", Text, theme.gold);
-        Place(statsHead.rectTransform, Inset, -6f, 120f, LabelH);
-        statsHead.textWrappingMode = TextWrappingModes.NoWrap;
-
-        // How much of a rival's sheet is known, on the heading's line, right-aligned.
-        var scouted = IronOvalUI.Label(middle, "Scouted", "", Text, theme.textDim);
-        Stretch(scouted.rectTransform, 130f, Inset, -6f, LabelH);
-        scouted.alignment = TextAlignmentOptions.Right;
-        scouted.textWrappingMode = TextWrappingModes.NoWrap;
-        ui.scoutingLabel = scouted;
-
-        // Rows are added in DriverAttributeSheet.All order — ability across the top, then the left column
-        // (track types, standing) and the right column (craft) — because GarageScreenUI fills them by
-        // index. Change the order here and the sheet has to change with it, not the other way round.
-        float sy = -(6f + HeadPitch);
-        foreach (var attribute in DriverAttributeSheet.Ability)
-        {
-            var rowRt = Row(middle, "Ability_" + ui.driverStats.Count, Inset, sy, 0f, LabelH);
-            Stretch(rowRt, Inset, Inset, sy, LabelH);
-
-            var label = IronOvalUI.Label(rowRt, "Label", attribute.Name, Text, theme.textDim);
-            Place(label.rectTransform, 0f, 0f, 90f, LabelH);
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-
-            // The bar is centred on the row, so it lines up with the text either side of it.
-            var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10);   // gold: the driver's own numbers
-            Place(cells, 94f, -(LabelH - 10f) / 2f, 110f, 10f);
-
-            var value = IronOvalUI.Label(rowRt, "Value", "-", Text, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(40f, LabelH));
-            value.alignment = TextAlignmentOptions.Right;
-
-            ui.driverStats.Add(new GarageScreenUI.StatRow { label = label, cells = cells, value = value });
-            sy -= TextPitch;
-        }
-
-        Stretch(Plate(middle, "StatsRule", theme.plateLight), Inset, Inset, sy - 2f, 1f);
-
-        // The sixteen 0-20 skills, two columns of grouped rows, splitting the block's width so a wider
-        // screen widens both. The left column's longest names ("Sponsor Appeal", "Superspeedway") are a
-        // character or two longer than the right's ("Adaptability"), so it takes a little more than half.
-        float colTop = sy - 6f;
-        const float split = 0.53f;
-        var colA = Column(middle, "ColumnA", 0f, split, Inset, 5f, colTop, colH);
-        var colB = Column(middle, "ColumnB", split, 1f, 5f, Inset, colTop, colH);
-
-        float ay = SkillGroup(ui, colA, theme, "TRACK TYPES", DriverAttributeSheet.TrackTypes, 0f);
-        SkillGroup(ui, colA, theme, "STANDING", DriverAttributeSheet.Standing, ay);
-        SkillGroup(ui, colB, theme, "CRAFT", DriverAttributeSheet.Craft, 0f);
-
-        // --- right: traits over the relationship, half the column each ----------------------------------
-        float halfH = Mathf.Floor((colH - 4f) / 2f);
-        var traits = Plate(root, "Traits", theme.plate);
-        Anchor(traits, new Vector2(1f, 1f), new Vector2(-8f, top), new Vector2(rightW, halfH));
-
-        float ty = -6f;
-        var traitsHead = IronOvalUI.Label(traits, "TraitsHead", "Traits", Text, theme.gold);
-        Place(traitsHead.rectTransform, rPad, ty, rightW - 2f * rPad, LabelH);
-        traitsHead.textWrappingMode = TextWrappingModes.NoWrap;
-        ty -= HeadPitch;
-        for (int i = 0; i < 6; i++)
-        {
-            var line = IronOvalUI.Label(traits, "Trait_" + i, "", Text, theme.text);
-            Place(line.rectTransform, rPad, ty, rightW - 2f * rPad, LabelH);
-            line.textWrappingMode = TextWrappingModes.NoWrap;
-            ui.traitLines.Add(line);
-            ty -= TextPitch;
-        }
-
-        var relationship = Plate(root, "Relationship", theme.plate);
-        Anchor(relationship, new Vector2(1f, 1f), new Vector2(-8f, top - halfH - 4f),
-               new Vector2(rightW, colH - halfH - 4f));
-
-        float ly = -6f;
-        var relHead = IronOvalUI.Label(relationship, "RelationshipHead", "Relationship", Text, theme.gold);
-        Place(relHead.rectTransform, rPad, ly, rightW - 2f * rPad, LabelH);
-        relHead.textWrappingMode = TextWrappingModes.NoWrap;
-        ly -= HeadPitch;
-        for (int i = 0; i < 2; i++)
-        {
-            var label = IronOvalUI.Label(relationship, "RelLabel_" + i, "", Text, theme.textDim);
-            Place(label.rectTransform, rPad, ly, 70f, LabelH);
-            var value = IronOvalUI.Label(relationship, "RelValue_" + i, "", Text, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-rPad, ly), new Vector2(80f, LabelH));
-            value.alignment = TextAlignmentOptions.Right;
-            ui.relationshipRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
-            ly -= TextPitch;
-        }
-        ly -= 4f;
-        var relNote = IronOvalUI.Label(relationship, "RelNote", "", Text, theme.textDim);
-        Place(relNote.rectTransform, rPad, ly, rightW - 2f * rPad, LabelH * 4f);
-        relNote.textWrappingMode = TextWrappingModes.Normal;
-        relNote.alignment = TextAlignmentOptions.TopLeft;
-        ui.relationshipNote = relNote;
+        BuildLeftColumn(ui, body, stripes);
+        BuildDriverStats(ui, body);
+        BuildRightColumn(ui, body);
 
         var lines = new GameObject("IronOvalScanlines", typeof(IronOvalScanlines));
-        lines.GetComponent<IronOvalScanlines>().opacity = 0.6f;
+        // The kit's scanline tile is darker than the design's (107 alpha to 41), so it is laid on lighter.
+        float tileAlpha = theme.scanline != null ? TileAlpha(theme.scanline) : 107;
+        lines.GetComponent<IronOvalScanlines>().opacity = Mathf.Clamp01(ScanlineAlpha / Mathf.Max(1f, tileAlpha));
 
         // Fill it in once so the saved scene shows real values rather than placeholders — the pickers
         // included, so the header reads as a real series and a real field in the editor too.
-        // Restyled first, so the fill measures names in the size they are drawn at.
-        RestyleSheetText(root, theme);
         ui.BuildPickers();
         ui.Refresh();
 
@@ -349,151 +137,412 @@ public static class IronOvalGarageBuilder
         EditorSceneManager.SaveScene(scene, kScenePath);
         AssetDatabase.SaveAssets();
 
-        Debug.Log($"Iron Oval: built the garage screen at {kScenePath}.");
+        Debug.Log($"DriveScout: built the laptop sheet at {kScenePath}.");
     }
 
-    // The sheet's grey labels and white values sit a pixel under the Data size, and its gold headings are in
-    // Silkscreen (tracked 2, as the title menu): the headings are Title Case in the text, and Silkscreen
-    // draws them in capitals. Picked out by structure rather than colour — GarageScreenUI recolours rows at
-    // runtime (disabled grey, gold accolades, green allies) — so a heading is a "...Head" object, and the
-    // pickers and the close box (Selectables) and the header title keep their own looks.
-    public const float SheetTextSize = 15f;
-    const float HeadingSpacing = 2f;
-    static readonly string[] KeepSize = { "Title" };
+    // ------------------------------------------------------------------ header pieces
 
-    static int RestyleSheetText(Transform root, PixelUITheme theme)
+    // [ESC] X: a slate box with a 2px near-black frame, a cream keycap on a 2px shadow, and the X. Pressing
+    // it is Back (GarageScreenUI wires the Button by this object's name — a builder-time AddListener does not
+    // survive the save). The keycap is a KeyboardLegend: gone on a phone or with a pad in hand, taking 30px
+    // of the box with it and handing them to the driver picker.
+    static void BuildCloseBox(RectTransform band, RectTransform driverPicker)
     {
-        if (theme == null || theme.data == null || theme.display == null) return 0;
-        float dataSize = UIType.KitPx(TypeRole.Data);
-        int changed = 0;
+        var go = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
+        var box = (RectTransform)go.transform;
+        box.SetParent(band, false);
+        box.anchorMin = box.anchorMax = new Vector2(1f, 1f);
+        box.pivot = new Vector2(1f, 1f);
+        box.sizeDelta = new Vector2(52f, 22f);
+        box.anchoredPosition = new Vector2(-6f, -3f);
 
-        foreach (var text in root.GetComponentsInChildren<TextMeshProUGUI>(true))
+        var plate = go.GetComponent<Image>();
+        plate.color = Color.white;
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = plate;
+        var colours = button.colors;
+        colours.normalColor = DriveScoutStyle.Edge;
+        colours.highlightedColor = Lighter(DriveScoutStyle.Edge);
+        colours.selectedColor = Lighter(DriveScoutStyle.Edge);
+        colours.pressedColor = DriveScoutStyle.HeaderRule;
+        colours.disabledColor = DriveScoutStyle.Edge;
+        colours.fadeDuration = 0f;
+        button.colors = colours;
+        Frame(box, 2f, DriveScoutStyle.HeaderRule);
+
+        var keys = new GameObject("Keys", typeof(RectTransform), typeof(CanvasGroup), typeof(KeyboardLegend));
+        var keysRt = (RectTransform)keys.transform;
+        keysRt.SetParent(box, false);
+        Fill(keysRt, 0f, 0f, 0f, 0f);
+        var legend = keys.GetComponent<KeyboardLegend>();
+        legend.collapseBox = box;
+        legend.collapsedWidth = 22f;
+        legend.stretchIntoGap = new[] { driverPicker };
+
+        Place(Box(keysRt, "KeyShadow", DriveScoutStyle.KeyShadow), 6f, 8f, 28f, 10f);
+        var cap = Box(keysRt, "Key", DriveScoutStyle.Text);
+        Place(cap, 6f, 6f, 28f, 10f);
+        Small(cap, "Text_ESC", "ESC", 4f, 0f, 24f, DriveScoutStyle.PickerPlate, trackingPx: 0f);
+
+        // Right-anchored, so it stays put when the box narrows to just the X.
+        var x = Text(box, "X", "X", 0f, 4f, 9f, DriveScoutStyle.Text);
+        var xr = x.rectTransform;
+        xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(1f, 1f);
+        xr.anchoredPosition = new Vector2(-4f, -4f);
+    }
+
+    // A picker in the design's paint: near-black plate, 2px slate frame outside it, the value in cream
+    // monogram 6px in, and a gold down-arrow 6px from the right. TMP's own control underneath
+    // (IronOvalUI.Dropdown), so the list still opens the way TMP expects; only the paint is the design's.
+    static TMP_Dropdown Picker(RectTransform band, string name, int visibleItems)
+    {
+        var dropdown = IronOvalUI.Dropdown(band, name, new Vector2(219f, 22f), visibleItems);
+        var rt = (RectTransform)dropdown.transform;
+
+        var colours = dropdown.colors;
+        colours.normalColor = DriveScoutStyle.PickerPlate;
+        colours.highlightedColor = DriveScoutStyle.HeaderBand;
+        colours.selectedColor = DriveScoutStyle.HeaderBand;
+        colours.pressedColor = DriveScoutStyle.Background;
+        colours.disabledColor = DriveScoutStyle.PickerPlate;
+        colours.fadeDuration = 0f;
+        dropdown.colors = colours;
+        Frame(rt, 2f, DriveScoutStyle.Edge);
+
+        var caption = dropdown.captionText;
+        SetFace(caption, s_mono, Px, DriveScoutStyle.Text);
+        caption.alignment = TextAlignmentOptions.TopLeft;
+        caption.textWrappingMode = TextWrappingModes.NoWrap;
+        caption.overflowMode = TextOverflowModes.Truncate;
+        StretchTop(caption.rectTransform, 6f, 16f, 4f, Px);
+
+        // The arrow is a 5x3 pixel triangle: the pixel faces in the project carry no ▼.
+        var arrow = rt.Find("Arrow") as RectTransform;
+        if (arrow != null)
         {
-            if (text.GetComponentInParent<Selectable>(true) != null) continue;
-
-            if (text.name.EndsWith("Head"))
-            {
-                if (text.font == theme.display && text.characterSpacing == HeadingSpacing) continue;
-                if (text.font != theme.data) continue;
-                text.font = theme.display;
-                if (theme.display.material != null) text.fontSharedMaterial = theme.display.material;
-                text.fontSize = dataSize;
-                text.characterSpacing = HeadingSpacing;
-            }
-            else if (text.font == theme.data && text.fontSize == dataSize
-                     && System.Array.IndexOf(KeepSize, text.name) < 0)
-            {
-                text.fontSize = SheetTextSize;
-            }
-            else continue;
-
-            EditorUtility.SetDirty(text);
-            changed++;
+            var caret = arrow.GetComponent<TMP_Text>();
+            if (caret != null) Object.DestroyImmediate(caret);
+            arrow.anchorMin = arrow.anchorMax = arrow.pivot = new Vector2(1f, 1f);
+            arrow.sizeDelta = new Vector2(5f, 3f);
+            arrow.anchoredPosition = new Vector2(-6f, -10f);
+            Place(Box(arrow, "Row0", DriveScoutStyle.Gold), 0f, 0f, 5f, 1f);
+            Place(Box(arrow, "Row1", DriveScoutStyle.Gold), 1f, 1f, 3f, 1f);
+            Place(Box(arrow, "Row2", DriveScoutStyle.Gold), 2f, 2f, 1f, 1f);
         }
-        return changed;
-    }
 
-    // One Personal row: grey label, white value taking the rest of the line, right-aligned. Returns the value.
-    static TextMeshProUGUI PersonalRow(RectTransform parent, PixelUITheme theme, string field, float pad,
-                                       float labelW, float y)
-    {
-        var label = IronOvalUI.Label(parent, field + "Label", field, Text, theme.textDim);
-        Place(label.rectTransform, pad, y, labelW, LabelH);
-        label.textWrappingMode = TextWrappingModes.NoWrap;
-
-        var value = IronOvalUI.Label(parent, field + "Value", "", Text, theme.text);
-        Stretch(value.rectTransform, pad + labelW + 3f, pad, y, LabelH);
-        value.alignment = TextAlignmentOptions.Right;
-        value.textWrappingMode = TextWrappingModes.NoWrap;
-        // Clipped rather than ellipsed: the pixel faces have no ellipsis glyph, so "..." draws as nothing.
-        value.overflowMode = TextOverflowModes.Truncate;
-        return value;
-    }
-
-    // How wide a gold heading draws once RestyleSheetText has set it in Silkscreen, so a column can be
-    // sized to hold it before it exists.
-    static float HeadingWidth(PixelUITheme theme, string heading)
-    {
-        if (theme == null || theme.display == null) return 0f;
-        var probe = new GameObject("HeadingProbe", typeof(RectTransform), typeof(TextMeshProUGUI));
-        try
+        // The list: the same plate under the frame, rows in monogram, the slate edge colour on the hovered row.
+        var template = dropdown.template;
+        template.anchoredPosition = new Vector2(0f, -2f);
+        template.GetComponent<Image>().color = DriveScoutStyle.HeaderRule;
+        var viewport = template.Find("Viewport");
+        if (viewport != null && viewport.TryGetComponent<Image>(out var viewportImage))
+            viewportImage.color = DriveScoutStyle.PickerPlate;
+        var item = template.Find("Viewport/Content/Item");
+        if (item != null && item.TryGetComponent<Toggle>(out var toggle))
         {
-            var text = probe.GetComponent<TextMeshProUGUI>();
-            text.font = theme.display;
-            text.fontSize = UIType.KitPx(TypeRole.Data);
-            text.characterSpacing = HeadingSpacing;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            return Mathf.Ceil(text.GetPreferredValues(heading).x);
+            var rows = toggle.colors;
+            rows.normalColor = DriveScoutStyle.PickerPlate;
+            rows.highlightedColor = DriveScoutStyle.Edge;
+            rows.selectedColor = DriveScoutStyle.Edge;
+            rows.pressedColor = DriveScoutStyle.Edge;
+            rows.disabledColor = DriveScoutStyle.PickerPlate;
+            rows.fadeDuration = 0f;
+            toggle.colors = rows;
         }
-        finally { Object.DestroyImmediate(probe); }
+        if (dropdown.itemText != null) SetFace(dropdown.itemText, s_mono, Px, DriveScoutStyle.Text);
+        var track = template.Find("Scrollbar");
+        if (track != null && track.TryGetComponent<Image>(out var trackImage)) trackImage.color = DriveScoutStyle.HeaderBand;
+        var handle = template.Find("Scrollbar/Sliding Area/Handle");
+        if (handle != null && handle.TryGetComponent<Image>(out var handleImage)) handleImage.color = DriveScoutStyle.Gold;
+
+        return dropdown;
     }
 
-    // RestyleSheetText on the saved scene, without rebuilding it. Idempotent.
-    [MenuItem("Draftmaster/Art/Restyle Garage Sheet Text (15px, Silkscreen Headings)", priority = 127)]
-    public static void RestyleSavedSheet()
+    // ------------------------------------------------------------------ left: car, Personal / Career / Accolades
+
+    static void BuildLeftColumn(GarageScreenUI ui, RectTransform body, Sprite stripes)
     {
-        var theme = PixelUITheme.Instance;
-        var scene = EditorSceneManager.OpenScene(kScenePath, OpenSceneMode.Single);
-        var ui = Object.FindFirstObjectByType<GarageScreenUI>(FindObjectsInactive.Include);
-        if (ui == null) { Debug.Log($"No GarageScreenUI in {kScenePath}."); return; }
+        var column = new GameObject("LeftColumn", typeof(RectTransform)).transform as RectTransform;
+        column.SetParent(body, false);
+        column.anchorMin = new Vector2(0f, 0f);
+        column.anchorMax = new Vector2(0f, 1f);
+        column.pivot = new Vector2(0f, 1f);
+        column.offsetMin = new Vector2(8f, 8f);
+        column.offsetMax = new Vector2(158f, -8f);
 
-        int changed = RestyleSheetText(ui.transform, theme);
-        if (changed == 0) { Debug.Log("Garage sheet text already restyled — left alone."); return; }
+        // The car slot: diagonal stripes, a 3px cream border, the car at 2x (GarageScreenUI picks the
+        // largest whole-pixel scale that leaves 4px round it — 128x64 here, 11px in and 6px down as drawn).
+        var slot = Box(column, "CarSlot", Color.white);
+        Place(slot, 0f, 0f, 150f, 76f);
+        var slotImage = slot.GetComponent<Image>();
+        slotImage.sprite = stripes;
+        slotImage.type = Image.Type.Tiled;
+        if (stripes == null) slotImage.color = DriveScoutStyle.HeaderBand;
+        Frame(slot, 3f, DriveScoutStyle.PanelFrame);
 
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene, kScenePath);
-        Debug.Log($"Garage sheet: restyled {changed} text(s) — labels/values {SheetTextSize}px, gold headings in " +
-                  $"{theme.display.name}.");
+        var carGo = new GameObject("Car", typeof(RectTransform), typeof(Image));
+        carGo.transform.SetParent(slot, false);
+        var carRt = (RectTransform)carGo.transform;
+        carRt.anchorMin = carRt.anchorMax = carRt.pivot = new Vector2(0.5f, 0.5f);
+        carRt.anchoredPosition = Vector2.zero;
+        carRt.sizeDelta = new Vector2(128f, 64f);
+        var carImage = carGo.GetComponent<Image>();
+        carImage.raycastTarget = false;
+        carImage.preserveAspect = true;
+        carImage.enabled = false;
+        ui.carImage = carImage;
+
+        var caption = Text(slot, "Caption", "[ No car ]", 0f, 30f, 150f, DriveScoutStyle.Meta);
+        caption.alignment = TextAlignmentOptions.Top;
+        ui.carSlotCaption = caption;
+
+        var panel = Panel(column, "Identity");
+        panel.anchorMin = Vector2.zero;
+        panel.anchorMax = Vector2.one;
+        panel.offsetMin = Vector2.zero;
+        panel.offsetMax = new Vector2(0f, -84f);
+
+        // Personal: label left, value right-aligned to the panel's inner edge.
+        Head(panel, "PersonalHead", "PERSONAL", 10f, 8f);
+        Text(panel, "NameLabel", "Name", 10f, 30f, 28f, DriveScoutStyle.Label);
+        // 72px, as the design draws it (a 70px value plus a pixel either side): wide enough for "A. Emerson",
+        // not for "Ace Emerson", so GarageScreenUI.FitName initials the first name exactly as the design does.
+        ui.driverName = ValueRight(panel, "NameValue", 10f, 30f, 72f);
+        ui.driverName.overflowMode = TextOverflowModes.Truncate;
+        Text(panel, "AgeLabel", "Age", 10f, 47f, 28f, DriveScoutStyle.Label);
+        ui.driverAge = ValueRight(panel, "AgeValue", 10f, 47f, 40f);
+
+        StretchTop(Box(panel, "Rule0", DriveScoutStyle.Edge), 10f, 10f, 68f, 1f);
+
+        Head(panel, "CareerHead", "CAREER", 10f, 75f);
+        for (int i = 0; i < 3; i++)
+        {
+            float y = 97f + i * RowPitch;
+            var label = Text(panel, "CareerLabel_" + i, "-", 10f, y, 90f, DriveScoutStyle.Label);
+            var value = ValueRight(panel, "CareerValue_" + i, 10f, y, 40f);
+            value.text = "0";
+            ui.careerRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
+        }
+
+        StretchTop(Box(panel, "Rule1", DriveScoutStyle.Edge), 10f, 10f, 152f, 1f);
+
+        Head(panel, "AccoladesHead", "ACCOLADES", 10f, 159f);
+        for (int i = 0; i < 3; i++)
+        {
+            var line = Text(panel, "Accolade_" + i, "", 10f, 181f + i * RowPitch, 130f, DriveScoutStyle.Meta);
+            ui.accoladeLines.Add(line);
+        }
     }
 
-    // One headed group of 0-20 skills down a column. Returns the y the next group starts at.
-    static float SkillGroup(GarageScreenUI ui, RectTransform parent, PixelUITheme theme, string heading,
+    // ------------------------------------------------------------------ middle: Driver Stats
+
+    static void BuildDriverStats(GarageScreenUI ui, RectTransform body)
+    {
+        var panel = Panel(body, "DriverStats");
+        panel.anchorMin = Vector2.zero;
+        panel.anchorMax = Vector2.one;
+        panel.offsetMin = new Vector2(166f, 8f);
+        panel.offsetMax = new Vector2(-172f, -8f);
+
+        Head(panel, "Head", "DRIVER STATS", 12f, 8f);
+
+        // How much of a rival's sheet is known, right-aligned on the heading's line. Not in the design (it
+        // only shows the player's own sheet, which is always fully known); empty there.
+        var scouted = ValueRight(panel, "Scouted", 12f, 9f, 150f);
+        scouted.color = DriveScoutStyle.Meta;
+        ui.scoutingLabel = scouted;
+
+        // Rows go in DriverAttributeSheet.All order — ability across the top, then the left column (track
+        // types, standing) and the right column (craft) — because GarageScreenUI fills them by index.
+        float y = 30f;
+        foreach (var attribute in DriverAttributeSheet.Ability)
+        {
+            var row = new GameObject("Ability_" + ui.driverStats.Count, typeof(RectTransform)).transform as RectTransform;
+            row.SetParent(panel, false);
+            StretchTop(row, 12f, 12f, y, 17f);
+
+            var label = Text(row, "Label", attribute.Name, 0f, 2f, 72f, DriveScoutStyle.Label);
+
+            // Ten 14x10 cells 2px apart, gold up to the rating, slate past it (GarageScreenUI recolours them).
+            var cells = new GameObject("Cells", typeof(RectTransform)).transform as RectTransform;
+            cells.SetParent(row, false);
+            Place(cells, 80f, 4f, 158f, 10f);
+            for (int c = 0; c < 10; c++)
+                Place(Box(cells, "Cell" + c, c < 8 ? DriveScoutStyle.Gold : DriveScoutStyle.Edge), c * 16f, 0f, 14f, 10f);
+
+            var value = ValueRight(row, "Value", 0f, 2f, 40f);
+            value.text = "-";
+
+            ui.driverStats.Add(new GarageScreenUI.StatRow
+            {
+                label = label, cells = cells, value = value, tint = DriveScoutStyle.Gold, max = attribute.Max,
+            });
+            y += 18f;
+        }
+
+        StretchTop(Box(panel, "StatsRule", DriveScoutStyle.Edge), 12f, 12f, 71f, 1f);
+
+        // The sixteen 0-20 skills in two columns, split 8px either side of the middle.
+        var colA = Column(panel, "ColumnA", 0f, 0.5f, 12f, 8f, 79f);
+        var colB = Column(panel, "ColumnB", 0.5f, 1f, 8f, 12f, 79f);
+
+        float ay = SkillGroup(ui, colA, "TRACK TYPES", DriverAttributeSheet.TrackTypes, 0f);
+        SkillGroup(ui, colA, "STANDING", DriverAttributeSheet.Standing, ay);
+        SkillGroup(ui, colB, "CRAFT", DriverAttributeSheet.Craft, 0f);
+    }
+
+    // One headed group of 0-20 skills down a column: name left, number right. Returns where the next
+    // group's heading goes.
+    static float SkillGroup(GarageScreenUI ui, RectTransform column, string heading,
                             DriverAttributeSheet.Attribute[] attributes, float y)
     {
-        // Name and number on one line, the cell bar under it — that was the sheet's shape while the
-        // label face was Silkscreen 8 and a row cost 20px. On VT323's 16px cell the same row costs 28,
-        // and sixteen of them no longer fit the column, so the skills read as name + number and the
-        // bars stay where there is room for them: the two ability rows above and the car's stats.
-        float rowPitch = LabelH;
-
-        var head = IronOvalUI.Label(parent, heading.Replace(' ', '_') + "Head", UIText.TitleCase(heading),
-                                    Text, theme.gold);
-        Stretch(head.rectTransform, 0f, 0f, y, LabelH);
-        y -= HeadPitch;
-
+        Head(column, heading.Replace(' ', '_') + "Head", heading, 0f, y);
+        float rowY = y + HeadToRow;
         foreach (var attribute in attributes)
         {
-            var rowRt = Row(parent, "Stat_" + ui.driverStats.Count, 0f, y, 0f, LabelH);
-            Stretch(rowRt, 0f, 0f, y, LabelH);
+            var row = new GameObject("Stat_" + ui.driverStats.Count, typeof(RectTransform)).transform as RectTransform;
+            row.SetParent(column, false);
+            StretchTop(row, 0f, 0f, rowY, Px);
 
-            var label = IronOvalUI.Label(rowRt, "Label", attribute.Name, Text, theme.textDim);
-            Stretch(label.rectTransform, 0f, 18f, 0f, LabelH);
-            label.textWrappingMode = TextWrappingModes.NoWrap;
+            var label = Text(row, "Label", attribute.Name, 0f, 1f, 110f, DriveScoutStyle.Label);
+            var value = ValueRight(row, "Value", 0f, 1f, 20f);
+            value.text = "-";
 
-            // Two digits ("20", "??") and nothing more, so the name gets every pixel left.
-            var value = IronOvalUI.Label(rowRt, "Value", "-", Text, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(18f, LabelH));
-            value.alignment = TextAlignmentOptions.Right;
-
-            ui.driverStats.Add(new GarageScreenUI.StatRow { label = label, cells = null, value = value });
-            y -= rowPitch;
+            ui.driverStats.Add(new GarageScreenUI.StatRow
+            {
+                label = label, cells = null, value = value, tint = DriveScoutStyle.Gold, max = attribute.Max,
+            });
+            rowY += RowPitch;
         }
-
-        return y - 4f;   // a group's worth of air before the next heading
+        return rowY + GroupGap;
     }
 
-    // ------------------------------------------------------------------ layout helpers
+    // ------------------------------------------------------------------ right: Traits over Relationship
 
-    static RectTransform Row(Transform parent, string name, float x, float y, float w, float h)
+    static void BuildRightColumn(GarageScreenUI ui, RectTransform body)
     {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var rt = (RectTransform)go.transform;
-        Place(rt, x, y, w, h);
+        var column = new GameObject("RightColumn", typeof(RectTransform)).transform as RectTransform;
+        column.SetParent(body, false);
+        column.anchorMin = new Vector2(1f, 0f);
+        column.anchorMax = new Vector2(1f, 1f);
+        column.pivot = new Vector2(1f, 1f);
+        column.offsetMin = new Vector2(-164f, 8f);
+        column.offsetMax = new Vector2(-8f, -8f);
+
+        // Half the column each, 8px apart.
+        var traits = Panel(column, "Traits");
+        traits.anchorMin = new Vector2(0f, 0.5f);
+        traits.anchorMax = Vector2.one;
+        traits.offsetMin = new Vector2(0f, 4f);
+        traits.offsetMax = Vector2.zero;
+
+        Head(traits, "TraitsHead", "TRAITS", 10f, 8f);
+        for (int i = 0; i < 6; i++)
+        {
+            float y = 30f + i * TraitPitch;
+            var bullet = Box(traits, "TraitBullet_" + i, DriveScoutStyle.Gold);
+            Place(bullet, 10f, y + 5f, 6f, 6f);
+            var bulletImage = bullet.GetComponent<Image>();
+            bulletImage.enabled = false;
+            ui.traitBullets.Add(bulletImage);
+            ui.traitLines.Add(Text(traits, "Trait_" + i, "", 22f, y + 1f, 124f, DriveScoutStyle.Text));
+        }
+
+        var relationship = Panel(column, "Relationship");
+        relationship.anchorMin = Vector2.zero;
+        relationship.anchorMax = new Vector2(1f, 0.5f);
+        relationship.offsetMin = Vector2.zero;
+        relationship.offsetMax = new Vector2(0f, -4f);
+
+        Head(relationship, "RelationshipHead", "RELATIONSHIP", 10f, 8f);
+        for (int i = 0; i < 2; i++)
+        {
+            float y = 30f + i * RowPitch;
+            var label = Text(relationship, "RelLabel_" + i, "", 10f, y, 70f, DriveScoutStyle.Label);
+            var value = ValueRight(relationship, "RelValue_" + i, 10f, y, 80f);
+            ui.relationshipRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
+        }
+
+        // The footnote: Silkscreen 8, tracked 1px, at the foot of the panel; a longer note grows upward.
+        var note = Small(relationship, "RelNote", "", 0f, 0f, 136f, DriveScoutStyle.Meta, trackingPx: 1f);
+        var nr = note.rectTransform;
+        nr.anchorMin = new Vector2(0f, 0f);
+        nr.anchorMax = new Vector2(1f, 0f);
+        nr.pivot = new Vector2(0f, 0f);
+        nr.offsetMin = new Vector2(10f, 9f);
+        nr.offsetMax = new Vector2(-10f, 48f);
+        note.alignment = TextAlignmentOptions.BottomLeft;
+        note.textWrappingMode = TextWrappingModes.Normal;
+        note.lineSpacing = (12f - 10.24f) * 100f / 8f;   // the design's 12px line
+        ui.relationshipNote = note;
+    }
+
+    // ------------------------------------------------------------------ pieces
+
+    // A panel: the navy plate with a 3px cream border outside it.
+    static RectTransform Panel(RectTransform parent, string name)
+    {
+        var rt = Box(parent, name, DriveScoutStyle.Panel);
+        Frame(rt, 3f, DriveScoutStyle.PanelFrame);
         return rt;
     }
 
-    static RectTransform Plate(Transform parent, string name, Color colour)
+    // A gold heading, in capitals as the design sets them.
+    static TextMeshProUGUI Head(RectTransform parent, string name, string text, float x, float y)
+        => Text(parent, name, text, x, y + 1f, 150f, DriveScoutStyle.Gold);
+
+    // One line of monogram with its box's top-left at (x, y) down from the parent's top-left.
+    static TextMeshProUGUI Text(RectTransform parent, string name, string text, float x, float y, float w, Color colour)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        Place(rt, x, y, w, Px);
+        var t = go.GetComponent<TextMeshProUGUI>();
+        SetFace(t, s_mono, Px, colour);
+        t.alignment = TextAlignmentOptions.TopLeft;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        t.overflowMode = TextOverflowModes.Overflow;
+        t.raycastTarget = false;
+        t.text = text;
+        return t;
+    }
+
+    // A cream value right-aligned `right` px in from the parent's right edge.
+    static TextMeshProUGUI ValueRight(RectTransform parent, string name, float right, float y, float w)
+    {
+        var t = Text(parent, name, "", 0f, y, w, DriveScoutStyle.Text);
+        var rt = t.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-right, -y);
+        t.alignment = TextAlignmentOptions.TopRight;
+        return t;
+    }
+
+    // Silkscreen 8: the keycap and the footnote.
+    static TextMeshProUGUI Small(RectTransform parent, string name, string text, float x, float y, float w,
+                                 Color colour, float trackingPx)
+    {
+        var t = Text(parent, name, text, x, y, w, colour);
+        SetFace(t, s_silk, 8f, colour);
+        t.rectTransform.sizeDelta = new Vector2(w, 10f);
+        t.characterSpacing = trackingPx * 100f / 8f;   // TMP tracks in hundredths of an em
+        return t;
+    }
+
+    static void SetFace(TMP_Text t, TMP_FontAsset face, float size, Color colour)
+    {
+        t.font = face;
+        if (face.material != null) t.fontSharedMaterial = face.material;
+        t.fontSize = size;
+        t.fontStyle = FontStyles.Normal;
+        t.characterSpacing = 0f;
+        t.enableAutoSizing = false;
+        t.color = colour;
+    }
+
+    // A solid rect (Image with no sprite), not hit by clicks.
+    static RectTransform Box(Transform parent, string name, Color colour)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -503,47 +552,125 @@ public static class IronOvalGarageBuilder
         return (RectTransform)go.transform;
     }
 
-    // Top-left placement in UI pixels: (x, y) is the corner, y running negative down the column.
+    // A border `b` px thick drawn just outside `rt`, as four strips (the design's px_frame).
+    static void Frame(RectTransform rt, float b, Color colour)
+    {
+        var top = Box(rt, "FrameTop", colour);
+        top.anchorMin = new Vector2(0f, 1f); top.anchorMax = new Vector2(1f, 1f);
+        top.offsetMin = new Vector2(-b, 0f); top.offsetMax = new Vector2(b, b);
+        var bottom = Box(rt, "FrameBottom", colour);
+        bottom.anchorMin = new Vector2(0f, 0f); bottom.anchorMax = new Vector2(1f, 0f);
+        bottom.offsetMin = new Vector2(-b, -b); bottom.offsetMax = new Vector2(b, 0f);
+        var left = Box(rt, "FrameLeft", colour);
+        left.anchorMin = new Vector2(0f, 0f); left.anchorMax = new Vector2(0f, 1f);
+        left.offsetMin = new Vector2(-b, 0f); left.offsetMax = new Vector2(0f, 0f);
+        var right = Box(rt, "FrameRight", colour);
+        right.anchorMin = new Vector2(1f, 0f); right.anchorMax = new Vector2(1f, 1f);
+        right.offsetMin = new Vector2(0f, 0f); right.offsetMax = new Vector2(b, 0f);
+    }
+
+    static Color Lighter(Color c) => Color.Lerp(c, Color.white, 0.12f);
+
+    // The car slot's diagonal stripes, from the design's Sprites/UI/stripes_5ed9a6fe.png, imported as a
+    // point-filtered tiling sprite at the canvas's pixels-per-unit so one texel is one UI pixel.
+    static Sprite StripesSprite()
+    {
+        var importer = AssetImporter.GetAtPath(kStripesPath) as TextureImporter;
+        if (importer == null)
+        {
+            Debug.LogWarning($"DriveScout: {kStripesPath} not found — the car slot gets a flat plate.");
+            return null;
+        }
+        bool dirty = importer.textureType != TextureImporterType.Sprite
+                     || importer.filterMode != FilterMode.Point
+                     || importer.wrapMode != TextureWrapMode.Repeat
+                     || !Mathf.Approximately(importer.spritePixelsPerUnit, PixelUITheme.ReferencePixelsPerUnit)
+                     || importer.textureCompression != TextureImporterCompression.Uncompressed
+                     || importer.mipmapEnabled;
+        if (dirty)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.filterMode = FilterMode.Point;
+            importer.wrapMode = TextureWrapMode.Repeat;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.spritePixelsPerUnit = PixelUITheme.ReferencePixelsPerUnit;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect;   // Tiled needs a full-rect mesh
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(kStripesPath);
+    }
+
+    // The darkest alpha in the kit's scanline tile, so the overlay can be scaled to the design's.
+    static float TileAlpha(Sprite sprite)
+    {
+        try
+        {
+            float best = 0f;
+            foreach (var c in sprite.texture.GetPixels32()) best = Mathf.Max(best, c.a);
+            return best > 0f ? best : 107f;
+        }
+        catch (UnityException) { return 107f; }   // not readable: the tile as shipped
+    }
+
+    // ------------------------------------------------------------------ layout helpers
+
+    // Top-left placement in UI pixels: (x, y) is the corner, y measured DOWN from the parent's top.
     static void Place(RectTransform rt, float x, float y, float w, float h)
     {
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
         rt.sizeDelta = new Vector2(w, h);
-        rt.anchoredPosition = new Vector2(x, y);
+        rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    // Across the parent's width, `left` and `right` in from its edges, at (y, h) as Place has them.
-    static void Stretch(RectTransform rt, float left, float right, float y, float h)
+    // Across the parent's width, `left` and `right` in from its edges, `y` down from its top, `h` tall.
+    static void StretchTop(RectTransform rt, float left, float right, float y, float h)
     {
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.offsetMin = new Vector2(left, y - h);
-        rt.offsetMax = new Vector2(-right, y);
+        rt.offsetMin = new Vector2(left, -y - h);
+        rt.offsetMax = new Vector2(-right, -y);
     }
 
-    // A column spanning the parent's width from fraction `from` to `to`, inset `left`/`right`, its top at y.
-    static RectTransform Column(Transform parent, string name, float from, float to, float left, float right, float y, float h)
+    // From fraction `from` to `to` of the parent's width (plus offsets), `y` down from its top, `h` tall.
+    static void Span(RectTransform rt, float from, float to, float left, float right, float y, float h)
     {
-        var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var rt = (RectTransform)go.transform;
         rt.anchorMin = new Vector2(from, 1f);
         rt.anchorMax = new Vector2(to, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.offsetMin = new Vector2(left, y - h);
-        rt.offsetMax = new Vector2(-right, y);
-        return rt;
+        rt.offsetMin = new Vector2(left, -y - h);
+        rt.offsetMax = new Vector2(right, -y);
     }
 
-    static void Anchor(RectTransform rt, Vector2 anchor, Vector2 position, Vector2 size, Vector2? pivot = null)
+    // Fills the parent, inset by the four margins.
+    static void Fill(RectTransform rt, float left, float right, float bottom, float top)
     {
-        rt.anchorMin = anchor;
-        rt.anchorMax = anchor;
-        rt.pivot = pivot ?? anchor;
-        rt.sizeDelta = size;
-        rt.anchoredPosition = position;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.offsetMin = new Vector2(left, bottom);
+        rt.offsetMax = new Vector2(-right, -top);
+    }
+
+    // A column from fraction `from` to `to` of the parent's width, inset `left`/`right`, from `y` down to
+    // 8px off the parent's foot.
+    static RectTransform Column(RectTransform parent, string name, float from, float to, float left, float right, float y)
+    {
+        var rt = new GameObject(name, typeof(RectTransform)).transform as RectTransform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = new Vector2(from, 0f);
+        rt.anchorMax = new Vector2(to, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.offsetMin = new Vector2(left, 8f);
+        rt.offsetMax = new Vector2(-right, -y);
+        return rt;
     }
 }
 #endif

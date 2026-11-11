@@ -140,19 +140,38 @@ public class GarageScreenDropdownTests
         var seriesRect = (RectTransform)series.transform;
         var driverRect = (RectTransform)driver.transform;
 
+        // The pickers stretch with the screen (the DriveScout design anchors them to the band's left half
+        // and right half), so their edges are worked out at the 640-wide reference rather than read off
+        // anchoredPosition, which only means "left edge" for a top-left-anchored rect.
         foreach (var rect in new[] { seriesRect, driverRect })
         {
-            Assert.LessOrEqual(rect.sizeDelta.y, band.sizeDelta.y,
+            var (left, right) = Edges(rect, PixelUITheme_ReferenceWidth);
+            Assert.LessOrEqual(Height(rect), band.sizeDelta.y,
                                "A picker taller than the band would hang over the columns below it.");
-            Assert.GreaterOrEqual(rect.anchoredPosition.x, 0f, "A picker has been pushed off the left of the band.");
-            Assert.LessOrEqual(rect.anchoredPosition.x + rect.sizeDelta.x, PixelUITheme_ReferenceWidth,
-                               "A picker runs off the right of a 640-wide screen.");
+            Assert.GreaterOrEqual(left, 0f, "A picker has been pushed off the left of the band.");
+            Assert.LessOrEqual(right, PixelUITheme_ReferenceWidth, "A picker runs off the right of a 640-wide screen.");
+            Assert.Greater(right - left, 100f, "A picker is too narrow to read a series or driver name.");
         }
 
-        float seriesRight = seriesRect.anchoredPosition.x + seriesRect.sizeDelta.x;
-        Assert.LessOrEqual(seriesRight, driverRect.anchoredPosition.x,
+        Assert.LessOrEqual(Edges(seriesRect, PixelUITheme_ReferenceWidth).right,
+                           Edges(driverRect, PixelUITheme_ReferenceWidth).left,
                            "The two pickers overlap, so one can't be clicked.");
     }
+
+    // A rect's left and right edges inside a parent `width` wide, whatever its anchors.
+    static (float left, float right) Edges(RectTransform rect, float width)
+    {
+        if (Mathf.Approximately(rect.anchorMin.x, rect.anchorMax.x))
+        {
+            float anchorX = rect.anchorMin.x * width + rect.anchoredPosition.x;
+            float left = anchorX - rect.pivot.x * rect.sizeDelta.x;
+            return (left, left + rect.sizeDelta.x);
+        }
+        return (rect.anchorMin.x * width + rect.offsetMin.x, rect.anchorMax.x * width + rect.offsetMax.x);
+    }
+
+    static float Height(RectTransform rect) =>
+        Mathf.Approximately(rect.anchorMin.y, rect.anchorMax.y) ? rect.sizeDelta.y : rect.offsetMax.y - rect.offsetMin.y;
 
     [Test]
     public void EveryPickerTemplateIsCompleteAndPutAway()
