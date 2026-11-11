@@ -16,7 +16,7 @@ public static class FontComparisonSheet
         ("VT323 Pixel", "VT323 (CURRENT)"),
         ("_VT323 Rebuild", "VT323 (REBUILT)"),
         ("Silkscreen Pixel", "SILKSCREEN"),
-        ("Fixedsys Pixel", "FIXEDSYS"),
+        ("Monogram Pixel", "MONOGRAM"),
     };
 
     [MenuItem("Draftmaster/Art/Font Comparison Sheet")]

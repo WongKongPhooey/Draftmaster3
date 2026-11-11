@@ -75,11 +75,13 @@ public static class IronOvalKitSetup
     //   VT323           dropped. A CRT face with curves rather than strict pixel art, its advances collide
     //                   at every size on this pipeline — rebuilding it from the TTF reproduced the same
     //                   overlapping glyphs, so it was removed rather than kept as a trap.
-    //   Fixedsys        16px cell, fixed advance, true lowercase. Takes prose and every column readout.
-    //                   Ladder 16 / 32 / 48.
+    //   monogram Bold   16px cell, fixed advance, true lowercase. Takes prose and every column readout.
+    //                   Ladder 16 / 32 / 48. datagoblin's monogram (CC0) with every stroke one pixel
+    //                   heavier, since the face ships no bold. It replaced Fixedsys on 2026-11-11 (the
+    //                   Draftmaster3_UI_Unity design handoff); the TMP asset and the TTF kept Fixedsys's GUIDs.
     const int kSilkscreenSize = 8;
     const int kPixelifySize = 20;
-    const int kFixedsysSize = 16;
+    const int kMonogramSize = 16;
 
     struct FaceSpec
     {
@@ -95,9 +97,9 @@ public static class IronOvalKitSetup
         new FaceSpec { ttf = "Assets/Fonts/PixelifySans-Variable.ttf",
                        outPath = kFontDir + "/Pixelify Sans Pixel.asset",
                        niceName = "Pixelify Sans Pixel", pointSize = kPixelifySize },
-        new FaceSpec { ttf = "Assets/Fonts/fixedsys.ttf",
-                       outPath = kFontDir + "/Fixedsys Pixel.asset",
-                       niceName = "Fixedsys Pixel", pointSize = kFixedsysSize },
+        new FaceSpec { ttf = "Assets/Fonts/monogram-extended-bold.ttf",
+                       outPath = kFontDir + "/Monogram Pixel.asset",
+                       niceName = "Monogram Pixel", pointSize = kMonogramSize },
     };
 
     [MenuItem("Draftmaster/Art/Set Up Iron Oval Kit", priority = 122)]
@@ -240,16 +242,16 @@ public static class IronOvalKitSetup
         if (theme.buttonRed != null) { theme.button = theme.buttonRed; theme.buttonDanger = theme.buttonRed; }
         if (theme.cursorArrow != null) theme.cursor = theme.cursorArrow;
 
-        // Type roles: Silkscreen headers/labels, Fixedsys for prose and dense data alike (and the IMGUI
+        // Type roles: Silkscreen headers/labels, monogram for prose and dense data alike (and the IMGUI
         // panels, which are almost all data readouts and take a plain Font rather than a TMP asset).
-        // Fixedsys covers both because Silkscreen has no lowercase and no fixed advance.
+        // monogram covers both because Silkscreen has no lowercase and no fixed advance.
         if (faces.TryGetValue("Silkscreen Pixel", out var silkscreen)) theme.display = silkscreen;
-        if (faces.TryGetValue("Fixedsys Pixel", out var fixedsys)) { theme.body = fixedsys; theme.data = fixedsys; }
+        if (faces.TryGetValue("Monogram Pixel", out var monogram)) { theme.body = monogram; theme.data = monogram; }
         // The IMGUI panels take plain Fonts rather than TMP assets, and they carry the same roles:
-        // Fixedsys for the readouts and prose that most of them are, Silkscreen for headings and buttons.
+        // monogram for the readouts and prose that most of them are, Silkscreen for the 8px labels.
         // PixelGUI sizes each at whole multiples of its cell.
-        var fixedTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/fixedsys.ttf");
-        if (fixedTtf != null) { theme.imguiFont = fixedTtf; theme.imguiBodyFont = fixedTtf; }
+        var monoTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/monogram-extended-bold.ttf");
+        if (monoTtf != null) { theme.imguiFont = monoTtf; theme.imguiBodyFont = monoTtf; }
         var silkTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Silkscreen-Regular.ttf");
         if (silkTtf != null) theme.imguiDisplayFont = silkTtf;
 
@@ -378,19 +380,19 @@ public static class IronOvalKitSetup
             sb.AppendLine($"| {role} | `{slot}` | {(f == null ? "**MISSING**" : f.name)} | {note} |");
         }
         FontRow("Headers, labels, buttons (Silkscreen)", "display", theme.display);
-        FontRow("Dialogue, names, prose (Fixedsys)", "body", theme.body);
-        FontRow("Dense data columns (Fixedsys)", "data", theme.data);
+        FontRow("Dialogue, names, prose (monogram)", "body", theme.body);
+        FontRow("Dense data columns (monogram)", "data", theme.data);
         sb.AppendLine($"| IMGUI panels | `imguiFont` | {(theme.imguiFont == null ? "**MISSING**" : theme.imguiFont.name)} | plain Font, hinted raster |");
         sb.AppendLine();
         sb.AppendLine($"Each atlas is rasterised at the smallest size its face ships at — Silkscreen {kSilkscreenSize}, " +
-                      $"Pixelify Sans {kPixelifySize}, Fixedsys {kFixedsysSize} — because a bitmap atlas scales up cleanly " +
+                      $"Pixelify Sans {kPixelifySize}, monogram {kMonogramSize} — because a bitmap atlas scales up cleanly " +
                       "and not down. Usable ladders:");
         sb.AppendLine();
         sb.AppendLine("| face | crisp sizes | off-ladder sizes from the sheet |");
         sb.AppendLine("|---|---|---|");
         sb.AppendLine($"| Silkscreen | {kSilkscreenSize}, {kSilkscreenSize * 2}, {kSilkscreenSize * 3} | 11 |");
         sb.AppendLine($"| Pixelify Sans | {kPixelifySize}, {kPixelifySize * 2}, {kPixelifySize * 3} | 12, 16, 32, 48 |");
-        sb.AppendLine($"| Fixedsys | {kFixedsysSize}, {kFixedsysSize * 2}, {kFixedsysSize * 3} | 19, 22 |");
+        sb.AppendLine($"| monogram | {kMonogramSize}, {kMonogramSize * 2}, {kMonogramSize * 3} | 19, 22 |");
         sb.AppendLine();
         sb.AppendLine("Disable auto-size on every label and keep text positions on whole pixels. " +
                       "`IronOvalUI` only ever asks for on-ladder sizes.");

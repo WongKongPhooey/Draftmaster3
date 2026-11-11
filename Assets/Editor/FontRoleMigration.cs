@@ -17,31 +17,31 @@ public static class FontRoleMigration
     const string ThemePath = "Assets/Resources/UI/PixelUITheme.asset";
     const string FontDir = "Assets/Resources/Fonts";
 
-    [MenuItem("Draftmaster/Art/Apply Font Roles (Silkscreen + Fixedsys)")]
+    [MenuItem("Draftmaster/Art/Apply Font Roles (Silkscreen + monogram)")]
     public static void Run()
     {
         var theme = AssetDatabase.LoadAssetAtPath<PixelUITheme>(ThemePath);
         if (theme == null) { Debug.LogError($"[FontRoles] No theme at {ThemePath}."); return; }
 
         var silkscreen = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"{FontDir}/Silkscreen Pixel.asset");
-        var fixedsys = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"{FontDir}/Fixedsys Pixel.asset");
-        if (silkscreen == null || fixedsys == null)
+        var monogram = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"{FontDir}/Monogram Pixel.asset");
+        if (silkscreen == null || monogram == null)
         {
-            Debug.LogError("[FontRoles] Silkscreen or Fixedsys asset missing — nothing applied.");
+            Debug.LogError("[FontRoles] Silkscreen or Monogram asset missing — nothing applied.");
             return;
         }
 
         theme.display = silkscreen;   // headings, labels, buttons, the wordmark
-        theme.body = fixedsys;        // prose and dialogue — needs real lowercase
-        theme.data = fixedsys;        // columns, timing, telemetry — needs fixed advance
+        theme.body = monogram;        // prose and dialogue — needs real lowercase
+        theme.data = monogram;        // columns, timing, telemetry — needs fixed advance
 
         var silkTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Silkscreen-Regular.ttf");
-        var fixedTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/fixedsys.ttf");
+        var fixedTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/monogram-extended-bold.ttf");
         if (silkTtf != null) theme.imguiDisplayFont = silkTtf;
         if (fixedTtf != null) { theme.imguiFont = fixedTtf; theme.imguiBodyFont = fixedTtf; }
 
         EditorUtility.SetDirty(theme);
         AssetDatabase.SaveAssets();
-        Debug.Log("[FontRoles] display=Silkscreen Pixel, body=data=Fixedsys Pixel, IMGUI body/data=fixedsys.ttf.");
+        Debug.Log("[FontRoles] display=Silkscreen Pixel, body=data=Monogram Pixel, IMGUI body/data=monogram-extended-bold.ttf.");
     }
 }

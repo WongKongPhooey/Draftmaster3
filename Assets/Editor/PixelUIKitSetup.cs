@@ -8,7 +8,7 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
 // One-shot setup for the pixel UI kit: imports the generated frame/icon art with the right settings
-// and 9-slice borders, builds a crisp bitmap font from fixedsys.ttf, and fills in the theme asset.
+// and 9-slice borders, builds a crisp bitmap font from monogram-extended-bold.ttf, and fills in the theme asset.
 //
 // Safe to re-run -- it overwrites settings and re-links the theme rather than duplicating anything.
 public static class PixelUIKitSetup
@@ -166,7 +166,7 @@ public static class PixelUIKitSetup
         }
     }
 
-    // Point size fixedsys is drawn for. It is a bitmap design shipped as outlines, so it is only truly
+    // Point size monogram is drawn for. It is a bitmap design shipped as outlines, so it is only truly
     // crisp when rasterised at its native cell height (or a whole multiple of it).
     const int kPixelFontPointSize = 16;
 
@@ -187,8 +187,8 @@ public static class PixelUIKitSetup
     //                            a bitmap atlas as if its alpha were a distance field, which is what
     //                            produces heavy fringing and near-unreadable text.
     static TMP_FontAsset BuildPixelFont()
-        => BuildBitmapFont("Assets/Fonts/fixedsys.ttf", kFontDir + "/Fixedsys Pixel.asset",
-                           "Fixedsys Pixel", kPixelFontPointSize);
+        => BuildBitmapFont("Assets/Fonts/monogram-extended-bold.ttf", kFontDir + "/Monogram Pixel.asset",
+                           "Monogram Pixel", kPixelFontPointSize);
 
     // Builds one bitmap TMP font asset by the recipe above. Public because the Iron Oval kit needs the
     // same five things to line up for its three faces, and a second copy of this would drift.
@@ -362,8 +362,8 @@ public static class PixelUIKitSetup
 
         if (body != null) theme.body = body;
         if (theme.imguiFont == null)
-            theme.imguiFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/fixedsys.ttf");
-        ConfigurePixelTtfImport("Assets/Fonts/fixedsys.ttf");
+            theme.imguiFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/monogram-extended-bold.ttf");
+        ConfigurePixelTtfImport("Assets/Fonts/monogram-extended-bold.ttf");
         if (theme.display == null)
         {
             // "mania SDF.asset" is a UI-Toolkit UnityEngine.TextCore.Text.FontAsset, which TextMeshPro

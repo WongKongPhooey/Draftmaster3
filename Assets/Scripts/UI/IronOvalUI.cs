@@ -88,7 +88,7 @@ public static class IronOvalUI
         if (n.IndexOf("VT323", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
         if (n.IndexOf("Silkscreen", System.StringComparison.OrdinalIgnoreCase) >= 0) return 8;
         if (n.IndexOf("Pixelify", System.StringComparison.OrdinalIgnoreCase) >= 0) return 20;
-        if (n.IndexOf("Fixedsys", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
+        if (n.IndexOf("monogram", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
         return fallback;
     }
 

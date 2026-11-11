@@ -303,6 +303,22 @@ public class TitleScreenWiringTests
     // TitleScreenUI.SubtitleName.
     const string SubtitleName = "Chapter";
 
+    // The bottom-right keyboard legend is there for a keyboard player and only them: it carries
+    // KeyboardLegend (which hides it on a phone and while a pad is in use) and never takes a click meant
+    // for the menu.
+    [Test]
+    public void TheKeyboardLegendIsPcOnlyAndClickThrough()
+    {
+        Component legend = null;
+        foreach (var root in _title.GetRootGameObjects())
+            foreach (var c in root.GetComponentsInChildren<MonoBehaviour>(true))
+                if (legend == null && c != null && c.GetType().Name == "KeyboardLegend") legend = c;
+        Assert.IsNotNull(legend, "TitleScreen has no KeyboardLegend — run Draftmaster > UI > Title Keyboard Legend.");
+        Assert.IsNotNull(legend.GetComponent<CanvasGroup>(), "The legend has no CanvasGroup to hide it with.");
+        foreach (var g in legend.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+            Assert.IsFalse(g.raycastTarget, $"Legend piece '{g.name}' would swallow clicks.");
+    }
+
     // A row that is drawn but missing from the list can never be selected — the cursor steps over a
     // visible line and Enter on it does nothing.
     [Test]

@@ -19,7 +19,7 @@ public static class PixelFontBake
 {
     static readonly string[] kFonts =
     {
-        "Assets/Resources/Fonts/Fixedsys Pixel.asset",
+        "Assets/Resources/Fonts/Monogram Pixel.asset",
         "Assets/Resources/Fonts/Silkscreen Pixel.asset",
         "Assets/Resources/Fonts/Pixelify Sans Pixel.asset",
     };
@@ -53,6 +53,7 @@ public static class PixelFontBake
                 continue;
             }
 
+            SnapLineMetrics(font);
             font.atlasPopulationMode = AtlasPopulationMode.Dynamic;   // TryAddCharacters refuses a static asset
             font.ClearFontAssetData(false);
             font.TryAddCharacters(charset, out string missing);
@@ -75,6 +76,21 @@ public static class PixelFontBake
         }
 
         AssetDatabase.SaveAssets();
+    }
+
+    // monogram's vertical metrics are not whole pixels at its 16px grid: ascent 682/1024 em = 10.66 px,
+    // line 12.66 px. TMP puts the first baseline one ascent below the top of the box and each further line
+    // one line height below that, so most lines land between screen pixels and the point-filtered glyphs
+    // drop or double a row. Rounded out to 11 / 13 (descent stays 2), every baseline is on the grid.
+    // The other faces were laid out against their own numbers and are left alone.
+    static void SnapLineMetrics(TMP_FontAsset font)
+    {
+        if (font.name.IndexOf("Monogram", System.StringComparison.OrdinalIgnoreCase) < 0) return;
+        var fi = font.faceInfo;
+        fi.ascentLine = Mathf.Ceil(fi.ascentLine);
+        fi.descentLine = Mathf.Floor(fi.descentLine);
+        fi.lineHeight = fi.ascentLine - fi.descentLine;
+        font.faceInfo = fi;
     }
 }
 #endif

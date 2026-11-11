@@ -155,6 +155,158 @@ public static class TitleScreenRowEditor
         Debug.Log($"Title screen: {rows} menu row(s) in {display.name} {size:0}/{spacing:0.#}; {footerNote}.");
     }
 
+    // The menu rows go into monogram Bold, the face everything else readable is in (2026-11-11, from the
+    // Draftmaster3_UI_Unity design handoff: menu items in monogram Bold, no tracking, capitals, one pixel
+    // step above its native 16px). The step is PixelStepText's to work out from the canvas scale — 21.33 at
+    // 1080p, 20 at 1440p — because no single point size is crisp at both.
+    //
+    // At step +1 the caps are 7 font px = 9.33 kit px (at 3x) under a 14.67 kit px ascent, so the label
+    // drops 1px inside its row to centre the caps on the row's cursor (8px tall at y -7, centre -11; caps
+    // centre lands at -11 at 1080p, -10.4 at 1440p). The copyright footer goes to monogram's native 16:
+    // it had been at 11, which is off monogram's grid. Absolute, so idempotent.
+    [MenuItem("Draftmaster/UI/Title Menu In monogram")]
+    public static void RowsInMonogram()
+    {
+        var face = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resources/Fonts/Monogram Pixel.asset");
+        if (face == null) { Debug.Log("Monogram Pixel font asset missing — title screen left alone."); return; }
+
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var ui = Object.FindObjectsByType<TitleScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .FirstOrDefault();
+        if (ui == null) { Debug.Log($"No TitleScreenUI in {ScenePath}."); return; }
+
+        const float LabelDrop = 1f;
+        const int MenuStep = 1;
+        int rows = 0;
+        foreach (var row in ui.rows)
+        {
+            var text = row != null ? row.labelText : null;
+            if (text == null) continue;
+            SetFace(text, face, 16f, 0f);
+            var rt = text.rectTransform;
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -LabelDrop);
+            EditorUtility.SetDirty(rt);
+
+            var stepper = text.GetComponent<PixelStepText>();
+            if (stepper == null) stepper = text.gameObject.AddComponent<PixelStepText>();
+            stepper.nativePx = 16;
+            stepper.step = MenuStep;
+            stepper.Apply();
+            EditorUtility.SetDirty(stepper);
+            rows++;
+        }
+
+        var footer = ui.GetComponentsInChildren<TextMeshProUGUI>(true).FirstOrDefault(t => t.name == "Footer");
+        if (footer != null) SetFace(footer, face, 16f, 0f);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        Debug.Log($"Title screen: {rows} menu row(s) in {face.name}, step +{MenuStep}; " +
+                  (footer != null ? "footer at 16." : "no Footer text found."));
+    }
+
+    // The keyboard legend in the bottom-right corner — "[W] [S] MOVE   [ENTER] SELECT" — laid out to the
+    // pixel from the Draftmaster3_UI_Unity design (Title_PC.json, nodes 54-68): a 183x20 plate 12px in from
+    // the right and 10px up from the bottom of the 640x360 canvas, a 2px outline round it, cream key caps
+    // with a 2px drop shadow, Silkscreen 8 throughout. KeyboardLegend hides it on a phone and while a pad is
+    // in use. Rebuilt from scratch each run (the old one is removed first), so idempotent.
+    [MenuItem("Draftmaster/UI/Title Keyboard Legend")]
+    public static void AddKeyboardLegend()
+    {
+        var label = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resources/Fonts/Silkscreen Pixel.asset");
+        if (label == null) { Debug.Log("Silkscreen Pixel font asset missing — title screen left alone."); return; }
+
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var ui = Object.FindObjectsByType<TitleScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .FirstOrDefault();
+        var canvas = ui != null ? ui.GetComponentInParent<Canvas>() : null;
+        if (canvas == null) { Debug.Log($"No TitleScreenUI canvas in {ScenePath}."); return; }
+        var root = canvas.rootCanvas.transform;
+
+        var old = root.Find(LegendName);
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+
+        Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
+        var plateCol = Hex("#0d0f16cc");
+        var outlineCol = Hex("#2c3145");
+        var capCol = Hex("#f4ead7");
+        var shadowCol = Hex("#8b93ad");
+        var capText = Hex("#12141c");
+        var wordCol = Hex("#b9ae9a");
+
+        // Plate: anchored to the canvas's bottom-right corner, everything inside measured from its top-left.
+        var plate = new GameObject(LegendName, typeof(RectTransform), typeof(CanvasGroup), typeof(KeyboardLegend));
+        var prt = (RectTransform)plate.transform;
+        prt.SetParent(root, false);
+        prt.SetAsLastSibling();
+        prt.anchorMin = prt.anchorMax = new Vector2(1f, 0f);
+        prt.pivot = new Vector2(1f, 0f);
+        prt.sizeDelta = new Vector2(183f, 20f);
+        prt.anchoredPosition = new Vector2(-12f, 10f);
+        Box(prt, "Fill", 0, 0, 183, 20, plateCol);
+
+        // 2px outline just outside the plate (the design's frame at -2,-2, 187x24). Four strips rather than a
+        // filled box behind, which would show through the translucent plate.
+        Box(prt, "OutlineTop", -2, -2, 187, 2, outlineCol);
+        Box(prt, "OutlineBottom", -2, 20, 187, 2, outlineCol);
+        Box(prt, "OutlineLeft", -2, 0, 2, 20, outlineCol);
+        Box(prt, "OutlineRight", 183, 0, 2, 20, outlineCol);
+
+        void Cap(string key, float x, float w)
+        {
+            Box(prt, $"Key_{key}_Shadow", x, 7, w, 10, shadowCol);
+            var cap = Box(prt, $"Key_{key}", x, 5, w, 10, capCol);
+            Text(cap, key, 4, 0, w - 4, 10, capText, 0f);
+        }
+        Cap("W", 7, 16);
+        Cap("S", 29, 15);
+        Text(prt, "MOVE", 50, 5, 31, 10, wordCol, 1f);
+        Cap("ENTER", 91, 41);
+        Text(prt, "SELECT", 138, 5, 40, 10, wordCol, 1f);
+
+        RectTransform Box(RectTransform parent, string name, float x, float y, float w, float h, Color col)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -y);
+            rt.sizeDelta = new Vector2(w, h);
+            var img = go.GetComponent<UnityEngine.UI.Image>();
+            img.color = col;
+            img.raycastTarget = false;
+            return rt;
+        }
+
+        void Text(RectTransform parent, string s, float x, float y, float w, float h, Color col, float trackingPx)
+        {
+            var go = new GameObject($"Text_{s}", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -y);
+            rt.sizeDelta = new Vector2(w, h);
+            var t = go.GetComponent<TextMeshProUGUI>();
+            t.font = label;
+            if (label.material != null) t.fontSharedMaterial = label.material;
+            t.fontSize = 8f;
+            // TMP tracking is in hundredths of an em: 1px at 8px is 12.5.
+            t.characterSpacing = trackingPx * 100f / 8f;
+            t.color = col;
+            t.alignment = TextAlignmentOptions.TopLeft;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
+            t.overflowMode = TextOverflowModes.Overflow;
+            t.raycastTarget = false;
+            t.text = s;
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        Debug.Log("Title screen: keyboard legend built (bottom-right, PC only).");
+    }
+
+    const string LegendName = "KeyboardLegend";
+
     static void SetFace(TextMeshProUGUI text, TMP_FontAsset face, float size, float spacing)
     {
         text.font = face;
