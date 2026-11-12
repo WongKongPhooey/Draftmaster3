@@ -8,9 +8,13 @@ using UnityEngine;
 // into the pit lane and parks. Rides a kinematic SplineDriver on the main spline; this component only
 // caps its pace, counts the lap, triggers the pit-in, blinks its roof light and despawns afterwards.
 //
-// Sent back out for a full-course caution (DeployForCaution, from FullCourseCaution): it reappears on the track
-// ahead of the race leader and runs cruise pace until it has covered the caution's minimum distance and the
-// director stops holding it out (HoldOut), then closes the field up and pits exactly as at the end of the pace lap.
+// Sent back out for a full-course caution (DeployForCaution, from FullCourseCaution): it pulls out of where it parked
+// at the top of pit road, drives down the lane and out of the pit exit, then crawls round low on the inside line
+// while the field drives past it on the outside - until the restart leader (PickupLeader, kept up to date by
+// FullCourseCaution) comes up behind it. Then it moves up onto the racing line in front of the leader, and from there
+// it runs cruise pace until it has covered the caution's minimum distance and the director stops holding it out
+// (HoldOut), then closes the field up and pits exactly as at the end of the pace lap. (It used to be put straight
+// onto the track ahead of the leader - it appeared out of nowhere.)
 [RequireComponent(typeof(SplineDriver))]
 public class SafetyCar : MonoBehaviour
 {
@@ -81,6 +85,30 @@ public class SafetyCar : MonoBehaviour
     [Tooltip("Backstop (s): set off this long after the formation lap begins whatever the field is doing.")]
     public float leadOffTimeoutSeconds = 30f;
 
+    [Header("Caution: out of the pits to pick up the leader")]
+    [Tooltip("Pace (mph) the safety car crawls round at on the inside after it leaves the pits under a caution, until the restart leader comes up behind it.")]
+    public float huntMph = 40f;
+    [Tooltip("How far (m) in from the inside limit of the road (where a car's centre may go) the safety car crawls while the field goes by on the outside.")]
+    public float huntEdgeInsetM = 0.4f;
+    [Tooltip("Sideways rate (m/s) the safety car moves down to the inside after the pit exit, and back up onto the racing line once it has the leader.")]
+    public float huntSlewPerSec = 1.5f;
+    [Tooltip("The restart leader this close (m) behind it, the safety car moves up onto the racing line in front of it and picks up its cruise pace: the leader is coming down to its speed, and the field behind the leader with it.")]
+    public float pickupRangeM = 120f;
+    [Tooltip("No move up onto the line while another car is alongside, or up to this far (m) ahead in another lane.")]
+    public float pickupSideClearM = 12f;
+    [Tooltip("...or while a car between it and the leader is coming by this much (mph) faster than it - it is passing, not following.")]
+    public float pickupPassingMph = 10f;
+    [Tooltip("Having picked the leader up, the safety car holds its crawl until the leader is this close behind (m, centre to centre) and only then picks up cruise pace - the leader comes down onto it at cruise or less, so a safety car already away at cruise left it parked at the end of its approach, 40-odd metres back.")]
+    public float pickupTuckInM = 38f;
+    [Tooltip("...or until this long (s) after the pickup, whatever the leader is doing.")]
+    public float pickupTuckInSeconds = 20f;
+    [Tooltip("Backstop (s): with no leader found by then (everybody pitting, nobody running), the safety car moves up onto the line and leads whoever is behind it.")]
+    public float huntTimeoutSeconds = 150f;
+    [Tooltip("Steepest angle (deg) of the pull-out from the parked spot on the box strip to the driving lane of pit road.")]
+    public float pitOutLaneAngleDeg = 8f;
+    [Tooltip("The safety car waits in its parked spot while a car is coming down pit road within this far (m) behind it.")]
+    public float pitOutWaitBehindM = 35f;
+
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
     public float blinkInterval = 0.35f;
@@ -95,8 +123,29 @@ public class SafetyCar : MonoBehaviour
     [NonSerialized] public bool HoldOut;
     // True from DeployForCaution until the car next pits.
     public bool CautionLap => _caution;
-    // Metres covered since the car came out (the formation lap, or this caution).
+    // Metres covered since the car came out (the formation lap), or since it picked up the leader (a caution).
     public float Travelled => _travelled;
+
+    // The car this caution's safety car is out to pick up: the head of the restart order on the track (set by
+    // FullCourseCaution). Until it has it (PickingUp), every other car drives past the safety car on the outside.
+    [NonSerialized] public Transform PickupLeader;
+    // Under a caution, still on its way out of the pits or crawling on the inside waiting for the leader.
+    public bool PickingUp => _caution && _stage != CautionStage.Leading;
+    // A car that drives past the safety car rather than keeping station off it: everybody but the leader, while it
+    // is picking the leader up.
+    public bool PassableBy(Transform car) => PickingUp && car != null && car != PickupLeader;
+    // Seconds from the caution to picking up the leader (-1 not yet), and whether the backstop called it instead.
+    public float PickupSeconds { get; private set; } = -1f;
+    public bool PickupTimedOut { get; private set; }
+    public SplineDriver Driver => _spline;
+
+    enum CautionStage { Leading, PitOut, Hunting }
+    CautionStage _stage = CautionStage.Leading;
+    float _cautionTime;
+    bool _pitOutRolling;
+    float _pitOutFrom, _pitOutTo, _pitOutStartD, _pitOutLength;
+    float _huntLat;
+    bool _awaitTuckIn;   // picked up the leader, still at crawl until it is tucked in behind
 
     SplineDriver _spline;
     bool _caution;
@@ -151,6 +200,14 @@ public class SafetyCar : MonoBehaviour
         if (!RaceStart.UnderSafetyCar) return;
         _spline.aiMaxSpeedMph = cruiseMph;
         _spline.aiMinDecelMphPerSec = 0f;
+
+        // A caution: out of the pits, then round on the inside until the leader comes up behind.
+        if (_caution) _cautionTime += Time.fixedDeltaTime;
+        if (_caution && _stage == CautionStage.PitOut) { StepPitOut(); return; }
+        if (_caution && _stage == CautionStage.Hunting) { StepHunt(); return; }
+        // Picked the leader up: back up from the inside onto the racing line in front of it.
+        if (_spline.tacticalLateralOffset != 0f)
+            _spline.tacticalLateralOffset = Mathf.MoveTowards(_spline.tacticalLateralOffset, 0f, huntSlewPerSec * Time.fixedDeltaTime);
 
         if (_pitting)
         {
@@ -220,6 +277,12 @@ public class SafetyCar : MonoBehaviour
         // Under caution the field is strung out round the whole lap when it comes out: waiting for it would crawl.
         // The train catches up (FormationController's far catch-up) while the car runs cruise.
         float wantMph = ClosingUp || _caution ? cruiseMph : WaitingPace(out followerFloor);
+        // Just picked up the leader: hold the crawl until it has tucked in behind.
+        if (_awaitTuckIn && _caution && !ClosingUp)
+        {
+            if (_cautionTime - PickupSeconds >= pickupTuckInSeconds || LeaderWithin(pickupTuckInM)) _awaitTuckIn = false;
+            else wantMph = Mathf.Min(huntMph, cruiseMph);
+        }
         _paceMph = Mathf.MoveTowards(_paceMph, wantMph, waitSlewMphPerSec * Time.fixedDeltaTime);
         _paceMph = Mathf.Max(_paceMph, Mathf.Min(followerFloor, cruiseMph));
         if (!ClosingUp) _spline.aiMaxSpeedMph = Mathf.Min(_spline.aiMaxSpeedMph, _paceMph);
@@ -446,9 +509,12 @@ public class SafetyCar : MonoBehaviour
         }
     }
 
-    // Back out for a full-course caution: on the track at `distance` (main-spline metres) at cruise pace, held out
-    // until HoldOut is cleared and it has covered at least `minLaps` laps — counted so the green, which waves as the
-    // leader reaches the line after this car pits, comes after that many laps behind it.
+    // Back out for a full-course caution, held out until HoldOut is cleared and it has covered at least `minLaps` laps
+    // in front of the leader - counted so the green, which waves as the leader reaches the line after this car pits,
+    // comes after that many laps behind it. From where it parked at the top of pit road it drives down the lane and out
+    // of the pit exit, and crawls round on the inside until it picks up the leader (PickupLeader). Only a car that is
+    // not on pit road at all (a track with no pit lane) is put on the track at `distance` (main-spline metres) and
+    // leads from there, as it used to.
     public void DeployForCaution(float distance, float minLaps)
     {
         if (_spline == null) _spline = GetComponent<SplineDriver>();
@@ -464,30 +530,253 @@ public class SafetyCar : MonoBehaviour
         _firstPassDistance = -1f;
         _paceMph = cruiseMph;
         _despawnTimer = despawnAfterPitSeconds;
+        _cautionTime = 0f;
+        PickupSeconds = -1f;
+        PickupTimedOut = false;
+        _awaitTuckIn = false;
 
-        _spline.usePitLane = false;
-        _spline.spawnInPit = false;
         _spline.pitParkDistance = -1f;
         _spline.pitStopHold = false;
         _spline.parkedHold = false;
-        _spline.lateralOffset = 0f;
         _spline.tacticalLateralOffset = 0f;
         _spline.ClearPitApproach();
-        _spline.aiMaxSpeedMph = cruiseMph;
         _spline.aiMinDecelMphPerSec = 0f;
-        _spline.speed = cruiseMph * PackAvoidance.MphToMps;
-        _spline.startDistance = lap > 0f ? Mathf.Repeat(distance, lap) : distance;
-        _spline.PlaceAtStartDistance();
 
         if (_pitEntryDistance < 0f && _spline.track != null && _spline.track.track != null)
             _pitEntryDistance = _spline.track.track.PitEntryDistanceOnLap;
         _cautionPitFloor = CautionRules.PitFloor(lap, _pitEntryDistance, StartFinishDistance, minLaps, pitEntryWindow);
+
+        if (_spline.PitLength > 0f && (_spline.IsOnPit || _spline.usePitLane))
+        {
+            // Parked (or still rolling to its spot) at the top of pit road: drive out from there. It rejoins the
+            // track at the pit exit as any car leaving the pits does (SplineDriver.autoPitExit, the continuous merge).
+            _stage = CautionStage.PitOut;
+            _pitOutRolling = false;
+            _spline.usePitLane = true;
+            _spline.autoPitExit = true;
+            _spline.aiMaxSpeedMph = 0f;
+            return;
+        }
+
+        _stage = CautionStage.Leading;
+        PickupSeconds = 0f;
+        _spline.usePitLane = false;
+        _spline.spawnInPit = false;
+        _spline.lateralOffset = 0f;
+        _spline.aiMaxSpeedMph = cruiseMph;
+        _spline.speed = cruiseMph * PackAvoidance.MphToMps;
+        _spline.startDistance = lap > 0f ? Mathf.Repeat(distance, lap) : distance;
+        _spline.PlaceAtStartDistance();
+    }
+
+    // Under a caution, down pit road from the parked spot: wait for a car coming down the lane to go by, pull off the
+    // box strip onto the driving lane along an S-curve, keep station off anything in the lane ahead, and once the
+    // car has merged onto the track start the crawl on the inside.
+    void StepPitOut()
+    {
+        if (!_spline.IsOnPit && !_spline.usePitLane)
+        {
+            // Out on the track: SplineDriver handed it back at the pit exit, easing the lane lateral out as a merge.
+            _spline.autoPitExit = false;
+            _stage = CautionStage.Hunting;
+            _paceMph = Mathf.Max(_spline.CurrentMph, 1f);
+            _huntLat = _spline.UntacticalLateral + _spline.tacticalLateralOffset;
+            StepHunt();
+            return;
+        }
+        if (!_spline.IsOnPit) return;   // the switch onto the lane lands on the SplineDriver's next step
+
+        float myD = _spline.CentreDistanceOnPit;
+        if (!_pitOutRolling)
+        {
+            if (PitTrafficComingBy(myD)) { _spline.aiMaxSpeedMph = 0f; return; }
+            _pitOutRolling = true;
+            _pitOutStartD = myD;
+            _pitOutFrom = _spline.lateralOffset;
+            _pitOutTo = PitDrivingLateral();
+            _pitOutLength = Mathf.Max(20f, FormationLanes.PullOutLength(Mathf.Abs(_pitOutTo - _pitOutFrom), pitOutLaneAngleDeg, 0f, 0f));
+        }
+        _spline.lateralOffset = PitBoxPath.Lateral(_pitOutFrom, _pitOutTo, Mathf.Max(0f, myD - _pitOutStartD), _pitOutLength);
+        // SplineDriver holds a pit-lane car to the pit limit itself; this only queues it behind traffic in its lane.
+        _spline.aiMaxSpeedMph = Mathf.Min(cruiseMph, PitLaneTrafficCap(myD));
+        if (_spline.aiMaxSpeedMph < _spline.CurrentMph) _spline.aiMinDecelMphPerSec = trafficBrakeMphPerSec;
+    }
+
+    // The lane down pit road to drive: on a two-lane pit road the one away from the boxes, where nobody is cutting in
+    // to stop; otherwise the middle.
+    float PitDrivingLateral()
+    {
+        float width = _spline.track != null ? _spline.track.PitDrivingWidth : 0f;
+        return PitLanes.Lateral(PitLanes.FarSide, width, PitLane.ParkLateral);
+    }
+
+    // A car coming down pit road behind the parked safety car (or level with it), close enough that pulling out would
+    // put the safety car in its way. Cars stopped in their boxes are not traffic.
+    bool PitTrafficComingBy(float myD)
+    {
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.isActiveAndEnabled || !d.IsOnPit) continue;
+            if (Mathf.Abs(d.PitLength - _spline.PitLength) > 0.5f || d.CurrentMph < 2f) continue;
+            float behind = myD - d.CentreDistanceOnPit;
+            if (behind > -6f && behind < pitOutWaitBehindM) return true;
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track || p.SpeedMph < 2f) continue;
+            if (!_spline.ProjectOntoPit(p.transform.position, out float pd, out float plat) || Mathf.Abs(plat) > 7f) continue;
+            float behind = myD - pd;
+            if (behind > -6f && behind < pitOutWaitBehindM) return true;
+        }
+        return false;
+    }
+
+    // Fastest (mph) the safety car may run down pit road with a car in its lane ahead: down to that car's speed by the
+    // time it is a few metres behind it.
+    float PitLaneTrafficCap(float myD)
+    {
+        float myLat = _spline.LateralOnTrack;
+        float cap = float.MaxValue;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.isActiveAndEnabled || !d.IsOnPit) continue;
+            if (Mathf.Abs(d.PitLength - _spline.PitLength) > 0.5f) continue;
+            Consider(d.CentreDistanceOnPit - myD, d.LateralOnTrack, d.CurrentMph);
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            if (!_spline.ProjectOntoPit(p.transform.position, out float pd, out float plat) || Mathf.Abs(plat) > 7f) continue;
+            Consider(pd - myD, plat, p.SpeedMph);
+        }
+        return cap;
+
+        void Consider(float gap, float lat, float mph)
+        {
+            if (gap <= 0.5f || gap > 40f || Mathf.Abs(lat - myLat) > 2.4f) return;
+            float v = Mathf.Max(0f, mph) + Mathf.Max(0f, gap - 8f) * 2f;
+            if (v < cap) cap = v;
+        }
+    }
+
+    // Under a caution, out of the pits and waiting for the leader: crawl round at huntMph low on the inside, where the
+    // field coming up behind goes by on the outside (FormationController, PaceLapAssist), until the leader is close
+    // behind - then move up onto the line in front of it and lead.
+    void StepHunt()
+    {
+        float dt = Time.fixedDeltaTime;
+        float infield = _spline.InfieldSide;
+        float want = _spline.UntacticalLateral;
+        if (infield != 0f && _spline.GetRoadBounds(out float lo, out float hi))
+            want = infield > 0f ? hi - huntEdgeInsetM : lo + huntEdgeInsetM;
+        // Slewed in the track frame, so the racing line swinging across underneath doesn't drag the car about.
+        _huntLat = Mathf.MoveTowards(_huntLat, want, huntSlewPerSec * dt);
+        _spline.tacticalLateralOffset = _huntLat - _spline.UntacticalLateral;
+
+        _paceMph = Mathf.MoveTowards(_paceMph, huntMph, waitSlewMphPerSec * dt);
+        _spline.aiMaxSpeedMph = Mathf.Min(cruiseMph, _paceMph);
+        YieldToTraffic();
+
+        bool found = LeaderToPickUp();
+        if (!found && _cautionTime < huntTimeoutSeconds) return;
+        _stage = CautionStage.Leading;
+        PickupSeconds = _cautionTime;
+        PickupTimedOut = !found;
+        // The caution's laps are counted from here, in front of the leader.
+        _travelled = 0f;
+        _hasPrev = false;
+        _paceMph = Mathf.Max(_spline.CurrentMph, 1f);
+        _awaitTuckIn = found;
+        Debug.Log(found
+            ? $"[Caution] safety car picked up the leader {PickupLeader.name} {_cautionTime:0} s into the caution"
+            : $"[Caution] safety car found no leader in {_cautionTime:0} s - leading from here");
+    }
+
+    // The leader is close behind, and the move up onto the line in front of it is clear: nobody else alongside or just
+    // ahead in another lane, and nobody between it and the leader still coming by.
+    bool LeaderToPickUp()
+    {
+        float len = _spline.TrackLength;
+        if (PickupLeader == null || len <= 0f) return false;
+        if (!TryLocate(PickupLeader, out float leaderC, out bool leaderOnPit) || leaderOnPit) return false;
+        float myC = _spline.CentreDistanceOnTrack;
+        float behind = Mathf.Repeat(myC - leaderC, len);
+        if (behind <= 0f || behind > pickupRangeM) return false;
+        float myMph = _spline.CurrentMph;
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.isActiveAndEnabled || d.IsOnPit || d.transform == PickupLeader) continue;
+            if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
+            if (InTheWay(PackAvoidance.SignedGap(d.CentreDistanceOnTrack, myC, len), d.CurrentMph)) return false;
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track || p.transform == PickupLeader) continue;
+            if (InTheWay(PackAvoidance.SignedGap(p.TrackDistance, myC, len), p.SpeedMph)) return false;
+        }
+        return true;
+
+        bool InTheWay(float gap, float mph)
+        {
+            if (gap > -8f && gap < pickupSideClearM) return true;                  // alongside, or just ahead
+            return gap <= -8f && gap > -behind && mph > myMph + pickupPassingMph;  // between us, still coming by
+        }
+    }
+
+    // The leader is on the track no more than `metres` behind (centre to centre).
+    bool LeaderWithin(float metres)
+    {
+        float len = _spline.TrackLength;
+        if (PickupLeader == null || len <= 0f) return false;
+        if (!TryLocate(PickupLeader, out float leaderC, out bool onPit) || onPit) return false;
+        float behind = Mathf.Repeat(_spline.CentreDistanceOnTrack - leaderC, len);
+        return behind > 0f && behind <= metres;
+    }
+
+    // Where a car is along the main spline, by its transform: the free-driven player first, then the AI field.
+    bool TryLocate(Transform t, out float centreDistance, out bool onPit)
+    {
+        centreDistance = 0f;
+        onPit = false;
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || p.transform != t || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            centreDistance = p.TrackDistance;
+            onPit = _spline.track != null && _spline.track.IsOnPitSurface(p.transform.position);
+            return true;
+        }
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d.transform != t || !d.isActiveAndEnabled) continue;
+            centreDistance = d.CentreDistanceOnTrack;
+            onPit = d.IsOnPit;
+            return true;
+        }
+        return false;
     }
 
     void PitIn()
     {
         _pitting = true;
         _caution = false;
+        _stage = CautionStage.Leading;
         ClosingUp = false; // pace car is leaving the surface; the field keeps its rows via FormationDirector.FieldClosingUp
         _despawnTimer = despawnAfterPitSeconds;
 

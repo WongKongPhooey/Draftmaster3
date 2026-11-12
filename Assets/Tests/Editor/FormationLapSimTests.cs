@@ -369,7 +369,7 @@ public class FormationLapSimTests
         }
         float tailAtCaution = -1f, widestAtCaution = -1f;   // as the safety car picks up the leader
         float tailAtLap = -1f, widestAtLap = -1f, closedUpAt = -1f;
-        float scBiggestStep = 0f;
+        float scBiggestStep = 0f, scPitInStep = 0f;
         string scBiggestAt = "";
         float minWidest = float.MaxValue, minWidestAt = -1f;
         var scPrevPos = scPosAtFlag;
@@ -422,11 +422,14 @@ public class FormationLapSimTests
                 float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
                 fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
             }
-            // The safety car drives out of the pits: it never jumps (60 mph is 0.5 m a step).
+            // The safety car drives out of the pits: it never jumps (60 mph is 0.5 m a step) - out of the pits, round
+            // on the inside, up onto the line and leading. Its pit-in at the end of the caution is reported, not judged
+            // here: the snap onto pit road at the entry is a separate known issue (FormationLapSimTests.Seams, SC JUMP).
             if (scSpline.gameObject.activeSelf)
             {
                 float stepM = (pos[0] - scPrevPos).magnitude;
-                if (stepM > scBiggestStep)
+                if ((bool)scType.GetProperty("Pitted").GetValue(sc)) scPitInStep = Mathf.Max(scPitInStep, stepM);
+                else if (stepM > scBiggestStep)
                 {
                     scBiggestStep = stepM;
                     scBiggestAt = $"t{t:0.00} onPit {(bool)onPitProp.GetValue(scSpline)} usePit {(bool)splineType.GetField("usePitLane").GetValue(scSpline)} " +
@@ -488,7 +491,7 @@ public class FormationLapSimTests
         bool pickupTimedOut = (bool)scType.GetProperty("PickupTimedOut").GetValue(sc);
         string summary = $"[CautionSim] {trackId}: race pace {raceMph:0} mph; green {(green ? "after" : "NOT after")} {t:0} s; " +
                          $"safety car {(scInPitsAtFlag ? "in the pits" : "NOT in the pits")} at the flag, " +
-                         $"{(scLeftPitRoad ? "drove out" : "never left pit road")}, biggest step {scBiggestStep:0.00} m ({scBiggestAt}), " +
+                         $"{(scLeftPitRoad ? "drove out" : "never left pit road")}, biggest step {scBiggestStep:0.00} m ({scBiggestAt}) (pit-in {scPitInStep:0.00} m), " +
                          $"picked up the leader at t{pickupSeconds:0} s{(pickupTimedOut ? " (TIMED OUT)" : "")}; " +
                          $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
                          $"tail {tailAtCaution:0} m behind the safety car (widest gap {widestAtCaution:0} m) as it picked up the leader, " +

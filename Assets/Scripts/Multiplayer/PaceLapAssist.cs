@@ -302,12 +302,17 @@ public class PaceLapAssist : MonoBehaviour
         for (int i = 0; i < field.Count && lap <= 0f; i++) if (field[i] != null) lap = field[i].TrackLength;
         bool letBy = meCaught && CautionLineup.ShouldYield(pvc.transform, playerDist, lap, pvc.ObstacleTrack, cautionLetByBehindM);
         CautionLineup.SetYielding(pvc.transform, letBy);
+        // The safety car out of the pits crawling on the inside to pick up the leader: unless the player IS that leader,
+        // they drive past it on the outside like the rest of the field.
+        var scNow = FormationDirector.Instance != null ? FormationDirector.Instance.SafetyCarInstance : null;
+        var passSc = scNow != null && scNow.PassableBy(pvc.transform) ? scNow.Driver : null;
         SplineDriver ahead = null;
         float gap = float.MaxValue;
         for (int i = 0; i < field.Count; i++)
         {
             var d = field[i];
             if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.TrackLength <= 0f) continue;
+            if (d == passSc) continue;
             if (d.CurrentMph < cautionMovingMph) continue;
             if (!meCaught && CautionLineup.IsYielding(d.transform)) continue;
             bool inMyLane = Mathf.Abs(d.LateralOnTrack - myLat) <= cautionLaneHalfWidth;
@@ -351,6 +356,12 @@ public class PaceLapAssist : MonoBehaviour
         _promptColor = new Color(1f, 0.85f, 0.2f);
         if (letBy) { _promptText = "CAUGHT IN THE WRECK — move low, let the field by"; return; }
         if (meCaught) { _promptText = "CAUGHT IN THE WRECK — restart from the tail"; return; }
+        if (passSc != null && !passSc.IsOnPit && passSc.TrackLength > 0f
+            && Mathf.Repeat(passSc.DistanceOnTrack - playerDist, passSc.TrackLength) < 200f)
+        {
+            _promptText = "CAUTION — safety car picking up the leader: pass it on the outside";
+            return;
+        }
         if (ahead == null) { _promptText = "CAUTION — hold your position"; return; }
         string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
         _promptText = gap > catchUpGap ? $"CAUTION — close up behind {who}" : $"CAUTION — hold station behind {who}";
