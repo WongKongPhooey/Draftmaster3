@@ -184,7 +184,30 @@ public static partial class PhoneDeploy
         var s = new Status { request = request, bump = bump, state = "working", startedAt = Now(), message = "queued" };
         Write(s);
         // Out of the menu call, so the MCP request that fired it returns before the build blocks the editor.
-        EditorApplication.delayCall += () => Run(s);
+        // The request also rides SessionState: a delayCall is lost to a domain reload, and an overnight task
+        // that changed scripts reloads the domain right about now — which left status.json stuck at "queued"
+        // and the controller waiting out its whole deploy timeout (2026-10-29). ResumeQueued picks it up.
+        SessionState.SetString(QueuedKey, JsonUtility.ToJson(s));
+        EditorApplication.delayCall += () => RunQueued(s);
+    }
+
+    const string QueuedKey = "PhoneDeploy.Queued";
+
+    // Run a scheduled request once, whichever of the delayCall and the post-reload resume gets there first.
+    static void RunQueued(Status s)
+    {
+        if (SessionState.GetString(QueuedKey, "").Length == 0) return;   // already taken
+        SessionState.EraseString(QueuedKey);
+        Run(s);
+    }
+
+    [InitializeOnLoadMethod]
+    static void ResumeQueued()
+    {
+        string json = SessionState.GetString(QueuedKey, "");
+        if (json.Length == 0) return;
+        var s = JsonUtility.FromJson<Status>(json);
+        EditorApplication.delayCall += () => RunQueued(s);
     }
 
     static void Run(Status s)
@@ -300,6 +323,17 @@ public static partial class PhoneDeploy
         {
             try
             {
+                // The phone has to still be there. A full Build And Run to a device adb has lost does not fail,
+                // it sits at "Reconnecting Device" with the editor's main thread blocked — all night, the one
+                // time it happened (2026-10-29), with Unity MCP dead and every later task skipped.
+                string model = AdbModel(s.device, out string adbWhy);
+                if (model == null)
+                {
+                    Finish(s, "skipped", "full", $"Patch failed and {s.device} is not connected now ({adbWhy}); " +
+                                                 "no full build attempted.");
+                    return;
+                }
+
                 // A full install replaces the APK anyway, so the bumps the patches counted cost nothing here.
                 if (s.bump && PendingBumps > 0) BumpVersion(s, PendingBumps);
                 FinishBuild(s, Build(s, patch: false), false, "the patch build failed");
@@ -481,11 +515,8 @@ public static partial class PhoneDeploy
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
                 CreateNoWindow = true,
             };
-            using (var p = Process.Start(psi))
-            {
-                output = p.StandardOutput.ReadToEnd();
-                if (!p.WaitForExit(20000)) return null;
-            }
+            output = RunAdb(psi);
+            if (output == null) return null;
         }
         catch { return null; }
 
@@ -497,6 +528,24 @@ public static partial class PhoneDeploy
                 return cols[0];
         }
         return null;
+    }
+
+    // Runs adb and returns its stdout, or null if it has not finished within 20 s (it is killed). The output is
+    // read on another thread so the timeout actually bounds the wait: a synchronous ReadToEnd blocks until adb
+    // closes its stdout, which a stuck adb never does.
+    static string RunAdb(ProcessStartInfo psi)
+    {
+        using (var p = Process.Start(psi))
+        {
+            var read = p.StandardOutput.ReadToEndAsync();
+            p.StandardError.ReadToEndAsync();
+            if (!p.WaitForExit(20000) || !read.Wait(2000))
+            {
+                try { p.Kill(); } catch { }
+                return null;
+            }
+            return read.Result;
+        }
     }
 
     // Wireless debugging shows up either as an mDNS name or as a raw ip:port.
@@ -515,11 +564,8 @@ public static partial class PhoneDeploy
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
                 CreateNoWindow = true,
             };
-            using (var p = Process.Start(psi))
-            {
-                output = p.StandardOutput.ReadToEnd();
-                if (!p.WaitForExit(20000)) { why = "adb timed out"; return null; }
-            }
+            output = RunAdb(psi);
+            if (output == null) { why = "adb timed out"; return null; }
         }
         catch (Exception e) { why = "adb not runnable: " + e.Message; return null; }
 
