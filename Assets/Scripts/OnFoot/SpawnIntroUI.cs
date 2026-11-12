@@ -370,6 +370,8 @@ public class SpawnIntroUI : MonoBehaviour
         // You can see them; you do not need an arrow telling you where they are.
         if (offScreenOnly && onScreen) return;
 
+        if (UsesWidget(m)) { DrawWidgetMarker(m, cam, gui, onScreen, dist); return; }
+
         // Where the marker lives once it has settled, plus the direction it points when edge-clamped.
         Vector2 rest;
         Vector2 dir = Vector2.zero;
@@ -429,6 +431,47 @@ public class SpawnIntroUI : MonoBehaviour
             DrawLabels(pos, dir, m.label, distanceText);
         }
 
+        GUI.color = Color.white;
+    }
+
+    // The objective while walking, reshaped to the Draftmaster3_UI_Unity design (Liaison_PC, 2026-11-11):
+    // where to go and how far is ObjectiveWidget in the corner — a boxed arrow pointing the way, the
+    // objective's name and the metres left — rather than an icon pinned to whichever screen edge the target
+    // is past. The icon still floats over the target while it is in view, so the thing itself is marked,
+    // and the fly-in still pulls the eye: out to the target when it is on screen, into the widget's box
+    // when it is not.
+    //
+    // Only for the objective (companions keep their edge pips, they are people, not places) and only on
+    // foot: a marker measured from the car (the pit box on the way down pit road) keeps the old drawing,
+    // and the corner is the race HUD's while driving.
+    bool UsesWidget(Marker m) =>
+        !m.companion && m.measureFrom == null && OnFootController.Current != null;
+
+    void DrawWidgetMarker(Marker m, Camera cam, Vector2 targetGui, bool onScreen, float dist)
+    {
+        // Which way to walk: from the player to the target, as the screen sees it.
+        Vector2 dir = Vector2.zero;
+        var from = From(m);
+        if (from != null)
+        {
+            Vector3 fp = cam.WorldToScreenPoint(from.position);
+            dir = targetGui - new Vector2(fp.x, Screen.height - fp.y);
+        }
+
+        var widget = ObjectiveWidget.Draw(m.label, $"{Mathf.RoundToInt(dist)} m", dir);
+        m.hitRect = widget;
+
+        float t = markerIntroTime > 0f ? Mathf.Clamp01(m.introTimer / markerIntroTime) : 1f;
+        float ease = 1f - (1f - t) * (1f - t);
+        bool settled = t >= 1f;
+        if (settled && !onScreen) return;   // nothing to float over; the widget says it all
+
+        // Box of the widget's arrow: where an off-screen objective's icon flies in to.
+        var into = new Vector2(widget.x + PixelGUI.Px(14f), widget.center.y);
+        Vector2 rest = onScreen ? new Vector2(targetGui.x, targetGui.y - iconSize) : into;
+        Vector2 pos = settled ? rest : Vector2.Lerp(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), rest, ease);
+        float scale = Mathf.Lerp(markerIntroScale, onScreen ? 1f : 0.5f, ease);
+        DrawIcon(pos, m.icon, scale, Tint(m));
         GUI.color = Color.white;
     }
 

@@ -23,7 +23,12 @@ public static class DriveScoutStyle
     public static readonly Color Gold = Hex(0xe8b13cff);         // headings, filled cells, standout values
     public static readonly Color Good = Hex(0x6fa85aff);
     public static readonly Color Bad = Hex(0xe0604aff);
-    public static readonly Color KeyShadow = Hex(0x8b93adff);    // under the ESC keycap
+    public static readonly Color KeyShadow = Hex(0x8b93adff);    // under every keycap
+
+    // The paddock's own furniture in the same handoff (Liaison_PC, Choice_PC): the dialogue and objective plates
+    // are a deeper navy than the laptop's panels, and the chosen answer sits on a lighter band.
+    public static readonly Color DialoguePanel = Hex(0x101a30ff);
+    public static readonly Color ChoiceSelected = Hex(0x243a5eff);
 
     // A 0-20 skill this high is drawn in gold rather than cream: on the design's sheet every 18 and 20 is
     // gold and every 17 and under is not.

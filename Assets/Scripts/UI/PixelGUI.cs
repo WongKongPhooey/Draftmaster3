@@ -393,6 +393,31 @@ public static class PixelGUI
         return tex;
     }
 
+    // A line with letter spacing, `trackPx` kit pixels between characters. IMGUI has no tracking of its own,
+    // so the line is set a character at a time. The design's small Silkscreen captions are all tracked
+    // (2px for labels, 1px for footnotes).
+    public static void LabelTracked(Rect r, string text, GUIStyle style, float trackPx)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        float x = r.x, track = Px(trackPx);
+        for (int i = 0; i < text.Length; i++)
+        {
+            var c = new GUIContent(text[i].ToString());
+            float w = style.CalcSize(c).x;
+            GUI.Label(new Rect(x, r.y, w + track, r.height), c, style);
+            x += w + track;
+        }
+    }
+
+    // How wide LabelTracked draws a line.
+    public static float TrackedWidth(string text, GUIStyle style, float trackPx)
+    {
+        if (string.IsNullOrEmpty(text)) return 0f;
+        float w = 0f;
+        for (int i = 0; i < text.Length; i++) w += style.CalcSize(new GUIContent(text[i].ToString())).x;
+        return w + Px(trackPx) * (text.Length - 1);
+    }
+
     // Fills a rect with a flat tint. Used for selection bands, which read better over the plate than a
     // second sprite would.
     public static void Fill(Rect r, Color c)

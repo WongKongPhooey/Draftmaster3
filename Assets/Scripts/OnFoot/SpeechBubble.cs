@@ -79,7 +79,6 @@ public class SpeechBubble : MonoBehaviour
     Vector2 _namePlateSize;
     Sprite _plateSprite;                            // what both plates are drawn from
     bool _plateAuthored;                            // themed/hand-textured art, as opposed to the fallback
-    SpriteRenderer _caret;                          // blinking "press to continue" marker
     Coroutine _reveal;
     string _full = "";
     Vector2 _boxSize = new Vector2(0.55f, 0.4f);
@@ -162,21 +161,94 @@ public class SpeechBubble : MonoBehaviour
         FitToMetres(_nameShadow, size * nameSizeFactor);
         _fittedSize = size;
 
-        // JRPG furniture: a marker in the box's bottom-right that appears once the line has finished
-        // typing, so the player can tell "still talking" from "waiting on you".
-        if (theme != null && theme.cursor != null)
-        {
-            _caret = new GameObject("Caret").AddComponent<SpriteRenderer>();
-            _caret.transform.SetParent(transform, false);
-            _caret.sprite = theme.cursor;
-            _caret.color = theme.gold;
-            _caret.sortingLayerName = "Vehicles";
-            _caret.sortingOrder = 62;
-            // The cursor art points right; rotate it to point down, the usual "continue" direction.
-            _caret.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
-            SetUnlit(_caret);
-            _caret.enabled = false;
-        }
+        BuildContinueRow();
+    }
+
+    // ------------------------------------------------------------------ the "your move" row
+
+    // JRPG furniture, drawn as the Draftmaster3_UI_Unity design has it (Liaison_PC, 2026-11-11): a row under
+    // the line, right-aligned, that appears once the line has finished typing — the key that moves it on, an
+    // E keycap (cream cap on a 2px slate shadow), and a small gold down-arrow that bobs. The keycap is for a
+    // keyboard only: a phone has no E (the design's mobile frame shows the arrow alone), and a pad player
+    // isn't holding one either.
+    //
+    // Laid out in the design's own pixels, converted through the size one line of dialogue is drawn at, so
+    // the row scales with the text on a desktop and on a phone alike.
+    const float RowPx = 10f;        // the row's height
+    const float RowGapPx = 2f;      // between the last line of text and the row
+    const float KeyWidthPx = 14f;
+    const float KeyToArrowPx = 6f;
+    const float ArrowWidthPx = 5f;
+    const float BobPx = 2f;         // how far the arrow drops on its off beat
+    const float BobPeriod = 0.8f;
+    // One line of monogram is 13 of the design's pixels (PixelFontBake rounds its line to 13).
+    const float LinePx = 13f;
+
+    Transform _continue, _keycap, _arrow;
+    bool _continueShown;
+    float _kp = 0.017f;            // world metres per design pixel, set per line
+
+    void BuildContinueRow()
+    {
+        _continue = new GameObject("Continue").transform;
+        _continue.SetParent(transform, false);
+
+        // The key, its right edge KeyToArrowPx short of the arrow.
+        _keycap = new GameObject("Key").transform;
+        _keycap.SetParent(_continue, false);
+        float keyLeft = -ArrowWidthPx - KeyToArrowPx - KeyWidthPx;
+        Pixel(_keycap, "Shadow", keyLeft, -2f, KeyWidthPx, RowPx, DriveScoutStyle.KeyShadow, 62);
+        Pixel(_keycap, "Cap", keyLeft, 0f, KeyWidthPx, RowPx, DriveScoutStyle.Text, 63);
+        // The E, a 4x5 Silkscreen capital: stem, top, middle (one short), bottom.
+        float ex = keyLeft + 5f;
+        Pixel(_keycap, "E_Stem", ex, 3f, 1f, 5f, DriveScoutStyle.PickerPlate, 64);
+        Pixel(_keycap, "E_Top", ex, 7f, 4f, 1f, DriveScoutStyle.PickerPlate, 64);
+        Pixel(_keycap, "E_Mid", ex, 5f, 3f, 1f, DriveScoutStyle.PickerPlate, 64);
+        Pixel(_keycap, "E_Bottom", ex, 3f, 4f, 1f, DriveScoutStyle.PickerPlate, 64);
+
+        // The arrow: rows 5, 3 and 1 wide, centred in the row.
+        _arrow = new GameObject("Arrow").transform;
+        _arrow.SetParent(_continue, false);
+        Pixel(_arrow, "Row0", -5f, 6f, 5f, 1f, DriveScoutStyle.Gold, 63);
+        Pixel(_arrow, "Row1", -4f, 5f, 3f, 1f, DriveScoutStyle.Gold, 63);
+        Pixel(_arrow, "Row2", -3f, 4f, 1f, 1f, DriveScoutStyle.Gold, 63);
+
+        _continue.gameObject.SetActive(false);
+    }
+
+    // A solid rectangle in design pixels, (x, y) its bottom-left with y up, under `parent`. Scaled to world
+    // metres by the parent's own scale, which ScaleContinueRow sets per line.
+    static void Pixel(Transform parent, string name, float x, float y, float w, float h, Color colour, int order)
+    {
+        var sr = new GameObject(name).AddComponent<SpriteRenderer>();
+        sr.transform.SetParent(parent, false);
+        sr.sprite = WhitePixel();
+        sr.color = colour;
+        sr.sortingLayerName = "Vehicles";
+        sr.sortingOrder = order;
+        sr.transform.localPosition = new Vector3(x + w * 0.5f, y + h * 0.5f, 0f);
+        sr.transform.localScale = new Vector3(w, h, 1f);
+        SetUnlit(sr);
+    }
+
+    static Sprite _whitePixel;
+    static Sprite WhitePixel()
+    {
+        if (_whitePixel != null) return _whitePixel;
+        var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+        tex.SetPixel(0, 0, Color.white);
+        tex.Apply();
+        _whitePixel = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+        return _whitePixel;
+    }
+
+    // The keycap only means something to whoever is holding a keyboard.
+    static bool KeyShows => !Mobile && !InputGlyphs.UsingGamepad;
+
+    void ShowContinue(bool show)
+    {
+        _continueShown = show && _keepOnScreen;   // ambient chatter is nobody's to move on
+        if (_continue != null) _continue.gameObject.SetActive(_continueShown);
     }
 
     // One plate of the dialogue furniture: the kit's window sprite, 9-sliced so it can be stretched to
@@ -329,19 +401,19 @@ public class SpeechBubble : MonoBehaviour
         _label.ForceMeshUpdate();
 
         Vector2 b = local * _labelScale;   // preferred values are pre-scale, so convert to metres
-        _boxSize = new Vector2(Mathf.Max(0.55f, b.x + padding.x * 2f), Mathf.Max(0.4f, b.y + padding.y * 2f));
-        _label.transform.localPosition = new Vector3(0f, 0f, -0.01f);
 
-        if (_caret != null)
+        // A line the player moves on gets the continue row under it (BuildContinueRow), and the box grows
+        // by the row so it never sits over the last line of text; the text keeps to the top.
+        _kp = _fittedSize / LinePx;
+        float row = _keepOnScreen ? (RowGapPx + RowPx) * _kp : 0f;
+        _boxSize = new Vector2(Mathf.Max(0.55f, b.x + padding.x * 2f), Mathf.Max(0.4f, b.y + row + padding.y * 2f));
+        _label.transform.localPosition = new Vector3(0f, row * 0.5f, -0.01f);
+
+        if (_continue != null)
         {
-            _caret.enabled = false;
-            _caret.transform.localPosition = new Vector3(
-                _boxSize.x * 0.5f - padding.x, -_boxSize.y * 0.5f + padding.y, -0.02f);
-            // The cursor sprite is authored in UI pixels, so scale it from its own native world size
-            // rather than assuming one.
-            float caretNative = _caret.sprite.rect.height / _caret.sprite.pixelsPerUnit;
-            float caretScale = caretNative > 0.0001f ? (_fittedSize * 0.8f) / caretNative : 1f;
-            _caret.transform.localScale = new Vector3(caretScale, caretScale, 1f);
+            ShowContinue(false);
+            _continue.localPosition = new Vector3(_boxSize.x * 0.5f - padding.x, -_boxSize.y * 0.5f + padding.y, -0.02f);
+            _continue.localScale = new Vector3(_kp, _kp, 1f);
         }
 
         // Name hangs off the box's top-left corner, so it stays glued to the box however wide the line is.
@@ -409,7 +481,7 @@ public class SpeechBubble : MonoBehaviour
             _label.maxVisibleCharacters = int.MaxValue;   // clear the typewriter's reveal clamp
         }
         IsRevealing = false;
-        if (_caret != null) _caret.enabled = true;
+        ShowContinue(true);
     }
 
     public void Hide()
@@ -425,7 +497,7 @@ public class SpeechBubble : MonoBehaviour
         if (_reveal != null) { StopCoroutine(_reveal); _reveal = null; }
         IsRevealing = false;
         _holdsScreen = false;
-        if (_caret != null) _caret.enabled = false;
+        ShowContinue(false);
         gameObject.SetActive(false);
     }
 
@@ -494,7 +566,7 @@ public class SpeechBubble : MonoBehaviour
         _label.maxVisibleCharacters = int.MaxValue;
         IsRevealing = false;
         _reveal = null;
-        if (_caret != null) _caret.enabled = true;
+        ShowContinue(true);
     }
 
     void LateUpdate()
@@ -511,12 +583,14 @@ public class SpeechBubble : MonoBehaviour
         SizePlate(_bg, _boxSize);
         if (_namePlate != null && _namePlate.gameObject.activeSelf) SizePlate(_namePlate, _namePlateSize);
 
-        // Blink the continue marker so a finished line reads as "your move" at a glance.
-        if (_caret != null && _caret.enabled)
+        // The arrow bobs in whole design pixels (down BobPx on the off beat), so a finished line reads as
+        // "your move" at a glance; the keycap follows the device in hand.
+        if (_continueShown)
         {
-            var c = _caret.color;
-            c.a = Mathf.Repeat(Time.unscaledTime, 0.8f) < 0.4f ? 1f : 0.25f;
-            _caret.color = c;
+            bool down = Mathf.Repeat(Time.unscaledTime, BobPeriod) >= BobPeriod * 0.5f;
+            _arrow.localPosition = new Vector3(0f, down ? -BobPx : 0f, 0f);
+            bool key = KeyShows;
+            if (_keycap.gameObject.activeSelf != key) _keycap.gameObject.SetActive(key);
         }
     }
 
