@@ -72,6 +72,8 @@ public class PaceLapAssist : MonoBehaviour
     string _promptText;
     Color _promptColor;
     bool _showPrompt;
+    bool _outOfPosition;        // the prompt is the out-of-position warning: drawn as the design's flashing red box
+    string _outOfPositionWho;   // "car #21" / "the safety car", for the box's "Drop in behind ..." line
 
     void OnDisable()
     {
@@ -280,6 +282,8 @@ public class PaceLapAssist : MonoBehaviour
         if (leaderT == null) { _showPrompt = false; return; }
         string who = _leaderIsSafety ? "the safety car" : $"car #{_leaderNumber}";
         _showPrompt = true;
+        _outOfPosition = gap < -2f;
+        _outOfPositionWho = who;
         if (gap < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
         else if (gap > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
         else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
@@ -353,6 +357,7 @@ public class PaceLapAssist : MonoBehaviour
         pvc.speedGovernorMps = _cautionGov;
 
         _showPrompt = true;
+        _outOfPosition = false;
         _promptColor = new Color(1f, 0.85f, 0.2f);
         if (letBy) { _promptText = "CAUGHT IN THE WRECK — move low, let the field by"; return; }
         if (meCaught) { _promptText = "CAUGHT IN THE WRECK — restart from the tail"; return; }
@@ -380,6 +385,8 @@ public class PaceLapAssist : MonoBehaviour
         float fwdDist = Vector2.Dot((Vector2)_leader.position - myPos, fwd);
         string who = _leaderIsSafety ? "the safety car" : $"car #{_leaderNumber}";
         _showPrompt = true;
+        _outOfPosition = fwdDist < -2f;
+        _outOfPositionWho = who;
         if (fwdDist < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
         else if (fwdDist > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
         else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
@@ -399,6 +406,9 @@ public class PaceLapAssist : MonoBehaviour
     void OnGUI()
     {
         if (!_showPrompt) return;
+        // Out of position is the design's boxed, flashing red warning; the other formation and caution prompts
+        // keep their plain coloured line.
+        if (_outOfPosition) { OutOfPositionBox.Draw($"Drop in behind {_outOfPositionWho}"); return; }
         var style = new GUIStyle(GUI.skin.label)
         {
             fontSize = 26,
