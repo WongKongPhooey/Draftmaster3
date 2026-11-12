@@ -97,6 +97,14 @@ slots first — there is no re-roll loop. A pool with nothing at the wanted rari
 rarity. The seed for a profile's Nth pack is `Hash(playerId) ^ N × 0x5DEECE66D`, so a pack can be re-derived
 and audited. Cards are revealed commons first, best card last.
 
+**The pack opening screen** (`MasterDraftUI.PackOpening.cs`, to the design handoff's `PackSealed_PC`): a
+full-screen layer — "Open Packs" header bar, the dark stage with diagonal stripes, the sealed pack floating over
+its shadow (stepped 4 px bob) and a blinking "Click or press Enter". Confirm or a tap tears it open; the cards are
+dealt face down showing a playing-card back (procedural: cream border, red lattice, the 3 medallion) and turn
+over one at a time, left to right; an Epic or Legendary pull holds a beat and gets a call-out. Confirm, R or Esc
+skips to the opened pack (the cards are already saved). The opened layout is a placeholder until the design
+settles. EditMode coverage: `PackOpeningScreenTests`.
+
 ### Team
 
 Active driver + bench ≤ 4 (5 drivers), exactly 1 car, 1 crew chief, action deck 5-15 with at most 2 copies of
@@ -196,6 +204,7 @@ outcome.
 | `  MasterDraftSession.cs` | DontDestroyOnLoad singleton: backend, catalogue, profile, race hand-off |
 | `  MasterDraftSources.cs` | DB rows → card sources |
 | `  MasterDraftUI.cs`, `MasterDraftCardView.cs` | The menu scene's screens; procedural cards |
+| `  MasterDraftUI.PackOpening.cs` | The pack opening screen (sealed pack, deal, flip) |
 | `  MasterDraftRaceLauncher.cs` | GO → RaceScene |
 | `  MasterDraftRaceHost.cs` | In-race hand, effects, HUD strip, payout |
 | `Assets/Editor/MasterDraftSceneBuilder.cs` | Scene builder + profile menu items |

@@ -157,6 +157,7 @@ public partial class MasterDraftUI : MonoBehaviour
         }
         if (_statusUntil > 0f && Time.unscaledTime >= _statusUntil) SetStatus("");
 
+        PackUpdate(Time.unscaledDeltaTime);
         if (_busy) return;
 
         var kb = Keyboard.current;
@@ -256,8 +257,7 @@ public partial class MasterDraftUI : MonoBehaviour
                 Rebuild();
                 return;
             case Overlay.Reveal:
-                _overlay = Overlay.None;
-                Rebuild();
+                PackBack();
                 return;
             case Overlay.Picker:
             case Overlay.WantType:
@@ -294,7 +294,9 @@ public partial class MasterDraftUI : MonoBehaviour
 
     void Confirm()
     {
-        if (_busy || _items.Count == 0) return;
+        if (_busy) return;
+        if (PackConfirm()) return;   // the pack screen's animation takes confirm before any item
+        if (_items.Count == 0) return;
         var item = _items[Mathf.Clamp(_focus, 0, _items.Count - 1)];
         if (!item.enabled) return;
         item.confirm?.Invoke();
@@ -370,6 +372,7 @@ public partial class MasterDraftUI : MonoBehaviour
         _focusFrame = null;
         _navOverride = null;
 
+        PreparePackLayer();
         PrepareCollectionLayout();
         DrawChromeState();
 
@@ -1264,72 +1267,15 @@ public partial class MasterDraftUI : MonoBehaviour
             return;
         }
 
-        SetStatus(kind == PackKind.Starter ? "Your team has been picked from the Starter Pack — change it in My Team." : "");
-        _reveal = result.cards;
-        _revealed = 0;
-        _revealTitle = PackGenerator.NameOf(kind);
-        _overlay = Overlay.Reveal;
-        _lastFocusKey = "rev0";
-        Rebuild();
+        SetStatus("");
+        // The pack screen: MasterDraftUI.PackOpening.cs.
+        StartPackOpening(kind, result.cards,
+                         kind == PackKind.Starter ? "Your team has been picked from this pack. Change it in My Team." : "");
     }
 
     // ------------------------------------------------------------------ Reveal
 
-    void BuildReveal()
-    {
-        int n = _reveal.Count;
-        Text(_content, $"{_revealTitle}   {_revealed} of {n}", IronOvalUI.Role.Header, T.gold, new Vector2(0f, -2f), new Vector2(330f, 22f));
-
-        bool done = _revealed >= n;
-        ButtonItem(_content, "rev.all", "Reveal All", new Vector2(370f, 0f), 110f, RevealAll, !done);
-        ButtonItem(_content, "rev.done", "Done", new Vector2(490f, 0f), 110f, CloseReveal, done);
-
-        const int cols = 6;
-        var size = new Vector2(80f, 98f);
-        int rows = (n + cols - 1) / cols;
-        for (int i = 0; i < n; i++)
-        {
-            int col = i % cols, row = i / cols;
-            int inRow = row == rows - 1 ? n - row * cols : cols;
-            float rowWidth = inRow * (size.x + 5f) - 5f;
-            float x = (600f - rowWidth) / 2f + col * (size.x + 5f);
-            float y = -32f - row * (size.y + 5f);
-
-            bool shown = i < _revealed;
-            var card = MasterDraftCardView.Build(_content, _reveal[i].def, size, faceDown: !shown);
-            TopLeft(card, new Vector2(x, y), size);
-            int index = i;
-            AddItem(card, "rev" + i, () =>
-            {
-                if (index >= _revealed) RevealNext();
-                else { _detail = _reveal[index]; ShowDetail(); }
-            });
-        }
-    }
-
-    void RevealNext()
-    {
-        if (_revealed >= _reveal.Count) return;
-        var card = _reveal[_revealed];
-        _revealed++;
-        if (card.def.rarity >= Rarity.Epic) SetStatus($"{CardText.RarityName(card.def.rarity)} pull — {card.def.name}!");
-        _lastFocusKey = _revealed < _reveal.Count ? "rev" + _revealed : "rev.done";
-        Rebuild();
-    }
-
-    void RevealAll()
-    {
-        if (_overlay != Overlay.Reveal) return;
-        _revealed = _reveal.Count;
-        _lastFocusKey = "rev.done";
-        Rebuild();
-    }
-
-    void CloseReveal()
-    {
-        _overlay = Overlay.None;
-        Rebuild();
-    }
+    // The pack opening screen is MasterDraftUI.PackOpening.cs.
 
     // ------------------------------------------------------------------ My Team
 
