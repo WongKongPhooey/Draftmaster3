@@ -67,32 +67,56 @@ public class WeekendResultCard : MonoBehaviour
     // A pixel measurement at the card's scale rather than the kit's.
     static float Px(float baseline) => baseline * CardScale;
 
-    static GUIStyle _heading, _body, _data, _dataDim;
+    // The card as the Draftmaster3_UI_Unity design draws it (Layout/DaySummary_PC / DaySummary_Mobile,
+    // 2026-11-11), in its kit pixels at the card's scale: a navy body 300 wide (330 on a phone) inside a 3px
+    // gold frame, on a hard drop shadow 6px down and right. Across the top a 28px band, a shade lighter, with
+    // a 3px dark rule along its foot and the title in cream monogram 10px in. Under it the headline, a 1px
+    // rule, the rows on a 17px pitch (sand label left, coloured value right), and the red confirm plate: 32
+    // tall in a 3px dark outline on a 4px shadow, with the confirm key's cap in front of the caption. Every
+    // word on it is monogram Bold 16; only the keycap's letter is Silkscreen.
+    const float CardW = 300f, CardWHandheld = 330f;
+    const float FrameW = 3f, ShadowOffset = 6f;
+    const float BandH = 28f, BandRuleH = 3f, Inset = 10f;
+    const float HeadlineTop = 9f, HeadlineGap = 8f, RuleGap = 7f;
+    const float RowH = 16f, RowPitch = 17f, RowsToButton = 11f;
+    const float ButtonH = 32f, ButtonOutline = 3f, ButtonShadow = 4f, Bottom = 10f;
+    const float KeyW = 14f, KeyH = 10f, KeyTop = 11f, KeyShadowDrop = 2f, KeyGap = 8f;
+
+    static Color Hex(uint rgba) => new Color32((byte)(rgba >> 24), (byte)(rgba >> 16), (byte)(rgba >> 8), (byte)rgba);
+    static readonly Color ButtonRed = Hex(0xc4452fff);   // the design's main confirm plate
+
+    static GUIStyle _title, _body, _row, _caption, _key;
     static int _stylesAtKitScale = -1, _stylesAtCardScale = -1;
 
-    // The kit's own styles with their type stepped down to match. Cloned rather than rebuilt from the
-    // theme, so the face, colour, alignment and wrapping all stay whatever the kit says they are and only
-    // the size moves. Kit sizes are always a whole multiple of PixelGUI.Scale, so the division is exact.
+    // The kit's monogram and Silkscreen faces with their type stepped down to the card's scale. Kit sizes are
+    // always a whole multiple of PixelGUI.Scale, so the division is exact and the faces stay on their cells.
+    // Overflow rather than clip: clipped IMGUI text drops any line that does not fit its rect whole, and the
+    // design's 16px rows are exactly one monogram cell tall.
     static void EnsureStyles()
     {
         int kit = Mathf.Max(1, PixelGUI.Scale), card = CardScale;
-        if (_heading != null && _stylesAtKitScale == kit && _stylesAtCardScale == card) return;
+        if (_title != null && _stylesAtKitScale == kit && _stylesAtCardScale == card) return;
         _stylesAtKitScale = kit;
         _stylesAtCardScale = card;
 
-        GUIStyle Down(GUIStyle from) =>
-            new GUIStyle(from) { fontSize = Mathf.Max(8, from.fontSize * card / kit) };
+        GUIStyle Down(GUIStyle from, Color colour, TextAnchor anchor, bool wrap)
+        {
+            var st = new GUIStyle(from)
+            {
+                fontSize = Mathf.Max(8, from.fontSize * card / kit),
+                alignment = anchor, wordWrap = wrap, clipping = TextClipping.Overflow, richText = false,
+                padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0),
+            };
+            st.normal.textColor = colour;
+            st.hover.textColor = colour;
+            return st;
+        }
 
-        _heading = Down(PixelGUI.Heading);
-        // The activity title is one line in a band, not a paragraph: centred in the band rather than
-        // hung from its top, and never wrapped. The kit's heading is set up for a section header with
-        // room under it, and left as it came the title sat high in the band with its descenders cut.
-        _heading.alignment = TextAnchor.MiddleLeft;
-        _heading.wordWrap = false;
-
-        _body = Down(PixelGUI.Body);
-        _data = Down(PixelGUI.Data);
-        _dataDim = Down(PixelGUI.DataDim);
+        _title = Down(PixelGUI.Data, DriveScoutStyle.Text, TextAnchor.MiddleLeft, false);
+        _body = Down(PixelGUI.Data, DriveScoutStyle.Text, TextAnchor.UpperLeft, true);
+        _row = Down(PixelGUI.Data, DriveScoutStyle.Label, TextAnchor.MiddleLeft, false);
+        _caption = Down(PixelGUI.Data, DriveScoutStyle.Text, TextAnchor.MiddleLeft, false);
+        _key = Down(PixelGUI.HeadingSmall, DriveScoutStyle.PickerPlate, TextAnchor.MiddleCenter, false);
     }
 
     public static void Show(WeekendActivity a, WeekendOutcome o, bool inWorld = false)
@@ -124,13 +148,13 @@ public class WeekendResultCard : MonoBehaviour
         {
             if (i == MaxSkippedRows - 1 && report.skipped.Count > MaxSkippedRows)
             {
-                rows.Add(("+" + (report.skipped.Count - i) + " More", "Skipped", PixelGUI.TextDim));
+                rows.Add(("+" + (report.skipped.Count - i) + " More", "Skipped", DriveScoutStyle.Meta));
                 break;
             }
             var a = report.skipped[i];
             string title = a.title.Length > 26 ? a.title.Substring(0, 26) : a.title;
             rows.Add((title, a.mandatory ? "No-Show" : "Skipped",
-                      a.mandatory ? PixelGUI.Danger : PixelGUI.TextDim));
+                      a.mandatory ? DriveScoutStyle.Bad : DriveScoutStyle.Meta));
         }
 
         var outcome = report.cost;
@@ -191,85 +215,115 @@ public class WeekendResultCard : MonoBehaviour
         EnsureStyles();
 
         var lines = Deltas();
-        float w = Mathf.Min(Px(340f), Screen.width - Px(16f));
+        float w = Mathf.Min(Px(PixelGUI.Handheld ? CardWHandheld : CardW),
+                            Screen.width - Px(16f) - Px(ShadowOffset));
+        float contentW = w - Px(Inset) * 2f;
+        int rowCount = Mathf.Max(lines.Count, 1);
 
-        // Measured, not budgeted. The meter rows are set in the data face, while the old height allowed a
-        // flat Px(12) for each of them and a flat Px(74) for everything above; a card with three or more
-        // meters on it ran its last rows out through the GOT IT button. What follows is the same
-        // arithmetic the draw below does, in the same order.
-        //
-        // The frame is the one part still measured at the kit's scale: PixelGUI.Panel 9-slices it from the
-        // kit's own upscaled sprite whatever size the card inside is, so the inset that clears it has to be
-        // asked for in those pixels. Everything inboard of it is the card's.
-        float pad = PixelGUI.Px(4f) + Px(8f);
-        float contentW = w - pad * 2f;
-        // The band is whatever the title needs, so a theme on a bigger cell opens it up instead of
-        // trimming the type inside it.
-        float bandH = Mathf.Max(Px(18f), _heading.fontSize + Px(6f));
-        float rowH = _data.fontSize + Px(3f);
-        float buttonH = PixelGUI.MenuButtonH;
+        // Measured, not budgeted: the same arithmetic the draw below does, in the same order, so a long
+        // headline or a skip that walked past eight things pushes the button down rather than under the rows.
         float headlineH = string.IsNullOrEmpty(_outcome.headline)
             ? 0f
-            : _body.CalcHeight(new GUIContent(_outcome.headline), contentW) + Px(5f);
-
-        float h = pad * 2f
-                  + bandH + Px(6f)                             // title band
-                  + headlineH                                  // what the weekend will remember it by
-                  + Px(4f)                                     // the rule under it
-                  + Mathf.Max(lines.Count, 1) * rowH           // one line per meter that moved
-                  + Px(6f) + buttonH;                          // and the way out
+            : Mathf.Ceil(_body.CalcHeight(new GUIContent(_outcome.headline), contentW)) + Px(HeadlineGap);
+        float h = Px(BandH)
+                  + Px(HeadlineTop) + headlineH                     // what the weekend will remember it by
+                  + Px(1f) + Px(RuleGap)                            // the rule under it
+                  + Px(RowPitch) * (rowCount - 1) + Px(RowH)        // one line per meter that moved
+                  + Px(RowsToButton) + Px(ButtonH) + Px(Bottom);    // and the way out
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         // In the world it sits low, out of the way of whoever is stood in front of you; as a modal it sits
         // where a modal sits.
         float y = _inWorld
-            ? Mathf.Round(Screen.height - h - Px(18f))
+            ? Mathf.Round(Screen.height - h - Px(ShadowOffset) - Px(18f))
             : Mathf.Round((Screen.height - h) * 0.4f);
-        var outer = new Rect(x, y, w, h);
+        var card = new Rect(x, y, w, h);
 
-        PixelGUI.Panel(outer, focused: true);
-        var c = new Rect(x + pad, y + pad, contentW, h - pad * 2f);
+        float frame = Px(FrameW), shadow = Px(ShadowOffset);
+        PixelGUI.Fill(new Rect(card.x + shadow, card.y + shadow, card.width, card.height), DriveScoutStyle.HeaderRule);
+        PixelGUI.Fill(new Rect(card.x - frame, card.y - frame, card.width + frame * 2f, card.height + frame * 2f),
+                      DriveScoutStyle.Gold);
+        PixelGUI.Fill(card, DriveScoutStyle.Panel);
 
-        PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
-        GUI.Label(new Rect(c.x + Px(4f), c.y, c.width - Px(8f), bandH), _activity.title, _heading);
+        // Title band, with its dark rule along the foot.
+        float bandInner = Px(BandH - BandRuleH);
+        PixelGUI.Fill(new Rect(card.x, card.y, card.width, bandInner), DriveScoutStyle.HeaderBand);
+        PixelGUI.Fill(new Rect(card.x, card.y + bandInner, card.width, Px(BandRuleH)), DriveScoutStyle.HeaderRule);
+        GUI.Label(new Rect(card.x + Px(Inset), card.y, contentW, bandInner), _activity.title, _title);
 
-        float cy = c.y + bandH + Px(6f);
+        float cx = card.x + Px(Inset);
+        float cy = card.y + Px(BandH) + Px(HeadlineTop);
 
-        if (!string.IsNullOrEmpty(_outcome.headline))
+        if (headlineH > 0f)
         {
-            var body = new GUIContent(_outcome.headline);
-            float bh = _body.CalcHeight(body, c.width);
-            GUI.Label(new Rect(c.x, cy, c.width, bh), body, _body);
-            cy += bh + Px(5f);
+            GUI.Label(new Rect(cx, cy, contentW, headlineH), _outcome.headline, _body);
+            cy += headlineH;
         }
 
-        PixelGUI.Fill(new Rect(c.x, cy, c.width, Px(1f)), PixelGUI.PlateLight);
-        cy += Px(4f);
+        PixelGUI.Fill(new Rect(cx, cy, contentW, Px(1f)), DriveScoutStyle.Edge);
+        cy += Px(1f) + Px(RuleGap);
 
         if (lines.Count == 0)
         {
-            GUI.Label(new Rect(c.x, cy, c.width, rowH), "Nothing moved.", _dataDim);
-            cy += rowH;
+            _row.normal.textColor = DriveScoutStyle.Meta;
+            GUI.Label(new Rect(cx, cy, contentW, Px(RowH)), "Nothing moved.", _row);
         }
         else
         {
-            foreach (var (label, value, colour) in lines)
+            for (int i = 0; i < lines.Count; i++)
             {
-                GUI.Label(new Rect(c.x, cy, c.width, rowH), label, _dataDim);
-                var prevColour = _data.normal.textColor;
-                var prevAlignment = _data.alignment;
-                _data.normal.textColor = colour;
-                _data.alignment = TextAnchor.MiddleRight;
-                GUI.Label(new Rect(c.x, cy, c.width, rowH), value, _data);
-                _data.normal.textColor = prevColour;
-                _data.alignment = prevAlignment;
-                cy += rowH;
+                var (label, value, colour) = lines[i];
+                var r = new Rect(cx, cy + Px(RowPitch) * i, contentW, Px(RowH));
+                _row.normal.textColor = DriveScoutStyle.Label;
+                _row.alignment = TextAnchor.MiddleLeft;
+                GUI.Label(r, label, _row);
+                _row.normal.textColor = colour;
+                _row.alignment = TextAnchor.MiddleRight;
+                GUI.Label(r, value, _row);
             }
+            _row.alignment = TextAnchor.MiddleLeft;
         }
 
-        if (PixelGUI.Button(new Rect(c.x, c.yMax - buttonH, c.width, buttonH),
-                            _inWorld || _summary || _drove ? "Got It" : "Back to the Schedule") ||
+        var button = new Rect(cx, card.yMax - Px(Bottom) - Px(ButtonH), contentW, Px(ButtonH));
+        if (ConfirmButton(button, _inWorld || _summary || _drove ? "Got It" : "Back to the Schedule") ||
             (Time.unscaledTime - _openedAt > 0.4f && ConfirmPressed()))
             Dismiss();
+    }
+
+    // The design's red plate: a 3px dark outline round it on a 4px hard shadow, and the caption in cream
+    // monogram behind a keycap naming the confirm key - E on a keyboard, the pad's own button with a pad in
+    // hand, and no cap at all on a phone, where the plate is tapped. Cap and caption are centred as one group.
+    // Held, the face drops 2px, the kit's pressed state.
+    static bool ConfirmButton(Rect r, string caption)
+    {
+        float outline = Px(ButtonOutline), drop = Px(ButtonShadow);
+        PixelGUI.Fill(new Rect(r.x + drop, r.y + drop, r.width, r.height), DriveScoutStyle.HeaderRule);
+        PixelGUI.Fill(new Rect(r.x - outline, r.y - outline, r.width + outline * 2f, r.height + outline * 2f),
+                      DriveScoutStyle.HeaderRule);
+        PixelGUI.Fill(r, ButtonRed);
+
+        bool clicked = TouchTaps.Button(r, GUIContent.none, GUIStyle.none);
+        bool held = Event.current != null && GUIUtility.hotControl != 0 && r.Contains(Event.current.mousePosition);
+        float dy = held ? Px(2f) : 0f;
+
+        bool phone = InputGlyphs.UsingTouch || (PixelGUI.Handheld && !InputGlyphs.UsingGamepad);
+        string key = phone ? null : InputGlyphs.Confirm;
+        float captionW = Mathf.Ceil(_caption.CalcSize(new GUIContent(caption)).x);
+        float keyW = 0f;
+        if (!string.IsNullOrEmpty(key))
+            keyW = key == "E" ? Px(KeyW) : Mathf.Ceil(_key.CalcSize(new GUIContent(key)).x / Px(1f)) * Px(1f) + Px(8f);
+        float groupW = captionW + (keyW > 0f ? keyW + Px(KeyGap) : 0f);
+        float gx = Mathf.Round(r.x + (r.width - groupW) * 0.5f);
+
+        if (keyW > 0f)
+        {
+            var cap = new Rect(gx, r.y + Px(KeyTop) + dy, keyW, Px(KeyH));
+            PixelGUI.Fill(new Rect(cap.x, cap.y + Px(KeyShadowDrop), cap.width, cap.height), DriveScoutStyle.KeyShadow);
+            PixelGUI.Fill(cap, DriveScoutStyle.Text);
+            GUI.Label(cap, key, _key);
+            gx += keyW + Px(KeyGap);
+        }
+        GUI.Label(new Rect(gx, r.y + dy, captionW + Px(2f), r.height), caption, _caption);
+        return clicked;
     }
 
     static bool ConfirmPressed()
@@ -290,7 +344,7 @@ public class WeekendResultCard : MonoBehaviour
         if (o.money != 0)
             lines.Add((o.money > 0 ? "Earned" : "Cost",
                        (o.money > 0 ? "+" : "-") + PlayerWallet.Format(Mathf.Abs(o.money)),
-                       o.money > 0 ? PixelGUI.Gold : PixelGUI.Danger));
+                       o.money > 0 ? DriveScoutStyle.Gold : DriveScoutStyle.Bad));
 
         Add(lines, "Fan Appeal", o.fanAppeal, 0.05f);
         Add(lines, "Sponsor Mood", o.sponsorMood, 0.5f);
@@ -301,7 +355,7 @@ public class WeekendResultCard : MonoBehaviour
         if (!string.IsNullOrEmpty(o.rivalName) && Mathf.Abs(o.rivalDelta) > 0.5f)
             lines.Add((o.rivalName,
                        (o.rivalDelta > 0f ? "+" : "") + Mathf.RoundToInt(o.rivalDelta),
-                       o.rivalDelta > 0f ? PixelGUI.Confirm : PixelGUI.Danger));
+                       o.rivalDelta > 0f ? DriveScoutStyle.Good : DriveScoutStyle.Bad));
 
         return lines;
     }
@@ -310,6 +364,6 @@ public class WeekendResultCard : MonoBehaviour
     {
         if (Mathf.Abs(value) < epsilon) return;
         string text = (value > 0f ? "+" : "") + (Mathf.Abs(value) < 10f ? value.ToString("0.0") : Mathf.RoundToInt(value).ToString());
-        into.Add((label, text, value > 0f ? PixelGUI.Confirm : PixelGUI.Danger));
+        into.Add((label, text, value > 0f ? DriveScoutStyle.Good : DriveScoutStyle.Bad));
     }
 }
