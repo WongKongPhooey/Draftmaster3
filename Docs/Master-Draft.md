@@ -105,6 +105,17 @@ over one at a time, left to right; an Epic or Legendary pull holds a beat and ge
 skips to the opened pack (the cards are already saved). The opened layout is a placeholder until the design
 settles. EditMode coverage: `PackOpeningScreenTests`.
 
+**The Card Detail screen** (`MasterDraftUI.CardDetail.cs`, to the design handoff's `CardDetail_PC`): what a card
+on the Card Collection grid opens — a full-screen layer with the card large on the left (rarity, number, livery,
+driver, team / make, carset, and "Class D" with a pip per class climbed where the design has "LV 2"), **Car
+Stats** (four rows of ten pips), the **Trait** box (the car's DM2 driver type), and the **Upgrade** panel (gears
+bar to the next class, its coin cost, and the button: "Need 30 more gears" / "Need 4,000 more coins" / "Upgrade
+to Class C"). **Set as race car** makes it the profile's selected car; opening a card no longer does. The stat
+names, values and trait lines are **placeholders** (`Core/Garage/CarStats.cs`, nothing reads them in a race yet):
+a base from rarity plus a fixed per-car spread, and a per-class gain table — the pips each class up adds show in
+green with "+N" before it's bought. Tune the tables there. Coverage: `GarageScreenTests` (EditMode) and
+`MasterDraftCollectionTests` (headless).
+
 ### Team
 
 Active driver + bench ≤ 4 (5 drivers), exactly 1 car, 1 crew chief, action deck 5-15 with at most 2 copies of
@@ -205,6 +216,7 @@ outcome.
 | `  MasterDraftSources.cs` | DB rows → card sources |
 | `  MasterDraftUI.cs`, `MasterDraftCardView.cs` | The menu scene's screens; procedural cards |
 | `  MasterDraftUI.PackOpening.cs` | The pack opening screen (sealed pack, deal, flip) |
+| `  MasterDraftUI.CardDetail.cs` | The Card Detail screen (stats, trait, upgrade, set as race car) |
 | `  MasterDraftRaceLauncher.cs` | GO → RaceScene |
 | `  MasterDraftRaceHost.cs` | In-race hand, effects, HUD strip, payout |
 | `Assets/Editor/MasterDraftSceneBuilder.cs` | Scene builder + profile menu items |

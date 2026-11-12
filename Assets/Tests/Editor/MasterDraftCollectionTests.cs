@@ -158,4 +158,80 @@ public class MasterDraftCollectionTests
         Assert.AreEqual(2, CardCollection.ScrollToShow(15, 0, 16, 2), "last row");
         Assert.AreEqual(0, CardCollection.ScrollToShow(3, 2, 16, 2), "back up to row 0");
     }
+
+    // ---- Card Detail stats (CarStats, placeholder numbers: these pin the shape, not the values)
+
+    [Test]
+    public void CarStats_ClassUpsOnlyAddAndStayInsideTheBar()
+    {
+        foreach (var car in Catalogue().Cars)
+            for (int s = 0; s < CarStats.Count; s++)
+            {
+                int b = CarStats.Base(car, s);
+                Assert.That(b, Is.InRange(1, CarStats.MaxPips), car.id);
+                Assert.AreEqual(b, CarStats.Value(car, CarProgression.MinClass, s));
+                for (int c = CarProgression.MinClass; c < CarProgression.MaxClass; c++)
+                {
+                    int now = CarStats.Value(car, c, s), next = CarStats.Value(car, c + 1, s);
+                    Assert.GreaterOrEqual(next, now, $"{car.id} {CarStats.Names[s]} class {c}");
+                    Assert.LessOrEqual(next, CarStats.MaxPips);
+                }
+            }
+    }
+
+    [Test]
+    public void CarStats_EveryClassUpRaisesSomethingAndRarerCarsStartHigher()
+    {
+        var cars = Catalogue();
+        var common = cars.Get("tst01_0");   // rarity 1
+        var legend = cars.Get("tst01_3");   // rarity 4
+        for (int c = CarProgression.MinClass; c < CarProgression.MaxClass; c++)
+        {
+            int gain = 0;
+            for (int s = 0; s < CarStats.Count; s++) gain += CarStats.ClassGain(c, s);
+            Assert.Greater(gain, 0, $"class {c} -> {c + 1}");
+        }
+        int commonTotal = 0, legendTotal = 0;
+        for (int s = 0; s < CarStats.Count; s++)
+        {
+            commonTotal += CarStats.Base(common, s);
+            legendTotal += CarStats.Base(legend, s);
+        }
+        Assert.Greater(legendTotal, commonTotal);
+        Assert.AreEqual(CarStats.Base(common, 2), CarStats.Base(cars.Get("tst01_0"), 2), "stable per car");
+    }
+
+    [Test]
+    public void CarStats_LinesShowTheNextClassGainOnlyForAnOwnedCarBelowTheTop()
+    {
+        var car = Catalogue().Get("tst01_1");
+        var lines = CarStats.Lines(car, new OwnedCar(car.id, 2, 0));
+        Assert.AreEqual(CarStats.Count, lines.Length);
+        int gain = 0;
+        for (int s = 0; s < lines.Length; s++)
+        {
+            Assert.AreEqual(CarStats.Names[s], lines[s].name);
+            Assert.AreEqual(CarStats.Value(car, 2, s), lines[s].value);
+            Assert.AreEqual(CarStats.Value(car, 3, s) - lines[s].value, lines[s].nextGain);
+            gain += lines[s].nextGain;
+        }
+        Assert.Greater(gain, 0);
+
+        foreach (var line in CarStats.Lines(car, new OwnedCar(car.id, CarProgression.MaxClass, 0)))
+            Assert.AreEqual(0, line.nextGain, "top class: nothing to come");
+        foreach (var line in CarStats.Lines(car, null))
+            Assert.AreEqual(0, line.nextGain, "not owned: base stats, nothing to come");
+    }
+
+    [Test]
+    public void CarStats_TraitFollowsTheDriverType()
+    {
+        foreach (var type in DriverTypes.All)
+        {
+            var car = new CarDef { id = "x_1", type = type, rarity = 1 };
+            Assert.AreEqual(type, CarStats.TraitName(car));
+            Assert.IsFalse(string.IsNullOrEmpty(CarStats.TraitText(car)), type);
+        }
+        Assert.AreEqual(DriverTypes.Rookie, CarStats.TraitName(new CarDef { id = "x_2", type = "Nonsense" }));
+    }
 }

@@ -20,8 +20,9 @@ using UnityEngine.UI;
 //    livery on the hatched slot, the driver, the rarity and the gears bar ("9/50 Gears"; full and green, "Ready",
 //    once the next class's gears are banked; the "UP" tag when the coins are there too). Cars still to collect
 //    are the design's "?" cards: rarity stripe, rarity and which carset they're in.
-//  * Confirm on a card opens the car (CarDetail): livery, team, make, type, class, gears and the paid upgrade —
-//    what the old garage's side panel showed. R / pad North upgrades the focused card from the grid too.
+//  * Confirm on a card opens the Card Detail screen (MasterDraftUI.CardDetail.cs, design CardDetail_PC): stats,
+//    trait, the gears bar and the paid upgrade, and Set As Race Car. R / pad North upgrades the focused card from
+//    the grid too.
 //
 // Not taken from the design: its bottom tab bar (GARAGE / CARDS / RACE / PACKS / CLUB) — the mode keeps its own
 // tabs; the packs count in the header (Master Draft has no packs since the DM2 rework); the Mobile layout's seven
@@ -154,19 +155,13 @@ public partial class MasterDraftUI
         if (_content != null) Rebuild();
     }
 
-    // Open a car (owned or not). An owned one also becomes the profile's selected car (saved).
+    // Open a car (owned or not) on the Card Detail screen. Opening doesn't change the race car: the screen's
+    // Set As Race Car button does (SetGarageRaceCar).
     public void SelectGarageCar(string carId)
     {
         _garageCar = carId;
         _overlay = Overlay.CarDetail;
         _lastFocusKey = null;
-        var owned = P?.Car(carId);
-        if (owned != null && P.selectedCar != carId)
-        {
-            P.selectedCar = carId;
-            SaveTeam();
-            return;
-        }
         if (_content != null) Rebuild();
     }
 
@@ -222,6 +217,7 @@ public partial class MasterDraftUI
         if (_collectionViewport != null) _collectionViewport.gameObject.SetActive(false);
         GarageCardsShown = 0;
 
+        PrepareCarDetailLayer();
         _collectionLayout = OnCollection && P != null;
         if (_content != null)
             TopLeft(_content, _collectionLayout ? CollectionContentPos : DefaultContentPos,
@@ -233,8 +229,18 @@ public partial class MasterDraftUI
     {
         if (_status == null) return;
         bool showing = !string.IsNullOrEmpty(_status.text);
-        Bottom(_status.rectTransform, _collectionLayout ? 6f : 24f);
-        if (_help != null) _help.enabled = !(_collectionLayout && showing);
+        // The Card Detail layer covers the menu: both lines move onto its footer strip, over the layer.
+        Bottom(_status.rectTransform, _detailLayout ? 8f : _collectionLayout ? 6f : 24f);
+        if (_help != null)
+        {
+            _help.enabled = !((_collectionLayout || _detailLayout) && showing);
+            Bottom(_help.rectTransform, _detailLayout ? 9f : 6f);
+        }
+        if (_detailLayout)
+        {
+            _help?.transform.SetAsLastSibling();
+            _status.transform.SetAsLastSibling();
+        }
     }
 
     // Mouse wheel over the grid: a row at a time.
@@ -577,71 +583,7 @@ public partial class MasterDraftUI
 
     string SetName(CarDef def) => Cars?.GetCarset(def.carset)?.name ?? def.carset;
 
-    // ------------------------------------------------------------------ car detail
-
-    // The car picked off the grid: what the old garage's side panel showed (who and what it is, class, gears bar,
-    // the paid upgrade), in a window with the card itself on the left.
-    void BuildCarDetail()
-    {
-        var cars = Cars;
-        var def = cars?.Get(_garageCar);
-        if (def == null) { _overlay = Overlay.None; BuildGarage(); return; }
-        var owned = P.Car(def.id);
-
-        const float W = 480f, H = 228f;
-        var win = IronOvalUI.Window(_content, "CarDetail", new Vector2(W, H));
-        TopLeft(win, new Vector2((600f - W) / 2f, -4f), new Vector2(W, H));
-
-        CollectionCard(win, def, owned, new Vector2(14f, -16f));
-
-        float x = 148f, w = W - x - 14f, y = -14f;
-        Text(win, $"#{def.number} {def.driver}", IronOvalUI.Role.Data, owned != null ? T.gold : T.textDim,
-             new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
-        y -= 16f;
-        Text(win, $"{SetName(def)}  {def.team}  {def.manufacturer}", IronOvalUI.Role.Data, T.text, new Vector2(x, y), new Vector2(w, 16f));
-        y -= 16f;
-        Text(win, $"{CardCollection.RarityName(def.rarity)}  {def.rarity}-Star {def.type}", IronOvalUI.Role.Data, T.text,
-             new Vector2(x, y), new Vector2(w, 16f));
-        y -= 20f;
-
-        float buttonsY = -H + 14f + UIButton.KitPx;
-        if (owned == null)
-        {
-            Text(win, "Not collected yet. Win it in a challenge or series to add it to your garage.", IronOvalUI.Role.Data,
-                 T.textDim, new Vector2(x, y), new Vector2(w, 34f), wrap: true);
-            ButtonItem(win, "g.close", "Close", new Vector2(x, buttonsY), 100f, CloseCarDetail);
-            return;
-        }
-
-        bool max = CarProgression.IsMaxClass(owned);
-        string letter = CardCollection.ClassLetter(owned.carClass);
-        string next = max ? "" : CardCollection.ClassLetter(owned.carClass + 1);
-        int toGo = CarProgression.GearsToNextClass(owned);
-        Text(win, max ? $"Class {letter} (top class)" : toGo > 0 ? $"Class {letter}   {toGo} gears to go" : $"Class {letter}   ready to upgrade",
-             IronOvalUI.Role.Data, T.gold, new Vector2(x, y), new Vector2(w, 16f));
-        y -= 18f;
-
-        var progress = CardCollection.Progress(owned, P.coins);
-        var bar = Plate(win, "GearsBar", CollectionStyle.Edge, new Vector2(x, y), new Vector2(w, 6f));
-        Frame(bar, CollectionStyle.Shadow, 1f, 1f);
-        float fill = progress.ready ? 1f : progress.fill;
-        if (fill > 0f)
-            Plate(bar, "Fill", progress.ready ? CollectionStyle.Ready : CollectionStyle.RarityColour(def.rarity), Vector2.zero,
-                  new Vector2(Mathf.Round(w * fill), 6f));
-        y -= 10f;
-        string gears = max ? $"{owned.gears} gears banked" : $"{owned.gears}/{progress.target} gears" + (next != letter ? $" to Class {next}" : "");
-        Text(win, gears, IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 16f));
-        y -= 20f;
-
-        var check = CarProgression.CanUpgrade(owned, P.coins);
-        string upgrade = max ? "Top Class" : CarProgression.UpgradeCost(owned.carClass) == 0
-            ? "Upgrade  Free" : $"Upgrade  {CarProgression.UpgradeCost(owned.carClass):N0}";
-        ButtonItem(win, "g.upgrade", upgrade, new Vector2(x, buttonsY), 190f, () => UpgradeSelectedCar(), check == UpgradeCheck.Ok);
-        ButtonItem(win, "g.close", "Close", new Vector2(x + 196f, buttonsY), 100f, CloseCarDetail);
-        if (check != UpgradeCheck.Ok && !max)
-            Text(win, UpgradeReason(owned, check, P.coins), IronOvalUI.Role.Data, T.caution,
-                 new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
-    }
+    // The car detail (the CarDetail overlay) is the Card Detail screen: MasterDraftUI.CardDetail.cs.
 
     // ------------------------------------------------------------------ building blocks
 

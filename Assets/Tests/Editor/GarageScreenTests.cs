@@ -62,14 +62,14 @@ public class GarageScreenTests
 
     static string TextOf(Transform t) => t == null ? null : t.GetComponent<TMP_Text>()?.text;
 
-    Transform Detail => Content.Find("CarDetail");
+    Transform Detail => _go.transform.Find("Canvas/CardDetail");
 
-    Button DetailButton(string key)
-    {
-        var detail = Detail;
-        var button = detail == null ? null : detail.Find("Button_" + key);
-        return button == null ? null : button.GetComponent<Button>();
-    }
+    Transform DetailFind(string name) =>
+        Detail == null ? null : Detail.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name);
+
+    Button DetailButton(string key) => DetailFind("Button_" + key)?.GetComponent<Button>();
+
+    static string CaptionOf(Button button) => button == null ? null : button.GetComponentInChildren<TMP_Text>(true)?.text;
 
     // 20 cars over two carsets, three teams, two makes, rarities 1-4. Livery names don't exist: the card
     // falls back to "[ Car ]".
@@ -214,8 +214,11 @@ public class GarageScreenTests
 
         Call("SelectGarageCar", "tst01_2");
         Assert.IsTrue(Get<bool>("GarageDetailOpen"));
+        Assert.IsNotNull(Detail, "the Card Detail layer is up");
+        Assert.AreEqual("Class R", Get<string>("GarageDetailClass"));
         Assert.IsNotNull(DetailButton("g.upgrade"), "owned car shows an upgrade button");
         Assert.IsTrue(DetailButton("g.upgrade").interactable);
+        Assert.AreEqual("Upgrade to Class D", Get<string>("GarageDetailUpgradeCaption"));
         Assert.IsNotNull(DetailButton("g.close"));
 
         Assert.AreEqual(UpgradeCheck.Ok, (UpgradeCheck)Call("UpgradeSelectedCar"));
@@ -223,9 +226,12 @@ public class GarageScreenTests
         Assert.AreEqual(5, car.gears, "gears past the target carry over");
         Assert.AreEqual(0, profile.coins);
 
-        // Rebuilt after the upgrade: still in the detail, now short of gears, button off.
+        // Rebuilt after the upgrade: still in the detail, now short of gears, button off and saying so.
         Assert.IsTrue(Get<bool>("GarageDetailOpen"));
+        Assert.AreEqual("Class D", Get<string>("GarageDetailClass"));
         Assert.IsFalse(DetailButton("g.upgrade").interactable);
+        Assert.AreEqual("Need 30 more gears", Get<string>("GarageDetailUpgradeCaption"));
+        Assert.AreEqual("Need 30 more gears", CaptionOf(DetailButton("g.upgrade")));
         Assert.AreEqual(UpgradeCheck.NeedGears, (UpgradeCheck)Call("UpgradeSelectedCar"));
         Assert.AreEqual(2, car.carClass);
 
@@ -236,16 +242,67 @@ public class GarageScreenTests
 
         Call("CloseCarDetail");
         Assert.IsFalse(Get<bool>("GarageDetailOpen"));
-        Assert.AreEqual("Class D", TextOf(Card("tst01_2").Find("Body/Class/Text")));
+        Assert.IsNull(Detail, "closing takes the layer down");
         Assert.AreEqual("100/35 Ready", TextOf(Card("tst01_2").Find("Body/Gears")));
+        Assert.AreEqual("Class D", TextOf(Card("tst01_2").Find("Body/Class/Text")));
         Assert.IsNull(Card("tst01_2").Find("Up"), "ready but the coins aren't there");
 
         // A locked car: no upgrade, no change to the selected car.
         Call("SelectGarageCar", "tst02_19");
         Assert.AreEqual("tst02_19", Get<string>("GarageSelectedCar"));
         Assert.IsNull(DetailButton("g.upgrade"), "a locked car has nothing to upgrade");
+        Assert.IsNull(DetailButton("g.race"), "nor can it be the race car");
         Assert.IsNotNull(DetailButton("g.close"));
         Assert.AreEqual("tst01_2", profile.selectedCar);
+    }
+
+    [Test]
+    public void CardDetail_StatsShowNextClassGainsAndSetAsRaceCarSelects()
+    {
+        var cars = TestCatalogue();
+        var first = new OwnedCar("tst01_1", 0, 0);
+        var car = new OwnedCar("tst01_3", 2, 5);   // Class D, short of gears
+        var profile = TestProfile(0, first, car);
+        Call("BuildOffline", profile, cars);
+
+        Call("SelectGarageCar", "tst01_3");
+        Assert.AreEqual("tst01_1", profile.selectedCar, "opening a card doesn't make it the race car");
+        Assert.AreEqual("Class D", Get<string>("GarageDetailClass"));
+
+        // Four stat rows, each with ten pips: gold to the value, green for the next class's gain.
+        var def = cars.Get("tst01_3");
+        var stats = Get<int[]>("GarageDetailStats");
+        var gains = Get<int[]>("GarageDetailNextGains");
+        Assert.AreEqual(CarStats.Count, stats.Length);
+        for (int s = 0; s < CarStats.Count; s++)
+        {
+            Assert.AreEqual(CarStats.Value(def, 2, s), stats[s], CarStats.Names[s]);
+            Assert.AreEqual(CarStats.Value(def, 3, s) - CarStats.Value(def, 2, s), gains[s], CarStats.Names[s]);
+            var row = DetailFind("Stat_" + CarStats.Names[s]);
+            Assert.IsNotNull(row, CarStats.Names[s]);
+            var pips = row.Find("Pips").Cast<Transform>().ToList();
+            Assert.AreEqual(CarStats.MaxPips, pips.Count);
+            Assert.AreEqual(gains[s] > 0, row.Find("Gain") != null, "the green +N only where the next class adds");
+        }
+        Assert.Greater(gains.Sum(), 0, "a class up adds to the stats");
+        Assert.IsNotNull(DetailFind("Legend"), "the Next Class legend shows when something will go up");
+
+        // Set As Race Car.
+        Assert.IsTrue(DetailButton("g.race").interactable);
+        Call("SetGarageRaceCar");
+        Assert.AreEqual("tst01_3", profile.selectedCar);
+        Assert.IsTrue(Get<bool>("GarageDetailOpen"), "still on the card");
+        Assert.IsFalse(DetailButton("g.race").interactable, "already the race car");
+        Assert.AreEqual("Your race car", CaptionOf(DetailButton("g.race")));
+
+        // Top class: no green, no Next Class legend.
+        car.carClass = CarProgression.MaxClass;
+        Call("SelectGarageCar", "tst01_3");
+        Assert.AreEqual("Class S", Get<string>("GarageDetailClass"));
+        Assert.AreEqual(0, Get<int[]>("GarageDetailNextGains").Sum());
+        Assert.IsNull(DetailFind("Legend"));
+        Assert.AreEqual("Top class", Get<string>("GarageDetailUpgradeCaption"));
+        Assert.IsFalse(DetailButton("g.upgrade").interactable);
     }
 
     [Test]
