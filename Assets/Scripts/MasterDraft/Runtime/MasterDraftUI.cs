@@ -12,10 +12,12 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// MASTER DRAFT's menu: Garage (the screen the mode opens on), Series (DM2's championships, raced in RaceScene),
-// Challenges (this week's DM2 events and their chapters, raced the same way, with a prize reveal), then the card mode's Home, Go Race, My Team, Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views over them. The card
-// screens stay reachable until the rework retires them (Docs/MasterDraft-Rework.md, row 9). One scene (Assets/Scenes/MasterDraft.unity, built by
-// Draftmaster > Master Draft > Build Master Draft Scene), one component.
+// MASTER DRAFT's menu, left to right: Home, Garage (the screen the mode opens on), Series (the overworld: a branching
+// tree of DM2's championships with the challenges on its branches, raced in RaceScene — MasterDraftUI.SeriesMap.cs),
+// then the card mode's My Team, Packs, Trades — and the pack-opening, card-detail, card-picker and race-result views
+// over them. The card screens stay reachable until the rework retires them (Docs/MasterDraft-Rework.md, row 9). The
+// card mode's Go Race and the weekly Challenges tab are gone: challenges are nodes on the series tree. One scene
+// (Assets/Scenes/MasterDraft.unity, built by Draftmaster > Master Draft > Build Master Draft Scene), one component.
 //
 // WHY THE UI IS BUILT IN CODE. Same reasoning as SingleRaceUI: almost everything here is a generated list
 // or grid (a collection, a pack, 38 tracks, a trade board), a generated scene's button listeners don't
@@ -24,17 +26,17 @@ using UnityEngine.UI;
 //
 // INPUT. One focus, moved spatially: arrows / WASD / d-pad step to the nearest item in that direction,
 // Enter / Space / E / pad South confirm, Esc / Backspace / pad East back out (overlay -> screen -> Garage ->
-// title). Tab / Shift+Tab, 1-8 or the shoulder buttons change screen. Every item is also a Button, so a tap
+// title). Tab / Shift+Tab, 1-6 or the shoulder buttons change screen. Every item is also a Button, so a tap
 // or a click picks it outright.
 public partial class MasterDraftUI : MonoBehaviour
 {
     [Tooltip("Scene BACK returns to from Home. Must be in the build settings.")]
     public string titleSceneName = "TitleScreen";
 
-    enum Tab { Garage, Series, Challenges, Home, GoRace, MyTeam, Packs, Trades }
+    enum Tab { Home, Garage, Series, MyTeam, Packs, Trades }
     enum Overlay { None, Reveal, Detail, Picker, WantType, Result, SeriesResult, ChallengeResult, CarDetail }
 
-    static readonly string[] TabNames = { "Garage", "Series", "Challenges", "Home", "Go Race", "My Team", "Packs", "Trades" };
+    static readonly string[] TabNames = { "Home", "Garage", "Series", "My Team", "Packs", "Trades" };
 
     class Item
     {
@@ -70,12 +72,6 @@ public partial class MasterDraftUI : MonoBehaviour
     CardType _filter = CardType.Driver;
     int _page;
     CardInstance _detail;
-
-    // Go Race
-    List<Track> _tracks;
-    int _trackIndex, _trackScroll;
-    string _driverUid;
-    const int TrackRows = 8;
 
     // Picker (trades)
     List<CardInstance> _pickList = new();
@@ -131,16 +127,25 @@ public partial class MasterDraftUI : MonoBehaviour
             _tab = Tab.Series;
             _overlay = Overlay.SeriesResult;
             var played = session.Series?.Get(session.LastSeries.plan.seriesId);
-            if (played != null) { _seriesMenu = played.menu; _seriesPick = played.id; }
+            if (played != null)
+            {
+                _pickIsChallenge = false;
+                _seriesPick = played.id;
+                _treeNode = TreeData?.ForSeries(played.id)?.id;
+                ScrollMapTo(TreeData?.Get(_treeNode));
+            }
         }
         if (session.LastChallenge?.plan != null)
         {
-            // Back from a challenge: its result (and the prize reveal) over the chapter it belongs to.
-            _tab = Tab.Challenges;
+            // Back from a challenge: its result (and the prize reveal) over its node on the series tree.
+            _tab = Tab.Series;
             _overlay = Overlay.ChallengeResult;
             _prizeRevealed = false;
             _challengeEvent = session.LastChallenge.plan.eventId;
             _challengeChapter = session.LastChallenge.plan.chapterId;
+            _pickIsChallenge = true;
+            _treeNode = TreeData?.ForChapter(_challengeChapter, _challengeEvent)?.id;
+            ScrollMapTo(TreeData?.Get(_treeNode));
         }
         SetStatus("");
         Rebuild();
@@ -172,14 +177,12 @@ public partial class MasterDraftUI : MonoBehaviour
             if (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame) Back();
             if (kb.tabKey.wasPressedThisFrame) StepTab(kb.shiftKey.isPressed ? -1 : 1);
             if (kb.rKey.wasPressedThisFrame) Shortcut();
-            if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Garage);
-            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Series);
-            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.Challenges);
-            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.Home);
-            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.GoRace);
-            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
-            if (kb.digit7Key.wasPressedThisFrame) SetTab(Tab.Packs);
-            if (kb.digit8Key.wasPressedThisFrame) SetTab(Tab.Trades);
+            if (kb.digit1Key.wasPressedThisFrame) SetTab(Tab.Home);
+            if (kb.digit2Key.wasPressedThisFrame) SetTab(Tab.Garage);
+            if (kb.digit3Key.wasPressedThisFrame) SetTab(Tab.Series);
+            if (kb.digit4Key.wasPressedThisFrame) SetTab(Tab.MyTeam);
+            if (kb.digit5Key.wasPressedThisFrame) SetTab(Tab.Packs);
+            if (kb.digit6Key.wasPressedThisFrame) SetTab(Tab.Trades);
         }
 
         var pad = Gamepad.current;
@@ -205,7 +208,7 @@ public partial class MasterDraftUI : MonoBehaviour
             : _overlay == Overlay.CarDetail ? "Upgrade"
             : _overlay != Overlay.None ? ""
             : _tab == Tab.MyTeam ? "Auto Pick"
-            : _tab == Tab.Garage ? "Upgrade" : "";
+            : _tab == Tab.Garage && _garageTab == GarageTab.Builds ? "Upgrade" : "";
         if (InputGlyphs.UsingGamepad)
             return $"D-Pad  Move     {InputGlyphs.PadName(PadBindings.Confirm)}  Select     {InputGlyphs.PadName(PadBindings.Back)}  Back" +
                    $"     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  Screen" +
@@ -398,9 +401,7 @@ public partial class MasterDraftUI : MonoBehaviour
                 {
                     case Tab.Garage: BuildGarage(); break;
                     case Tab.Series: BuildSeries(); break;
-                    case Tab.Challenges: BuildChallenges(); break;
                     case Tab.Home: BuildHome(); break;
-                    case Tab.GoRace: BuildGoRace(); break;
                     case Tab.MyTeam: BuildMyTeam(); break;
                     case Tab.Packs: BuildPacks(); break;
                     case Tab.Trades: BuildTrades(); break;
@@ -418,14 +419,13 @@ public partial class MasterDraftUI : MonoBehaviour
 
     // ------------------------------------------------------------------ Series
 
-    // DM2's series: the menus down the left, the picked menu's series in the middle, the picked series on the
-    // right — entry requirements, its tracks, the garage cars that can enter, and Start Championship / Race Round N
-    // (MasterDraftRaceLauncher.LaunchSeriesRound). A finished round comes back here as the SeriesResult overlay.
-    const int SeriesRows = 10;
-    const float SeriesMenuW = 130f, SeriesListX = 136f, SeriesListW = 200f, SeriesPanelX = 342f, SeriesPanelW = 258f;
+    // The picked series on the right of the series tree (MasterDraftUI.SeriesMap.cs): entry requirements, its
+    // tracks, the garage cars that can enter, and Start Championship / Race Round N
+    // (MasterDraftRaceLauncher.LaunchSeriesRound); what clearing it opens. A finished round comes back here as the
+    // SeriesResult overlay.
+    const float SeriesPanelX = 342f, SeriesPanelW = 258f;
 
-    string _seriesMenu, _seriesPick, _seriesEntry, _seriesQuitArmed;
-    int _seriesScroll;
+    string _seriesPick, _seriesEntry, _seriesQuitArmed;
     DraftSeriesCatalog _seriesOverride, _seriesLoaded;
 
     DraftSeriesCatalog SeriesData =>
@@ -438,136 +438,51 @@ public partial class MasterDraftUI : MonoBehaviour
     public bool SeriesCanStart { get; private set; }
     public bool SeriesInProgress { get; private set; }
 
-    // Draw the Series screen against a profile and catalogues with no session (EditMode tests).
-    public void BuildOfflineSeries(MasterDraftProfile profile, CarCatalog cars, DraftSeriesCatalog series, string seriesId = null)
+    // Draw the Series screen against a profile and catalogues with no session (EditMode tests). tree null = an empty
+    // tree (the picked series is then off the tree, and open).
+    public void BuildOfflineSeries(MasterDraftProfile profile, CarCatalog cars, DraftSeriesCatalog series, string seriesId = null,
+        SeriesTree tree = null, ChallengeCatalog challenges = null)
     {
         _profileOverride = profile;
         _carsOverride = cars;
         _seriesOverride = series;
+        _challengesOverride = challenges ?? _challengesOverride;
+        _treeOverride = tree ?? new SeriesTree(null);
         _busy = false;
         if (_root == null) BuildChrome();
         _tab = Tab.Series;
         _overlay = Overlay.None;
-        PickSeries(seriesId);
+        if (seriesId != null) PickSeries(seriesId);
+        else Rebuild();
     }
 
-    // Show a series (and its menu); null = keep the current pick.
+    // Show a series (and its node on the tree); null = keep the current pick.
     public void PickSeries(string seriesId)
     {
-        var data = SeriesData;
-        var def = data?.Get(seriesId);
+        var def = SeriesData?.Get(seriesId);
         if (def != null)
         {
-            _seriesMenu = def.menu;
+            _pickIsChallenge = false;
             _seriesPick = def.id;
             _seriesEntry = null;
             _seriesQuitArmed = null;
-            var menu = data.GetMenu(def.menu);
-            int at = menu == null ? 0 : menu.series.FindIndex(x => x.id == def.id);
-            if (at < _seriesScroll || at >= _seriesScroll + SeriesRows) _seriesScroll = Mathf.Max(0, at - SeriesRows + 1);
+            _treeNode = TreeData?.ForSeries(def.id)?.id;
+            ScrollMapTo(TreeData?.Get(_treeNode));
         }
         if (_content != null) Rebuild();
-    }
-
-    void BuildSeries()
-    {
-        var p = P;
-        var data = SeriesData;
-        var cars = Cars;
-        SeriesEligibleCount = 0;
-        SeriesCanStart = SeriesInProgress = false;
-        if (data == null || data.Menus.Count == 0 || cars == null)
-        {
-            Text(_content, data == null || data.Menus.Count == 0
-                    ? $"No series data (Resources/{DraftSeriesCatalog.ResourcePath}.json)."
-                    : $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).",
-                 IronOvalUI.Role.Body, T.danger, Vector2.zero, new Vector2(600f, 20f));
-            return;
-        }
-
-        var menu = data.GetMenu(_seriesMenu) ?? data.Menus[0];
-        _seriesMenu = menu.id;
-        var series = data.Get(_seriesPick);
-        if (series == null || series.menu != menu.id) series = menu.series[0];
-        _seriesPick = series.id;
-
-        // Menus.
-        Text(_content, "Series", IronOvalUI.Role.Data, T.gold, Vector2.zero, new Vector2(SeriesMenuW, 16f));
-        for (int i = 0; i < data.Menus.Count && i < SeriesRows; i++)
-        {
-            var m = data.Menus[i];
-            bool open = DraftSeriesCatalog.MenuUnlocked(m, p.level);
-            string id = m.id;
-            RowItem(_content, "sm." + id, m.name, new Vector2(0f, -18f - i * 20f), new Vector2(SeriesMenuW, 18f), () =>
-            {
-                _seriesMenu = id;
-                _seriesPick = null;
-                _seriesEntry = null;
-                _seriesScroll = 0;
-                _lastFocusKey = "sm." + id;
-                Rebuild();
-            }, id == menu.id, open ? m.series.Count.ToString() : $"Lv{DraftSeriesCatalog.MenuMinLevel(m)}");
-        }
-
-        // The menu's series, scrolled.
-        int count = menu.series.Count;
-        int pickAt = menu.series.FindIndex(x => x.id == series.id);
-        if (pickAt < _seriesScroll) _seriesScroll = pickAt;
-        if (pickAt >= _seriesScroll + SeriesRows) _seriesScroll = pickAt - SeriesRows + 1;
-        _seriesScroll = Mathf.Clamp(_seriesScroll, 0, Mathf.Max(0, count - SeriesRows));
-        Text(_content, menu.name + (count > SeriesRows ? $"  {pickAt + 1}/{count}" : ""), IronOvalUI.Role.Data, T.gold,
-             new Vector2(SeriesListX, 0f), new Vector2(SeriesListW, 16f));
-        for (int i = 0; i < SeriesRows; i++)
-        {
-            int index = _seriesScroll + i;
-            if (index >= count) break;
-            var s = menu.series[index];
-            var running = p.Championship(s.id);
-            string right = running != null ? $"R{running.round + 1}/{running.Length}"
-                : !Restrictions.LevelUnlocked(s.restriction, p.level) ? $"Lv{s.restriction.minLevel}"
-                : (p.SeriesRecord(s.id)?.titles ?? 0) > 0 ? "Won" : "";
-            string id = s.id;
-            RowItem(_content, "sr" + i, s.name, new Vector2(SeriesListX, -18f - i * 20f), new Vector2(SeriesListW, 18f), () =>
-            {
-                _seriesPick = id;
-                _seriesEntry = null;
-                _seriesQuitArmed = null;
-                _lastFocusKey = "se.go";
-                Rebuild();
-            }, s.id == series.id, right);
-        }
-
-        // Up/down on the list walks every series of the menu, not just the visible ones.
-        _navOverride = dir =>
-        {
-            string key = FocusKey;
-            if (key == null || !key.StartsWith("sr") || Mathf.Abs(dir.y) < 0.5f) return false;
-            int row = int.Parse(key.Substring(2));
-            int target = _seriesScroll + row + (dir.y > 0f ? -1 : 1);
-            if (target < 0 || target >= count) return dir.y < 0f;
-            if (target < _seriesScroll) _seriesScroll = target;
-            if (target >= _seriesScroll + SeriesRows) _seriesScroll = target - SeriesRows + 1;
-            _seriesPick = menu.series[target].id;
-            _seriesEntry = null;
-            _seriesQuitArmed = null;
-            _lastFocusKey = "sr" + (target - _seriesScroll);
-            Rebuild();
-            return true;
-        };
-
-        SeriesPanel(p, cars, series);
     }
 
     void SeriesPanel(MasterDraftProfile p, CarCatalog cars, SeriesDef s)
     {
         float x = SeriesPanelX, w = SeriesPanelW, y = 0f;
-        Text(_content, s.name, IronOvalUI.Role.Body, T.gold, new Vector2(x, y), new Vector2(w, 18f)).overflowMode = TextOverflowModes.Ellipsis;
+        var node = TreeData?.ForSeries(s.id);
+        PanelTitle(s.name, node, x, w);
         y -= 20f;
         string prize = s.prize == null || s.prize.IsNone ? "none" : s.prize.code;
         Text(_content, $"{s.RoundCount} rounds   AI {SeriesRules.DifficultyPercent(s.aiLevel)}%   Prize {prize}", IronOvalUI.Role.Data,
              T.text, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
         y -= 16f;
-        Text(_content, string.Join("   ", Restrictions.Describe(s.restriction)), IronOvalUI.Role.Data, T.text,
+        Text(_content, string.Join("   ", Restrictions.Describe(s.restriction, cars)), IronOvalUI.Role.Data, T.text,
              new Vector2(x, y), new Vector2(w, 32f), wrap: true);
         y -= 32f;
         var tracks = s.rounds.Select(r => TrackCatalog.Nicify(r.track)).ToList();   // short: five rounds fit two lines
@@ -596,6 +511,20 @@ public partial class MasterDraftUI : MonoBehaviour
             y -= 22f;
             ButtonItem(_content, "se.go", $"Race Round {running.round + 1}", new Vector2(x, y), 164f, () => RaceSeriesRound(s.id), owned != null && next != null);
             ButtonItem(_content, "se.quit", _seriesQuitArmed == s.id ? "Sure?" : "Quit", new Vector2(x + 170f, y), w - 170f, () => QuitChampionship(s.id));
+            UnlockLine(p, node, x, w);
+            SeriesRecordLine(p, s, x, w);
+            return;
+        }
+
+        // Locked on the tree: what opens it, and no start.
+        string locked = LockReason(node);
+        if (locked != null)
+        {
+            Text(_content, locked, IronOvalUI.Role.Data, T.caution, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
+            y -= UIButton.KitPx + 2f + 22f;
+            SeriesCanStart = false;
+            ButtonItem(_content, "se.go", "Locked", new Vector2(x, y), w, () => SetStatus(locked), false);
+            UnlockLine(p, node, x, w);
             SeriesRecordLine(p, s, x, w);
             return;
         }
@@ -614,6 +543,16 @@ public partial class MasterDraftUI : MonoBehaviour
             Text(_content, $"{eligible.Count} of {p.garage.Count} garage cars can enter", IronOvalUI.Role.Data, T.textDim,
                  new Vector2(x, y), new Vector2(w, 16f));
         }
+        else if (TreeData != null && TreeData.CanCollectStarter(node, p, SeriesData, ChallengeData, cars))
+        {
+            // A branch's first series, reached with no car of its kind: the branch hands one over.
+            var starter = cars.Get(node.starterCar);
+            ButtonItem(_content, "se.starter", $"Take the #{starter.number} {starter.driver} (free)", new Vector2(x, y), w,
+                       () => CollectStarter(node));
+            y -= UIButton.KitPx + 2f;
+            Text(_content, $"No {Restrictions.CarsetNames(s.restriction.carsets, cars)} car in your garage can enter yet.",
+                 IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
+        }
         else
         {
             // Why not: the level, else the selected garage car's first reason.
@@ -626,15 +565,30 @@ public partial class MasterDraftUI : MonoBehaviour
         y -= 22f;
         SeriesCanStart = entry != null && SeriesRules.CanEnter(s, entry, p.garage, p.level).Eligible;
         ButtonItem(_content, "se.go", "Start Championship", new Vector2(x, y), w, () => StartChampionship(s), SeriesCanStart);
+        UnlockLine(p, node, x, w);
         SeriesRecordLine(p, s, x, w);
+    }
+
+    // What clearing the series opens: "Score 90 pts to open: Tri-Oval Trouble, Push To Pass" ("Cleared" once done).
+    void UnlockLine(MasterDraftProfile p, TreeNode node, float x, float w)
+    {
+        var tree = TreeData;
+        if (tree == null || node == null) return;
+        var opens = tree.Children(node);
+        if (opens.Count == 0) return;
+        string names = string.Join(", ", opens.Select(NodeName));
+        bool cleared = SeriesTree.IsCleared(node, p, SeriesData, ChallengeData);
+        string line = cleared ? $"Cleared. Opened: {names}" : $"Score {SeriesTree.UnlockPoints(node, SeriesData)} pts to open: {names}";
+        Text(_content, line, IronOvalUI.Role.Data, cleared ? T.confirm : T.textDim, new Vector2(x, -202f), new Vector2(w, 16f))
+            .overflowMode = TextOverflowModes.Ellipsis;
     }
 
     void SeriesRecordLine(MasterDraftProfile p, SeriesDef s, float x, float w)
     {
         var rec = p.SeriesRecord(s.id);
         if (rec == null || rec.championships == 0) return;
-        Text(_content, $"Run {rec.championships}   Titles {rec.titles}   Best P{rec.bestFinish}", IronOvalUI.Role.Data, T.textDim,
-             new Vector2(x, -220f), new Vector2(w, 16f));
+        Text(_content, $"Run {rec.championships}   Titles {rec.titles}   Best P{rec.bestFinish}   {rec.bestPoints} pts", IronOvalUI.Role.Data,
+             T.textDim, new Vector2(x, -220f), new Vector2(w, 16f)).overflowMode = TextOverflowModes.Ellipsis;
     }
 
     static string TrackName(string trackId)
@@ -674,6 +628,8 @@ public partial class MasterDraftUI : MonoBehaviour
         var p = P;
         var cars = Cars;
         var car = cars?.Get(_seriesEntry);
+        string locked = LockReason(TreeData?.ForSeries(s.id));
+        if (locked != null) { SetStatus(locked); return false; }
         var check = SeriesRules.CanEnter(s, car, p.garage, p.level);
         if (!check.Eligible) { SetStatus(check.Reasons.Count > 0 ? check.Reasons[0].message : "Can't enter."); return false; }
         p.StartChampionship(s, car, cars);
@@ -755,14 +711,13 @@ public partial class MasterDraftUI : MonoBehaviour
 
     // ------------------------------------------------------------------ Challenges
 
-    // DM2's challenges ("Events"): the events down the left (this week's first, with their progress; the rest with
-    // when they're back), the picked event's chapters in the middle (won / locked / level), and the picked chapter
-    // on the right — track, laps, AI, prize, entry requirements, the garage car to race (or the car the chapter hands
-    // over), every reason it can't start, and Start Challenge (MasterDraftRaceLauncher.LaunchChallenge). A finished
-    // chapter comes back as the ChallengeResult overlay, which reveals the prize.
-    const int ChallengeRows = 11;
-    const float ChallengeEventW = 170f, ChallengeListX = 176f, ChallengeListW = 170f, ChallengePanelX = 352f, ChallengePanelW = 248f;
-    const float ChallengeRowStep = 19f, ChallengeRowH = 17f;
+    // DM2's challenges ("Events") are nodes on the series tree (MasterDraftUI.SeriesMap.cs): an event's node races
+    // its chapters in order (a chapter picker steps through them), a chapter's node just that chapter. The picked
+    // chapter shows on the right — track, laps, AI, prize, entry requirements, the garage car to race (or the car the
+    // chapter hands over), every reason it can't start, and Start Challenge (MasterDraftRaceLauncher.LaunchChallenge).
+    // A finished chapter comes back as the ChallengeResult overlay, which reveals the prize. An event on the tree runs
+    // every week (SeriesTree.Apply); one off it (EditMode test data) keeps DM2's weekly rotation.
+    const float ChallengePanelX = 342f, ChallengePanelW = 258f;
 
     string _challengeEvent, _challengeChapter, _challengeEntry;
     int _challengeWeekOverride;   // > 0: BuildOfflineChallenges' week instead of the calendar's
@@ -778,44 +733,51 @@ public partial class MasterDraftUI : MonoBehaviour
 
     MasterDraftSession.ChallengeOutcome ChallengeOutcome => _challengeOutcomeOverride ?? S?.LastChallenge;
 
-    // What the Challenges screen is showing, for EditMode tests (ChallengesScreenTests).
+    // What the challenge panel is showing, for EditMode tests (ChallengesScreenTests).
     public string ChallengePickedEvent => _challengeEvent;
     public string ChallengePickedChapter => _challengeChapter;
     public string ChallengeEntryCar => _challengeEntry;
     public int ChallengeShownWeek { get; private set; }
-    public int ChallengeLiveCount { get; private set; }
     public bool ChallengeCanStart { get; private set; }
     public string ChallengeReasons { get; private set; } = "";   // why it can't start, one per line; "" when it can
     public string ChallengePrizeText { get; private set; } = "";  // the revealed prize's caption
     public string ChallengePrizeSprite { get; private set; } = ""; // the revealed prize's livery sprite
 
-    // Draw the Challenges screen against a profile and catalogues with no session (EditMode tests). week = the
-    // cycle week to show; chapterId = the chapter to pick (null = the first live event's next chapter).
+    // Draw a challenge on the Series screen against a profile and catalogues with no session (EditMode tests).
+    // week = the cycle week (for events off the tree); chapterId = the chapter to pick (null = the first event this
+    // week, else the first event, on its next chapter to win). tree null = an empty tree (every event off it).
     public void BuildOfflineChallenges(MasterDraftProfile profile, CarCatalog cars, ChallengeCatalog challenges, int week,
-        string chapterId = null)
+        string chapterId = null, SeriesTree tree = null)
     {
         _profileOverride = profile;
         _carsOverride = cars;
         _challengesOverride = challenges;
         _challengeWeekOverride = week;
+        _treeOverride = tree ?? new SeriesTree(null);
         _busy = false;
         if (_root == null) BuildChrome();
-        _tab = Tab.Challenges;
+        _tab = Tab.Series;
         _overlay = Overlay.None;
+        if (chapterId == null && challenges != null && challenges.Events.Count > 0)
+        {
+            var live = Draftmaster.MasterDraft.Challenges.LiveEvents(challenges, week);
+            chapterId = NextChapter(live.Count > 0 ? live[0] : challenges.Events[0])?.id;
+        }
         PickChallenge(chapterId);
     }
 
     // Show a finished chapter's result over the screen (EditMode tests), as coming back from the race does.
     public void BuildOfflineChallengeResult(MasterDraftProfile profile, CarCatalog cars, ChallengeCatalog challenges,
-        MasterDraftSession.ChallengeOutcome outcome)
+        MasterDraftSession.ChallengeOutcome outcome, SeriesTree tree = null)
     {
         _profileOverride = profile;
         _carsOverride = cars;
         _challengesOverride = challenges;
         _challengeOutcomeOverride = outcome;
+        _treeOverride = tree ?? _treeOverride ?? new SeriesTree(null);
         _busy = false;
         if (_root == null) BuildChrome();
-        _tab = Tab.Challenges;
+        _tab = Tab.Series;
         _overlay = Overlay.ChallengeResult;
         _prizeRevealed = false;
         _prizeShown = 0;
@@ -824,120 +786,80 @@ public partial class MasterDraftUI : MonoBehaviour
         Rebuild();
     }
 
-    // Show a chapter (and its event); null = keep the current pick.
+    // Show a chapter (and its node on the tree); null = keep the current pick.
     public void PickChallenge(string chapterId)
     {
         var chapter = ChallengeData?.GetChapter(chapterId);
         if (chapter != null)
         {
+            _pickIsChallenge = true;
             _challengeEvent = chapter.eventId;
             _challengeChapter = chapter.id;
             _challengeEntry = null;
+            _treeNode = TreeData?.ForChapter(chapter.id, chapter.eventId)?.id;
+            ScrollMapTo(TreeData?.Get(_treeNode));
         }
         if (_content != null) Rebuild();
     }
 
-    void BuildChallenges()
+    // An event's next chapter to win (its last once all are won).
+    ChallengeChapter NextChapter(ChallengeEvent ev)
+    {
+        if (ev?.chapters == null || ev.chapters.Count == 0) return null;
+        var progress = Draftmaster.MasterDraft.Challenges.Progress(ev, P?.challengeRecords ?? new List<ChallengeRecord>());
+        return ev.chapters[Mathf.Clamp(progress.nextChapter, 0, ev.chapters.Count - 1)];
+    }
+
+    // The picked chapter's panel, on the right of the tree.
+    void BuildChallengePanel()
     {
         var p = P;
         var data = ChallengeData;
         var cars = Cars;
-        ChallengeLiveCount = 0;
         ChallengeCanStart = false;
         ChallengeReasons = "";
-        if (data == null || data.Events.Count == 0 || cars == null)
+        var chapter = data?.GetChapter(_challengeChapter);
+        var ev = data?.EventOf(chapter);
+        if (chapter == null || ev == null || cars == null)
         {
             Text(_content, data == null || data.Events.Count == 0
                     ? $"No challenge data (Resources/{ChallengeCatalog.ResourcePath}.json)."
-                    : $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).",
-                 IronOvalUI.Role.Body, T.danger, Vector2.zero, new Vector2(600f, 20f));
+                    : cars == null ? $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json)." : "Pick a challenge on the tree.",
+                 IronOvalUI.Role.Data, T.danger, new Vector2(ChallengePanelX, 0f), new Vector2(ChallengePanelW, 32f), wrap: true);
             return;
         }
+        ChallengePanel(p, cars, data, ev, chapter, ChallengeWeek);
+    }
 
-        int week = ChallengeWeek;
-        ChallengeShownWeek = Draftmaster.MasterDraft.Challenges.CycleWeek(week, data.CycleWeeks);
-
-        // This week's events first, then the rest in catalogue order.
-        var live = Draftmaster.MasterDraft.Challenges.LiveEvents(data, week);
-        ChallengeLiveCount = live.Count;
-        var ordered = new List<ChallengeEvent>(live);
-        foreach (var e in data.Events) if (!ordered.Contains(e)) ordered.Add(e);
-
-        var ev = data.Get(_challengeEvent);
-        if (ev == null) ev = ordered[0];
-        _challengeEvent = ev.id;
-        var chapter = data.GetChapter(_challengeChapter);
-        if (chapter == null || chapter.eventId != ev.id)
-        {
-            // An event opens on its next chapter to win.
-            var progress = Draftmaster.MasterDraft.Challenges.Progress(ev, p.challengeRecords);
-            chapter = ev.chapters[Mathf.Clamp(progress.nextChapter, 0, ev.chapters.Count - 1)];
-            _challengeEntry = null;
-        }
-        _challengeChapter = chapter.id;
-
-        // Events.
-        Text(_content, $"Week {ChallengeShownWeek} of {data.CycleWeeks}", IronOvalUI.Role.Data, T.gold, Vector2.zero,
-             new Vector2(ChallengeEventW, 16f));
-        for (int i = 0; i < ordered.Count && i < ChallengeRows; i++)
-        {
-            var e = ordered[i];
-            bool isLive = live.Contains(e);
-            string right;
-            if (isLive)
-            {
-                var progress = Draftmaster.MasterDraft.Challenges.Progress(e, p.challengeRecords);
-                right = $"{progress.completed}/{progress.total}";
-            }
-            else
-            {
-                int ahead = Draftmaster.MasterDraft.Challenges.WeeksUntilLive(e, week, data.CycleWeeks);
-                right = ahead < 0 ? "Off" : ahead == 1 ? "Next wk" : $"In {ahead} wk";
-            }
-            string id = e.id;
-            var row = RowItem(_content, "ce" + i, e.name, new Vector2(0f, -18f - i * ChallengeRowStep), new Vector2(ChallengeEventW, ChallengeRowH), () =>
-            {
-                _challengeEvent = id;
-                _challengeChapter = null;
-                _challengeEntry = null;
-                _lastFocusKey = "ce" + ordered.FindIndex(x => x.id == id);
-                Rebuild();
-            }, e.id == ev.id, right);
-            if (!isLive)
-                foreach (var t in row.rect.GetComponentsInChildren<TMP_Text>(true)) if (t.color != T.gold) t.color = T.textDim;
-        }
-
-        // The event's chapters.
-        Text(_content, ev.name + (ev.IsProgression ? "" : "  (replay)"), IronOvalUI.Role.Data, T.gold,
-             new Vector2(ChallengeListX, 0f), new Vector2(ChallengeListW, 16f)).overflowMode = TextOverflowModes.Ellipsis;
-        for (int i = 0; i < ev.chapters.Count && i < ChallengeRows; i++)
-        {
-            var c = ev.chapters[i];
-            var record = Draftmaster.MasterDraft.Challenges.FindRecord(p.challengeRecords, c.id);
-            bool unlocked = Draftmaster.MasterDraft.Challenges.ChapterUnlocked(ev, i, p.challengeRecords);
-            string right = record != null && record.Completed ? (record.completions > 1 && !ev.IsProgression ? $"Won x{record.completions}" : "Won")
-                : !unlocked ? "Locked"
-                : !Restrictions.LevelUnlocked(c.restriction, p.level) ? $"Lv{c.restriction.minLevel}"
-                : record != null && record.bestFinish > 0 ? $"P{record.bestFinish}" : "";
-            string id = c.id;
-            RowItem(_content, "cc" + i, $"{i + 1}. {c.name}", new Vector2(ChallengeListX, -18f - i * ChallengeRowStep),
-                new Vector2(ChallengeListW, ChallengeRowH), () =>
-                {
-                    _challengeChapter = id;
-                    _challengeEntry = null;
-                    _lastFocusKey = "ch.go";
-                    Rebuild();
-                }, c.id == chapter.id, right);
-        }
-
-        ChallengePanel(p, cars, data, ev, chapter, week);
+    // An event's node: step to its next (or previous) chapter.
+    void CycleChapter(List<ChallengeChapter> chapters, int by)
+    {
+        if (chapters.Count < 2) return;
+        int i = chapters.FindIndex(c => c.id == _challengeChapter);
+        _challengeChapter = chapters[((i + by) % chapters.Count + chapters.Count) % chapters.Count].id;
+        _challengeEntry = null;
+        _lastFocusKey = "ch.pick";
+        Rebuild();
     }
 
     void ChallengePanel(MasterDraftProfile p, CarCatalog cars, ChallengeCatalog data, ChallengeEvent ev, ChallengeChapter c, int week)
     {
         float x = ChallengePanelX, w = ChallengePanelW, y = 0f;
-        Text(_content, c.name, IronOvalUI.Role.Body, T.gold, new Vector2(x, y), new Vector2(w, 18f)).overflowMode = TextOverflowModes.Ellipsis;
-        y -= 20f;
+        ChallengeShownWeek = Draftmaster.MasterDraft.Challenges.CycleWeek(week, data.CycleWeeks);
+        var node = TreeData?.ForChapter(c.id, ev.id);
+        var chapters = node != null ? SeriesTree.Chapters(node, data) : new List<ChallengeChapter>();
+        if (chapters.Count > 1)
+        {
+            // An event's node: its chapters, one at a time.
+            int at = chapters.FindIndex(o => o.id == c.id);
+            ButtonItem(_content, "ch.pick", $"< {at + 1}/{chapters.Count}  {c.name} >", new Vector2(x, y), w, () => CycleChapter(chapters, 1));
+            y -= UIButton.KitPx + 2f;
+        }
+        else
+        {
+            PanelTitle(c.name, node, x, w);
+            y -= 20f;
+        }
         if (!string.IsNullOrEmpty(c.description))
         {
             Text(_content, c.description, IronOvalUI.Role.Data, T.textDim, new Vector2(x, y), new Vector2(w, 32f), wrap: true);
@@ -994,10 +916,12 @@ public partial class MasterDraftUI : MonoBehaviour
         }
 
         var entry = Draftmaster.MasterDraft.Challenges.CanEnter(ev, c, car, p.garage, p.level, week, p.challengeRecords, data.CycleWeeks);
-        ChallengeCanStart = entry.Eligible && (c.ProvidesCar || _challengeEntry != null);
-        if (!entry.Eligible)
+        string locked = LockReason(node);
+        ChallengeCanStart = locked == null && entry.Eligible && (c.ProvidesCar || _challengeEntry != null);
+        if (locked != null || !entry.Eligible)
         {
             var lines = new List<string>();
+            if (locked != null) lines.Add(locked);
             if (!entry.live)
             {
                 int ahead = Draftmaster.MasterDraft.Challenges.WeeksUntilLive(ev, week, data.CycleWeeks);
@@ -1055,6 +979,9 @@ public partial class MasterDraftUI : MonoBehaviour
 
     void StartChallenge(string chapterId)
     {
+        var chapter = ChallengeData?.GetChapter(chapterId);
+        string locked = chapter == null ? null : LockReason(TreeData?.ForChapter(chapter.id, chapter.eventId));
+        if (locked != null) { SetStatus(locked); return; }
         if (PlanPickedChallenge(out string error) == null) { SetStatus(error); return; }
         error = MasterDraftRaceLauncher.LaunchChallenge(chapterId, _challengeEntry);
         if (error != null) { SetStatus(error); return; }
@@ -1066,7 +993,7 @@ public partial class MasterDraftUI : MonoBehaviour
     void BuildChallengeResult()
     {
         var o = ChallengeOutcome;
-        if (o == null || o.plan == null) { _overlay = Overlay.None; BuildChallenges(); return; }
+        if (o == null || o.plan == null) { _overlay = Overlay.None; BuildSeries(); return; }
 
         var win = IronOvalUI.Window(_content, "ChallengeResult", new Vector2(400f, 222f));
         TopLeft(win, new Vector2(100f, -4f), new Vector2(400f, 222f));
@@ -1168,7 +1095,7 @@ public partial class MasterDraftUI : MonoBehaviour
         if (S != null) S.LastChallenge = null;
         _challengeOutcomeOverride = null;
         _overlay = Overlay.None;
-        _tab = Tab.Challenges;
+        _tab = Tab.Series;
         _prizeRevealed = false;
         _lastFocusKey = "ch.go";
         PickChallenge(chapter);
@@ -1209,7 +1136,7 @@ public partial class MasterDraftUI : MonoBehaviour
             ButtonItem(_content, "home.starter", "Open Starter Pack", new Vector2(x, y), 240f, () => { SetTab(Tab.Packs); OpenPack(PackKind.Starter); });
             y -= 34f;
         }
-        ButtonItem(_content, "home.race", "Go Race", new Vector2(x, y), 240f, () => SetTab(Tab.GoRace)); y -= 34f;
+        ButtonItem(_content, "home.series", "Series", new Vector2(x, y), 240f, () => SetTab(Tab.Series)); y -= 34f;
         ButtonItem(_content, "home.team", "My Team", new Vector2(x, y), 240f, () => SetTab(Tab.MyTeam)); y -= 34f;
         ButtonItem(_content, "home.packs", "Packs", new Vector2(x, y), 240f, () => SetTab(Tab.Packs)); y -= 34f;
         ButtonItem(_content, "home.trades", "Trades", new Vector2(x, y), 240f, () => SetTab(Tab.Trades)); y -= 34f;
@@ -1530,107 +1457,6 @@ public partial class MasterDraftUI : MonoBehaviour
         SaveTeam();
     }
 
-    // ------------------------------------------------------------------ Go Race
-
-    void BuildGoRace()
-    {
-        var p = P;
-
-        var quick = IronOvalUI.TabButton(_content, "Mode_Quick", "Quick Race", new Vector2(120f, 0f), true);
-        TopLeft((RectTransform)quick.transform.parent, Vector2.zero, new Vector2(120f, UIButton.KitPx));
-        AddItem((RectTransform)quick.transform, "mode.quick", () => SetStatus("Quick Race: you and your team against the AI field."));
-
-        var online = IronOvalUI.TabButton(_content, "Mode_Online", "Online (Coming Soon)", new Vector2(190f, 0f), false);
-        TopLeft((RectTransform)online.transform.parent, new Vector2(126f, 0f), new Vector2(190f, UIButton.KitPx));
-        AddItem((RectTransform)online.transform, "mode.online", () => SetStatus(MasterDraftOnline.Enabled
-            ? "Online racing is coming soon."
-            : "Online racing is coming soon — it is built but switched off while it is tested."));
-
-        if (_tracks == null)
-        {
-            _tracks = TrackCatalog.Playable().ToList();
-            _tracks.Sort((a, b) => a.Type != b.Type ? a.Type.CompareTo(b.Type) : string.CompareOrdinal(a.DisplayName, b.DisplayName));
-            _trackIndex = Mathf.Max(0, _tracks.FindIndex(t => t.Name == TrackSelection.CurrentId));
-        }
-        if (_tracks.Count == 0)
-        {
-            Text(_content, "No tracks are built.", IronOvalUI.Role.Body, T.danger, new Vector2(0f, -40f), new Vector2(300f, 20f));
-            return;
-        }
-
-        _trackIndex = Mathf.Clamp(_trackIndex, 0, _tracks.Count - 1);
-        if (_trackIndex < _trackScroll) _trackScroll = _trackIndex;
-        if (_trackIndex >= _trackScroll + TrackRows) _trackScroll = _trackIndex - TrackRows + 1;
-        _trackScroll = Mathf.Clamp(_trackScroll, 0, Mathf.Max(0, _tracks.Count - TrackRows));
-
-        Text(_content, "Track", IronOvalUI.Role.Data, T.gold, new Vector2(0f, -34f), new Vector2(300f, 16f));
-        for (int i = 0; i < TrackRows; i++)
-        {
-            int index = _trackScroll + i;
-            if (index >= _tracks.Count) break;
-            var track = _tracks[index];
-            bool selected = index == _trackIndex;
-            RowItem(_content, "trk" + i, track.DisplayName, new Vector2(0f, -52f - i * 20f), new Vector2(310f, 18f),
-                    () => { _trackIndex = index; _driverUid = null; _lastFocusKey = "go"; Rebuild(); },
-                    selected, Nice(track.Type));
-        }
-        if (_tracks.Count > TrackRows)
-            Text(_content, $"{_trackIndex + 1} of {_tracks.Count}", IronOvalUI.Role.Data, T.textDim, new Vector2(0f, -236f + 16f), new Vector2(310f, 16f));
-
-        // Up/down on the list moves through all the tracks, not just the visible ones.
-        _navOverride = dir =>
-        {
-            string key = FocusKey;
-            if (key == null || !key.StartsWith("trk") || Mathf.Abs(dir.y) < 0.5f) return false;
-            int row = int.Parse(key.Substring(3));
-            int target = _trackScroll + row + (dir.y > 0f ? -1 : 1);
-            if (target < 0 || target >= _tracks.Count) return dir.y > 0f ? false : true;
-            if (target < _trackScroll) _trackScroll = target;
-            if (target >= _trackScroll + TrackRows) _trackScroll = target - TrackRows + 1;
-            _trackIndex = target;
-            _driverUid = null;
-            _lastFocusKey = "trk" + (target - _trackScroll);
-            Rebuild();
-            return true;
-        };
-
-        // Right: the team's drivers, rated for this track's type.
-        var selectedTrack = _tracks[_trackIndex];
-        var kind = MasterDraftSources.KindOf(selectedTrack.Type);
-        var drivers = TeamRules.TeamDrivers(p.team, p);
-        var best = TeamRules.BestDriverFor(kind, drivers);
-        if (_driverUid == null || drivers.All(d => d.uid != _driverUid)) _driverUid = best?.uid;
-
-        float x = 330f;
-        Text(_content, $"{CardText.TrackKindName(kind)} Aptitude", IronOvalUI.Role.Data, T.gold, new Vector2(x, -34f), new Vector2(270f, 16f));
-        for (int i = 0; i < drivers.Count; i++)
-        {
-            var d = drivers[i];
-            string tag = d == best ? "  Best" : "";
-            RowItem(_content, "drv" + d.uid, $"{Surname(d.def.name)}  {d.def.Aptitude(kind)}/20{tag}", new Vector2(x, -52f - i * 20f), new Vector2(270f, 18f),
-                    () => { _driverUid = d.uid; _lastFocusKey = "go"; Rebuild(); }, d.uid == _driverUid, $"OVR {d.def.overall}");
-        }
-        if (drivers.Count == 0)
-            Text(_content, "No drivers in your team. Open the Starter Pack.", IronOvalUI.Role.Data, T.textDim, new Vector2(x, -52f), new Vector2(270f, 36f), wrap: true);
-
-        var problems = TeamRules.Validate(p.team, p);
-        if (problems.Count > 0)
-            Text(_content, problems[0], IronOvalUI.Role.Data, T.danger, new Vector2(x, -160f), new Vector2(270f, 34f), wrap: true);
-
-        Text(_content, selectedTrack.DisplayName, IronOvalUI.Role.Data, T.text, new Vector2(x, -196f), new Vector2(150f, 32f), wrap: true);
-        ButtonItem(_content, "go", "Go", new Vector2(490f, -204f), 110f, Go, problems.Count == 0 && _driverUid != null);
-    }
-
-    void Go()
-    {
-        var driver = P.Find(_driverUid);
-        string error = MasterDraftRaceLauncher.Launch(_tracks[_trackIndex].Name, driver);
-        if (error != null) { SetStatus(error); return; }
-        _leaving = true;
-    }
-
-    static string Nice(TrackType type) => CardText.TrackKindName(MasterDraftSources.KindOf(type));
-
     static string Surname(string name)
     {
         if (string.IsNullOrEmpty(name)) return "";
@@ -1905,9 +1731,12 @@ public partial class MasterDraftUI : MonoBehaviour
         // The Garage tab is the Card Collection: the design's header, "Card Collection  10 / 48 collected", in the
         // title row; the badge moves along after it.
         bool collection = _tab == Tab.Garage && (_overlay == Overlay.None || _overlay == Overlay.CarDetail) && P != null;
-        var cars = collection ? Cars : null;
         _title.text = collection ? "Card Collection" : "Master Draft";
-        _subtitle.text = cars != null ? $"{CardCollection.Collected(cars, P.garage)} / {cars.Count} collected" : "";
+        _subtitle.text = "";
+        if (collection && _garageTab == GarageTab.Builds && Cars != null)
+            _subtitle.text = $"{CardCollection.Collected(Cars, P.garage)} / {Cars.Count} collected";
+        else if (collection && _garageTab == GarageTab.Cars && Paints != null)
+            _subtitle.text = $"{PaintCollection.Collected(Paints, P.paints)} / {Paints.Count} collected";
         float titleW = Mathf.Ceil(_title.GetPreferredValues(_title.text).x);
         float subtitleW = _subtitle.text.Length > 0 ? Mathf.Ceil(_subtitle.GetPreferredValues(_subtitle.text).x) : 0f;
         _subtitle.rectTransform.anchoredPosition = new Vector2(20f + titleW + 12f, -12f);
@@ -1931,7 +1760,7 @@ public partial class MasterDraftUI : MonoBehaviour
         }
     }
 
-    const float TabWidth = 71f;   // eight tabs across the 600 px content width
+    const float TabWidth = 96f;   // six tabs across the 600 px content width
 
     void SetStatus(string message, float seconds = 4f)
     {

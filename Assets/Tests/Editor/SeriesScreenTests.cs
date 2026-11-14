@@ -35,8 +35,15 @@ public class SeriesScreenTests
         if (_go != null) Object.DestroyImmediate(_go);
     }
 
-    object Call(string method, params object[] args) =>
-        UiType.GetMethod(method, BindingFlags.Public | BindingFlags.Instance).Invoke(_ui, args);
+    // Optional parameters the call leaves out take their defaults (reflection won't fill them in).
+    object Call(string method, params object[] args)
+    {
+        var m = UiType.GetMethod(method, BindingFlags.Public | BindingFlags.Instance);
+        var ps = m.GetParameters();
+        var full = new object[ps.Length];
+        for (int i = 0; i < ps.Length; i++) full[i] = i < args.Length ? args[i] : ps[i].DefaultValue;
+        return m.Invoke(_ui, full);
+    }
 
     T Get<T>(string property) =>
         (T)UiType.GetProperty(property, BindingFlags.Public | BindingFlags.Instance).GetValue(_ui);

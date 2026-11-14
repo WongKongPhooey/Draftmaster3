@@ -141,10 +141,11 @@ public class GarageScreenTests
         Assert.IsNull(Card("tst01_5").Find("Up"));
         Assert.IsNull(Card("tst01_0").Find("Up"));
 
-        // Rarity tabs and the two cyclers along the top.
-        foreach (var r in new[] { "All", "Common", "Rare", "Epic", "Legend" })
-            Assert.IsNotNull(Content.Find("Rarity_" + r), r + " tab");
+        // What-to-collect tabs and the three cyclers along the top (Set on Builds only).
+        foreach (var t in new[] { "Builds", "Cars", "Drivers", "Teams", "Numbers" })
+            Assert.IsNotNull(Content.Find("GarageTab_" + t), t + " tab");
         Assert.IsNotNull(Content.Find("Cycler_Sort"));
+        Assert.IsNotNull(Content.Find("Cycler_Rarity"));
         Assert.IsNotNull(Content.Find("Cycler_Set"));
     }
 

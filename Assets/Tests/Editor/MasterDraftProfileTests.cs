@@ -38,14 +38,14 @@ public class MasterDraftProfileTests
     static CarDef Car(string id, int number, int rarity = 1, string team = "HEN") =>
         new CarDef { id = id, carset = id.Split('_')[0], number = number, team = team, manufacturer = "CHV", rarity = rarity, type = "Closer", driver = "D" + number };
 
-    // Ten cars in one carset ("tst"), rarities 1-2, plus cup24_77 so the starter resolves to the real one.
+    // Ten cars in one carset ("tst"), rarities 1-2, plus dmc15_0 so the starter resolves to the real one.
     static CarCatalog SmallCatalog()
     {
         var file = new CarCatalogFile { version = 1 };
         file.carsets.Add(new CarsetDef { id = "tst", name = "Test", cars = 10 });
         for (int n = 1; n <= 10; n++) file.cars.Add(Car("tst_" + n, n, n <= 5 ? 1 : 2));
-        file.carsets.Add(new CarsetDef { id = "cup24", name = "Cup '24", cars = 1 });
-        file.cars.Add(Car("cup24_77", 77));
+        file.carsets.Add(new CarsetDef { id = "dmc15", name = "DM1 '15", cars = 1 });
+        file.cars.Add(Car("dmc15_0", 0));
         return new CarCatalog(file);
     }
 

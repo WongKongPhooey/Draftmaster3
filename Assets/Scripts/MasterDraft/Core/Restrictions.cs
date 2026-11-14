@@ -14,6 +14,8 @@ namespace Draftmaster.MasterDraft
         public int minRarity;    // stars >= this; 0 = any. Every DM2 series has 0 (its Rarity rule is exact)
         public string rule;      // "" or one of RestrictionRule.All
         public string value;     // what the rule asks for: team code, manufacturer code, car number, driver, type, stars
+        public List<string> carsets = new List<string>();   // only cars of these carsets ("irl23"); empty = any.
+                                                            // Set by the series tree (SeriesTree.Apply), never by DM2's data
 
         public Restriction() { }
 
@@ -27,9 +29,11 @@ namespace Draftmaster.MasterDraft
         }
 
         public bool HasRule => !string.IsNullOrEmpty(rule);
+        public bool HasCarsets => carsets != null && carsets.Count > 0;
 
         public override string ToString() =>
-            $"L{minLevel}+ class {minClass}+" + (minRarity > 0 ? $" {minRarity}*+" : "") + (HasRule ? $" {rule}={value}" : "");
+            $"L{minLevel}+ class {minClass}+" + (minRarity > 0 ? $" {minRarity}*+" : "") + (HasRule ? $" {rule}={value}" : "")
+            + (HasCarsets ? $" carsets={string.Join("/", carsets)}" : "");
     }
 
     // DM2's offlineMinType values (plus "Driver", which DM2's garage checked and its challenges use).
@@ -62,6 +66,7 @@ namespace Draftmaster.MasterDraft
         Rarity = 9,        // the Rarity rule: not exactly that many stars
         UnknownRule = 10,  // the data names a rule this engine doesn't know: fails closed
         NoCar = 11,        // no car given (or not in the catalogue)
+        Carset = 12,       // the car's carset isn't one the restriction takes (the series tree's branches)
     }
 
     public struct RestrictionReason
@@ -175,14 +180,15 @@ namespace Draftmaster.MasterDraft
         }
 
         // The entry-requirements list (DM2 SeriesUI.getEntryReqs): "Level: 5+", "Driver Class: D+", then the rule.
-        public static List<string> Describe(Restriction restriction)
+        // No level line when there is no level gate (minLevel 0: the series tree gates instead). cars, if given, names
+        // the carsets ("Cars: IRL '23 / IRL '24"); without it the ids are listed.
+        public static List<string> Describe(Restriction restriction, CarCatalog cars = null)
         {
             var r = restriction ?? new Restriction();
-            var lines = new List<string>
-            {
-                $"Level: {r.minLevel}+",
-                $"Driver Class: {ClassLetter(r.minClass)}+",
-            };
+            var lines = new List<string>();
+            if (r.minLevel > 0) lines.Add($"Level: {r.minLevel}+");
+            lines.Add($"Driver Class: {ClassLetter(r.minClass)}+");
+            if (r.HasCarsets) lines.Add("Cars: " + CarsetNames(r.carsets, cars));
             if (r.minRarity > 0) lines.Add($"Driver Rarity: {r.minRarity}+");
             switch (r.rule)
             {
@@ -210,8 +216,23 @@ namespace Draftmaster.MasterDraft
             }
         }
 
+        // "IRL '23 / IRL '24": carset names from the catalogue, the id where it has none.
+        public static string CarsetNames(IList<string> carsets, CarCatalog cars = null)
+        {
+            if (carsets == null || carsets.Count == 0) return "any";
+            var names = new List<string>();
+            foreach (var id in carsets)
+            {
+                string name = cars?.GetCarset(id)?.name;
+                names.Add(string.IsNullOrEmpty(name) ? id : name);
+            }
+            return string.Join(" / ", names);
+        }
+
         static void AddCarFailures(Restriction r, CarDef car, Eligibility result)
         {
+            if (r.HasCarsets && !r.carsets.Exists(c => Same(c, car.carset)))
+                result.Add(RestrictionFailure.Carset, $"{string.Join(" / ", r.carsets)} cars only");
             if (r.minRarity > 0 && car.rarity < r.minRarity)
                 result.Add(RestrictionFailure.MinRarity, $"{r.minRarity}-star driver or better");
             if (!r.HasRule) return;

@@ -12,8 +12,10 @@ using NUnit.Framework;
 public class MasterDraftSeriesTests
 {
     // DM2's menus in order and how many series each holds ("Mods" had none of its own and isn't exported).
+    // The hand-authored ladder (the series tree) comes first.
     static readonly (string id, int count)[] ExpectedMenus =
     {
+        ("ladder", 6),
         ("rookies", 5), ("superspeedways", 5), ("cookie_cutters", 5), ("short_tracks", 5), ("class", 5),
         ("team", 24), ("manufacturer", 8), ("type", 6), ("rarity", 4), ("seasons", 10),
     };
@@ -59,7 +61,7 @@ public class MasterDraftSeriesTests
     public void FileHasEveryMenuAndSeriesInOrder()
     {
         var file = (SeriesFile)ProfileJson.Read(Resource(DraftSeriesCatalog.ResourcePath), typeof(SeriesFile));
-        Assert.AreEqual(1, file.version);
+        Assert.AreEqual(2, file.version);
         var s = new DraftSeriesCatalog(file);
         CollectionAssert.AreEqual(ExpectedMenus.Select(m => m.id).ToArray(), s.Menus.Select(m => m.id).ToArray());
         foreach (var (id, count) in ExpectedMenus)
@@ -126,7 +128,11 @@ public class MasterDraftSeriesTests
         var rowIds = new HashSet<int>(series.Dm2Tracks.Select(t => t.dm2Id));
         foreach (var s in series.All)
             foreach (var r in s.rounds)
+            {
+                Assert.IsTrue(TrackDimensions.Has(r.track), $"{s.id}: '{r.track}' is not a TrackCatalog id");
+                if (r.dm2Track == 0) continue;   // a hand-authored round, not from DM2
                 Assert.IsTrue(rowIds.Contains(r.dm2Track), $"{s.id}: DM2 track {r.dm2Track} has no mapping row");
+            }
     }
 
     [Test]
@@ -330,7 +336,8 @@ public class MasterDraftSeriesTests
         CollectionAssert.AreEqual(new[] { "Level: 35+", "Driver Class: B+", "Team: PEN" },
             Restrictions.Describe(new Restriction(35, 4, RestrictionRule.Team, "PEN")));
         CollectionAssert.AreEqual(new[] { "Level: 1+", "Driver Class: R+" }, Restrictions.Describe(new Restriction(1, 0)));
-        CollectionAssert.AreEqual(new[] { "Level: 0+", "Driver Class: R+", "Exact Car: #48" },
+        // No level gate (the series tree's series): no level line.
+        CollectionAssert.AreEqual(new[] { "Driver Class: R+", "Exact Car: #48" },
             Restrictions.Describe(new Restriction(0, 1, RestrictionRule.Car, "48")));
         CollectionAssert.AreEqual(new[] { "R", "R", "D", "C", "B", "A", "S" },
             Enumerable.Range(0, 7).Select(Restrictions.ClassLetter).ToArray());

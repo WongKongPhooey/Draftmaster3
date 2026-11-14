@@ -37,6 +37,7 @@ namespace Draftmaster.MasterDraft
         public List<SeriesRecord> seriesRecords = new();
         public List<ChallengeRecord> challengeRecords = new();
         public List<string> altPaints = new();                     // alternate livery sprites unlocked
+        public List<string> paints = new();                        // PaintDef ids collected (the Garage's Cars tab)
         public ProfileMigration migration = new();                 // what converting an older save did; empty if none
 
         // --- Schema 1: the card mode (retires in rework row 9) ---
@@ -191,6 +192,7 @@ namespace Draftmaster.MasterDraft
             seriesRecords ??= new List<SeriesRecord>();
             challengeRecords ??= new List<ChallengeRecord>();
             altPaints ??= new List<string>();
+            paints ??= new List<string>();
             migration ??= new ProfileMigration();
         }
 
@@ -212,6 +214,8 @@ namespace Draftmaster.MasterDraft
             Challenges.Sanitise(challengeRecords);
             seen.Clear();
             altPaints.RemoveAll(a => string.IsNullOrEmpty(a) || !seen.Add(a));
+            seen.Clear();
+            paints.RemoveAll(a => string.IsNullOrEmpty(a) || !seen.Add(a));
 
             if (level < FirstLevel) level = FirstLevel;
             if (level > RaceRewards.MaxLevel) level = RaceRewards.MaxLevel;

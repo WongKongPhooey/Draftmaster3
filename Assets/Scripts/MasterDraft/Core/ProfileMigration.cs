@@ -109,8 +109,10 @@ namespace Draftmaster.MasterDraft
     {
         public static readonly string[] Ids =
         {
+            // A DM1 '15 rookie stock first: the series tree starts in Rookie Stocks (SeriesTree.json).
+            "dmc15_0", "dmc15_1", "dmc15_2",
             "cup24_77", "cup24_97", "cup23_42", "cup23_67", "cup22_78", "cup22_91", "cup20_52",
-            "irl23_51", "irl24_4", "dmc15_0", "dmc15_1", "dmc15_2",
+            "irl23_51", "irl24_4",
         };
 
         // The starter id: the first of Ids the catalogue holds; with no catalogue, Ids[0]; with a catalogue that

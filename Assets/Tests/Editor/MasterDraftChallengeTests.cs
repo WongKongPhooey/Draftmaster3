@@ -14,8 +14,10 @@ public class MasterDraftChallengeTests
 {
     // DM2's events in order and how many chapters each has ("All Stars" is commented out, "The Final 4" was a
     // PlayerPrefs special with no chapters).
+    // The hand-authored Snowball Derby (the series tree's first challenge) comes first.
     static readonly (string id, string type, int chapters)[] ExpectedEvents =
     {
+        ("snowball_derby", "Progression", 1),
         ("ol_seven_time", "Progression", 8), ("the_intimidator", "Progression", 8), ("the_closer", "Progression", 11),
         ("modern_era", "Replay", 3), ("classics", "Replay", 2),
     };
@@ -83,7 +85,7 @@ public class MasterDraftChallengeTests
     public void FileHasEveryEventAndChapterInOrder()
     {
         var file = (ChallengesFile)ProfileJson.Read(Resource(ChallengeCatalog.ResourcePath), typeof(ChallengesFile));
-        Assert.AreEqual(1, file.version);
+        Assert.AreEqual(2, file.version);
         Assert.AreEqual(13, file.cycleWeeks);
         var c = new ChallengeCatalog(file);
         CollectionAssert.AreEqual(ExpectedEvents.Select(e => e.id).ToArray(), c.Events.Select(e => e.id).ToArray());
@@ -179,8 +181,10 @@ public class MasterDraftChallengeTests
             Assert.IsTrue(TrackDimensions.Has(ch.track), $"{ch.id}: '{ch.track}' is not a TrackCatalog id");
             Assert.Greater(Challenges.LapsToRun(ch), 0, ch.id);
             Assert.IsTrue(RestrictionRule.IsValid(ch.restriction.rule), ch.id);
-            Assert.IsFalse(ch.prize.IsNone, $"{ch.id}: every DM2 chapter had a prize");
-            Assert.IsNotEmpty(Challenges.PrizePool(ch.prize, cars), $"{ch.id}: prize {ch.prize.code} has no car");
+            bool fromDm2 = ch.dm2Index != null && ch.dm2Index.Length > 0;
+            if (fromDm2) Assert.IsFalse(ch.prize.IsNone, $"{ch.id}: every DM2 chapter had a prize");
+            if (!ch.prize.IsNone)
+                Assert.IsNotEmpty(Challenges.PrizePool(ch.prize, cars), $"{ch.id}: prize {ch.prize.code} has no car");
             if (ch.prize.kind == ChallengePrizeKind.AltPaint)
                 StringAssert.StartsWith(cars.Get(ch.prize.cars[0]).livery + "alt", ch.prize.livery, ch.id);
             if (!ch.ProvidesCar)
@@ -222,7 +226,8 @@ public class MasterDraftChallengeTests
     public void LiveEventsFollowTheWeeks()
     {
         var c = LoadChallenges();
-        string[] Live(int week) => Challenges.LiveEvents(c, week).Select(e => e.id).ToArray();
+        // DM2's rotation: events on the series tree run every week and aren't part of it.
+        string[] Live(int week) => Challenges.LiveEvents(c, week).Where(e => !TreePlacement.IsPlaced(e.tree)).Select(e => e.id).ToArray();
         CollectionAssert.AreEqual(new[] { "ol_seven_time", "modern_era", "classics" }, Live(4));
         CollectionAssert.AreEqual(new[] { "the_closer", "modern_era", "classics" }, Live(1));
         CollectionAssert.AreEqual(Live(4), Live(17), "week 17 is week 4 of the next cycle");

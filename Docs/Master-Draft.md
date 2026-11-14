@@ -20,11 +20,65 @@ HUD have not been play-tested (see "Play-test checklist").
 ## The player's route
 
 ```
-TitleScreen ─MASTER DRAFT─▶ MasterDraft.unity ─ Home / Go Race / My Team / Packs / Trades
-                                │  Esc/B from Home ──▶ TitleScreen
-                                └─ Go Race ▸ GO ──▶ RaceScene (GameSession.Mode.MasterDraft)
+TitleScreen ─MASTER DRAFT─▶ MasterDraft.unity ─ Home / Garage / Series / My Team / Packs / Trades
+                                │  Esc/B from Garage ──▶ TitleScreen
+                                └─ Series ▸ a node ▸ Start Championship / Start Challenge ──▶ RaceScene
                                                        └─ results ▸ Back to Master Draft ──▶ MasterDraft.unity
 ```
+
+### The Garage collects Builds, Cars, Drivers, Teams and Numbers (2026-11-14)
+
+The Garage's top row is **Builds / Cars / Drivers / Teams / Numbers** (`GarageTab`), not rarity tabs. Rarity is a
+cycler on the right, next to Sort (and the carset Set, on Builds).
+
+* **Cars** are paint schemes, each named after a fictional primary sponsor: `Assets/Resources/MasterDraft/Paints.json`
+  (Core `PaintCatalog`), hand-authored. The first 53 are every Cup '26 blank paint in Resources
+  (`cup26livery9blank.png`, the `alt1` blanks too). `sponsor` is empty until named; the card reads "No. 9 paint"
+  until then. `rarity` is the DM2 star rating of the same number in DM2's newest Cup carset that has it
+  (`rarityFrom`, "cup24_9"); #35 and #40 had none and are Common. The profile's `paints` list holds the ids collected.
+  Nothing awards a paint yet. `Draftmaster > Master Draft > Give Every Paint (Offline Profile)` (not in Play Mode)
+  fills the list for testing.
+* **Builds** shows the old garage cards (the DM2 cars the series race, with classes, gears and Card Detail) until
+  builds are defined.
+* **Drivers, Teams, Numbers:** "coming soon".
+
+### The Series tab is an overworld (2026-11-13)
+
+The tabs run **Home, Garage, Series, My Team, Packs, Trades**. The card mode's **Go Race** and the weekly
+**Challenges** tab are gone.
+
+**Series** is a branching tree read left to right, like a roguelike map. The rules are in `Core/SeriesTree.cs` and
+the screen is `Runtime/MasterDraftUI.SeriesMap.cs`. The tree is on the left and the picked node's panel is on the
+right.
+
+* **The data is the master copy.** `Assets/Resources/MasterDraft/Series.json` and `Challenges.json` are edited by
+  hand; the DM2 export of them is retired (`Tools/masterdraft_export.py` now writes only `Cars.json`). A series, a
+  challenge event (all its chapters on one tile) or a single chapter is on the tree when it has a `"tree"`
+  placement: `col`, `row`, `branch`, `after` (ids of what opens it), `unlockPoints`, `starterCar`, `icon`.
+  `SeriesTree.Build` reads the placements. Anything without one is off the tree: DM2's 75 series and 5 events stay
+  in the files as a pool to place or delete.
+* **The ladder (2026-11-13):** Rookie Midgets → Legend Cars or Late Models. Legend Cars → ARCA Regionals or Super
+  Late Models. Late Models → Super Late Models, Sprint Cars (Dirt), or the **Snowball Derby** challenge (one race,
+  40 laps at Martinsville against 10 for a Late Models round there). The series are in the `ladder` menu.
+* **Clearing a series:** finish its championship with at least `unlockPoints` points (0 = rounds × 30, about 7th
+  place every round), or win the title. A node opens once **any** of its `after` entries is cleared. A challenge
+  is cleared once every chapter it covers is won. `SeriesRecord.bestPoints` holds the best score.
+* **The data says what it means:** nothing on the tree has a level gate (`minLevel` 0) and challenges on it list
+  every week. `SeriesTree.Validate` (run by `MasterDraftSeriesTreeTests`) flags anything that doesn't, plus unknown
+  ids, parents not left of children, shared cells, unknown carsets and starter cars.
+* **Car types:** a series can take only some carsets (`restriction.carsets`), and a branch can hand over a free
+  `starterCar`. The catalogue has no midget, legend, late model, ARCA or sprint cars yet, so the ladder takes any
+  car for now. Sprint Cars (Dirt) races short ovals: there are no dirt tracks.
+* **Tiles are square icon boxes** (30 kit px, icon 24x24). The row pitch fits exactly 4 rows in the window
+  (`MapVisibleRows`); keep a part of the tree within 4 consecutive `row` values and it never scrolls vertically. Icons are PNGs in
+  `Assets/Resources/MasterDraft/TreeIcons/`, which import as point-filtered sprites
+  (`Assets/Editor/SeriesTreeIconImport.cs`). A tile shows its node's `icon`, else its series' DM2 menu id
+  (`rookies`, `superspeedways`, `cookie_cutters`, `short_tracks`, `seasons`, `team`, `manufacturer`, `type`,
+  `rarity`, `class`), else `challenge`. Until the PNG exists the tile shows two letters ("SS"). The state is the
+  border (gold running, green cleared) and dimming (locked). Challenges get an orange corner. The name is in the
+  panel.
+* **Controls on the map:** arrows / d-pad walk the tree, picking as they go and scrolling the window. Enter
+  steps into the panel. Tapping a node picks it.
 
 1. **First visit**: a free **Starter Pack** waits in Packs (Home shows an "Open Starter Pack" shortcut).
    Opening it gives 12 cards and **builds a team automatically** (`TeamRules.AutoBuild`), so GO RACE works
@@ -217,6 +271,9 @@ outcome.
 | `  MasterDraftUI.cs`, `MasterDraftCardView.cs` | The menu scene's screens; procedural cards |
 | `  MasterDraftUI.PackOpening.cs` | The pack opening screen (sealed pack, deal, flip) |
 | `  MasterDraftUI.CardDetail.cs` | The Card Detail screen (stats, trait, upgrade, set as race car) |
+| `  MasterDraftUI.SeriesMap.cs` | The Series tab's tree map (tiles, links, scrolling, tree navigation) |
+| `Assets/Scripts/MasterDraft/Core/SeriesTree.cs` | The series tree: nodes, open/cleared rules, starter cars, `Apply`, `Validate` |
+| `Assets/Resources/MasterDraft/SeriesTree.json` | The tree (hand-authored) |
 | `  MasterDraftRaceLauncher.cs` | GO → RaceScene |
 | `  MasterDraftRaceHost.cs` | In-race hand, effects, HUD strip, payout |
 | `Assets/Editor/MasterDraftSceneBuilder.cs` | Scene builder + profile menu items |
@@ -247,7 +304,7 @@ Touched outside the mode: `GameSession` (`Mode.MasterDraft` appended, `IsMasterD
 ## Controls
 
 **Menu**: arrows / WASD / d-pad move to the nearest item; Enter / Space / E / A select; Esc / Backspace / B
-back (overlay → screen → Home → title); Tab / Shift+Tab, 1-5 or LB/RB change screen; R / Y = Reveal All
+back (overlay → screen → Garage → title); Tab / Shift+Tab, 1-6 or LB/RB change screen; R / Y = Reveal All
 while opening a pack, Auto Pick on My Team. Every item is tappable.
 
 **Race**: `1`-`5` play a card; pad **View** steps the highlight, **A** plays it; on a phone, tap the card.
@@ -256,7 +313,9 @@ paused and once the results are up.
 
 ## Play-test checklist (not done yet)
 
-* Menu: first visit → Starter → reveal → My Team edits → Go Race track/driver → GO, on keyboard, pad and phone.
+* Menu: first visit → Series tree opens on Take The Wheel → start it with the dmc15 starter → after the
+  championship, the next two nodes open (or don't, under 90 pts); Open Wheel / Cup offer their starter car;
+  tree scrolls with arrows, pad and touch.
 * Race: a card is drawn at each crossing (not on the formation lap); each playable card does what it says;
   Perfect Pit Stop halves the next stop; the strip doesn't collide with the touch pedals or other HUD.
 * Flag: coins paid once; Back to Master Draft shows the Race Result; the career's track/driver are

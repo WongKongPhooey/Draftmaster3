@@ -36,7 +36,7 @@ public class MasterDraftSession : MonoBehaviour
         public string error = "";           // why not
     }
 
-    // A challenge chapter's result, for the Challenges screen's prize reveal on the way back.
+    // A challenge chapter's result, for the Series screen's prize reveal on the way back.
     public class ChallengeOutcome
     {
         public ChallengeRacePlan plan;
@@ -91,6 +91,9 @@ public class MasterDraftSession : MonoBehaviour
         return text == null ? null : DraftSeriesCatalog.FromJson(text.text);
     }
 
+    // The Series screen's overworld: the "tree" placements in Series.json and Challenges.json (SeriesTree.Build).
+    public SeriesTree Tree => _tree ??= SeriesTree.Build(Series, Challenges);
+
     // Every challenge event (Resources/MasterDraft/Challenges.json), loaded on first use. Null if missing.
     public ChallengeCatalog Challenges
     {
@@ -117,6 +120,7 @@ public class MasterDraftSession : MonoBehaviour
     CarCatalog _cars;
     DraftSeriesCatalog _series;
     ChallengeCatalog _challenges;
+    SeriesTree _tree;
 
     // True between GO and the return to the Master Draft menu.
     public bool InRace => Pending != null;

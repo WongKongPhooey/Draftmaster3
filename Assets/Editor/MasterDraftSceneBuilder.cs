@@ -53,6 +53,28 @@ public static class MasterDraftSceneBuilder
         else Debug.Log($"Master Draft: no offline profile yet at {path}.");
     }
 
+    // Puts every paint in Paints.json into the offline profile's Cars collection, so the Garage's Cars tab shows
+    // them all (there's no way to earn one yet). Dev only; not while playing (the running session would save over it).
+    [MenuItem("Draftmaster/Master Draft/Give Every Paint (Offline Profile)")]
+    public static void GiveEveryPaint()
+    {
+        if (Application.isPlaying) { Debug.LogWarning("Master Draft: stop Play Mode first — the running session would save over the change."); return; }
+        string path = Path.Combine(Application.persistentDataPath, LocalMasterDraftBackend.FileName);
+        if (!File.Exists(path)) { Debug.Log($"Master Draft: no offline profile yet at {path}. Open Master Draft once first."); return; }
+        MasterDraftJsonInstaller.Install();
+        var paintsText = Resources.Load<TextAsset>(Draftmaster.MasterDraft.PaintCatalog.ResourcePath);
+        var paints = paintsText == null ? null : Draftmaster.MasterDraft.PaintCatalog.FromJson(paintsText.text);
+        var carsText = Resources.Load<TextAsset>(Draftmaster.MasterDraft.CarCatalog.ResourcePath);
+        var cars = carsText == null ? null : Draftmaster.MasterDraft.CarCatalog.FromJson(carsText.text);
+        var profile = Draftmaster.MasterDraft.MasterDraftProfile.FromJson(File.ReadAllText(path), cars);
+        if (paints == null || profile == null) { Debug.LogWarning("Master Draft: couldn't read Paints.json or the profile."); return; }
+        int added = 0;
+        foreach (var p in paints.Paints)
+            if (Draftmaster.MasterDraft.PaintCollection.Award(profile.paints, paints, p.id)) added++;
+        File.WriteAllText(path, profile.ToJson(pretty: true));
+        Debug.Log($"Master Draft: gave {added} paints ({profile.paints.Count} of {paints.Count} held) in {path}.");
+    }
+
     // Wipes the offline profile, so the next visit starts from a fresh Starter Pack. Dev only.
     [MenuItem("Draftmaster/Master Draft/Delete Offline Profile")]
     public static void DeleteProfile()

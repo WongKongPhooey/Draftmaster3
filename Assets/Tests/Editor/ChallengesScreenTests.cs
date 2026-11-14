@@ -36,8 +36,15 @@ public class ChallengesScreenTests
         if (_go != null) Object.DestroyImmediate(_go);
     }
 
-    object Call(string method, params object[] args) =>
-        UiType.GetMethod(method, BindingFlags.Public | BindingFlags.Instance).Invoke(_ui, args);
+    // Optional parameters the call leaves out take their defaults (reflection won't fill them in).
+    object Call(string method, params object[] args)
+    {
+        var m = UiType.GetMethod(method, BindingFlags.Public | BindingFlags.Instance);
+        var ps = m.GetParameters();
+        var full = new object[ps.Length];
+        for (int i = 0; i < ps.Length; i++) full[i] = i < args.Length ? args[i] : ps[i].DefaultValue;
+        return m.Invoke(_ui, full);
+    }
 
     T Get<T>(string property) =>
         (T)UiType.GetProperty(property, BindingFlags.Public | BindingFlags.Instance).GetValue(_ui);
@@ -108,7 +115,6 @@ public class ChallengesScreenTests
         Call("BuildOfflineChallenges", profile, TestCatalogue(), TestChallenges(), 2, null);
 
         Assert.AreEqual(2, Get<int>("ChallengeShownWeek"));
-        Assert.AreEqual(2, Get<int>("ChallengeLiveCount"));
         Assert.AreEqual("seven", Get<string>("ChallengePickedEvent"), "this week's events come first");
         Assert.AreEqual("seven_one", Get<string>("ChallengePickedChapter"));
         Assert.AreEqual("tst01_2", Get<string>("ChallengeEntryCar"), "the selected car can't enter: the first one that can");
@@ -130,7 +136,6 @@ public class ChallengesScreenTests
 
         // Week 3: "seven" isn't running (back in week 6).
         Call("BuildOfflineChallenges", profile, TestCatalogue(), TestChallenges(), 3, "seven_one");
-        Assert.AreEqual(1, Get<int>("ChallengeLiveCount"));
         Assert.IsFalse(Get<bool>("ChallengeCanStart"));
         StringAssert.Contains("Not running this week. Back in 3 weeks", Get<string>("ChallengeReasons"));
         Assert.IsFalse(ContentButton("ch.go").interactable);
@@ -180,30 +185,33 @@ public class ChallengesScreenTests
     }
 
     [Test]
-    public void Challenges_TheShippedDataBuildsEveryWeek()
+    public void Challenges_EveryShippedChapterDrawsOnItsTreeNode()
     {
         MasterDraftJsonInstallerShim();
         var cars = CarCatalog.FromJson(Resources.Load<TextAsset>(CarCatalog.ResourcePath).text);
+        var series = DraftSeriesCatalog.FromJson(Resources.Load<TextAsset>(DraftSeriesCatalog.ResourcePath).text);
         var data = ChallengeCatalog.FromJson(Resources.Load<TextAsset>(ChallengeCatalog.ResourcePath).text);
         Assert.IsNotNull(cars);
         Assert.IsNotNull(data);
+        var tree = SeriesTree.Build(series, data);
         var profile = MasterDraftProfile.New("challenge-real", "Ace", cars);
 
-        for (int week = 1; week <= data.CycleWeeks; week++)
-        {
-            Call("BuildOfflineChallenges", profile, cars, data, week, null);
-            Assert.AreEqual(Challenges.LiveEvents(data, week).Count, Get<int>("ChallengeLiveCount"), $"week {week}");
-            Assert.IsNotNull(ContentButton("ch.go"), $"week {week}");
-        }
-
-        // Every chapter's panel draws (one week is enough: the week only changes the reasons).
+        // Every chapter of every event placed on the tree draws its panel, on its node, any week.
+        Call("BuildOfflineTree", profile, cars, series, data, tree, null);
+        int drawn = 0;
         foreach (var ev in data.Events)
             foreach (var c in ev.chapters)
             {
+                var node = tree.ForChapter(c.id, ev.id);
+                if (node == null) continue;
                 Call("PickChallenge", c.id);
                 Assert.AreEqual(c.id, Get<string>("ChallengePickedChapter"));
+                Assert.AreEqual(node.id, Get<string>("TreePickedNode"), c.id);
                 Assert.IsNotNull(ContentButton("ch.go"), c.id);
+                StringAssert.DoesNotContain("Not running this week", Get<string>("ChallengeReasons"), c.id);
+                drawn++;
             }
+        Assert.Greater(drawn, 0, "the shipped tree places challenges");
     }
 
     // JsonUtility as Core's reader, as the game installs it (MasterDraftJsonInstaller lives in Assembly-CSharp).
