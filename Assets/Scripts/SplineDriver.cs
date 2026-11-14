@@ -1446,10 +1446,25 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _onPit = onPit;
         _apronEntryActive = false;
         _apronExitBlend = 0f;
-        RejoinSplineContinuous(transform.position);
+
+        // The way the car really points. This component is kinematic again by now, so RejoinSplineContinuous would
+        // otherwise take the facing from CommandedHeadingDeg - stale, from wherever this spline last placed the car.
+        var pvc = GetComponent<PlayerVehicleController>();
+        float facingDeg = pvc != null ? pvc.HeadingDeg : transform.eulerAngles.z - angleOffsetDeg + (spriteFacesUp ? 90f : 0f);
+        RejoinSplineContinuous(transform.position, facingDeg);
         float cap = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
         _currentMph = Mathf.Clamp(startMph, 0f, cap);
         speed = _currentMph * MphToMps;
+
+        // The commanded pose is what a dynamic model's input driver (SplineInputDriver) seeds the car from on its
+        // first step after it is enabled, and that step can run before this component's next Place(). Left as it
+        // was, it still held the pose from the last time this spline drove - so every Auto toggle mid-race
+        // teleported the player's car back to wherever the AI last handed it over. Seed it with where the car is.
+        Vector3 carLocal = track != null ? track.transform.InverseTransformPoint(transform.position) : transform.position;
+        CommandedLocalPos = new Vector2(carLocal.x, carLocal.y);
+        CommandedHeadingDeg = facingDeg;
+        CommandedSpeedMps = speed;
+        externalActualSpeedMps = speed;
         _startSeeded = true;
     }
 
@@ -2801,16 +2816,22 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // kinked at the join (a kinematic car swung 18 m/s sideways in one step), and PathPointAhead - where the dynamic
     // AI steers - left the bias out altogether: at Texas's hand-drawn pit exit, 14 m below the racing line, the aim
     // point jumped 14 m up the track and the car darted across the road onto the line in about a second.
-    void RejoinSplineContinuous(Vector3 worldNow)
+    void RejoinSplineContinuous(Vector3 worldNow, float? worldFacingDeg = null)
     {
         if (track == null || _mainSamples == null || _mainSamples.Count < 2) { _distance = 0f; return; }
         Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
 
         // The facing the car arrives with, in the track's frame. A dynamic car is wherever its own model put it,
-        // pointing where that left it - not where the brain's last commanded pose said.
+        // pointing where that left it - not where the brain's last commanded pose said. A takeover passes the
+        // car's real facing in (EngageFromCurrentPose).
         bool hasFacing = _hasPrevLateral;
         float arrivingHeadingDeg = CommandedHeadingDeg;
-        if (externalMotionController)
+        if (worldFacingDeg.HasValue)
+        {
+            arrivingHeadingDeg = worldFacingDeg.Value - track.transform.eulerAngles.z;
+            hasFacing = true;
+        }
+        else if (externalMotionController)
         {
             arrivingHeadingDeg = transform.eulerAngles.z - angleOffsetDeg + (spriteFacesUp ? 90f : 0f) - track.transform.eulerAngles.z;
             hasFacing = true;
