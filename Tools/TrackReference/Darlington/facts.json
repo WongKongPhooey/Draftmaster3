@@ -1,0 +1,106 @@
+{
+ "trackId": "Darlington",
+ "displayName": "Darlington Raceway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.37,
+  "surfaceWidthM": 16.76,
+  "hasCommittedTrace": true,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Darlington Raceway",
+  "url": "https://en.wikipedia.org/wiki/Darlington_Raceway",
+  "coordinates": [
+   34.29561944444444,
+   -79.90596111111111
+  ],
+  "location": "1301 Harry Byrd Highway; Darlington, South Carolina, United States; 29532",
+  "opened": "1950",
+  "capacity": "47,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Darlington Raceway 2024.svg",
+    "caption": "Oval (1953–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1953–present)",
+   "surface": "Asphalt",
+   "length_km": "2.198",
+   "length_mi": "1.366",
+   "turns": "4",
+   "banking": "Turns 1 and 2: 25°; Turns 3 and 4: 23°; Frontstretch and Backstretch: 6°",
+   "record_time": "0:28.332",
+   "record_driver": "Denny Hamlin",
+   "record_year": "2018",
+   "record_class": "NASCAR Cup",
+   "miles": 1.366,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1953–present)",
+  "surface": "Asphalt",
+  "length_km": "2.198",
+  "length_mi": "1.366",
+  "turns": "4",
+  "banking": "Turns 1 and 2: 25°; Turns 3 and 4: 23°; Frontstretch and Backstretch: 6°",
+  "record_time": "0:28.332",
+  "record_driver": "Denny Hamlin",
+  "record_year": "2018",
+  "record_class": "NASCAR Cup",
+  "miles": 1.366,
+  "index": 1
+ },
+ "lengthCheckPct": -0.29,
+ "venueCentre": [
+  34.295341,
+  -79.905615
+ ],
+ "osmRadiusM": 1055,
+ "osmCounts": {
+  "raceway": 1,
+  "pit": 1,
+  "wall": 0,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 5,
+  "building": 1,
+  "parking": 4,
+  "water": 3,
+  "road": 119
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 918351834,
+   "name": "Pit Road",
+   "lengthM": 1449.9
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2224,
+  "height": 1669,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Darlington Raceway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Darlington_Raceway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Oval (1953–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

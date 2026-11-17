@@ -1,0 +1,115 @@
+{
+ "trackId": "WatkinsGlen",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293208056,
+    428026652,
+    293208074,
+    293208064,
+    293208062,
+    293208063,
+    20163576,
+    293208067,
+    293208075,
+    293208065,
+    293208060,
+    50262689
+   ],
+   "lengthM": 3935.2,
+   "lengthErrPct": -0.2,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.94,
+    "p95M": 4.36,
+    "maxM": 7.05,
+    "scale": 1.013
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293208067,
+    293208075,
+    293208065,
+    293208060,
+    50262689,
+    293208056,
+    293208074,
+    293208064,
+    293208062,
+    293208063,
+    20163576
+   ],
+   "lengthM": 3913.6,
+   "lengthErrPct": -0.74,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 5.69,
+    "p95M": 6.67,
+    "maxM": 31.26,
+    "scale": 1.0148
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    20163576,
+    20164027,
+    50289311,
+    293208075,
+    293208065,
+    293208060,
+    50262689,
+    293208056,
+    293208074,
+    293208064,
+    293208062,
+    293208063
+   ],
+   "lengthM": 3869.4,
+   "lengthErrPct": -1.86,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.15,
+    "p95M": 14.85,
+    "maxM": 32.88,
+    "scale": 1.0059
+   },
+   "index": 2
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 1.94,
+  "p95M": 4.36,
+  "maxM": 7.05,
+  "refToBuiltMaxM": 7.08,
+  "worstStretches": [
+   {
+    "fromM": 1002,
+    "toM": 1100,
+    "meanM": 6.2
+   },
+   {
+    "fromM": 1484,
+    "toM": 1582,
+    "meanM": 4.8
+   },
+   {
+    "fromM": 1102,
+    "toM": 1200,
+    "meanM": 2.6
+   }
+  ],
+  "scale": 1.013
+ },
+ "verdict": "matches",
+ "notes": []
+}

@@ -1,0 +1,133 @@
+{
+ "trackId": "Atlanta",
+ "displayName": "Atlanta Motor Speedway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.54,
+  "surfaceWidthM": 12.19,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Atlanta Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Atlanta_Motor_Speedway",
+  "coordinates": [
+   33.383494444444445,
+   -84.31785555555555
+  ],
+  "location": "Hampton, Georgia, United States",
+  "opened": "",
+  "capacity": "71,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Atlanta_Motor_Speedway_2024.svg",
+    "caption": "Quad-oval (1997–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Quad-oval (2022–present)",
+   "length_mi": "1.540",
+   "length_km": "2.478",
+   "banking": "Turns: 28°; Straights: 5°",
+   "record_time": "0:29.361",
+   "record_driver": "Josh Berry",
+   "record_year": "2024",
+   "record_class": "NASCAR",
+   "miles": 1.54,
+   "index": 1
+  },
+  {
+   "layout": "Quad-oval (1997–2021)",
+   "length_mi": "1.540",
+   "length_km": "2.478",
+   "banking": "Turns: 24°; Straights: 5°",
+   "record_time": "0:24.732 (224.163 mph)",
+   "record_driver": "Billy Boat",
+   "record_year": "1998",
+   "record_class": "IRL",
+   "miles": 1.54,
+   "index": 2
+  },
+  {
+   "layout": "Oval (1960–1996)",
+   "length_mi": "1.522",
+   "length_km": "2.449",
+   "banking": "Turns: 24°; Straights: 5°",
+   "miles": 1.522,
+   "index": 3
+  },
+  {
+   "layout": "Road course (1992–1996)",
+   "length_mi": "2.522",
+   "length_km": "4.059",
+   "record_time": "1:13.514",
+   "record_driver": "Juan Manuel Fangio II",
+   "record_year": "1993",
+   "record_class": "IMSA GTP",
+   "miles": 2.522,
+   "index": 4
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Quad-oval (2022–present)",
+  "length_mi": "1.540",
+  "length_km": "2.478",
+  "banking": "Turns: 28°; Straights: 5°",
+  "record_time": "0:29.361",
+  "record_driver": "Josh Berry",
+  "record_year": "2024",
+  "record_class": "NASCAR",
+  "miles": 1.54,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  33.383383,
+  -84.318012
+ ],
+ "osmRadiusM": 1143,
+ "osmCounts": {
+  "raceway": 9,
+  "pit": 1,
+  "wall": 0,
+  "fence": 0,
+  "surface": 0,
+  "grandstand": 0,
+  "building": 37,
+  "parking": 11,
+  "water": 6,
+  "road": 479
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 288853232,
+   "name": "Pit Road",
+   "lengthM": 632.1
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2487,
+  "height": 1858,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Atlanta_Motor_Speedway_2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Atlanta_Motor_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Quad-oval (1997–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

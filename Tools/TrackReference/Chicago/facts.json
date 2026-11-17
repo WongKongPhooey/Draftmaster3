@@ -1,0 +1,98 @@
+{
+ "trackId": "Chicago",
+ "displayName": "Chicago Street Course",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.2,
+  "surfaceWidthM": 11,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Chicago Street Course",
+  "url": "https://en.wikipedia.org/wiki/Chicago_Street_Course",
+  "coordinates": [
+   41.87583333333333,
+   -87.62055555555555
+  ],
+  "location": "Chicago, Illinois",
+  "opened": "2023",
+  "capacity": "",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Chicago Street Course.svg",
+    "caption": "Street Circuit (2023–2025)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Street Circuit (2023–2025)",
+   "surface": "Asphalt",
+   "length_km": "3.444",
+   "length_mi": "2.140",
+   "turns": "12",
+   "record_time": "1:29.720",
+   "record_driver": "Shane van Gisbergen",
+   "record_year": "2024",
+   "record_class": "NASCAR Cup",
+   "miles": 2.14,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Street Circuit (2023–2025)",
+  "surface": "Asphalt",
+  "length_km": "3.444",
+  "length_mi": "2.140",
+  "turns": "12",
+  "record_time": "1:29.720",
+  "record_driver": "Shane van Gisbergen",
+  "record_year": "2024",
+  "record_class": "NASCAR Cup",
+  "miles": 2.14,
+  "index": 1
+ },
+ "lengthCheckPct": -2.73,
+ "venueCentre": [
+  41.875833,
+  -87.620556
+ ],
+ "osmRadiusM": 1482,
+ "osmCounts": {
+  "raceway": 1,
+  "pit": 0,
+  "wall": 674,
+  "fence": 418,
+  "surface": 108,
+  "grandstand": 1,
+  "building": 1760,
+  "parking": 214,
+  "water": 44,
+  "road": 2040
+ },
+ "osmPitLanes": [],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 991,
+  "height": 982,
+  "groundMetresPerPixel": 0.5999,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Chicago Street Course.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Chicago_Street_Course.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Mindfrieze",
+   "caption": "Street Circuit (2023–2025)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}
