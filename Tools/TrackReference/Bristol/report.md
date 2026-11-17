@@ -27,9 +27,9 @@ All layouts in the article:
 |---|---|---|---|---|---|---|
 | 0 (best) | committed trace (Assets/TrackTraces) | 846 m | -0.79% | no | 3.3 / 4.7 / 4.9 m (scale x0.977) |  |
 | 1 | raceway ring taken as the centre | 846 m | -0.79% | no | 3.3 / 4.7 / 4.9 m (scale x0.977) | 116606212 |
-| 2 | raceway ring taken as the centre | 805 m | -5.66% | no | 7.8 / 11.3 / 12.4 m (scale x0.913) | 116606212,852971861,378531039,852971861,378531040,852971860,852971859,852971860 |
-| 3 | raceway ring taken as the centre | 802 m | -6.00% | no | 7.1 / 10.0 / 13.1 m (scale x0.911) | 116606212,852971859,378531040,378531039 |
-| 4 | raceway ring taken as the centre | 753 m | -11.75% | no | 10.9 / 15.6 / 16.8 m (scale x0.837) | 378531040,852971861,378531040,378531039,378531040,852971859,378531040,852971860 |
+| 2 | raceway ring taken as the centre | 805 m | -5.66% | no | 8.9 / 13.5 / 13.6 m (scale x0.950) | 116606212,852971861,378531039,852971861,378531040,852971860,852971859,852971860 |
+| 3 | raceway ring taken as the centre | 802 m | -6.00% | no | 8.4 / 12.3 / 12.4 m (scale x0.950) | 116606212,852971859,378531040,378531039 |
+| 4 | raceway ring taken as the centre | 753 m | -11.75% | no | 16.8 / 23.4 / 23.5 m (scale x0.950) | 378531040,852971861,378531040,378531039,378531040,852971859,378531040,852971860 |
 
 Mapped pit lanes: way 378531040 Pit Road (751 m)
 

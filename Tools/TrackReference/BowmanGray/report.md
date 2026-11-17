@@ -22,7 +22,7 @@ Source: [Bowman Gray Stadium](https://en.wikipedia.org/wiki/Bowman_Gray_Stadium)
 |---|---|---|---|---|---|---|
 | 0 (best) | committed trace (Assets/TrackTraces) | 403 m | +0.14% | no | 3.8 / 5.5 / 5.7 m (scale x0.977) |  |
 | 1 | raceway ring taken as the centre | 403 m | +0.14% | no | 3.8 / 5.5 / 5.7 m (scale x0.977) | 914237156 |
-| 2 | raceway ring taken as the centre | 427 m | +6.08% | no | 1.3 / 2.2 / 2.3 m (scale x1.053) | 298238713 |
+| 2 | raceway ring taken as the centre | 427 m | +6.08% | no | 1.3 / 2.1 / 2.2 m (scale x1.050) | 298238713 |
 | 3 | raceway ring taken as the centre | 428 m | +6.30% | no | 5.6 / 7.3 / 7.8 m (scale x1.019) | 298355406 |
 
 ## How far the game is from the best candidate

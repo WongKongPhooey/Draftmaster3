@@ -56,7 +56,7 @@ Furthest-out stretches (mean deviation over 100 m, in metres along the game spli
 - `cache/aerial.jpg` + `aerial.json`: NAIP orthoimagery and its georeference.
 - `cache/trackmap.png`: Wikipedia diagram "Tri-Oval (1959–present)" (CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Daytona_International_Speedway_2024.svg).
 - `cache/trackmap2.png`: Wikipedia diagram "Sports Car Course (1985–present)" (CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Daytona_International_Speedway_Road_Course_2024.svg).
-- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Show Aerial Under Selected Track`.
+- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Open Aerial Overlay For Selected Track`.
 
 ## Next steps
 

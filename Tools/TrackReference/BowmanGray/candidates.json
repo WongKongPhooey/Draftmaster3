@@ -44,10 +44,10 @@
    "lengthErrPct": 6.08,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 1.32,
-    "p95M": 2.17,
-    "maxM": 2.3,
-    "scale": 1.0529
+    "rmsM": 1.33,
+    "p95M": 2.07,
+    "maxM": 2.18,
+    "scale": 1.05
    },
    "index": 2
   },

@@ -726,6 +726,9 @@ def build(tid, refresh=False, offline=False, batch=False):
     trace = load_json(os.path.join(TRACES, tid + '.json'))
     log = []
 
+    if offline and not os.path.exists(os.path.join(cache, 'osm.json')):
+        return {'trackId': tid, 'error': 'not fetched yet (no cache/osm.json); run without --offline'}
+
     # Facts.
     wpath = os.path.join(cache, 'wiki.json')
     wiki = None if refresh else load_json(wpath)
@@ -742,15 +745,14 @@ def build(tid, refresh=False, offline=False, batch=False):
     elif wiki.get('coordinates'):
         centre = tuple(wiki['coordinates'])
     else:
-        centre = next(((v[1], v[2]) for v in ft.VENUES if v[0] == tid), None)
+        same = {'CharlotteRoval': 'Charlotte', 'IndyRoad': 'Indianapolis'}.get(tid, tid)   # same venue
+        centre = next(((v[1], v[2]) for v in ft.VENUES if v[0] == same), None)
     if not centre:
         return {'trackId': tid, 'error': 'no coordinates for the venue'}
     radius = int(min(2200, max(900, published_m * 0.32 + 350)))
 
     # OSM.
     opath = os.path.join(cache, 'osm.json')
-    if offline and not os.path.exists(opath):
-        return {'trackId': tid, 'error': 'not fetched yet (no cache/osm.json); run without --offline'}
     osm = None if refresh else load_json(opath)
     if osm is None and not offline:
         osm = overpass(osm_query(centre[0], centre[1], radius, OSM_TRACK))

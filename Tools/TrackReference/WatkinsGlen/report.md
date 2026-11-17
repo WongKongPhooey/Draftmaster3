@@ -42,7 +42,7 @@ Mapped pit lanes: way 20164027 Pit Lane (634 m), way 50289311 Pit Lane (120 m)
 
 Fitted by rotation, translation and uniform scale (x1.0130). RMS **1.9 m**, 95% within 4.4 m, worst point 7.0 m; worst gap from the candidate back to the game 7.1 m.
 
-Furthest-out stretches (metres from the game's start line, mean deviation over 100 m):
+Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
 - 1002-1100 m: 6.2 m
 - 1484-1582 m: 4.8 m
@@ -54,7 +54,7 @@ Furthest-out stretches (metres from the game's start line, mean deviation over 1
 - `cache/aerial.jpg` + `aerial.json`: NAIP orthoimagery and its georeference.
 - `cache/trackmap.png`: Wikipedia diagram "Short Circuit (1992–present)" (CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Watkins_Glen_International_Short_Circuit_2024.svg).
 - `cache/trackmap2.png`: Wikipedia diagram "Grand Prix Circuit (1992–present)" (CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Watkins_Glen_International_Long_Circuit_2024.svg).
-- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Show Aerial Under Selected Track`.
+- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Open Aerial Overlay For Selected Track`.
 
 ## Next steps
 

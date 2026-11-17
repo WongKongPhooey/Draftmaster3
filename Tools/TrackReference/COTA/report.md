@@ -26,20 +26,20 @@ All layouts in the article:
 
 | # | What | Lap | vs published | Crosses itself | Built line fits within (RMS / p95 / max) | OSM ways |
 |---|---|---|---|---|---|---|
-| 0 (best) | raceway ring taken as the centre | 5487 m | -0.01% | no | 54.7 / 99.3 / 118.3 m (scale x0.711) | 118256423,514836373,118258950,118258954,118258956,514758200,514820043,514820041... |
-| 1 | raceway ring taken as the centre | 5549 m | +1.12% | no | 51.4 / 94.2 / 124.5 m (scale x0.752) | 118258940,1571489343,514820045,1571489343,118258942,118258947,118258943,1382286273... |
+| 0 (best) | raceway ring taken as the centre | 5487 m | -0.01% | no | 71.2 / 150.0 / 171.5 m (scale x0.950) | 118256423,514836373,118258950,118258954,118258956,514758200,514820043,514820041... |
+| 1 | raceway ring taken as the centre | 5549 m | +1.12% | no | 67.6 / 137.7 / 159.6 m (scale x0.950) | 118258940,1571489343,514820045,1571489343,118258942,118258947,118258943,1382286273... |
 
 Mapped pit lanes: way 514836373 Pit Lane (948 m)
 
 ## How far the game is from the best candidate
 
-Fitted by rotation, translation and uniform scale (x0.7112). RMS **54.7 m**, 95% within 99.3 m, worst point 118.3 m; worst gap from the candidate back to the game 370.1 m.
+Fitted by rotation, translation and uniform scale (x0.9500). RMS **71.2 m**, 95% within 150.0 m, worst point 171.5 m; worst gap from the candidate back to the game 212.8 m.
 
 Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
-- 4808-4906 m: 108.4 m
-- 5286-5384 m: 108.3 m
-- 4912-5010 m: 100.9 m
+- 4407-4506 m: 169.9 m
+- 356-454 m: 155.9 m
+- 4508-4606 m: 149.4 m
 
 ## Files
 

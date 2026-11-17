@@ -10,10 +10,10 @@
    "lengthErrPct": -4.54,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 35.91,
-    "p95M": 59.23,
-    "maxM": 66.11,
-    "scale": 0.9047
+    "rmsM": 38.25,
+    "p95M": 52.35,
+    "maxM": 52.46,
+    "scale": 0.95
    },
    "index": 0
   },
@@ -27,10 +27,10 @@
    "lengthErrPct": -4.54,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 35.91,
-    "p95M": 59.23,
-    "maxM": 66.11,
-    "scale": 0.9047
+    "rmsM": 38.25,
+    "p95M": 52.35,
+    "maxM": 52.46,
+    "scale": 0.95
    },
    "index": 1
   },
@@ -45,38 +45,38 @@
    "lengthErrPct": -10.3,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 36.72,
-    "p95M": 68.73,
-    "maxM": 88.1,
-    "scale": 0.8328
+    "rmsM": 49.22,
+    "p95M": 69.94,
+    "maxM": 71.57,
+    "scale": 0.95
    },
    "index": 2
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 35.91,
-  "p95M": 59.23,
-  "maxM": 66.11,
-  "refToBuiltMaxM": 66.13,
+  "rmsM": 38.25,
+  "p95M": 52.35,
+  "maxM": 52.46,
+  "refToBuiltMaxM": 52.46,
   "worstStretches": [
    {
-    "fromM": 634,
-    "toM": 732,
-    "meanM": 64.2
+    "fromM": 234,
+    "toM": 332,
+    "meanM": 52.4
    },
    {
-    "fromM": 534,
-    "toM": 632,
-    "meanM": 45.0
+    "fromM": 134,
+    "toM": 232,
+    "meanM": 52.3
    },
    {
-    "fromM": 734,
-    "toM": 832,
-    "meanM": 44.8
+    "fromM": 34,
+    "toM": 132,
+    "meanM": 52.2
    }
   ],
-  "scale": 0.9047
+  "scale": 0.95
  },
  "verdict": "wrong shape",
  "notes": []

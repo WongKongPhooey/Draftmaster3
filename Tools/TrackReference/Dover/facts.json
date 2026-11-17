@@ -1,0 +1,107 @@
+{
+ "trackId": "Dover",
+ "displayName": "Dover Motor Speedway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1,
+  "surfaceWidthM": 12.19,
+  "hasCommittedTrace": true,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Dover Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Dover_Motor_Speedway",
+  "coordinates": [
+   39.19,
+   -75.53
+  ],
+  "location": "1131 North Dupont Highway; Dover, Delaware, United States; 19901",
+  "opened": "1969",
+  "capacity": "54,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Dover Motor Speedway 2024.svg",
+    "caption": "Oval (1969–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval",
+   "surface": "Concrete (1995–present); Asphalt (1969–1994)",
+   "length_km": "1.609",
+   "length_mi": "1.000",
+   "turns": "4",
+   "banking": "Turns: 24°; Straights: 9°",
+   "record_time": "0:19.622 ()",
+   "record_driver": "Greg Ray",
+   "record_year": "1998",
+   "record_class": "IRL",
+   "miles": 1.0,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval",
+  "surface": "Concrete (1995–present); Asphalt (1969–1994)",
+  "length_km": "1.609",
+  "length_mi": "1.000",
+  "turns": "4",
+  "banking": "Turns: 24°; Straights: 9°",
+  "record_time": "0:19.622 ()",
+  "record_driver": "Greg Ray",
+  "record_year": "1998",
+  "record_class": "IRL",
+  "miles": 1.0,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  39.189371,
+  -75.530291
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 3,
+  "pit": 1,
+  "wall": 0,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 4,
+  "stadium": 1,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 395874675,
+   "name": "Pit Road",
+   "lengthM": 777.1
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1463,
+  "height": 1910,
+  "groundMetresPerPixel": 0.6001,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Dover Motor Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Dover_Motor_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Oval (1969–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

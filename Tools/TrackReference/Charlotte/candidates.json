@@ -16,7 +16,7 @@
     401660627,
     1052107104
    ],
-   "lengthM": 2363.1,
+   "lengthM": 2363.0,
    "lengthErrPct": -2.11,
    "selfIntersects": false,
    "builtFit": {
@@ -42,10 +42,10 @@
    "lengthErrPct": 8.42,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 24.19,
-    "p95M": 48.58,
-    "maxM": 58.09,
-    "scale": 0.4436
+    "rmsM": 74.25,
+    "p95M": 123.09,
+    "maxM": 147.68,
+    "scale": 0.95
    },
    "index": 1
   }
@@ -76,7 +76,5 @@
   "scale": 1.0165
  },
  "verdict": "wrong shape",
- "notes": [
-  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
- ]
+ "notes": []
 }

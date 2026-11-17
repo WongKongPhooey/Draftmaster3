@@ -1,0 +1,85 @@
+{
+ "trackId": "Dover",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "",
+   "lengthM": 1661.1,
+   "lengthErrPct": 3.22,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 4.24,
+    "p95M": 8.04,
+    "maxM": 8.75,
+    "scale": 1.0265
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    350676133,
+    395874675
+   ],
+   "lengthM": 1624.3,
+   "lengthErrPct": 0.93,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 6.97,
+    "p95M": 11.93,
+    "maxM": 13.05,
+    "scale": 0.9986
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    350676133
+   ],
+   "lengthM": 1661.1,
+   "lengthErrPct": 3.22,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 4.24,
+    "p95M": 8.04,
+    "maxM": 8.75,
+    "scale": 1.0265
+   },
+   "index": 2
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 4.24,
+  "p95M": 8.04,
+  "maxM": 8.75,
+  "refToBuiltMaxM": 8.75,
+  "worstStretches": [
+   {
+    "fromM": 799,
+    "toM": 897,
+    "meanM": 8.0
+   },
+   {
+    "fromM": 248,
+    "toM": 346,
+    "meanM": 7.9
+   },
+   {
+    "fromM": 148,
+    "toM": 246,
+    "meanM": 6.0
+   }
+  ],
+  "scale": 1.0265
+ },
+ "verdict": "close",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}

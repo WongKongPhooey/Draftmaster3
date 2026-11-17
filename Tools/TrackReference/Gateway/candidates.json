@@ -1,0 +1,127 @@
+{
+ "trackId": "Gateway",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 2041.4,
+   "lengthErrPct": 1.48,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.42,
+    "p95M": 5.78,
+    "maxM": 6.05,
+    "scale": 1.0082
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    180008394,
+    1015873402
+   ],
+   "lengthM": 2041.4,
+   "lengthErrPct": 1.48,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.42,
+    "p95M": 5.78,
+    "maxM": 6.05,
+    "scale": 1.0082
+   },
+   "index": 1
+  },
+  {
+   "label": "fence ring as the OUTER edge, 7.6 m in",
+   "kind": "fence-outer",
+   "ways": [
+    585164768,
+    585164775
+   ],
+   "lengthM": 2044.8,
+   "lengthErrPct": 1.65,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.27,
+    "p95M": 5.94,
+    "maxM": 6.97,
+    "scale": 1.0105
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    1015873402,
+    585157405,
+    1112502971,
+    585163203,
+    1112502970,
+    585163203,
+    180008394
+   ],
+   "lengthM": 1885.8,
+   "lengthErrPct": -6.26,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 5.11,
+    "p95M": 7.95,
+    "maxM": 9.1,
+    "scale": 0.95
+   },
+   "index": 3
+  },
+  {
+   "label": "fence ring as the INSIDE edge, 7.6 m out",
+   "kind": "fence-inner",
+   "ways": [
+    585164768,
+    585164775
+   ],
+   "lengthM": 2140.5,
+   "lengthErrPct": 6.4,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 6.72,
+    "p95M": 11.49,
+    "maxM": 12.45,
+    "scale": 1.05
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 3.42,
+  "p95M": 5.78,
+  "maxM": 6.05,
+  "refToBuiltMaxM": 6.05,
+  "worstStretches": [
+   {
+    "fromM": 256,
+    "toM": 354,
+    "meanM": 6.0
+   },
+   {
+    "fromM": 1327,
+    "toM": 1425,
+    "meanM": 5.7
+   },
+   {
+    "fromM": 356,
+    "toM": 454,
+    "meanM": 5.0
+   }
+  ],
+  "scale": 1.0082
+ },
+ "verdict": "matches",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}

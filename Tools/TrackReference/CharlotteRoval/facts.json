@@ -1,0 +1,169 @@
+{
+ "trackId": "CharlotteRoval",
+ "displayName": "Charlotte Motor Speedway Roval",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.32,
+  "surfaceWidthM": 12.5,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Charlotte Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Charlotte_Motor_Speedway",
+  "coordinates": [
+   35.3525,
+   -80.6825
+  ],
+  "location": "5555 Concord Parkway South; Concord, North Carolina, United States; 28027",
+  "opened": "1960",
+  "capacity": "95,000",
+  "matchedLayout": 2,
+  "trackMaps": [],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Quad Oval (1960–present) class=skin-invert|180px",
+   "surface": "Asphalt",
+   "length_km": "2.414",
+   "length_mi": "1.500",
+   "turns": "4",
+   "banking": "Turns: 24° ; Straights: 5°",
+   "record_time": "0:24.735",
+   "record_driver": "Kenny Bräck",
+   "record_year": "1998",
+   "record_class": "IndyCar",
+   "miles": 1.5,
+   "index": 1
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2024–present) class=skin-invert|250px",
+   "surface": "Asphalt",
+   "length_km": "3.734",
+   "length_mi": "2.320",
+   "turns": "17",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:24.163",
+   "record_driver": "Austin Dillon",
+   "record_year": "2024",
+   "record_class": "NASCAR Cup",
+   "miles": 2.32,
+   "index": 2
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2019–2023)",
+   "surface": "Asphalt",
+   "turns": "17",
+   "length_km": "3.669",
+   "length_mi": "2.280",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:18.188",
+   "record_driver": "Paul Menard",
+   "record_year": "2022",
+   "record_class": "TA1",
+   "miles": 2.28,
+   "index": 3
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2018)",
+   "surface": "Asphalt",
+   "turns": "17",
+   "length_km": "3.669",
+   "length_mi": "2.280",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:18.078",
+   "record_driver": "Kyle Larson",
+   "record_year": "2018",
+   "record_class": "NASCAR Cup",
+   "miles": 2.28,
+   "index": 4
+  },
+  {
+   "layout": "Roval (1971–2014)",
+   "surface": "Asphalt",
+   "length_km": "3.621",
+   "length_mi": "2.250",
+   "turns": "18",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:05.524",
+   "record_driver": "Jan Magnussen",
+   "record_year": "2000",
+   "record_class": "LMP900",
+   "miles": 2.25,
+   "index": 5
+  }
+ ],
+ "matchedLayout": {
+  "layout": "NASCAR Road Course \"Roval\" (2024–present) class=skin-invert|250px",
+  "surface": "Asphalt",
+  "length_km": "3.734",
+  "length_mi": "2.320",
+  "turns": "17",
+  "banking": "Oval turns: 24° ; Oval straights: 5°",
+  "record_time": "1:24.163",
+  "record_driver": "Austin Dillon",
+  "record_year": "2024",
+  "record_class": "NASCAR Cup",
+  "miles": 2.32,
+  "index": 2
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  35.3525,
+  -80.6825
+ ],
+ "osmRadiusM": 1544,
+ "osmCounts": {
+  "raceway": 46,
+  "pit": 5,
+  "wall": 10,
+  "fence": 1,
+  "surface": 1,
+  "grandstand": 7,
+  "stadium": 1,
+  "building": 55,
+  "parking": 13,
+  "water": 8,
+  "road": 671
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 116034339,
+   "name": "Pit Lane",
+   "lengthM": 281.9
+  },
+  {
+   "wayId": 923003592,
+   "name": "Charlotte Motor Speedway Roval Pit Exit",
+   "lengthM": 250.7
+  },
+  {
+   "wayId": 401660631,
+   "name": "Pit Lane;1/4 Mile track",
+   "lengthM": 134.4
+  },
+  {
+   "wayId": 401660628,
+   "name": "Charlotte Motor Speedway Pit Exit",
+   "lengthM": 127.4
+  },
+  {
+   "wayId": 1052107105,
+   "name": "Pit Lane",
+   "lengthM": 119.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1755,
+  "height": 2494,
+  "groundMetresPerPixel": 0.6002,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": null,
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

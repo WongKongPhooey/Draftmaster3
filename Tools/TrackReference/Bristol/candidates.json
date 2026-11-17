@@ -51,10 +51,10 @@
    "lengthErrPct": -5.66,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 7.82,
-    "p95M": 11.29,
-    "maxM": 12.42,
-    "scale": 0.9128
+    "rmsM": 8.95,
+    "p95M": 13.49,
+    "maxM": 13.64,
+    "scale": 0.95
    },
    "index": 2
   },
@@ -71,10 +71,10 @@
    "lengthErrPct": -6.0,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 7.07,
-    "p95M": 10.02,
-    "maxM": 13.06,
-    "scale": 0.9112
+    "rmsM": 8.41,
+    "p95M": 12.26,
+    "maxM": 12.4,
+    "scale": 0.95
    },
    "index": 3
   },
@@ -95,10 +95,10 @@
    "lengthErrPct": -11.75,
    "selfIntersects": false,
    "builtFit": {
-    "rmsM": 10.92,
-    "p95M": 15.56,
-    "maxM": 16.78,
-    "scale": 0.8372
+    "rmsM": 16.84,
+    "p95M": 23.38,
+    "maxM": 23.52,
+    "scale": 0.95
    },
    "index": 4
   }

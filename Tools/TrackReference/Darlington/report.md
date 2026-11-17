@@ -20,21 +20,21 @@ Source: [Darlington Raceway](https://en.wikipedia.org/wiki/Darlington_Raceway). 
 
 | # | What | Lap | vs published | Crosses itself | Built line fits within (RMS / p95 / max) | OSM ways |
 |---|---|---|---|---|---|---|
-| 0 (best) | committed trace (Assets/TrackTraces) | 2105 m | -4.54% | no | 35.9 / 59.2 / 66.1 m (scale x0.905) |  |
-| 1 | raceway ring taken as the centre | 2105 m | -4.54% | no | 35.9 / 59.2 / 66.1 m (scale x0.905) | 104277971 |
-| 2 | raceway ring taken as the centre | 1978 m | -10.30% | no | 36.7 / 68.7 / 88.1 m (scale x0.833) | 104277971,918351834 |
+| 0 (best) | committed trace (Assets/TrackTraces) | 2105 m | -4.54% | no | 38.2 / 52.4 / 52.5 m (scale x0.950) |  |
+| 1 | raceway ring taken as the centre | 2105 m | -4.54% | no | 38.2 / 52.4 / 52.5 m (scale x0.950) | 104277971 |
+| 2 | raceway ring taken as the centre | 1978 m | -10.30% | no | 49.2 / 69.9 / 71.6 m (scale x0.950) | 104277971,918351834 |
 
 Mapped pit lanes: way 918351834 Pit Road (1450 m)
 
 ## How far the game is from the best candidate
 
-Fitted by rotation, translation and uniform scale (x0.9047). RMS **35.9 m**, 95% within 59.2 m, worst point 66.1 m; worst gap from the candidate back to the game 66.1 m.
+Fitted by rotation, translation and uniform scale (x0.9500). RMS **38.2 m**, 95% within 52.4 m, worst point 52.5 m; worst gap from the candidate back to the game 52.5 m.
 
 Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
-- 634-732 m: 64.2 m
-- 534-632 m: 45.0 m
-- 734-832 m: 44.8 m
+- 234-332 m: 52.4 m
+- 134-232 m: 52.3 m
+- 34-132 m: 52.2 m
 
 ## Files
 

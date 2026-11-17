@@ -1,0 +1,178 @@
+{
+ "trackId": "Gateway",
+ "displayName": "World Wide Technology Raceway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.25,
+  "surfaceWidthM": 15.24,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Gateway Motorsports Park",
+  "url": "https://en.wikipedia.org/wiki/Gateway_Motorsports_Park",
+  "coordinates": [
+   38.6508,
+   -90.13536944444445
+  ],
+  "location": "700 Raceway Blvd, ; Madison, Illinois, United States, 62060",
+  "opened": "As a road course: 1985; As oval: 1997",
+  "capacity": "57,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "World Wide Technology Raceway 2024.svg",
+    "caption": "Layout of the oval circuit (1997–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1997–present)",
+   "surface": "Asphalt",
+   "length_km": "2.012",
+   "length_mi": "1.250",
+   "turns": "4",
+   "banking": "Turn 1 & 2: 11°; Turn 3 & 4: 9°",
+   "record_time": "0:24.6317",
+   "record_driver": "Josef Newgarden",
+   "record_year": "2017",
+   "record_class": "IndyCar",
+   "miles": 1.25,
+   "index": 1
+  },
+  {
+   "layout": "Infield Road Course 1 (1997–present)",
+   "surface": "Asphalt",
+   "length_km": "2.575",
+   "length_mi": "1.600",
+   "turns": "10",
+   "record_time": "0:58.729",
+   "record_driver": "Chris Dyson",
+   "record_year": "2023",
+   "record_class": "TA1",
+   "miles": 1.6,
+   "index": 2
+  },
+  {
+   "layout": "Infield Road Course 2 (2019–present)",
+   "surface": "Asphalt",
+   "length_km": "3.219",
+   "length_mi": "2.000",
+   "turns": "14",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 2.0,
+   "index": 3
+  },
+  {
+   "layout": "Drag Strip",
+   "surface": "Asphalt",
+   "length_mi": "0.25",
+   "length_km": "0.402",
+   "banking": "",
+   "miles": 0.25,
+   "index": 4
+  },
+  {
+   "layout": "Kartplex",
+   "surface": "Asphalt",
+   "length_km": "",
+   "length_mi": "0.55",
+   "turns": "11",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 0.55,
+   "index": 5
+  },
+  {
+   "layout": "Original Road Course (1985–1995)",
+   "surface": "",
+   "length_km": "4.184",
+   "length_mi": "2.600",
+   "turns": "14",
+   "record_time": "1:23.090",
+   "record_driver": "Bill Tempero",
+   "record_year": "1986",
+   "record_class": "Can-Am",
+   "miles": 2.6,
+   "index": 6
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1997–present)",
+  "surface": "Asphalt",
+  "length_km": "2.012",
+  "length_mi": "1.250",
+  "turns": "4",
+  "banking": "Turn 1 & 2: 11°; Turn 3 & 4: 9°",
+  "record_time": "0:24.6317",
+  "record_driver": "Josef Newgarden",
+  "record_year": "2017",
+  "record_class": "IndyCar",
+  "miles": 1.25,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  38.650769,
+  -90.135384
+ ],
+ "osmRadiusM": 993,
+ "osmCounts": {
+  "raceway": 10,
+  "pit": 3,
+  "wall": 2,
+  "fence": 3,
+  "surface": 0,
+  "grandstand": 2,
+  "stadium": 0,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 1112502971,
+   "name": "Pit Road",
+   "lengthM": 555.0
+  },
+  {
+   "wayId": 585157405,
+   "name": "Pit Road",
+   "lengthM": 486.3
+  },
+  {
+   "wayId": 585163203,
+   "name": "Pit Road",
+   "lengthM": 391.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1490,
+  "height": 2264,
+  "groundMetresPerPixel": 0.5999,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "World Wide Technology Raceway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:World_Wide_Technology_Raceway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Layout of the oval circuit (1997–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

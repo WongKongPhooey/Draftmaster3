@@ -36,7 +36,7 @@ Mapped pit lanes: way 1448242327 Pit Stop (1369 m), way 104503569 Pit Road (381 
 
 Fitted by rotation, translation and uniform scale (x1.0095). RMS **1.6 m**, 95% within 2.6 m, worst point 3.5 m; worst gap from the candidate back to the game 3.6 m.
 
-Furthest-out stretches (metres from the game's start line, mean deviation over 100 m):
+Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
 - 1564-1662 m: 3.0 m
 - 1870-1968 m: 2.7 m
@@ -47,7 +47,7 @@ Furthest-out stretches (metres from the game's start line, mean deviation over 1
 - `cache/overview_small.jpg` (and full-size `overview.jpg`): the aerial with every layer and the fitted game line.
 - `cache/aerial.jpg` + `aerial.json`: NAIP orthoimagery and its georeference.
 - `cache/trackmap.png`: Wikipedia diagram "Quad-oval (1997–present)" (CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Texas_Motor_Speedway_2024.svg).
-- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Show Aerial Under Selected Track`.
+- `cache/alignment.json`: the aerial placed in package metres; Unity: `Draftmaster > Tracks > Reference > Open Aerial Overlay For Selected Track`.
 
 ## Next steps
 

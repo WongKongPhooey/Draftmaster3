@@ -11,20 +11,107 @@
  "wikipedia": {
   "title": "Charlotte Motor Speedway",
   "url": "https://en.wikipedia.org/wiki/Charlotte_Motor_Speedway",
-  "coordinates": null,
-  "location": "",
-  "opened": "",
-  "capacity": "",
-  "matchedLayout": null,
+  "coordinates": [
+   35.3525,
+   -80.6825
+  ],
+  "location": "5555 Concord Parkway South; Concord, North Carolina, United States; 28027",
+  "opened": "1960",
+  "capacity": "95,000",
+  "matchedLayout": 1,
   "trackMaps": [],
   "licence": "Text from Wikipedia, CC BY-SA 4.0"
  },
- "wikipediaLayouts": [],
- "matchedLayout": null,
- "lengthCheckPct": null,
+ "wikipediaLayouts": [
+  {
+   "layout": "Quad Oval (1960–present) class=skin-invert|180px",
+   "surface": "Asphalt",
+   "length_km": "2.414",
+   "length_mi": "1.500",
+   "turns": "4",
+   "banking": "Turns: 24° ; Straights: 5°",
+   "record_time": "0:24.735",
+   "record_driver": "Kenny Bräck",
+   "record_year": "1998",
+   "record_class": "IndyCar",
+   "miles": 1.5,
+   "index": 1
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2024–present) class=skin-invert|250px",
+   "surface": "Asphalt",
+   "length_km": "3.734",
+   "length_mi": "2.320",
+   "turns": "17",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:24.163",
+   "record_driver": "Austin Dillon",
+   "record_year": "2024",
+   "record_class": "NASCAR Cup",
+   "miles": 2.32,
+   "index": 2
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2019–2023)",
+   "surface": "Asphalt",
+   "turns": "17",
+   "length_km": "3.669",
+   "length_mi": "2.280",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:18.188",
+   "record_driver": "Paul Menard",
+   "record_year": "2022",
+   "record_class": "TA1",
+   "miles": 2.28,
+   "index": 3
+  },
+  {
+   "layout": "NASCAR Road Course \"Roval\" (2018)",
+   "surface": "Asphalt",
+   "turns": "17",
+   "length_km": "3.669",
+   "length_mi": "2.280",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:18.078",
+   "record_driver": "Kyle Larson",
+   "record_year": "2018",
+   "record_class": "NASCAR Cup",
+   "miles": 2.28,
+   "index": 4
+  },
+  {
+   "layout": "Roval (1971–2014)",
+   "surface": "Asphalt",
+   "length_km": "3.621",
+   "length_mi": "2.250",
+   "turns": "18",
+   "banking": "Oval turns: 24° ; Oval straights: 5°",
+   "record_time": "1:05.524",
+   "record_driver": "Jan Magnussen",
+   "record_year": "2000",
+   "record_class": "LMP900",
+   "miles": 2.25,
+   "index": 5
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Quad Oval (1960–present) class=skin-invert|180px",
+  "surface": "Asphalt",
+  "length_km": "2.414",
+  "length_mi": "1.500",
+  "turns": "4",
+  "banking": "Turns: 24° ; Straights: 5°",
+  "record_time": "0:24.735",
+  "record_driver": "Kenny Bräck",
+  "record_year": "1998",
+  "record_class": "IndyCar",
+  "miles": 1.5,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
  "venueCentre": [
-  35.352,
-  -80.6829
+  35.3525,
+  -80.6825
  ],
  "osmRadiusM": 1122,
  "osmCounts": {
@@ -33,11 +120,12 @@
   "wall": 10,
   "fence": 1,
   "surface": 1,
-  "grandstand": 8,
-  "building": 0,
-  "parking": 0,
-  "water": 0,
-  "road": 0
+  "grandstand": 7,
+  "stadium": 1,
+  "building": 29,
+  "parking": 10,
+  "water": 1,
+  "road": 446
  },
  "osmPitLanes": [
   {
