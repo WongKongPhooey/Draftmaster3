@@ -2,30 +2,30 @@ using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The restart queue under a full-course caution (rules: Draftmaster.Sim.CautionOrder). FullCourseCaution freezes it the
-// moment the caution comes out: the running order then is the order the field restarts in, except that a car that pits
-// comes out behind the cars that stayed out, and a car caught up in the crash goes to the tail.
+// The restart queue under a full-course caution (rules: Draftmaster.Sim.CautionOrder). FullCourseCaution takes it from
+// the running order the moment the caution comes out, and it changes only three ways while the caution runs:
 //
-// Caught up in the crash = CautionWatch saw it wrecking (spun, sideways, in the wall, stopped on the track) in the
-// seconds before the flag, or it wrecks in the first few seconds after it - a crash is still happening when the flag
-// comes out.
+//   * a car that stops on the track, for any length of time, is dropped from it;
+//   * once that car is back up to speed (rejoinMph, 30) it joins the back of the queue;
+//   * a car that pits loses its place, and takes whatever place it is in on the road when it leaves pit road.
 //
 // The order is what the position readout and the classification show for as long as the caution lasts
-// (RacePositionTracker sorts by it), and the field drives into it: a caught car with anybody behind it who is due
-// ahead of it slows and moves down to the inside to be passed (FormationController, PaceLapAssist for the player),
-// and the cars due ahead go by it on the outside. Nobody else passes under the caution.
+// (RacePositionTracker sorts by it), and the field drives into it: a car that stopped and rejoined at the back, with
+// anybody behind it who is due ahead of it, slows and moves down to the inside to be passed (FormationController,
+// PaceLapAssist for the player), and the cars due ahead go by it on the outside. Nobody else passes under the caution.
 public static class CautionLineup
 {
     static readonly CautionOrder _order = new();
     static readonly HashSet<Transform> _yielding = new();
     static readonly List<int> _scratch = new();
-    static float _declaredAt = -1f;
-    static float _caughtGrace;
+    static readonly Dictionary<Transform, PlayerVehicleController> _pvcOf = new();
 
     // A caution's restart queue is frozen and in force.
     public static bool Active { get; private set; }
 
-    public static void Begin(RacePositionTracker rt, IEnumerable<Transform> caught, float now, float caughtGraceSeconds)
+    // The queue from the tracker's running order now; `stopped` = cars already stopped on the track, dropped from it at
+    // once. A car is stopped under `stoppedMph` and rejoins (at the back) at `rejoinMph`.
+    public static void Begin(RacePositionTracker rt, IEnumerable<Transform> stopped, float stoppedMph, float rejoinMph)
     {
         _scratch.Clear();
         if (rt != null)
@@ -35,12 +35,13 @@ public static class CautionLineup
                 if (order[i] != null && order[i].tf != null) _scratch.Add(order[i].tf.GetInstanceID());
         }
         _order.Freeze(_scratch);
+        _order.StopMps = Mathf.Max(0f, stoppedMph) * CautionOrder.MphToMps;
+        _order.RejoinMps = Mathf.Max(_order.StopMps, rejoinMph * CautionOrder.MphToMps);
         _yielding.Clear();
-        if (caught != null)
-            foreach (var t in caught)
-                if (t != null) _order.MarkCaught(t.GetInstanceID());
-        _declaredAt = now;
-        _caughtGrace = Mathf.Max(0f, caughtGraceSeconds);
+        _pvcOf.Clear();
+        if (stopped != null)
+            foreach (var t in stopped)
+                if (t != null) _order.Drop(t.GetInstanceID());
         Active = true;
     }
 
@@ -48,31 +49,39 @@ public static class CautionLineup
     {
         Active = false;
         _yielding.Clear();
+        _pvcOf.Clear();
         _order.Freeze(null);
-        _declaredAt = -1f;
     }
 
-    // Once a step under the caution: cars still wrecking in the grace after the flag join the tail, and pit road is
-    // watched for the cars that pit (they restart behind the cars that stayed out).
-    public static void Step(RacePositionTracker rt, float now)
+    // Once a step under the caution: every car's speed, pit road and race distance into the queue (CautionOrder.Observe)
+    // - stopped cars out, cars back up to speed onto the back, cars off pit road in where they are.
+    public static void Step(RacePositionTracker rt)
     {
         if (!Active || rt == null) return;
-        var watch = CautionWatch.Instance;
-        bool grace = now - _declaredAt <= _caughtGrace;
         var order = rt.Order;
         for (int i = 0; i < order.Count; i++)
         {
             var e = order[i];
             if (e == null || e.tf == null) continue;
-            int id = e.tf.GetInstanceID();
-            if (grace && watch != null && watch.IsWrecking(e.tf)) _order.MarkCaught(id);
             bool onPit = e.spline != null && e.spline.enabled ? e.spline.IsOnPit
                        : rt.track != null && rt.track.IsOnPitSurface(e.tf.position);
-            _order.Observe(id, onPit);
+            _order.Observe(e.tf.GetInstanceID(), onPit, SpeedOf(e), e.progress);
         }
         _yielding.RemoveWhere(t => t == null);
     }
 
+    // The car's real speed, step by step: the dynamic model's when it drives the car, else the brain's. The tracker's
+    // own figure is a per-frame difference of positions, which reads 0 on any frame a kinematic car was not moved in -
+    // and one zero would drop the car from the queue.
+    static float SpeedOf(RacePositionTracker.Entry e)
+    {
+        if (!_pvcOf.TryGetValue(e.tf, out var pvc)) _pvcOf[e.tf] = pvc = e.tf.GetComponent<PlayerVehicleController>();
+        if (pvc != null && pvc.enabled) return pvc.SpeedMps;
+        if (e.spline != null && e.spline.isActiveAndEnabled) return OvalTrain.SpeedOf(e.spline);
+        return e.speedMps;
+    }
+
+    // Stopped under this caution and not since placed by a pit exit: dropped, or at the back of the queue it rejoined.
     public static bool IsCaught(Transform t) => Active && t != null && _order.IsCaught(t.GetInstanceID());
 
     // Sort key for the restart order, lowest first (CautionOrder.Key).

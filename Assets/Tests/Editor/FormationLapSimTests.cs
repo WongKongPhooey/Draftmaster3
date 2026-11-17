@@ -744,8 +744,8 @@ public class FormationLapSimTests
         if (!behindSafetyCar) Assert.Less(worstOff, 1.5f, summary);   // behind the hunting safety car it goes by it
     }
 
-    // Caught up in the crash under a caution (CautionLineup): the car that was leading when the caution came out is
-    // marked caught and goes to the tail of the restart order. With the rest of the field due ahead of it coming up
+    // Stopped under a caution (CautionLineup): the car that was leading when the caution came out is dropped from the
+    // restart order and goes to the tail of it. With the rest of the field due ahead of it coming up
     // behind, it slows and moves down to the inside, the field goes by on the outside, and before the green it is
     // last on the road - with nobody touching.
     [TestCase("Daytona")]
@@ -810,7 +810,7 @@ public class FormationLapSimTests
         scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leaderD + pickup });
         lineupType.GetMethod("Begin").Invoke(null, new object[]
         {
-            null, new List<Transform> { cars[leaderIdx].transform }, 0f, 0f
+            null, new List<Transform> { cars[leaderIdx].transform }, 3f, 30f
         });
         // The safety car picks up the head of the restart order - the caught leader is going to the tail, so the car
         // running second (nearest behind it on the road), as FullCourseCaution.RestartLeader picks.

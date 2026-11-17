@@ -3,10 +3,15 @@ using System.Linq;
 using Draftmaster.Sim;
 using NUnit.Framework;
 
-// The restart order under a full-course caution (CautionOrder, run by CautionLineup): frozen at the flag, cars that pit
-// behind the cars that stayed out in the order they leave pit road, cars caught up in the crash at the tail.
+// The restart order under a full-course caution (CautionOrder, run by CautionLineup): the running order at the flag;
+// a car that stops is dropped from it and joins the back once it is back up to 30 mph; a car that pits loses its place
+// and takes whatever place it is in on the road when it leaves pit road.
 public class CautionOrderTests
 {
+    const float Racing = 60f;      // m/s - well above the rejoin speed
+    const float Crawl = 8f;        // m/s (~18 mph) - moving, but not yet back up to 30 mph
+    const float Stopped = 0f;
+
     static List<int> Restart(CautionOrder order, IEnumerable<int> cars) => cars.OrderBy(order.Key).ToList();
 
     [Test]
@@ -18,75 +23,192 @@ public class CautionOrderTests
     }
 
     [Test]
-    public void ACarCaughtUpInTheCrashGoesToTheTail()
+    public void TheThresholdsAreThirtyMphToRejoin()
     {
         var o = new CautionOrder();
-        o.Freeze(new[] { 5, 3, 9, 1 });
-        o.MarkCaught(5);
-        o.MarkCaught(9);
-        CollectionAssert.AreEqual(new[] { 3, 1, 5, 9 }, Restart(o, new[] { 1, 9, 3, 5 }));
-        Assert.IsTrue(o.IsCaught(5));
-        Assert.IsFalse(o.IsCaught(3));
-        Assert.IsTrue(o.Behind(5, 1), "the caught leader restarts behind the car that ran last");
+        Assert.AreEqual(30f / 2.237f, o.RejoinMps, 0.01f);
+        Assert.Less(o.StopMps, 2f, "stopped means stopped, not slow");
     }
 
     [Test]
-    public void CarsThatPitComeOutBehindTheCarsThatStayedOut_InPitExitOrder()
+    public void ACarThatStopsIsDroppedFromTheOrder_AndHoldsNoPlaceWhileItCrawls()
     {
         var o = new CautionOrder();
         o.Freeze(new[] { 1, 2, 3, 4 });
-        o.Observe(1, true);
-        o.Observe(2, true);
-        o.Observe(2, false);   // 2 off pit road first
-        o.Observe(1, false);
-        CollectionAssert.AreEqual(new[] { 3, 4, 2, 1 }, Restart(o, new[] { 1, 2, 3, 4 }));
+        o.Observe(2, false, Stopped, 900);
+        Assert.IsFalse(o.IsQueued(2));
+        Assert.IsTrue(o.IsDropped(2));
+        Assert.IsTrue(o.IsCaught(2));
+        CollectionAssert.AreEqual(new[] { 1, 3, 4, 2 }, Restart(o, new[] { 1, 2, 3, 4 }));
+
+        o.Observe(2, false, Crawl, 905);   // going again, but not yet up to speed
+        Assert.IsTrue(o.IsDropped(2), "still out of the order below 30 mph");
+        CollectionAssert.AreEqual(new[] { 1, 3, 4 }, o.Queue);
+    }
+
+    [Test]
+    public void ASlowCarThatNeverStopsKeepsItsPlace()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(1, false, Crawl, 1000);
+        o.Observe(2, false, Crawl, 990);
+        CollectionAssert.AreEqual(new[] { 1, 2, 3 }, o.Queue);
+        Assert.IsFalse(o.IsCaught(1));
+    }
+
+    [Test]
+    public void BackUpToThirtyMph_AStoppedCarJoinsTheBackOfTheQueue_InTheOrderTheyGetGoing()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3, 4, 5 });
+        o.Observe(1, false, Stopped, 1000);
+        o.Observe(3, false, Stopped, 980);
+        o.Observe(3, false, Racing, 990);   // 3 gets going first...
+        o.Observe(1, false, Racing, 1010);  // ...then the old leader
+        CollectionAssert.AreEqual(new[] { 2, 4, 5, 3, 1 }, o.Queue);
+        Assert.IsTrue(o.IsCaught(1), "a car back from a stop is due behind - it lets the field by");
+        Assert.IsTrue(o.Behind(1, 5));
+    }
+
+    [Test]
+    public void ACarThatStopsAgainAfterRejoiningIsDroppedAgain()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(1, false, Stopped, 1000);
+        o.Observe(1, false, Racing, 1001);
+        o.Observe(1, false, Stopped, 1002);
+        CollectionAssert.AreEqual(new[] { 2, 3 }, o.Queue);
+        o.Observe(1, false, Racing, 1003);
+        CollectionAssert.AreEqual(new[] { 2, 3, 1 }, o.Queue);
+    }
+
+    [Test]
+    public void ACarOnPitRoadLosesItsPlace_AndAStopInThePitBoxIsNotAStop()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(1, true, 20f, 1000);
+        o.Observe(1, true, Stopped, 1050);   // in the box
+        Assert.IsFalse(o.IsQueued(1));
+        Assert.IsFalse(o.IsDropped(1));
+        Assert.IsFalse(o.IsCaught(1));
         Assert.IsTrue(o.HasPitted(1));
-        Assert.IsFalse(o.HasPitted(3));
-    }
-
-    [Test]
-    public void ACarStillOnPitRoadIsBehindTheCarsAlreadyBackOut()
-    {
-        var o = new CautionOrder();
-        o.Freeze(new[] { 1, 2, 3 });
-        o.Observe(1, true);
-        o.Observe(2, true);
-        o.Observe(2, false);
-        CollectionAssert.AreEqual(new[] { 3, 2, 1 }, Restart(o, new[] { 1, 2, 3 }));
-    }
-
-    [Test]
-    public void ACaughtCarThatPitsForRepairsIsStillAtTheTail()
-    {
-        var o = new CautionOrder();
-        o.Freeze(new[] { 1, 2, 3 });
-        o.MarkCaught(1);
-        o.Observe(1, true);
-        o.Observe(1, false);
-        o.Observe(3, true);
-        o.Observe(3, false);
         CollectionAssert.AreEqual(new[] { 2, 3, 1 }, Restart(o, new[] { 1, 2, 3 }));
     }
 
     [Test]
-    public void BeingOnPitRoadOutsideACautionIsNotAStop_TheNextFreezeStartsClean()
+    public void OffPitRoad_ACarTakesWhateverPlaceItIsInOnTheRoad()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3, 4, 5 });
+        // The leader pits; by the time it leaves pit road 2 and 3 have gone by the pit exit, 4 and 5 have not.
+        o.Observe(1, true, 20f, 1000);
+        o.Observe(2, false, Racing, 1300);
+        o.Observe(3, false, Racing, 1250);
+        o.Observe(4, false, Racing, 1150);
+        o.Observe(5, false, Racing, 1100);
+        o.Observe(1, false, 25f, 1200);
+        CollectionAssert.AreEqual(new[] { 2, 3, 1, 4, 5 }, o.Queue);
+        Assert.IsFalse(o.IsCaught(1));
+    }
+
+    [Test]
+    public void OffPitRoadBehindEverybody_ACarGoesToTheBack()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(2, true, 20f, 1000);
+        o.Observe(1, false, Racing, 1400);
+        o.Observe(3, false, Racing, 1300);
+        o.Observe(2, false, 25f, 1100);
+        CollectionAssert.AreEqual(new[] { 1, 3, 2 }, o.Queue);
+    }
+
+    [Test]
+    public void OffPitRoad_RaceDistanceCountsTheLaps_ALappedCarIsNotAhead()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });   // 3 is a lap down
+        o.Observe(1, true, 20f, 5000);
+        o.Observe(2, false, Racing, 5400);
+        o.Observe(3, false, Racing, 5400 - 2500 + 100);   // physically just ahead of the pit exit, a lap down
+        o.Observe(1, false, 25f, 5100);
+        CollectionAssert.AreEqual(new[] { 2, 1, 3 }, o.Queue);
+    }
+
+    [Test]
+    public void AStoppedCarThatGetsToPitRoadIsPlacedWhereItComesOut_NotAtTheBack()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3, 4 });
+        o.Observe(1, false, Stopped, 1000);
+        o.Observe(1, false, Crawl, 1010);   // limps on, never back to 30 mph
+        o.Observe(1, true, Crawl, 1020);    // onto pit road
+        o.Observe(2, false, Racing, 1300);
+        o.Observe(3, false, Racing, 1100);
+        o.Observe(4, false, Racing, 1050);
+        o.Observe(1, false, 25f, 1200);
+        CollectionAssert.AreEqual(new[] { 2, 1, 3, 4 }, o.Queue);
+        Assert.IsFalse(o.IsCaught(1), "placed by where it came out: nobody is due to pass it");
+    }
+
+    [Test]
+    public void ACarRejoinedAtTheBackThatPitsIsPlacedWhereItComesOut()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(1, false, Stopped, 1000);
+        o.Observe(1, false, Racing, 1005);
+        CollectionAssert.AreEqual(new[] { 2, 3, 1 }, o.Queue);
+        o.Observe(1, true, 20f, 1010);
+        o.Observe(2, false, Racing, 1300);
+        o.Observe(3, false, Racing, 1100);
+        o.Observe(1, false, 25f, 1200);
+        CollectionAssert.AreEqual(new[] { 2, 1, 3 }, o.Queue);
+    }
+
+    [Test]
+    public void CarsOutOfTheQueueSortAfterIt_PitRoadThenUnseenThenStopped()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(1, false, Stopped, 1000);
+        o.Observe(2, true, 20f, 990);
+        CollectionAssert.AreEqual(new[] { 3, 2, 7, 1 }, Restart(o, new[] { 7, 1, 2, 3 }));
+    }
+
+    [Test]
+    public void ACarTheFreezeNeverSawJoinsTheBackOnceItIsUpToSpeed()
     {
         var o = new CautionOrder();
         o.Freeze(new[] { 1, 2 });
-        o.MarkCaught(1);
-        o.Observe(2, true);
-        o.Freeze(new[] { 2, 1 });
-        Assert.IsFalse(o.IsCaught(1));
-        Assert.IsFalse(o.HasPitted(2));
+        o.Observe(7, false, Racing, 3000);
+        CollectionAssert.AreEqual(new[] { 1, 2, 7 }, o.Queue);
+    }
+
+    [Test]
+    public void DroppedFromTheStart_ACarStoppedAtTheFlagHoldsNoPlace()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2 });
+        o.Drop(1);
+        Assert.IsTrue(o.IsCaught(1));
         CollectionAssert.AreEqual(new[] { 2, 1 }, Restart(o, new[] { 1, 2 }));
     }
 
     [Test]
-    public void ACarTheFreezeNeverSawRestartsBehindTheCarsThatStayedOut_AheadOfTheCaught()
+    public void TheNextFreezeStartsClean()
     {
         var o = new CautionOrder();
         o.Freeze(new[] { 1, 2 });
-        o.MarkCaught(1);
-        CollectionAssert.AreEqual(new[] { 2, 7, 1 }, Restart(o, new[] { 7, 1, 2 }));
+        o.Drop(1);
+        o.Observe(2, true, 20f, 1000);
+        o.Freeze(new[] { 2, 1 });
+        Assert.IsFalse(o.IsCaught(1));
+        Assert.IsFalse(o.IsDropped(1));
+        Assert.IsFalse(o.HasPitted(2));
+        CollectionAssert.AreEqual(new[] { 2, 1 }, o.Queue);
     }
 }

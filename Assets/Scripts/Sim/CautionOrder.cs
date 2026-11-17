@@ -2,63 +2,140 @@ using System.Collections.Generic;
 
 namespace Draftmaster.Sim
 {
-    // The restart order under a full-course caution. The field is frozen where it ran the moment the caution came out
-    // (scored then, not where the cars are when they get back to the safety car), with two changes made to it:
+    // The restart order under a full-course caution: a queue, taken from the running order the moment the caution comes
+    // out (scored then, not where the cars are when they get back to the safety car), then changed in exactly three ways:
     //
-    //   * a car that pits under the caution comes out behind every car that stayed out, in the order it leaves pit road;
-    //   * a car caught up in the crash - spun, in the wall, stopped, or wrecking in the seconds after the flag - goes to
-    //     the tail of the queue, behind everybody, whatever else it does.
+    //   * a car that stops - any speed under StopMps, for any length of time, out on the track - is dropped from the
+    //     queue; it holds no place at all while it is stopped and crawling;
+    //   * once it is back up to RejoinMps it joins the BACK of the queue (two cars getting going again join in the order
+    //     they reach that speed);
+    //   * a car that pits loses its place in the queue the moment it is on pit road, and when it leaves pit road it
+    //     simply takes whatever place it is in on the road: in front of the first car in the queue it is ahead of by
+    //     race distance (laps and all), behind every car it is not. A stop on pit road is a pit stop, not a stop.
     //
-    // Cars the snapshot never saw (joined after it) go after the cars that stayed out, ordered by pit-exit then
-    // snapshot as best known. Ids are opaque ints (instance ids at runtime), so this stays testable without a scene.
+    // Cars not holding a place sort after every car that does: on pit road first, then cars the queue never saw, then
+    // stopped cars. Ids are opaque ints (instance ids at runtime), so this stays testable without a scene.
     public sealed class CautionOrder
     {
-        readonly Dictionary<int, int> _snapshot = new();   // id -> running position at the flag (0 = leader)
-        readonly HashSet<int> _caught = new();
-        readonly Dictionary<int, int> _pitExit = new();    // id -> order it came off pit road (0 = first)
-        readonly HashSet<int> _onPit = new();
-        int _nextExit;
+        public const float MphToMps = 1f / 2.237f;
+        public const float DefaultStopMph = 3f;
+        public const float DefaultRejoinMph = 30f;
+
+        // Under this (m/s) out on the track = stopped: dropped from the queue.
+        public float StopMps = DefaultStopMph * MphToMps;
+        // A dropped car back up to this (m/s) joins the back of the queue.
+        public float RejoinMps = DefaultRejoinMph * MphToMps;
+
+        readonly List<int> _queue = new();                  // the restart order, leader first
+        readonly Dictionary<int, int> _snapshot = new();    // id -> running position at the flag (0 = leader)
+        readonly Dictionary<int, double> _distance = new(); // id -> race distance last observed
+        readonly HashSet<int> _dropped = new();             // stopped on the track, out of the queue
+        readonly HashSet<int> _onPit = new();               // on pit road, out of the queue
+        readonly HashSet<int> _pitted = new();              // has been on pit road under this caution
+        readonly HashSet<int> _caught = new();              // stopped and not since placed by a pit exit
 
         public int Count => _snapshot.Count;
+        public IReadOnlyList<int> Queue => _queue;
         public bool Contains(int id) => _snapshot.ContainsKey(id);
-        public bool IsCaught(int id) => _caught.Contains(id);
-        public bool HasPitted(int id) => _onPit.Contains(id) || _pitExit.ContainsKey(id);
+        public bool IsQueued(int id) => _queue.Contains(id);
+        public bool IsDropped(int id) => _dropped.Contains(id);
+        public bool IsOnPit(int id) => _onPit.Contains(id);
+        public bool HasPitted(int id) => _pitted.Contains(id);
 
-        // The running order at the flag, leader first.
+        // Stopped under this caution: dropped, or back at the tail it rejoined at. A pit exit clears it - that car has
+        // its place by where it is on the road, so nobody is due to pass it.
+        public bool IsCaught(int id) => _caught.Contains(id);
+
+        // The running order at the flag, leader first: the queue.
         public void Freeze(IReadOnlyList<int> runningOrder)
         {
+            _queue.Clear();
             _snapshot.Clear();
-            _caught.Clear();
-            _pitExit.Clear();
+            _distance.Clear();
+            _dropped.Clear();
             _onPit.Clear();
-            _nextExit = 0;
+            _pitted.Clear();
+            _caught.Clear();
             if (runningOrder == null) return;
             for (int i = 0; i < runningOrder.Count; i++)
-                if (!_snapshot.ContainsKey(runningOrder[i])) _snapshot[runningOrder[i]] = i;
+            {
+                int id = runningOrder[i];
+                if (_snapshot.ContainsKey(id)) continue;
+                _snapshot[id] = i;
+                _queue.Add(id);
+            }
         }
 
-        // A car caught up in the crash: to the tail. Stays caught until the next Freeze.
-        public void MarkCaught(int id) => _caught.Add(id);
-
-        // Where a car is right now - on pit road or not. A car seen on pit road under the caution has pitted; it is
-        // given its place behind the cars that stayed out when it leaves pit road.
-        public void Observe(int id, bool onPitRoad)
+        // A car known to be stopped on the track: out of the queue until it is back up to RejoinMps.
+        public void Drop(int id)
         {
-            if (onPitRoad) { _onPit.Add(id); return; }
-            if (_onPit.Remove(id) && !_pitExit.ContainsKey(id)) _pitExit[id] = _nextExit++;
+            _queue.Remove(id);
+            _onPit.Remove(id);
+            _dropped.Add(id);
+            _caught.Add(id);
         }
 
-        // Sort key, lowest first. Group (stayed out / pitted or unknown / caught) dominates; inside a group, snapshot
-        // order - or pit-exit order for the cars that pitted (still on pit road = after every car already out).
+        // Where a car is right now: on pit road or not, how fast, and how far into the race (laps x lap length + distance
+        // into the lap - any measure that grows with the race, the same for every car). Once per car per step.
+        public void Observe(int id, bool onPitRoad, float speedMps, double raceDistance)
+        {
+            _distance[id] = raceDistance;
+
+            if (onPitRoad)
+            {
+                // Pitting: out of the queue. A stop in the pit box is a pit stop, not a stop.
+                _queue.Remove(id);
+                _dropped.Remove(id);
+                _onPit.Add(id);
+                _pitted.Add(id);
+                return;
+            }
+
+            if (_onPit.Remove(id))
+            {
+                // Off pit road: into the queue wherever it is on the road.
+                _caught.Remove(id);
+                Insert(id, raceDistance);
+                if (speedMps < StopMps) Drop(id);
+                return;
+            }
+
+            if (_dropped.Contains(id))
+            {
+                if (speedMps < RejoinMps) return;
+                _dropped.Remove(id);
+                _queue.Add(id);   // back up to speed: the back of the queue
+                return;
+            }
+
+            bool queued = _queue.Contains(id);
+            if (speedMps < StopMps) { Drop(id); return; }
+            if (!queued && speedMps >= RejoinMps) _queue.Add(id);   // a car the flag never saw, up to speed: the back
+        }
+
+        // In front of the first car in the queue it is ahead of on the road (race distance), else at the back.
+        void Insert(int id, double raceDistance)
+        {
+            _queue.Remove(id);
+            for (int i = 0; i < _queue.Count; i++)
+            {
+                if (!_distance.TryGetValue(_queue[i], out double d)) continue;
+                if (raceDistance > d) { _queue.Insert(i, id); return; }
+            }
+            _queue.Add(id);
+        }
+
+        // Sort key, lowest first: the place in the queue; then cars on pit road, cars never seen, stopped cars - each of
+        // those groups in the order the flag found them.
         public long Key(int id)
         {
+            int at = _queue.IndexOf(id);
+            if (at >= 0) return at;
             bool known = _snapshot.TryGetValue(id, out int snap);
             if (!known) snap = 9999;
-            if (_caught.Contains(id)) return 2L * 100_000_000L + snap;
+            if (_dropped.Contains(id)) return 2L * 100_000_000L + snap;
             if (_onPit.Contains(id)) return 1L * 100_000_000L + 50_000_000L + snap;
-            if (_pitExit.TryGetValue(id, out int exit)) return 1L * 100_000_000L + exit * 10_000L + snap;
-            if (!known) return 1L * 100_000_000L + 60_000_000L;
-            return snap;
+            return 1L * 100_000_000L + 60_000_000L + snap;
         }
 
         // Whether `id` ranks behind `other` in the restart order.

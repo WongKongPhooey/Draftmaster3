@@ -37,10 +37,10 @@ public class FullCourseCaution : MonoBehaviour
     public float clearRoadAheadM = 25f;
 
     [Header("Restart order")]
-    [Tooltip("The restart order is frozen when the caution comes out (CautionLineup). A car seen wrecking (CautionWatch: spun, sideways, in the wall, stopped) this many seconds before the flag was caught up in the crash and goes to the tail.")]
-    public float caughtLookbackSeconds = 8f;
-    [Tooltip("...and so does one that wrecks in this many seconds after it - the crash is still happening when the flag comes out.")]
-    public float caughtGraceSeconds = 6f;
+    [Tooltip("The restart order is the running order when the caution comes out (CautionLineup). A car out on the track slower than this (mph), for any length of time, has stopped and is dropped from it.")]
+    public float stoppedMph = CautionOrder.DefaultStopMph;
+    [Tooltip("A dropped car back up to this speed (mph) joins the back of the restart order. (A car that pits takes whatever place it is in on the road when it leaves pit road.)")]
+    public float rejoinMph = CautionOrder.DefaultRejoinMph;
 
     // Seconds into the current caution; -1 when there is none.
     public float CautionSeconds { get; private set; } = -1f;
@@ -168,7 +168,7 @@ public class FullCourseCaution : MonoBehaviour
 
         // Out of the pits to pick up the leader (`at` only places a safety car that has no pit lane to come out of).
         sc.DeployForCaution(at);
-        FreezeRestartOrder(Time.time);
+        FreezeRestartOrder();
         sc.PickupLeader = RestartLeader();
         CautionSeconds = 0f;
 
@@ -187,29 +187,17 @@ public class FullCourseCaution : MonoBehaviour
                   "pick up the leader, one lap with pit road open, green the next time by");
     }
 
-    // The running order now is the restart order (positions are frozen at the flag), with every car caught up in the
-    // crash sent to the tail of it.
-    void FreezeRestartOrder(float now)
+    // The running order now is the restart order (positions are frozen at the flag), less every car stopped on the
+    // track: those are dropped from it, and join the back once they are going again.
+    void FreezeRestartOrder()
     {
         var rt = RacePositionTracker.Instance;
-        var watch = CautionWatch.Instance;
         _scratch.Clear();
-        if (rt != null)
-        {
-            var order = rt.Order;
-            for (int i = 0; i < order.Count; i++)
-            {
-                var e = order[i];
-                if (e == null || e.tf == null) continue;
-                bool caught = _stoppedSince.ContainsKey(e.tf)
-                              || watch != null && watch.SecondsSinceWreck(e.tf) <= caughtLookbackSeconds;
-                if (caught) _scratch.Add(e.tf);
-            }
-        }
-        CautionLineup.Begin(rt, _scratch, now, caughtGraceSeconds);
+        foreach (var kv in _stoppedSince) if (kv.Key != null) _scratch.Add(kv.Key);
+        CautionLineup.Begin(rt, _scratch, stoppedMph, rejoinMph);
         if (_scratch.Count > 0)
         {
-            var sb = new System.Text.StringBuilder("[Caution] caught up in the crash, to the tail:");
+            var sb = new System.Text.StringBuilder("[Caution] stopped on the track, dropped from the restart order:");
             for (int i = 0; i < _scratch.Count; i++) sb.Append(' ').Append(_scratch[i].name);
             Debug.Log(sb.ToString());
         }
@@ -218,7 +206,7 @@ public class FullCourseCaution : MonoBehaviour
     void StepCaution(float dt)
     {
         CautionSeconds += dt;
-        CautionLineup.Step(RacePositionTracker.Instance, Time.time);
+        CautionLineup.Step(RacePositionTracker.Instance);
         var sc = _director.SafetyCarInstance;
         if (sc == null) return;
         // Who the safety car is out to pick up, for as long as it is looking: the leader may pit, or be caught out.
@@ -247,7 +235,7 @@ public class FullCourseCaution : MonoBehaviour
     }
 
     // The car the safety car picks up: the head of the restart order (RacePositionTracker sorts by CautionLineup under
-    // a caution) that is out on the track - not stopped, not on pit road, not caught up in the crash. Null for none.
+    // a caution) that is out on the track - not stopped, not on pit road, not back from a stop. Null for none.
     Transform RestartLeader()
     {
         var rt = RacePositionTracker.Instance;

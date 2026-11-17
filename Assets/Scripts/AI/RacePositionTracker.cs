@@ -132,8 +132,8 @@ public class RacePositionTracker : MonoBehaviour
         for (int i = 0; i < _entries.Count; i++) UpdateProgress(_entries[i]);
 
         // Under a full-course caution the positions were frozen when the flag came out (CautionLineup): the order is the
-        // restart order - cars that pitted behind those that stayed out, cars caught up in the crash at the tail - not
-        // wherever the cars happen to be on the road while it sorts itself out behind the safety car.
+        // restart order - cars that stopped dropped from it and back on the tail once going again, cars that pitted
+        // wherever they came out - not wherever the cars happen to be on the road while it sorts itself out.
         if (CautionLineup.Active && RaceStart.IsCaution) _entries.Sort(_byRestartOrder);
         else _entries.Sort(_byProgress);
         for (int i = 0; i < _entries.Count; i++) _entries[i].position = i + 1;
