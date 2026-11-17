@@ -80,3 +80,7 @@ __pycache__/
 
 # Unity Android build cache (CMake/ninja intermediates)
 /.utmp/
+
+# Track reference packs: imagery, raw OSM answers, Commons diagrams and renders (re-created by
+# python -I Tools/track_reference.py <id>; facts/candidates/report next to them are committed)
+Tools/TrackReference/*/cache/

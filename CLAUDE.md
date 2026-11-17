@@ -7,6 +7,7 @@ Editor — it is not built from the CLI. There is no CI; testing is Play Mode pl
 full Draftmaster menu reference, the play-mode key map, and the standing gotchas. Start there.
 It links the rest: `Docs/Tracks.md` (track pipeline), `Docs/Race-Weekend.md`,
 `Docs/NPCs-and-Quests.md` (paper-doll characters, dialogue, quests),
+`Docs/Track-Reference.md` (real-world reference + accuracy check for any venue),
 `Docs/Rivalry-and-TeamSwitch.md`, `Docs/Sponsorship.md`, `Docs/AI-NR2003.md` (AI roadmap from NR2003),
 `Docs/Master-Draft.md` (the card mode), `Docs/Overnight-Lanes.md` (parallel overnight work: worktree lanes,
 headless compile/tests, satnav stop and paddock sidecar data).

@@ -181,6 +181,16 @@ Package` moves one from the scene to the package when you get it the wrong way r
 `Draftmaster > Tracks > Report Calendar Coverage` prints what's built vs catalogue-only.
 `Dress All Undressed Packages` fills in every package missing scenery. Detail: `Docs/Tracks.md`.
 
+## 1b. Make a track match the real one
+
+`python -I Tools/track_reference.py <TrackId>` gathers the venue's aerial (USGS NAIP), OSM walls / raceway /
+pit lanes, Wikipedia's length / turns / banking and its layout diagrams, fits the game's centreline onto the
+real one and says how far off it is (`Tools/TrackReference/<id>/report.md`, overview image in `cache/`).
+`--all` writes `Tools/TrackReference/STATUS.md`, every venue worst first. `--write-trace=<n>` turns a
+candidate into a trace for `Import Traced Geometry`. In Unity, `Draftmaster > Tracks > Reference > Open Aerial
+Overlay For Selected Track` puts the aerial, already lined up, over the package in a new scene. Full guide:
+`Docs/Track-Reference.md`.
+
 ## 2. Add a road course
 
 The generator refuses road courses — there is no formula for one. Duplicate
@@ -742,6 +752,9 @@ it, B would close the pause menu and open it again, and in the car it would paus
 | Report Current Selection | Which track the next race builds, and why — prefs, travel-map fallback, resolved id |
 | Clear Package Previews From Scene | Optional now — saving `RaceScene` does the same. Applies hand edits on any track in the scene to its package, then removes the track |
 | Report Calendar Coverage | What's built vs catalogue-only |
+| Reference > Open Aerial Overlay For Selected Track | New unsaved scene: the package at the origin with its real aerial lined up on top (needs `python -I Tools/track_reference.py <id>` first). `Docs/Track-Reference.md` |
+| Reference > Toggle Aerial Over Or Under The Track | Translucent on top (for lining up) or opaque under the road |
+| Reference > Open Report For Selected Track | Opens `Tools/TrackReference/<id>/report.md` and the overview image |
 | Texas > Author Texas (Real Layout) | Dresses FortWorth after the real track (stands, landmarks, paved infield, road course, Watkins Glen paddock). Geometry, walls and lines untouched. Safe to re-run |
 | Texas > Report Layout Over Aerial (Temp png) | `Temp/texas_layout.png`: the package drawn over the calibrated aerial, plus a text dump |
 | Texas > Capture Rendered Preview (Temp png) | `Temp/texas_preview_*.png`: the package as the game draws it, from a preview scene (nothing opened or saved) |

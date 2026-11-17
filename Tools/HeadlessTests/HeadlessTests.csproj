@@ -45,6 +45,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelDaysTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelTutorialRouteTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OsmTrackGeometryTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TrackReferenceAlignmentTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OvalGeometryTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PitChordFitTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RacingLineTrainerTests.cs" />

@@ -207,6 +207,11 @@ Generate, then tune the numbers in the inspector with `TrackBuilder`'s racing-li
 
 ## Traced geometry, which beats any formula
 
+> **Start with `Docs/Track-Reference.md`.** `Tools/track_reference.py <id>` finds every candidate centreline
+> OSM can give (raceway rings, walls read as outer or inside edge, the committed trace), fetches NAIP
+> imagery and Wikipedia's figures, measures the game's track against them and writes a trace from the one
+> you pick. What follows is how a trace becomes geometry.
+
 A published lap length describes a **distance, not a shape**. "A 1,551 ft back stretch on a 1.022 mile lap"
 is equally true of a long thin oval and of a rounded triangle — and Phoenix is the second one, but was
 generated as the first: its corners came out 34 m tighter than the real ones and its straights 92 m too
