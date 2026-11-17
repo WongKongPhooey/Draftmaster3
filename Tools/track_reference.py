@@ -305,9 +305,11 @@ def split_top(body):
 
 
 def infobox(text):
-    i = text.lower().find('{{infobox')
-    if i < 0:
+    # Usually {{Infobox motorsport venue, but some articles call the template directly ({{Motorsport venue).
+    m = re.search(r'\{\{\s*(?:infobox[^|}]*|[^|{}]*(?:venue|racetrack|race track|circuit))\s*\|', text, re.I)
+    if not m:
         return {}
+    i = m.start()
     depth, j = 0, i
     while j < len(text):
         if text[j:j + 2] == '{{':
