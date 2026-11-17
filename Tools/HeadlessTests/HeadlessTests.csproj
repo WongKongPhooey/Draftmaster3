@@ -31,6 +31,9 @@
   <ItemGroup>
     <Compile Include="$(ProjectRoot)Assets\Scripts\MasterDraft\Core\**\*.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Tracks\Core\**\*.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\SpinSlide.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\PlateDraft.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\FuelPlan.cs" />
   </ItemGroup>
 
   <!-- Tests that only reach the assemblies above. -->
@@ -49,6 +52,9 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TrackDimensionsTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RoadsideShopsTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RaceFlowTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\SpinSlideTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PlateDraftTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\FuelPlanTests.cs" />
     <Compile Include="HeadlessSetup.cs" />
   </ItemGroup>
 

@@ -17,6 +17,8 @@ public class TyreSmoke : MonoBehaviour
     public float maxRate = 45f;
     [Tooltip("Wheelspin (0..1) below which nothing is emitted — a trickle of spin shouldn't fog the car.")]
     [Range(0f, 1f)] public float minWheelspin = 0.08f;
+    [Tooltip("Smoke rate (as wheelspin 0..1) while the car slides after being spun by a hit (PlayerVehicleController.IsSpinSliding).")]
+    [Range(0f, 1f)] public float spinSlideSmoke = 0.6f;
     [Tooltip("Seconds a puff lives.")]
     public float lifetime = 1.4f;
     [Tooltip("Puff size when it leaves the tyre, and how many times bigger it grows before fading (m).")]
@@ -92,8 +94,10 @@ public class TyreSmoke : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (_car == null) return;
-        float spin = _car.Wheelspin;
+        // A disabled car model is a kinematic car (behind the safety car, on pit road): its tyre state is stale.
+        if (_car == null || !_car.enabled) { _spawnAccum = 0f; return; }
+        // A car spun loose by a hit (Spin Slide) scrubs its tyres across the road and smokes them too.
+        float spin = Mathf.Max(_car.Wheelspin, _car.IsSpinSliding ? spinSlideSmoke : 0f);
         if (spin < minWheelspin) { _spawnAccum = 0f; return; }
         if (_ps == null) _ps = MakeSystem();
 

@@ -126,8 +126,9 @@ public static class RuntimeHierarchy
         for (int i = 0; i < _roots.Count; i++)
         {
             var go = _roots[i];
-            if (go == null || !CanAdopt(go)) continue;
-            if (IsBucket(go, scene)) continue;
+            if (go == null) continue;
+            if (IsBucket(go, scene) || ReclaimBucket(go, scene)) continue;
+            if (!CanAdopt(go)) continue;
 
             var parent = GetGroup(Classify(go), scene);
             if (parent == null || parent.gameObject == go) continue;
@@ -145,19 +146,48 @@ public static class RuntimeHierarchy
         return false;
     }
 
+    // A root that is one of our buckets from before a domain reload (a script recompile in Play Mode wipes
+    // _buckets but leaves the bucket objects in the scene). Without this the sweep filed the old "Vehicles"
+    // bucket, cars and all, under a fresh "Vehicles" - reparenting every NetworkObject nested in them, which
+    // throws from Netcode's OnTransformParentChanged while its NetworkManager is gone.
+    static bool ReclaimBucket(GameObject go, Scene scene)
+    {
+        int idx = System.Array.IndexOf(GroupNames, go.name);
+        if (idx < 0) return false;
+        // A bucket is a bare Transform at the origin; anything else that happens to be called "UI" is content.
+        if (go.GetComponents<Component>().Length != 1) return false;
+        var t = go.transform;
+        if (t.position != Vector3.zero || t.rotation != Quaternion.identity || t.localScale != Vector3.one) return false;
+
+        if (!_buckets.TryGetValue(scene.handle, out var groups) || groups == null)
+        {
+            groups = new Transform[GroupNames.Length];
+            _buckets[scene.handle] = groups;
+        }
+        if (groups[idx] != null && groups[idx] != t) return false;   // already have one; this is a duplicate
+        groups[idx] = t;
+        return true;
+    }
+
+    // Roots turned away because something under them is a NetworkObject: remembered so a big hierarchy is
+    // walked once, not every sweep. Instance IDs, cleared with the scene's buckets.
+    static readonly HashSet<int> _refused = new HashSet<int>();
+
     static bool CanAdopt(GameObject go)
     {
         if (go.hideFlags != HideFlags.None) return false;
         // DontDestroyOnLoad lives in its own scene; pulling it into a real one would destroy it on load.
         if (go.scene.buildIndex == -1 && go.scene.name == "DontDestroyOnLoad") return false;
         if (go.GetComponent<HierarchyIgnore>() != null) return false;
+        if (_refused.Contains(go.GetInstanceID())) return false;
 
-        // Netcode: checked by type name so this file carries no dependency on the Netcode package.
-        var comps = go.GetComponents<Component>();
+        // Netcode: checked by type name so this file carries no dependency on the Netcode package. Children
+        // too - reparenting a root fires OnTransformParentChanged on every NetworkObject under it.
+        var comps = go.GetComponentsInChildren<Component>(true);
         for (int i = 0; i < comps.Length; i++)
         {
             if (comps[i] == null) continue;
-            if (comps[i].GetType().Name == "NetworkObject") return false;
+            if (comps[i].GetType().Name == "NetworkObject") { _refused.Add(go.GetInstanceID()); return false; }
         }
         return true;
     }
@@ -258,7 +288,7 @@ public static class RuntimeHierarchy
     }
 
     // Buckets are per-scene and die with their scene; drop stale handles so the dictionary cannot grow.
-    internal static void ForgetScene(Scene scene) => _buckets.Remove(scene.handle);
+    internal static void ForgetScene(Scene scene) { _buckets.Remove(scene.handle); _refused.Clear(); }
 
-    internal static void ForgetAll() => _buckets.Clear();
+    internal static void ForgetAll() { _buckets.Clear(); _refused.Clear(); }
 }

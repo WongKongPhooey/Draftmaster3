@@ -825,7 +825,7 @@ public class TrackBuilder : MonoBehaviour
         {
             if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
             float extra = HasPitBoxLane ? pitBoxLaneWidth * PitBoxSide : 0f;
-            if (OnPitBand(_pitSurfaceCache, local, extra, out float pitLat))
+            if (OnPitBand(_pitSurfaceCache, local, extra, out float pitLat, false))
             {
                 lateralAbs = pitLat;
                 return true;
@@ -875,7 +875,11 @@ public class TrackBuilder : MonoBehaviour
 
     // Signed band test against the pit centerline: [-width/2, width/2 + extraPlus] along +normal.
     // `extra` widens the band on one side: positive past the +normal edge, negative past the -normal edge.
-    static bool OnPitBand(List<Sample> samples, Vector2 local, float extra, out float lateralAbs)
+    // `boundEnds` stops the band at the two ends of the lane (see below). IsOnSurface (grip) still passes false:
+    // unbounded, the band runs on for ever in line with the pit entry and exit as phantom tarmac, and Watkins
+    // Glen's AI lap leans on it - at 2287 m its line leaves the real road and only that stripe kept it gripped
+    // (AIImpactSimTests). Bounding grip too is right but needs that line looked at first.
+    static bool OnPitBand(List<Sample> samples, Vector2 local, float extra, out float lateralAbs, bool boundEnds)
     {
         lateralAbs = 0f;
         if (samples == null || samples.Count < 2) return false;
@@ -889,6 +893,12 @@ public class TrackBuilder : MonoBehaviour
         var s = samples[bi];
         float lat = Vector2.Dot(local - s.position, s.normal);
         lateralAbs = Mathf.Abs(lat);
+        // Off either end of the lane. The pit lane is not a loop: anywhere in line with its first or last sample
+        // is nearest to that sample, however far away, and passed the sideways test. Daytona's back-straight
+        // infield read as pit road, so a car broken down there was never retired and held up a whole caution.
+        Vector2 neighbour = samples[bi == 0 ? 1 : bi - 1].position;
+        float spacing = Vector2.Distance(neighbour, s.position);
+        if (boundEnds && Mathf.Abs(Vector2.Dot(local - s.position, s.tangent)) > spacing + 0.01f) return false;
         return lat >= -s.width * 0.5f + Mathf.Min(0f, extra) && lat <= s.width * 0.5f + Mathf.Max(0f, extra);
     }
 
@@ -903,7 +913,7 @@ public class TrackBuilder : MonoBehaviour
         Vector2 local = transform.InverseTransformPoint(worldPos);
         if (OnSampleSurface(_surfaceCache, local, out _)) return false;
         float extra = HasPitBoxLane ? pitBoxLaneWidth * PitBoxSide : 0f;
-        return OnPitBand(_pitSurfaceCache, local, extra, out _);
+        return OnPitBand(_pitSurfaceCache, local, extra, out _, true);
     }
 
     // The banking under a car and which way is downhill, in world space. `distance` is where the car is round the

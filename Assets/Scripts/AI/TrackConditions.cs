@@ -59,6 +59,12 @@ public static class TrackConditions
     [Tooltip("Scales fuel burn on every car. 1 nominal, 0 = no burn, 2 = double consumption.")]
     public static float FuelUseMultiplier = 1f;
 
+    // Race fuel (Draftmaster.Sim.FuelPlan): a full tank lasts the race split into (FuelRequiredStops + 1) stints, plus
+    // FuelSpareLaps, flat out. 0 stops = the whole field can go the distance without a fuel stop, a couple of laps
+    // spare. Set 1 to make a fuel stop necessary (a race setting to come).
+    public static int FuelRequiredStops = 0;
+    public static float FuelSpareLaps = 2f;
+
     [Tooltip("Scales crash damage accrual on every car. 1 nominal, 0 = invulnerable bodywork, 2 = fragile.")]
     public static float DamageMultiplier = 1f;
 

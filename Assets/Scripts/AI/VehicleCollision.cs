@@ -91,7 +91,7 @@ public class VehicleCollision : MonoBehaviour
         _prevPos = transform.position;
     }
 
-    void OnEnable()  { if (_bodywork != null) _bodywork.BodyChanged += ApplyBoxShape; PerfLog.CarsActive++; }
+    void OnEnable()  { if (_bodywork != null) _bodywork.BodyChanged += ApplyBoxShape; PerfLog.CarsActive++; _hasSafePos = false; }
     void OnDisable() { if (_bodywork != null) _bodywork.BodyChanged -= ApplyBoxShape; PerfLog.CarsActive--; }
 
     // The box is the undamaged car less however far each end has been folded back. See BodyDeform.CrushedSpan.
@@ -155,6 +155,7 @@ public class VehicleCollision : MonoBehaviour
         _prevPos = nowPos;
 
         var filter = new ContactFilter2D { useLayerMask = true, layerMask = collisionMask, useTriggers = false };
+        StopCrossing(filter);
         int count = _box.Overlap(filter, _hits);
 
         if (debugLog && Time.frameCount % 50 == 0)
@@ -170,7 +171,7 @@ public class VehicleCollision : MonoBehaviour
             Debug.Log(sb.ToString(), this);
         }
 
-        if (count <= 0) return;
+        if (count <= 0) { NoteSafePosition(); return; }
 
         // Re-resolve each contact frame: the active controller (PlayerVehicleController) may be enabled AFTER our Awake,
         // so a responder cached at Awake goes stale (was picking the dormant SplineDriver, which can't move a free car).
@@ -284,6 +285,7 @@ public class VehicleCollision : MonoBehaviour
             else
             {
                 // Barrier (static): full correction on us. d.pointA is the contact on our body → lever arm for spin.
+                pushWorld = SameSidePush(other, pushWorld);
                 _responder?.ApplyContact(pushWorld, d.pointA, severity);
                 BarrierHit?.Invoke(closingSpeed);
                 AnyBarrierHit?.Invoke(transform, closingSpeed);
@@ -307,6 +309,90 @@ public class VehicleCollision : MonoBehaviour
                 });
             }
             processed++;
+        }
+        NoteSafePosition();
+    }
+
+    // Where this car sat at the end of its last collision pass: resolved, so on the side of every wall it was
+    // meant to be on. A wall is pushed out of back toward it.
+    Vector2 _safePos;
+    bool _hasSafePos;
+    [Tooltip("A car further than this (m) from where it was last step was moved there (a re-seed, a tow), not " +
+             "driven, so where it was says nothing about which side of a wall it belongs on.")]
+    public float wallSideJumpLimit = 8f;
+
+    void NoteSafePosition()
+    {
+        _safePos = transform.position;
+        _hasSafePos = true;
+    }
+
+    // Walls are thin (TrackEnvironmentBuilder: 1 m), and Unity's overlap answer pushes a car out by the shortest
+    // way. A car shoved deep into one in a step (pinned in a pile-up with cars hammering it from the inside) got
+    // its centre past the middle of the wall, and the shortest way out was then the back: out into the crowd. And
+    // a long curved wall is hundreds of convex slivers, whose seams can answer with a push ALONG the wall that
+    // lets the car keep sinking. A car only ever reaches a wall from one side, so it leaves by that side: out of
+    // the face nearest where it was last step, far enough for every corner of the box to clear it.
+    Vector2 SameSidePush(Collider2D wall, Vector2 push)
+    {
+        if (!_hasSafePos) return push;
+        Vector2 pos = transform.position;
+        if ((pos - _safePos).sqrMagnitude > wallSideJumpLimit * wallSideJumpLimit) return push;
+        Vector2 surface = wall.ClosestPoint(_safePos);
+        Vector2 side = _safePos - surface;
+        if (side.sqrMagnitude < 1e-6f) return push;  // it was inside the wall last step: no side to go back to
+        side.Normalize();
+        Vector2 facePush = side * Mathf.Max(0f, -Clearance(surface, side));
+        if (facePush.sqrMagnitude > 1e-8f) return facePush;
+        // Touching it somewhere the face through that point doesn't see (an end cap): the overlap's own answer,
+        // as long as it doesn't take the car through.
+        return Vector2.Dot(push, side) >= 0f ? push : Vector2.zero;
+    }
+
+    // How far the box's deepest corner is in front of the face through `facePoint` facing `n` (negative = behind it).
+    float Clearance(Vector2 facePoint, Vector2 n)
+    {
+        Vector2 c = _box.offset, h = _box.size * 0.5f;
+        float least = float.MaxValue;
+        for (int k = 0; k < 4; k++)
+        {
+            Vector2 local = c + new Vector2((k & 1) == 0 ? -h.x : h.x, (k & 2) == 0 ? -h.y : h.y);
+            Vector2 world = transform.TransformPoint(local);
+            least = Mathf.Min(least, Vector2.Dot(world - facePoint, n));
+        }
+        return least;
+    }
+
+    // Solid scenery: a wall, a building. Not a car (they carry a rigidbody and a responder), not a person.
+    static bool IsScenery(Collider2D c)
+    {
+        if (c == null || c.isTrigger) return false;
+        var rb = c.attachedRigidbody;
+        if (rb != null && rb.bodyType != RigidbodyType2D.Static) return false;
+        return c.GetComponent<ICollisionResponder>() == null;
+    }
+
+    readonly RaycastHit2D[] _crossHits = new RaycastHit2D[8];
+
+    // The backstop. However a car got there in one step (shoved by a pile-up, a spike in a frame), its centre never
+    // goes through a wall: if the path from where it was last step to where it is now crosses solid scenery, it is
+    // put back in front of the face it crossed, every corner clear, and its speed into the wall taken away.
+    void StopCrossing(ContactFilter2D filter)
+    {
+        if (!_hasSafePos) return;
+        Vector2 pos = transform.position;
+        float moved = (pos - _safePos).magnitude;
+        if (moved < 1e-4f || moved > wallSideJumpLimit) return;
+        int n = Physics2D.Linecast(_safePos, pos, filter, _crossHits);
+        for (int i = 0; i < n; i++)
+        {
+            var hit = _crossHits[i];
+            if (hit.fraction <= 0f || !IsScenery(hit.collider)) continue;  // started inside it: nothing crossed
+            Vector2 mtv = hit.normal * (Mathf.Max(0f, -Clearance(hit.point, hit.normal)) + 0.02f);
+            _responder = PickResponder();
+            if (_responder != null) _responder.ApplyContact(mtv, hit.point, 0f);
+            else transform.position += new Vector3(mtv.x, mtv.y, 0f);
+            return;
         }
     }
 

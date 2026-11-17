@@ -142,12 +142,20 @@ public class AIRacingBehaviour : MonoBehaviour
     public float packCloseDecel = 1.2f;
     [Tooltip("Seconds between lane decisions. A pack changes shape over seconds, not frames.")]
     public float packDecisionInterval = 0.4f;
-    [Tooltip("A neighbouring lane is worth moving into when the car that would be ahead of us in it is this much quicker (mph) than the car ahead of us in ours.")]
-    public float packLaneSwitchMph = 1.2f;
+    [Tooltip("A neighbouring lane is worth moving into when the car that would be ahead of us in it is this much quicker (mph) than the car ahead of us in ours. Was 1.2: every car hopped for any flicker of speed, and the pack never settled.")]
+    public float packLaneSwitchMph = 2.5f;
     [Tooltip("Pulling out into an empty lane needs a run: closing on the car ahead by at least this (mph).")]
-    public float packRunMph = 2f;
-    [Tooltip("Chance per decision that a car right on the bumper of the car ahead, in its tow, pulls out to start a new lane anyway - at aggression 1. Scales down with aggression.")]
-    public float packPullOutChance = 0.08f;
+    public float packRunMph = 3f;
+    [Tooltip("Chance per decision that a car right on the bumper of the car ahead, in its tow, pulls out to start a new lane anyway - at aggression 1. Scales down with aggression. Only from back in the pack (packGambleMinCarsAhead). Was 0.08 from anywhere: about four gambles a second across a 40-car field.")]
+    public float packPullOutChance = 0.02f;
+    [Tooltip("A pull-out without a run (packPullOutChance) is only tried with at least this many cars ahead within 200 m: the cars making a third lane come from further back, not the front rows.")]
+    public int packGambleMinCarsAhead = 6;
+    [Tooltip("Seconds a car holds its lane after a move before it will choose another (a faster lane, a new lane, a line to join). Patience: a pack settles into its lines. Going with the car ahead of it in its line is not held back by this.")]
+    public float packLaneDwellSeconds = 6f;
+    [Tooltip("A car that pulled out to make a new lane and is not yet alongside the car it pulled out from behind after this many seconds gives up and drops back into its old lane, if there is room (NR2003 gives up a pass set-up after 135 ticks, 3.75 s).")]
+    public float packNewLaneGiveUpSeconds = 3.75f;
+    [Tooltip("Teammates stick together: a lane whose car ahead is a teammate scores this much (mph) better, a car always goes with a teammate leading its line, and never gambles out from behind one without a run.")]
+    public float packTeammateBonusMph = 2f;
     [Tooltip("Chance a car on the bumper goes with the car ahead when it changes lane (the line follows its leader), at aggression 0. Aggressive drivers stay put and take the gap a little more often.")]
     public float packFollowLeaderChance = 0.85f;
     [Tooltip("A lane with nobody in it this far (m) ahead is empty: a car alone in it tucks into a line beside it if one is near.")]
@@ -329,6 +337,10 @@ public class AIRacingBehaviour : MonoBehaviour
     int _packLane = -1;
     bool _packMoving;
     float _packDecisionTimer;
+    float _packDwell;                 // seconds left holding the lane after a move (packLaneDwellSeconds)
+    SplineDriver _newLaneRival;       // the car we pulled out from behind to make a new lane (give-up clock)
+    int _newLaneFrom = -1;
+    float _newLaneTimer;
     SplineDriver _leaderMoveSeen;   // the leader whose current lane change we have already decided about
     int _leaderMoveLane = -1;
     PlayerVehicleController _pvc;
@@ -431,6 +443,7 @@ public class AIRacingBehaviour : MonoBehaviour
         _tacticalVelocity = 0f;
         _packLane = -1;
         _packMoving = false;
+        _newLaneRival = null;
         _fieldTarget = float.NaN;
         if (_spline != null) _spline.tacticalLateralOffset = tactical;
     }
@@ -877,6 +890,7 @@ public class AIRacingBehaviour : MonoBehaviour
             desiredTactical = _smoothedTactical;
             _packLane = -1;
             _packMoving = false;
+            _newLaneRival = null;
         }
         else if (Pack && !wantOvertake && !underYellow && !_spline.IsOnPit && PackLanes(dt, out float packLat))
             desiredTactical = packLat - _spline.UntacticalLateral;
@@ -1481,10 +1495,28 @@ public class AIRacingBehaviour : MonoBehaviour
             return true;
         }
         _packLane = cur;   // settled: whatever lane we are in is our lane
+        if (_packDwell > 0f) _packDwell -= dt;
 
         float myMph = _spline.CurrentMph;
         var lead = AheadInLane(cur, packEmptyLaneMetres, out float leadGap);
         float leadMph = lead != null ? lead.CurrentMph : float.MaxValue;
+        bool leadTeammate = IsTeammate(lead);
+
+        // 0. Made a new lane and it isn't working: not alongside the car we pulled out from behind within
+        // packNewLaneGiveUpSeconds - drop back into the line we left while there is still room (NR2003's 3.75 s).
+        if (_newLaneRival != null)
+        {
+            _newLaneTimer += dt;
+            bool gone = !_newLaneRival.isActiveAndEnabled || _newLaneRival.IsOnPit;
+            float g = gone ? 0f : LongitudinalGap(_spline, _newLaneRival);
+            if (gone || g < 4.8f || cur == _newLaneFrom) _newLaneRival = null;           // alongside (or back): done
+            else if (_newLaneTimer >= packNewLaneGiveUpSeconds)
+            {
+                _newLaneRival = null;
+                if (_newLaneFrom >= 0 && _newLaneFrom < count && PackLaneClear(_newLaneFrom))
+                    return MoveTo(_newLaneFrom, out lateral);
+            }
+        }
 
         // 1. Our leader is changing lane: decide at once whether to go with it - every step, not on the decision
         // clock, because a pusher that waited the better part of half a second was still on the bumper as the car
@@ -1496,13 +1528,13 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             _leaderMoveSeen = lead;
             _leaderMoveLane = lb._packLane;
-            if (Random.value < Mathf.Lerp(packFollowLeaderChance, packFollowLeaderChance * 0.6f, _phaseAggression)
-                && PackLaneClear(lb._packLane))
+            float goWith = leadTeammate ? 1f : Mathf.Lerp(packFollowLeaderChance, packFollowLeaderChance * 0.6f, _phaseAggression);
+            if (Random.value < goWith && PackLaneClear(lb._packLane))
                 return MoveTo(lb._packLane, out lateral);
         }
 
         _packDecisionTimer -= dt;
-        if (_packDecisionTimer > 0f) { lateral = LaneLateral(_packLane); return true; }
+        if (_packDecisionTimer > 0f || _packDwell > 0f) { lateral = LaneLateral(_packLane); return true; }
         _packDecisionTimer = packDecisionInterval * Random.Range(0.75f, 1.25f);
 
         // 2. A quicker lane beside, 3. a new lane with a run, or 4. tuck into a line.
@@ -1510,24 +1542,37 @@ public class AIRacingBehaviour : MonoBehaviour
         float bestScore = 0f;
         float tow = Tow;
         bool haveRun = lead != null && leadGap < 30f && myMph - leadMph > packRunMph;
-        bool nerve = lead != null && leadGap < packFollowGap * 1.6f && tow > 0.5f
-                     && Random.value < packPullOutChance * _phaseAggression;
+        // A gamble without a run: only from back in the pack, and never out from behind a teammate.
+        bool nerve = lead != null && !leadTeammate && leadGap < packFollowGap * 1.6f && tow > 0.5f
+                     && Random.value < packPullOutChance * _phaseAggression
+                     && CarsAheadWithin(200f) >= packGambleMinCarsAhead;
+        bool makingLane = false;
         for (int dir = -1; dir <= 1; dir += 2)
         {
             int lane = cur + dir;
             if (lane < 0 || lane >= count) continue;
             var adj = AheadInLane(lane, packEmptyLaneMetres, out float adjGap);
             float score;
+            bool adjTeammate = IsTeammate(adj);
             if (adj != null)
             {
-                if (lead == null) score = adjGap < 35f ? 1f : 0f;                                  // 4: join the line beside
-                else score = adj.CurrentMph - leadMph - packLaneSwitchMph;                          // 2: the faster lane
+                if (lead == null) score = adjGap < 35f ? 1f + (adjTeammate ? 1f : 0f) : 0f;      // 4: join the line beside
+                else
+                {
+                    score = adj.CurrentMph - leadMph - packLaneSwitchMph;                           // 2: the faster lane
+                    if (adjTeammate) score += packTeammateBonusMph;                                 //    a teammate's line
+                    if (leadTeammate) score -= packTeammateBonusMph;                                //    leaving one
+                }
                 if (lead != null && adjGap < leadGap - 2f) score -= 0.5f;                           //    not to sit further back
             }
             else score = (haveRun || nerve) ? 0.5f + Mathf.Max(0f, myMph - leadMph) * 0.1f : 0f;    // 3: make a lane
-            if (score > bestScore && PackLaneClear(lane)) { best = lane; bestScore = score; }
+            if (score > bestScore && PackLaneClear(lane)) { best = lane; bestScore = score; makingLane = adj == null; }
         }
-        if (best >= 0) return MoveTo(best, out lateral);
+        if (best >= 0)
+        {
+            if (makingLane && lead != null) { _newLaneRival = lead; _newLaneFrom = cur; _newLaneTimer = 0f; }
+            return MoveTo(best, out lateral);
+        }
 
         lateral = LaneLateral(_packLane);
         return true;
@@ -1547,8 +1592,39 @@ public class AIRacingBehaviour : MonoBehaviour
     {
         _packLane = lane;
         _packMoving = true;
+        _packDwell = packLaneDwellSeconds * Random.Range(0.8f, 1.2f);
         lateral = LaneLateral(lane);
         return true;
+    }
+
+    // Same real team (DriverLabel.teamId, -1 = unaffiliated). Read live, not cached: a team switch re-labels cars.
+    static int TeamOf(SplineDriver d)
+    {
+        if (d == null) return -1;
+        var label = d.GetComponent<DriverLabel>();
+        return label != null ? label.teamId : -1;
+    }
+    bool IsTeammate(SplineDriver other)
+    {
+        if (other == null) return false;
+        int mine = TeamOf(_spline);
+        return mine >= 0 && TeamOf(other) == mine;
+    }
+
+    // Cars on the road ahead of us within this many metres: how far back in the pack we are.
+    int CarsAheadWithin(float metres)
+    {
+        int n = 0;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float g = LongitudinalGap(_spline, other);
+            if (g > 0.5f && g <= metres) n++;
+        }
+        return n;
     }
 
     // The nearest car ahead of us in this lane, within range.

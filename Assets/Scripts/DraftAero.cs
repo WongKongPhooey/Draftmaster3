@@ -32,6 +32,9 @@ public static class DraftAero
     public const float ReferenceMps = 75f;
     public static float SpeedShare(float speedMps)
     {
+        // Plate tracks: NR2003's (v / vTop)^10 against the plate speed (Draftmaster.Sim.PlateDraft) - nothing off a
+        // rolling start, all of it at pack speed.
+        if (TrackConditions.PlateMph > 0f) return Draftmaster.Sim.PlateDraft.SpeedShare(speedMps, TrackConditions.PlateMph / 2.237f);
         if (!TrackConditions.DraftBySpeed || TrackConditions.AiPackRacing || !TrackConditions.AiLanes) return 1f;
         float q = speedMps / ReferenceMps;
         return Mathf.Clamp(q * q, 0f, 1.3f);

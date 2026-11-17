@@ -69,6 +69,32 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Max yaw rate a single impact can add (deg/sec). Caps how violent a spin-out gets.")]
     public float maxImpactSpinDeg = 360f;
 
+    [Header("Spin Slide (after a car hit)")]
+    [Tooltip("Spun by another car past the break angle, the tyres let go and the car slides on its momentum like a real car turned sideways, instead of catching itself. Player and AI alike (Draftmaster.Sim.SpinSlide).")]
+    public bool enableSpinSlide = true;
+    [Tooltip("Seconds after a car-vs-car hit during which the car can break away. A spin takes a moment to develop after the contact.")]
+    public float spinSlideArmSeconds = 1.5f;
+    [Tooltip("A wall hit at least this hard (m/s into the wall) arms the breakaway too. A wreck spins cars off the wall as well as off each other; a scrape along it doesn't.")]
+    public float spinSlideWallArmMps = 4f;
+    [Tooltip("Angle between the nose and the direction of travel (deg) that breaks the car away at or below spinSlideLowSpeedMph.")]
+    [Range(5f, 120f)] public float spinSlideLowSpeedAngleDeg = 60f;
+    public float spinSlideLowSpeedMph = 30f;
+    [Tooltip("Angle (deg) that breaks the car away at or above spinSlideHighSpeedMph. Smaller than the low-speed angle: the faster it goes, the less it takes. Linear between the two points.")]
+    [Range(2f, 90f)] public float spinSlideHighSpeedAngleDeg = 12f;
+    public float spinSlideHighSpeedMph = 180f;
+    [Tooltip("No breakaway below this speed (mph): a crawling car pivots on its tyres, it doesn't slide.")]
+    public float spinSlideMinMph = 15f;
+    [Tooltip("Grip left to both axles while sliding (fraction of normal). Low = the car goes where its momentum takes it, steering does next to nothing. It still scrubs speed sideways.")]
+    [Range(0f, 1f)] public float spinSlideGrip = 0.35f;
+    [Tooltip("Yaw damping left while sliding (fraction). The damper is a stability aid for a gripping car; left at full it stops a spin dead.")]
+    [Range(0f, 1f)] public float spinSlideYawDamping = 0.2f;
+    [Tooltip("The tyres bite again once the car is back within this fraction of the break angle and has stopped rotating fast (spinSlideRegripYawDeg)...")]
+    [Range(0f, 1f)] public float spinSlideRegripFraction = 0.5f;
+    [Tooltip("...turning slower than this (deg/s). A car passing straight in the middle of a 360 keeps sliding.")]
+    public float spinSlideRegripYawDeg = 45f;
+    [Tooltip("...or once it has scrubbed down to this speed (mph).")]
+    public float spinSlideRegripMph = 12f;
+
     [Header("Vehicle Geometry / Mass")]
     [Tooltip("Fraction of static weight on the FRONT axle. >0.5 = nose-heavy (more front grip, tends to understeer).")]
     [Range(0.4f, 0.65f)] public float frontWeightBias = 0.54f;
@@ -88,6 +114,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float brakeYawDamping = 4f;
     [Tooltip("Below this forward speed (m/s) steering is kinematic (geometry only) to avoid divide-by-near-zero jitter at crawl.")]
     public float lowSpeedKinematic = 2.0f;
+    [Tooltip("...but only while the whole car is slow: above this speed (m/s) the tyre model runs whatever way the car points. A car sliding sideways has next to no forward speed; treated as parked, its slide was bled off at a fixed rate whatever the grip and the engine drove it away along its nose.")]
+    public float kinematicMaxSpeed = 6f;
+    [Tooltip("Turned this far (deg) against its travel, the car is spun: the engine can only put down what the rear tyres have left over from holding the slide (friction circle). Also always while spin sliding.")]
+    public float spunDriveAngleDeg = 45f;
     [Tooltip("Physics sub-steps per FixedUpdate. More = stiffer/stabler tyres without oscillation. 4 is plenty.")]
     [Range(1, 8)] public int subSteps = 4;
 
@@ -268,6 +298,24 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // 0..1 how lit up the rear tyres are this step (donuts, a hot launch). Tyre smoke and the engine's
     // flare read it; the car itself already acted on it.
     public float Wheelspin { get; private set; }
+    // Spun by a car hit past the break angle: the tyres have let go and the car is sliding on its momentum
+    // (Spin Slide). TyreSmoke and the AI driver read it.
+    public bool IsSpinSliding => _spinSliding;
+    // The race fuel plan has run this car's tank dry (FuelTank). The engine is cut.
+    public bool FuelDry
+    {
+        get
+        {
+            if (_fuel == null) _fuel = GetComponent<FuelTank>();
+            return _fuel != null && _fuel.Planned && _fuel.IsEmpty;
+        }
+    }
+    FuelTank _fuel;
+    // Angle (deg, 0..180) between the nose and the direction of travel, and the angle past which a hit car breaks
+    // away at the current speed - telemetry for tuning the Spin Slide knobs.
+    public float TravelAngleDeg => Draftmaster.Sim.SpinSlide.TravelAngleDeg(_vx, _vy);
+    public float SpinSlideBreakAngleDeg => Draftmaster.Sim.SpinSlide.BreakAngleDeg(SpeedMps,
+        spinSlideLowSpeedMph / 2.237f, spinSlideLowSpeedAngleDeg, spinSlideHighSpeedMph / 2.237f, spinSlideHighSpeedAngleDeg);
     public TrackEnvironment.SurfaceType CurrentSurface { get; private set; } = TrackEnvironment.SurfaceType.Grass;
     // World centre of the rear axle — where tyre trails and surface spray come from.
     public Vector2 RearAxleWorld
@@ -317,6 +365,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     bool _onGrass;          // car is off the track surface this step
     float _lastAy;          // last lateral accel (m/s²), for tyre load-transfer split
     float _lastAx;          // last commanded longitudinal accel (m/s²), telemetry only
+    float _spinArmTimer;    // seconds left in which a car hit can still break the car away (Spin Slide)
+    bool _spinSliding;      // tyres have let go after a hit
     float _lastSteerIn, _lastThrottleIn, _lastBrakeIn; // resolved inputs this step, telemetry only
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
     VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
@@ -392,6 +442,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (_human == this) _human = null;
         if (_isObstacle) RaceObstacles.Unregister(this);
         FormationOrder.Unregister(this);
+        // Handed to a kinematic driver (the caution, a pit-in, retirement): this model stops stepping, so nothing
+        // would ever clear a slide or a wheelspin caught at that moment, and TyreSmoke smoked off them all caution.
+        _spinSliding = false; _spinArmTimer = 0f;
+        Wheelspin = 0f;
     }
 
     // Project our world position onto the track centerline so the AI can compare our progress to its own.
@@ -475,6 +529,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     {
         _headingDeg = transform.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
         _vx = 0f; _vy = 0f; _r = 0f;
+        _spinSliding = false; _spinArmTimer = 0f;
         RecomputeGeometry();
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
     }
@@ -503,6 +558,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _started = true;   // seeded: trust the state from here, even before Start
         _vx = forwardSpeedMps;
         _vy = _r = 0f;
+        _spinSliding = false; _spinArmTimer = 0f;
         transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);
     }
 
@@ -592,6 +648,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             steerIn = Mathf.Sign(steerIn) * Mathf.Pow(Mathf.Abs(steerIn), steerExpo);
         }
         _lastSteerIn = steerIn; _lastThrottleIn = throttleIn; _lastBrakeIn = brakeIn;
+        // Out of fuel in a race: the engine cuts and the car coasts (FuelTank, Draftmaster.Sim.FuelPlan).
+        if (FuelDry) throttleIn = 0f;
 
         // Steering → front-wheel angle, rate-limited and speed-scaled.
         float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));
@@ -675,24 +733,31 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // banking holds (RestrictorPlate) - so the turns are flat out and the draft decides everything.
         if (TrackConditions.PlateMph > 0f)
             topMps = Mathf.Min(topMps, TrackConditions.PlateMph / 2.237f * (1f - dmg * damageTopSpeedLoss));
+        // What the tow and the push are worth go with the drag they save, so with speed (DraftAero.SpeedShare; on a
+        // plate track NR2003's (v / plate)^10, so a field getting going off the green gets nothing from either).
+        float draftShare = DraftAero.SpeedShare(speedNow);
+        float towWorth = tow * draftShare;
+        float pushWorth = push * draftShare;
         // Pushed by a line of cars behind: a little less drag at the head of it (DraftAero.Push).
-        if (push > 0f) topMps *= 1f + RestrictorPlate.PushTopSpeedGain * push * TrackConditions.PushScale;
+        if (pushWorth > 0f) topMps *= 1f + RestrictorPlate.PushTopSpeedGain * pushWorth * TrackConditions.PushScale;
         // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
-        // What the tow is worth goes with the drag it saves, so with speed (DraftAero.SpeedShare).
-        float towWorth = tow * DraftAero.SpeedShare(speedNow);
         topMps *= (1f + vehicleInfo.draftingTopSpeedGain * towWorth * cardDraftScale * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
         topMps *= cardPowerScale;
         float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
         if (tow > 0f) accel += vehicleInfo.draftingTowAccel * towWorth * cardDraftScale * TrackConditions.DraftScale * throttleIn;
-        if (push > 0f) accel += RestrictorPlate.PushAccel * push * TrackConditions.PushScale * throttleIn;
+        if (pushWorth > 0f) accel += RestrictorPlate.PushAccel * pushWorth * TrackConditions.PushScale * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
         // BRAKES (and keeps its momentum) instead of being snapped to the reverse cap.
-        bool reversing = brakeIn > 0.05f && throttleIn < 0.05f && _vx < reverseEngageSpeed && _vx > -reverseMaxSpeed;
+        // Human drivers only. The AI's brake means "slow down": its speed loop reads unsigned speed, so an AI car
+        // asked to stop (a stopped queue, a wreck ahead) braked at its last creep, this put it in reverse, the
+        // backward speed read as more speed to brake off, and it ran itself backwards to reverseMaxSpeed - steering
+        // with a forward heading loop that winds the wrong way in reverse, so it swung round on the spot.
+        bool reversing = !externalInput && brakeIn > 0.05f && throttleIn < 0.05f && _vx < reverseEngageSpeed && _vx > -reverseMaxSpeed;
 
         // Brakes stretch with the same envelope so a pace-boosted car can still shed its extra straight
         // speed inside the profile's baked braking distances (they assume symmetric scaling).
@@ -728,6 +793,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
         muF *= surfGrip;
         muR *= surfGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
+
+        // Spun by a car past the break angle for this speed: the tyres let go and the car slides on its momentum.
+        UpdateSpinSlide(dt);
+        if (_spinSliding) { muF *= spinSlideGrip; muR *= spinSlideGrip; }
 
         // Banking. The tyres are loaded harder by cornering into the bank, and gravity pulls down it - toward the
         // inside of an oval's turn - carrying part of the cornering for free (BankedGrip). The banking is the one
@@ -780,11 +849,18 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             }
 
             float fyF, fyR;
-            if (_vx > lowSpeedKinematic)
+            float rearDriveShare = 1f;   // share of the rear tyres' grip left for the engine (friction circle)
+            float stepSpeed = Mathf.Sqrt(_vx * _vx + _vy * _vy);
+            if (_vx > lowSpeedKinematic || stepSpeed > kinematicMaxSpeed)
             {
                 // Slip angles: difference between where each axle points and where it's actually travelling.
-                float alphaF = Mathf.Atan2(_vy + _a * _r, _vx) - delta;
-                float alphaR = Mathf.Atan2(_vy - _b * _r, _vx);
+                // Measured against the way each axle rolls, forwards or backwards: a tyre's sideways force opposes its
+                // sideways velocity either way, and steered wheels turn the car the other way going backwards. Going
+                // forwards above lowSpeedKinematic (all normal driving) this is exactly atan2(v, vx) - delta.
+                float rollX = Mathf.Max(Mathf.Abs(_vx), 0.01f);
+                float steerDir = Mathf.Clamp(_vx, -1f, 1f);
+                float alphaF = Mathf.Atan2(_vy + _a * _r, rollX) - delta * steerDir;
+                float alphaR = Mathf.Atan2(_vy - _b * _r, rollX);
                 _alphaF = alphaF; _alphaR = alphaR;
 
                 // Linear tyre with friction-circle clamp. The axle that hits its μ·Fz ceiling first lets go first.
@@ -795,6 +871,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 float stiffness = corneringStiffness * TrackConditions.TrackGripScale;
                 fyF = Mathf.Clamp(-stiffness * fzF * alphaF, -peakF, peakF);
                 fyR = Mathf.Clamp(-stiffness * fzR * alphaR, -peakR, peakR);
+                float usedR = peakR > 1f ? Mathf.Abs(fyR) / peakR : 1f;
+                rearDriveShare = Mathf.Sqrt(Mathf.Max(0f, 1f - usedR * usedR));
 
                 // Tyre work for wear: how close each axle runs to its limit.
                 wearAccumF += Mathf.Abs(fyF) / Mathf.Max(peakF, 1f);
@@ -805,6 +883,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 _lastAy = ay;
                 // Yaw damper opposes rotation (stabilises oversteer); extra damping under braking kills spin-on-the-brakes.
                 float yawDamp = yawDamping + brakeYawDamping * brakeIn;
+                if (_spinSliding) yawDamp *= spinSlideYawDamping;   // a sliding car keeps rotating
                 float dr = (_a * fyF - _b * fyR) / izDrive - yawDamp * _r; // yaw accel from front/rear moment + damping
                 _vy += ay * h;
                 _r += dr * h;
@@ -846,7 +925,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             // direction without pushing the car through zero into reverse (so backward momentum from a spin is kept,
             // not deleted and then "shot forward" under throttle). The velocity-vector rotation lives in the tyre
             // branch above.
-            _vx += accel * h;
+            // Spun (sliding after a hit, or turned well across its travel): the engine only gets what the rear tyres
+            // have left after holding the slide, nothing at all fully sideways - not a free shove along the nose.
+            bool spun = _spinSliding || Draftmaster.Sim.SpinSlide.TravelAngleDeg(_vx, _vy) >= spunDriveAngleDeg;
+            _vx += (spun ? accel * rearDriveShare : accel) * h;
             _vx += reverseDrive * h;
             float resist = decel * h;
             if (_vx > 0f) _vx = Mathf.Max(0f, _vx - resist);
@@ -881,6 +963,29 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);
 
         UpdateTrails();
+    }
+
+    // Spin Slide state for this step. A car hit arms it for spinSlideArmSeconds; while armed, turning past the
+    // speed's break angle lets the tyres go. Sliding, they bite again once the car has scrubbed down to
+    // spinSlideRegripMph or come back near straight without still rotating hard (Draftmaster.Sim.SpinSlide).
+    void UpdateSpinSlide(float dt)
+    {
+        if (_spinArmTimer > 0f) _spinArmTimer -= dt;
+        if (!enableSpinSlide) { _spinSliding = false; return; }
+        float speed = SpeedMps;
+        float angle = TravelAngleDeg;
+        float breakAngle = SpinSlideBreakAngleDeg;
+        if (_spinSliding)
+        {
+            if (Draftmaster.Sim.SpinSlide.ShouldRegrip(angle, speed, breakAngle, spinSlideRegripFraction,
+                                                      YawRateDeg, spinSlideRegripYawDeg, spinSlideRegripMph / 2.237f))
+                _spinSliding = false;
+        }
+        else if (_spinArmTimer > 0f
+                 && Draftmaster.Sim.SpinSlide.ShouldBreak(angle, speed, breakAngle, spinSlideMinMph / 2.237f))
+        {
+            _spinSliding = true;
+        }
     }
 
     // Park the two trail emitters over the rear tyres (world metres) and emit only while sliding on grass.
@@ -949,6 +1054,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             float deltaOmega = (crossZ * impulse / Mathf.Max(_iz, 1f)) * spinSensitivity; // rad/s
             float cap = maxImpactSpinDeg * Mathf.Deg2Rad;
             _r += Mathf.Clamp(deltaOmega, -cap, cap);
+            // A real hit on the wall (not a scrape along it) can spin the car loose too (Spin Slide).
+            if (dvn >= spinSlideWallArmMps) _spinArmTimer = spinSlideArmSeconds;
         }
     }
 
@@ -980,6 +1087,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             yawKick = Mathf.Clamp(deltaOmega, -cap, cap);
             _r += yawKick;
         }
+        _spinArmTimer = spinSlideArmSeconds;   // a hit can now spin the car loose (Spin Slide)
         CarImpactApplied?.Invoke(yawKick * Mathf.Rad2Deg, lateralDv);
     }
 

@@ -240,6 +240,25 @@ public class SplineInputDriver : MonoBehaviour
         }
     }
 
+    [Header("Fuel")]
+    [Tooltip("Laps in hand the driver wants on top of the laps left before it stops saving fuel.")]
+    public float fuelSaveMarginLaps = 0.5f;
+    FuelTank _fuelTank;
+
+    // The most throttle this car can use and still finish on the fuel it has (1 = no saving needed).
+    float FuelThrottleCap()
+    {
+        if (_fuelTank == null) _fuelTank = GetComponent<FuelTank>();
+        if (_fuelTank == null || !_fuelTank.Planned) return 1f;
+        if (TrackConditions.FuelRequiredStops > 0) return 1f;   // the pit stop makes the distance, not the lift
+        var rd = RaceDirector.Instance;
+        float progress = RaceDirector.Progress01;
+        if (rd == null || rd.raceLaps <= 0 || progress < 0f) return 1f;   // -1: race distance not known yet
+        float lapsLeft = rd.raceLaps * (1f - progress);
+        return Draftmaster.Sim.FuelPlan.ThrottleCapToFinish(_fuelTank.fuelLitres, lapsLeft, _fuelTank.LitresPerLapFull,
+                                                             fuelSaveMarginLaps);
+    }
+
     float UpsetReaction(float u) => Mathf.Lerp(upsetReactionMin, upsetReactionMax, u);
     float UpsetRecover(float u) => Mathf.Lerp(upsetRecoverMin, upsetRecoverMax, u);
 
@@ -479,6 +498,14 @@ public class SplineInputDriver : MonoBehaviour
         }
 
         brake *= brakeScale;   // a brake-fade mistake (AIRacingBehaviour.mistakeAsBrakeFade)
+
+        // Saving fuel: if what is in the tank wouldn't make the finish flat out, lift to the throttle that does
+        // (FuelPlan.ThrottleCapToFinish, half a lap in hand). A car with a stop to come refuels there instead.
+        throttle = Mathf.Min(throttle, FuelThrottleCap());
+
+        // Spun loose by a hit (PlayerVehicleController.IsSpinSliding): the tyres have let go and no steering
+        // catches it. "When in doubt, both feet in" - off the throttle, on the brakes, until it bites again.
+        if (_car.IsSpinSliding) { throttle = 0f; brake = 1f; }
 
         // Still reacting to a hit: the driver hasn't moved their hands or feet yet.
         if (holding) { steerInput = _heldSteer; throttle = _heldThrottle; brake = _heldBrake; }

@@ -8,6 +8,7 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup22AltPaintNames = new string[101,10];
 	public static string[,] cup23AltPaintNames = new string[101,10];
 	public static string[,] cup24AltPaintNames = new string[101,10];
+	public static string[,] cup26AltPaintNames = new string[101,10];
 	public static string[,] irl23AltPaintNames = new string[101,10];
 	public static string[,] irl24AltPaintNames = new string[101,10];
 	
@@ -15,6 +16,7 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static string[,] cup23AltPaintDriver = new string[101,10];
 	public static string[,] cup24AltPaintDriver = new string[101,10];
+	public static string[,] cup26AltPaintDriver = new string[101,10];
 	public static string[,] irl23AltPaintDriver = new string[101,10];
 	public static string[,] irl24AltPaintDriver = new string[101,10];
 	
@@ -24,6 +26,7 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup22AltPaintTheme = new string[101,10];
 	public static string[,] cup23AltPaintTheme = new string[101,10];
 	public static string[,] cup24AltPaintTheme = new string[101,10];
+	public static string[,] cup26AltPaintTheme = new string[101,10];
 	public static string[,] irl23AltPaintTheme = new string[101,10];
 	public static string[,] irl24AltPaintTheme = new string[101,10];
 	
@@ -31,6 +34,7 @@ public class AltPaints : MonoBehaviour {
 	public static bool[,] cup22AltCanBuy = new bool[101,10];
 	public static bool[,] cup23AltCanBuy = new bool[101,10];
 	public static bool[,] cup24AltCanBuy = new bool[101,10];
+	public static bool[,] cup26AltCanBuy = new bool[101,10];
 	public static bool[,] irl23AltCanBuy = new bool[101,10];
 	public static bool[,] irl24AltCanBuy = new bool[101,10];
 	
@@ -38,6 +42,7 @@ public class AltPaints : MonoBehaviour {
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup23AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup24AltPaintAISpawning = new bool[101,10];
+	public static bool[,] cup26AltPaintAISpawning = new bool[101,10];
 	public static bool[,] irl23AltPaintAISpawning = new bool[101,10];
 	public static bool[,] irl24AltPaintAISpawning = new bool[101,10];
 	
@@ -163,6 +168,13 @@ public class AltPaints : MonoBehaviour {
 		cup24AltPaintNames[66,1] = "#1 Sunset";
 		cup24AltPaintNames[99,1] = "#1 Time Trial";
 		cup24AltPaintNames[99,2] = "#2 Worldwide";
+		
+		cup26AltPaintNames[21,1] = "#1 Alt";
+		cup26AltPaintNames[22,1] = "#1 Alt";
+		cup26AltPaintNames[24,1] = "#1 Alt";
+		cup26AltPaintNames[41,1] = "#1 Alt";
+		cup26AltPaintNames[45,1] = "#1 Alt";
+		cup26AltPaintNames[77,1] = "#1 Alt";
 		
 		irl23AltPaintNames[2,1] = "#1 The 500";
 		irl23AltPaintNames[5,1] = "#1 Le Triple";
@@ -322,6 +334,9 @@ public class AltPaints : MonoBehaviour {
 			case "cup24":
 				altPaintName = cup24AltPaintNames[carNum,altNum];
 				break;
+			case "cup26":
+				altPaintName = cup26AltPaintNames[carNum,altNum];
+				break;
 			case "irl23":
 				altPaintName = irl23AltPaintNames[carNum,altNum];
 				break;
@@ -344,6 +359,8 @@ public class AltPaints : MonoBehaviour {
 				return cup23AltPaintDriver[carNum,altNum];
 			case "cup24":
 				return cup24AltPaintDriver[carNum,altNum];
+			case "cup26":
+				return cup26AltPaintDriver[carNum,altNum];
 			case "irl23":
 				return irl23AltPaintDriver[carNum,altNum];
 			case "irl24":
@@ -374,6 +391,11 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup24":
 				if(cup24AltCanBuy[carNum,altNum] == true){
+					canBuy = true;
+				}
+				break;
+			case "cup26":
+				if(cup26AltCanBuy[carNum,altNum] == true){
 					canBuy = true;
 				}
 				break;
@@ -416,6 +438,11 @@ public class AltPaints : MonoBehaviour {
 					canSpawn = true;
 				}
 				break;
+			case "cup26":
+				if(cup26AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
+				break;
 			case "irl23":
 				if(irl23AltPaintAISpawning[carNum,altNum] == true){
 					canSpawn = true;
@@ -442,6 +469,8 @@ public class AltPaints : MonoBehaviour {
 				return cup23AltPaintTheme[carNum,altNum];
 			case "cup24":
 				return cup24AltPaintTheme[carNum,altNum];
+			case "cup26":
+				return cup26AltPaintTheme[carNum,altNum];
 			case "irl23":
 				return irl23AltPaintTheme[carNum,altNum];
 			case "irl24":

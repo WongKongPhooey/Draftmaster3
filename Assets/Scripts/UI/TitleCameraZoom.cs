@@ -20,6 +20,9 @@ public class TitleCameraZoom : MonoBehaviour
              "negative slides it right. Both are laid out off the camera and hung off the screen's right edge, so " +
              "moving the camera itself doesn't move the road on screen. This does.")]
     public float panPx = 0f;
+    [Tooltip("Slides the tableau (crash and finish line) this many reference pixels down the screen; negative " +
+             "slides it up. 0 on the real title: for layouts where the logo takes the top of the frame.")]
+    public float panYPx = 0f;
 
     Camera _camera;
 
@@ -57,5 +60,12 @@ public class TitleCameraZoom : MonoBehaviour
     {
         if (camera == null || !camera.TryGetComponent(out TitleCameraZoom zoom) || !zoom.enabled) return 0f;
         return zoom.panPx;
+    }
+
+    // How many reference pixels down the tableau is slid (panYPx): 0 without the component.
+    public static float PanYPx(Camera camera)
+    {
+        if (camera == null || !camera.TryGetComponent(out TitleCameraZoom zoom) || !zoom.enabled) return 0f;
+        return zoom.panYPx;
     }
 }

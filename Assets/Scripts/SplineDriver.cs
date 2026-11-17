@@ -595,6 +595,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Header("Cornering Feel")]
     [Tooltip("Generous temporal smoothing (0..0.97) applied to the racing-line lateral AND the turn-in yaw, so the car flows through corner entry/exit instead of the rear axle snapping at segment boundaries. Higher = smoother but slightly rounds/lags the authored line. Per-FixedUpdate Lerp weight on the OLD value.")]
     [Range(0f, 0.97f)] public float cornerSmoothing = 0.88f;
+    [Tooltip("Steepest angle (deg) to the road a car driven along the spline can travel at. A rear-wheel-drive car " +
+             "with front-wheel steering cannot move sideways: it gets across the road only by driving forward at an " +
+             "angle, so its sideways speed is capped at forward speed x tan(this), and a stopped car does not move " +
+             "sideways at all. Without it a car crawling in a caution queue was carried sideways by lane changes, " +
+             "yields and contact nudges, and its heading (the direction it moved) whipped from side to side. 0 = off.")]
+    [Range(0f, 80f)] public float maxPathAngleDeg = 30f;
     [Tooltip("Fraction of speed bled off on a perfectly square contact (scaled by severity and how head-on the hit is). Keep small for the parade — a hard scrub on a nose-to-tail tap makes the field concertina into a pile-up.")]
     [Range(0f, 1f)] public float contactSpeedScrub = 0.12f;
     const float rearAxleToCenter = -2.4f;
@@ -1381,6 +1387,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _pitLength;
     float _distance;
     bool _onPit;
+    bool _prevPlacedOnPit;   // _onPit as of the last Place, to tell a road/pit-lane switch from a sideways move
     float _prevLateral;
     bool _hasPrevLateral;
     float _currentMph;
@@ -3213,6 +3220,18 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // pit lane sits laterally outside the track, so clamping deletes the offset. Added after the clamp and
         // run out along its S-curve so the car slides smoothly onto the line instead of teleporting.
         float totalLateral = baseLateral + _mergeLatBias;
+        // Only as far sideways as driving forward at an angle gets it (maxPathAngleDeg). The rest is carried and
+        // taken up as the car moves on. Placed (kinematic) cars only: a free car's own physics already can't slide
+        // sideways at a crawl. Not on pit road: the box pull-in and pull-out are planned along the lane's distance
+        // (PitBoxPath), so they only ever move as the car does, and steeper than this mid-curve - limiting them
+        // put a car leaving its box into the path of the one passing it. Nor across the switch between the main
+        // road and the pit lane, whose laterals are measured from different centrelines.
+        if (!externalMotionController && maxPathAngleDeg > 0f && _hasPrevLateral && !_onPit && !_prevPlacedOnPit)
+        {
+            float maxStep = Mathf.Abs(speed) * Time.fixedDeltaTime * Mathf.Tan(maxPathAngleDeg * Mathf.Deg2Rad);
+            totalLateral = _prevLateral + Mathf.Clamp(totalLateral - _prevLateral, -maxStep, maxStep);
+        }
+        _prevPlacedOnPit = _onPit;
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
         if (track != null)
         {
@@ -3233,7 +3252,21 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // Smooth the turn-in yaw too (same generous filter), so the body doesn't snap as the car points onto its
         // path at corner entry/exit. Cold first frame takes the raw angle so there's no start-up swing.
         if (_mergeJustJoined) _mergeJustJoined = false;   // keep the arriving facing RejoinSplineContinuous seeded
-        else _pathYawSmoothed = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
+        else
+        {
+            float pathYaw = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
+            // And no faster than its steering can turn it: yaw rate v * tan(full lock) / wheelbase. The car hangs
+            // behind the point placed on the line (rearAxleToCenter is negative), so a heading swing at a crawl
+            // swung its tail round its nose - a car rolling off from a standstill whipped side to side.
+            if (!externalMotionController && maxPathAngleDeg > 0f && _hasPrevLateral && !_onPit && vehicleInfo != null)
+            {
+                float maxYawStep = Mathf.Abs(speed) * Time.fixedDeltaTime
+                                   * Mathf.Tan(Mathf.Clamp(vehicleInfo.maxSteeringAngle, 1f, 60f) * Mathf.Deg2Rad)
+                                   / Mathf.Max(vehicleInfo.wheelbase, 0.5f) * Mathf.Rad2Deg;
+                pathYaw = Mathf.MoveTowards(_pathYawSmoothed, pathYaw, maxYawStep);
+            }
+            _pathYawSmoothed = pathYaw;
+        }
         // No cosmetic lean on top: a top-down car shows body roll as nothing at all, so extra yaw for "leaning
         // into the turn" only pointed the car off its own path — up to 5° on a weave, more than twice the real
         // turn-in, and it read as the car rocking side to side through every line change.

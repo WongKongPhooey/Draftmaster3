@@ -54,6 +54,7 @@ public class TitleTrackBackdrop : MonoBehaviour
 
     Camera _camera;
     Vector4 _builtFor;              // (aspect, orthographic size, zoom, pan) the quads were last laid out for
+    float _builtForPanY;            // ...and the pan down the screen
     Transform _root;
     readonly Mesh[] _meshes = new Mesh[4];
 
@@ -94,8 +95,10 @@ public class TitleTrackBackdrop : MonoBehaviour
 
         var key = new Vector4(_camera.aspect, _camera.orthographicSize, TitleCameraZoom.Factor(_camera),
                               TitleCameraZoom.PanPx(_camera));
-        if (key == _builtFor && _root != null) return;
+        float panY = TitleCameraZoom.PanYPx(_camera);
+        if (key == _builtFor && panY == _builtForPanY && _root != null) return;
         _builtFor = key;
+        _builtForPanY = panY;
         Build();
     }
 
@@ -131,7 +134,8 @@ public class TitleTrackBackdrop : MonoBehaviour
         // TitleCameraZoom.panPx slides the track left with the crash; the grass and asphalt still reach the edges.
         wallMid -= TitleCameraZoom.PanPx(_camera) * (top - bottom) / viewPx;
         float wallL = wallMid - wallW * 0.5f, wallR = wallMid + wallW * 0.5f;   // wallR = the track-side face
-        float finishMid = Mathf.Lerp(top, bottom, finishLineAt);
+        // TitleCameraZoom.panYPx slides the finish line down with the crash.
+        float finishMid = Mathf.Lerp(top, bottom, finishLineAt) - TitleCameraZoom.PanYPx(_camera) * (top - bottom) / viewPx;
         float finishB = finishMid - finishLineMetres * 0.5f, finishT = finishMid + finishLineMetres * 0.5f;
 
         // Run every strip a little past the screen's edges, so the title's camera shake (TitleCrashScene, as the

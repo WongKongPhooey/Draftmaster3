@@ -146,8 +146,11 @@ public class AIRetirement : MonoBehaviour
     bool StoppedOnCircuit()
     {
         if (_car.SpeedMph > stoppedBelowMph) return false;
-        if (_spline.IsOnPit || _spline.IsHeldStill) return false;
-        if (_spline.track != null && _spline.track.IsOnPitSurface(transform.position)) return false;
+        if (_spline.IsHeldStill) return false;
+        // On pit road a car is waiting for its stop. Not a broken one: BreakDown switched its pit stop off, so
+        // nobody is coming to fix it, and left there it is a roadblock the caution queue waits behind for ever.
+        if (!BrokenDown && _spline.IsOnPit) return false;
+        if (!BrokenDown && _spline.track != null && _spline.track.IsOnPitSurface(transform.position)) return false;
         // Under formation control (the caution's kinematic queue) the car is being driven for it.
         if (_input == null || !_input.enabled) return false;
         // Sat behind a car that has stopped is a queue, not a stuck car — unless this one is broken.
