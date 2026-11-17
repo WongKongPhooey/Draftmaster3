@@ -56,6 +56,12 @@ public class DriveModeController : MonoBehaviour
              "it goes onto Auto whatever the speed.")]
     public float laneEngageMph = 20f;
 
+    [Header("Pit stops on Auto")]
+    [Tooltip("While Auto drives the player's car in a race, the AI brings it in for repairs: under a caution at the " +
+             "first pits-open pass with any damage, under green once its bodywork damage (VehicleDamage.DamageLevel, " +
+             "0..1 — a full-severity hit adds ~0.18) reaches this. 0 = only under a caution.")]
+    [Range(0f, 1f)] public float autoGreenRepairDamage = 0.15f;
+
     public bool IsDriving => _driving;
     // Auto has been switched off and the AI is still driving, waiting for the player to tap a pedal.
     public bool HandBackPending => _handBack.Waiting;
@@ -438,6 +444,7 @@ public class DriveModeController : MonoBehaviour
             if (spawner != null) _spline.cornerSpeedScale = spawner.aiCornerSpeedScale;
             if (playerCar.GetComponent<SplineInputDriver>() == null) _inputAddedTo = playerCar;
             AIHandover.ToAI(playerCar, spawner != null ? spawner.aiSteerGain : 1.5f, spawner != null ? spawner.aiSpeedGain : 2f);
+            EnsureAutoPitBrain();
 
             // In the train behind the safety car (formation lap, cautions) like every other car, and handed to the
             // racing brain at the green.
@@ -450,12 +457,34 @@ public class DriveModeController : MonoBehaviour
         if (cameraFollow != null && playerCar != null) cameraFollow.target = playerCar.transform;
     }
 
+    // A damaged car on Auto has to know to come in. The field gets its pit brain from GridSpawner; the player's own
+    // car has none (the human calls their stops, PlayerPitService runs them), so Auto fits one the first time it takes
+    // the car in a race: damage stops only - tyre strategy and the demo stop stay the player's - in the player's box.
+    // A team car switched into keeps the pit brain it was built with. Not in practice or qualifying (the stint
+    // controller owns pit road there), not after the chequer (RaceEndPitIn brings the car home), and not without a
+    // reserved box to stop in.
+    void EnsureAutoPitBrain()
+    {
+        if (playerCar == null || playerCar.GetComponent<PitStopController>() != null) return;
+        if (RaceWeekend.IsPracticeLike || RaceDirector.TookChequer(playerCar.transform)) return;
+        if (!PitLane.Configured || PitLane.PlayerBox < 0) return;
+        var pit = playerCar.AddComponent<PitStopController>();
+        pit.boxOverride = PitLane.PlayerBox;
+        pit.forcedPit = false;
+        pit.tyreStops = false;
+        pit.greenRepairDamage = autoGreenRepairDamage;
+    }
+
     void ResumeDriving()
     {
         StopLanes();
         if (_pvc != null && _spline != null)
         {
             FormationController.HandBack(_spline);
+            // Taken back part-way through a stop the AI was making: drop it, rather than leave the car pinned in
+            // the box or the crew working on a car that has gone.
+            var pit = playerCar.GetComponent<PitStopController>();
+            if (pit != null) pit.ReleaseForHuman();
             AIHandover.ToHuman(playerCar);
             // A car with an AI input driver on it is not the human's, enabled or not (PlayerVehicleController.IsHuman),
             // so the one Auto added comes off again. A team car keeps the one it was built with.

@@ -55,9 +55,13 @@ public class PlayerPitService : MonoBehaviour
         bool onPit = OnPitLane(playerCar.transform.position);
         bool slow = playerCar.SpeedMps < stopSpeedMps;
         float wear = _tires != null ? 0.5f * (_tires.FrontWear + _tires.RearWear) : 0f;
-        bool needs = wear > 0.05f
+        // Auto has brought the car in for a stop of its own (PitStopController): that brain calls the crew and
+        // runs the stop, so this one stays out of it rather than servicing the car a second time.
+        var aiStop = playerCar.GetComponent<PitStopController>();
+        bool aiStopping = aiStop != null && aiStop.RunningServiceStop;
+        bool needs = !aiStopping && (wear > 0.05f
                      || (repairDamage && _bodywork != null && _bodywork.DamageLevel > 0.05f)
-                     || (refuel && _fuel != null && _fuel.Fraction < 0.999f);
+                     || (refuel && _fuel != null && _fuel.Fraction < 0.999f));
 
         // Glowing box marker: shown while the player drives the pit lane. The stop only arms once the
         // car is stopped fully inside it. No reserved box this session → the whole lane counts.

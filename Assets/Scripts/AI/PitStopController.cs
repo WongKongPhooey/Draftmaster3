@@ -8,6 +8,10 @@ using UnityEngine;
 // for one pass only (FullCourseCaution.PitRoadOpen) - the field's one chance to stop - and a damaged car comes in then
 // for repairs (cautionRepairDamage).
 //
+// The player's car carries one while Auto drives it (DriveModeController.EnsureAutoPitBrain): tyre strategy and the
+// demo stop off, it comes in for damage - under a caution at the first pits-open pass, under green once it is badly
+// bent (greenRepairDamage) - and stops in the player's box. Handing the car back mid-stop calls ReleaseForHuman.
+//
 // When the race is over (RaceDirector.TookChequer) the car runs its cool-down lap, then comes in the same way
 // and parks in its box for good — no service, no rejoin.
 [RequireComponent(typeof(SplineDriver))]
@@ -77,6 +81,12 @@ public class PitStopController : MonoBehaviour
     [Range(0f, 1f)] public float cautionRepairDamage = 0.02f;
     [Tooltip("Under a full-course caution a car comes in for tyres once they are this share of the way to its green-flag wear threshold — a stop costs little behind the safety car.")]
     [Range(0f, 1f)] public float cautionWearShare = 0.5f;
+
+    [Header("Strategy")]
+    [Tooltip("Come in for worn tyres (past wearThreshold under green, cautionWearShare of it under a caution). Off on the player's car while Auto drives it: the AI brings it in for damage only and the tyre calls stay the player's.")]
+    public bool tyreStops = true;
+    [Tooltip("Under green, a car with at least this much bodywork damage (VehicleDamage.DamageLevel, 0..1 — a full-severity hit adds ~0.18) comes in for repairs. 0 = never under green: the car races on bent and is repaired at the next caution. Set on the player's car while Auto drives it.")]
+    [Range(0f, 1f)] public float greenRepairDamage = 0f;
 
     [Header("After the chequer")]
     [Tooltip("Once this car has taken the chequered flag, run a cool-down lap and then park in its pit box.")]
@@ -151,6 +161,7 @@ public class PitStopController : MonoBehaviour
         if (_tires == null) _tires = GetComponent<TireModel>();
         if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
         if (_fuel == null) _fuel = GetComponent<FuelTank>();
+        if (_ai == null) _ai = GetComponent<AIRacingBehaviour>();
     }
 
     void FixedUpdate()
@@ -423,6 +434,31 @@ public class PitStopController : MonoBehaviour
         _state = State.HeadingToPit;   // on track it heads for the entry; on pit road it rolls on to the box
     }
 
+    // In for a stop with the crew's work still to come or under way - not a cool-down park after the chequer, and
+    // not done. PlayerPitService stands aside while this brain is running a stop on the player's car.
+    public bool RunningServiceStop =>
+        isActiveAndEnabled && !_parking && !_raceOver && _state != State.Racing && _state != State.Parked;
+
+    // The human is taking the car back (DriveModeController, coming off Auto) part-way through a stop: drop it, so
+    // nothing is left holding the car in the box or capping it on pit road, and the crew are not left working on
+    // a car that has gone. The next time Auto has the car it decides afresh. A park after the chequer is left alone.
+    public void ReleaseForHuman()
+    {
+        if (_raceOver || _parking || _state == State.Racing || _state == State.Parked) return;
+        if (_state == State.Servicing && _crew != null) _crew.EndService();
+        _crew = null;
+        if (_spline != null)
+        {
+            _spline.pitStopHold = false;
+            _spline.pitParkDistance = -1f;
+            _spline.aiMaxSpeedMph = float.MaxValue;
+            _spline.ClearPitApproach();
+        }
+        _cutting = _pullingOut = _pulledOut = _laneMoving = false;
+        _lane = -1;
+        _state = State.Racing;
+    }
+
     // Put this car in its box this instant, parked for good: the race has been ended from the results screen
     // and whoever was still running a cool-down lap or rolling down pit road is simply there. No-op without
     // a box ladder to park in.
@@ -592,11 +628,18 @@ public class PitStopController : MonoBehaviour
         if (forceAllowed && !_forcedDone && _greenTime >= 0f && Time.time - _greenTime >= _forcedThreshold)
             return true;
 
-        // Under caution: come in to have damage repaired, and for tyres well before they would be due under green.
-        if (caution && _bodywork != null && _bodywork.DamageLevel >= cautionRepairDamage) return true;
+        // Damage: under caution, come in to have any of it repaired; under green, only once the car is badly bent
+        // (greenRepairDamage, off for the field by default).
+        if (_bodywork != null)
+        {
+            float damage = _bodywork.DamageLevel;
+            if (caution && damage >= cautionRepairDamage) return true;
+            if (!caution && greenRepairDamage > 0f && damage >= greenRepairDamage) return true;
+        }
 
-        // Strategy: pit when the tyres are worn past this car's threshold.
-        if (_tires == null) return false;
+        // Strategy: pit when the tyres are worn past this car's threshold - under caution, well before they would be
+        // due under green.
+        if (!tyreStops || _tires == null) return false;
         float avgWear = 0.5f * (_tires.FrontWear + _tires.RearWear);
         return avgWear >= (caution ? _threshold * cautionWearShare : _threshold);
     }
