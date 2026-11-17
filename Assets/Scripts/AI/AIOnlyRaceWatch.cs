@@ -131,8 +131,8 @@ public class AIOnlyRaceWatch : MonoBehaviour
         if (Edge(kb[Key.RightBracket].isPressed, ref _fasterHeld)) _speedIndex = Mathf.Min(Speeds.Length - 1, _speedIndex + 1);
 
         // Re-applied every frame so a pause menu that resumes to 1x does not lose the chosen speed; a paused game
-        // (timeScale 0) is left alone.
-        if (Time.timeScale > 0f && !Mathf.Approximately(Time.timeScale, Speeds[_speedIndex]))
+        // (timeScale 0) is left alone, and so is a pace-lap skip (FormationSkip) while it runs.
+        if (Time.timeScale > 0f && !FormationSkip.Skipping && !Mathf.Approximately(Time.timeScale, Speeds[_speedIndex]))
             Time.timeScale = Speeds[_speedIndex];
     }
 

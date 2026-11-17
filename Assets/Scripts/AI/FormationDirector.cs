@@ -207,6 +207,9 @@ public class FormationDirector : MonoBehaviour
 
         // Full-course cautions on ovals: same safety car, same restart.
         if (GetComponent<FullCourseCaution>() == null) gameObject.AddComponent<FullCourseCaution>();
+
+        // On Auto, the offer to fast-forward the pace lap to the close-up.
+        if (GetComponent<FormationSkip>() == null) gameObject.AddComponent<FormationSkip>();
     }
 
     void SpawnSafetyCar()

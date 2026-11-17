@@ -672,6 +672,7 @@ and `PadBindingsTests` fails if two shortcuts land on one button in the same con
 | `,` / `.` | D-pad left / right | Crew chief only: point the camera at the previous / next car in the running order; past either end it comes back to the chief. The chief stands still while the camera is away |
 | `V` | B | Drive / Auto toggle — AI drives your car, camera stays on it; watch other cars as crew chief (pad: from the seat only) |
 | `L` | Y | Pit limiter (car) |
+| `N` | View | Skip the pace lap — only on Auto during the formation lap: fast-forwards (`FormationSkip`, 8x) until the safety car peels off and the field closes up for the start, then back to normal speed. Press again to stop; taking the wheel stops it too. Also a tappable prompt along the bottom |
 | `1`-`5` | View steps, A plays | Master Draft race only: play an action card from the hand strip (tap it on a phone) |
 
 Prompts follow the device touched last, not the one plugged in: world-space keycaps (`InputPromptGlyph`),
