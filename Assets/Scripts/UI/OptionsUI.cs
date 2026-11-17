@@ -238,6 +238,21 @@ public class OptionsUI : MonoBehaviour
             cycle = () => AIDifficulty.AggressionPercent = AIDifficultyRules.CycleAggression(AIDifficulty.AggressionPercent),
         });
 
+        // Draftmaster 2's controls: the AI drives the player's car and left / right only pick the lane
+        // (LegacyLaneControls, DriveModeController). Here because it is the AI doing the driving, and the first
+        // page has no room for another row.
+        _rows.Add(new MenuRow
+        {
+            label = "Controls",
+            kind = RowKind.Choice,
+            heading = "Your Car",
+            gapBefore = 34f,
+            hint = "Draftmaster 2's controls: inside, middle or outside line.",
+            read = () => LaneSelect.Label(LegacyLaneControls.Enabled),
+            describe = () => LaneSelect.Describe(LegacyLaneControls.Enabled),
+            step = _ => LegacyLaneControls.Enabled = !LegacyLaneControls.Enabled,
+        });
+
         _rows.Add(new MenuRow { label = "Back", kind = RowKind.Back, gapBefore = 26f });
     }
 

@@ -187,6 +187,17 @@ public class AIRacingBehaviour : MonoBehaviour
     public float packLateralSpeed = 3.2f;
     public float packLateralAccel = 7f;
 
+    [Header("Player's Lane (legacy lane controls)")]
+    [Tooltip("Where the player's lane choice is not an oval lane (road courses, ovals without the lane AI), the left and right lanes sit this far (m) either side of the car's racing line, inside the AI's bounds. The middle lane is the racing line itself. On a superspeedway the lanes are the pack's own grooves.")]
+    public float playerLaneOffset = 3.2f;
+    public const int NoPlayerLane = int.MinValue;
+    // The lane the player has picked for this car - -1 left, 0 middle, +1 right (Draftmaster.Controls.LaneSelect) - or
+    // NoPlayerLane, when the brain decides where across the road to be. Set by DriveModeController while the
+    // Draftmaster 2 control scheme has the player's car on Auto. The brain still owns the speed: it follows, lifts
+    // and draws up behind whatever is in the chosen lane; it only stops choosing the lane.
+    [System.NonSerialized] public int playerLane = NoPlayerLane;
+    public bool HasPlayerLane => playerLane != NoPlayerLane;
+
     [Header("Lateral Field (NR2003 - Docs/NR2003-Internals.md)")]
     [Tooltip("Choose where across the road to be, and the follow cap, from a lateral field: every slot across the road scored by how far the car could get in the next few seconds there - clean air, the tow of a car ahead, the push of a line behind, never further than the car ahead in it allows - with a car alongside a wall. Replaces the pack's lane rules (PackLanes), its follow cap and the side-by-side push. Superspeedway packs only for now.")]
     public bool useLateralField = false;
@@ -398,6 +409,7 @@ public class AIRacingBehaviour : MonoBehaviour
         if (_spline == null) return;
         _spline.laneAvoidLateral = 0f;
         _spline.avoidingStopped = false;
+        _spline.forcedOvalLane = Draftmaster.Tracks.OvalLanes.Lane.None;
     }
 
     void OnDestroy()
@@ -451,6 +463,8 @@ public class AIRacingBehaviour : MonoBehaviour
     void FixedUpdate()
     {
         if (_spline == null || _spline.TrackLength <= 0f) return;
+        // The player's lane, as the oval lane AI names it (SplineDriver moves the car into it when it holds lanes).
+        _spline.forcedOvalLane = PlayerOvalLane();
         // Racing tactics stay off until the green flag. During PreGrid/Formation, FormationController
         // owns the AI's speed cap and line so the field forms up behind the safety car.
         if (!RaceStart.IsGreen) { _wasGreen = false; _spline.allowRunOff = false; _runOffHold = 0f; _spline.avoidingStopped = false; return; }
@@ -892,7 +906,7 @@ public class AIRacingBehaviour : MonoBehaviour
             _packMoving = false;
             _newLaneRival = null;
         }
-        else if (Pack && !wantOvertake && !underYellow && !_spline.IsOnPit && PackLanes(dt, out float packLat))
+        else if (Pack && !wantOvertake && !underYellow && !_spline.IsOnPit && !HasPlayerLane && PackLanes(dt, out float packLat))
             desiredTactical = packLat - _spline.UntacticalLateral;
         else if (Pack) { _packLane = -1; _packMoving = false; }
 
@@ -991,6 +1005,16 @@ public class AIRacingBehaviour : MonoBehaviour
                               * blueFlagOffset * yieldStrength;
             blueFlagLiftFactor = RaceCraft.YieldSpeedFactor(yieldStrength, blueFlagLift);
             _commitTimer = 0f;   // don't let an overtake commitment resume the moment we're past
+        }
+
+        // The player's lane outranks everything the brain chose across the road - except driving round a stopped car,
+        // which it still does on its own. Still never across a car alongside (the clamp below): the move waits until
+        // there is room.
+        if (HasPlayerLane && !_spline.IsOnPit && !(wantOvertake && _passAroundStopped)
+            && TryPlayerLaneLateral(playerLane, out float playerLaneLat))
+        {
+            desiredTactical = playerLaneLat - _spline.UntacticalLateral;
+            _commitTimer = 0f;
         }
 
         if (alongsideIsWall && !PaybackActive && !_spline.IsOnPit)
@@ -1922,6 +1946,70 @@ public class AIRacingBehaviour : MonoBehaviour
         if (gap < -alongsideLength || gap > cornerScanDistance) return 0f;
         if (sideways < 1f || sideways > 6f) return 0f;
         return 1f - Mathf.Clamp01(gap / cornerScanDistance) * 0.7f;
+    }
+
+    // ---- The player's lane (legacy lane controls) ----
+
+    // The oval lane the player's choice is, while this car holds oval lanes: the middle is the ideal, and a side lane
+    // is the inside or the outside depending on which side the infield is. None while there is no choice.
+    Draftmaster.Tracks.OvalLanes.Lane PlayerOvalLane()
+    {
+        if (!HasPlayerLane) return Draftmaster.Tracks.OvalLanes.Lane.None;
+        if (playerLane == 0) return Draftmaster.Tracks.OvalLanes.Lane.Ideal;
+        bool insideIsLeft = _spline.LaneInsideSide < 0f;
+        return (playerLane < 0) == insideIsLeft ? Draftmaster.Tracks.OvalLanes.Lane.Inside : Draftmaster.Tracks.OvalLanes.Lane.Outside;
+    }
+
+    // Where across the road (m lateral, + right of travel) a player's lane (-1, 0, +1) is here, when the car is not
+    // holding oval lanes. On a superspeedway: the pack's outer grooves and the one nearest the middle. Elsewhere: the
+    // racing line, and playerLaneOffset either side of it. Always inside the AI's bounds.
+    public bool TryPlayerLaneLateral(int lane, out float lateral)
+    {
+        lateral = 0f;
+        if (_spline == null || !_spline.GetLateralBounds(out float lo, out float hi)) return false;
+        lane = lane < 0 ? -1 : lane > 0 ? 1 : 0;
+        if (Pack && TrackConditions.AiPackLanes >= 2 && LaneGeometry(out _, out _, out int count))
+        {
+            int groove = lane < 0 ? 0 : lane > 0 ? count - 1 : (count - 1) / 2;
+            lateral = LaneLateral(groove);
+        }
+        else lateral = _spline.UntacticalLateral + lane * playerLaneOffset;
+        lateral = Mathf.Clamp(lateral, lo, hi);
+        return true;
+    }
+
+    // The player's lane (-1, 0, +1) nearest where the car is now - where the lane controls start it off, so taking
+    // over does not swerve it across the road.
+    public int NearestPlayerLane()
+    {
+        if (_spline == null) return 0;
+        if (_spline.LaneFollowing)
+        {
+            var l = _spline.ovalLane;
+            if (l == Draftmaster.Tracks.OvalLanes.Lane.Inside || l == Draftmaster.Tracks.OvalLanes.Lane.Outside)
+            {
+                bool left = (l == Draftmaster.Tracks.OvalLanes.Lane.Inside) == (_spline.LaneInsideSide < 0f);
+                return left ? -1 : 1;
+            }
+            return 0;
+        }
+        float here = _spline.LateralOnTrack;
+        int best = 0;
+        float bestGap = float.MaxValue;
+        for (int lane = -1; lane <= 1; lane++)
+        {
+            if (!TryPlayerLaneLateral(lane, out float lat)) return 0;
+            float gap = Mathf.Abs(lat - here);
+            if (gap < bestGap - 0.01f) { bestGap = gap; best = lane; }
+        }
+        return best;
+    }
+
+    // What the player's lane is called here (the HUD): inside / outside on an oval, left / right on a road course.
+    public string PlayerLaneName(int lane)
+    {
+        bool insideIsLeft = _spline == null || !_spline.LaneFollowing || _spline.LaneInsideSide < 0f;
+        return Draftmaster.Controls.LaneSelect.Name(lane, TrackConditions.AiLanes, insideIsLeft);
     }
 
     // ---- Lanes ----

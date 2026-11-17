@@ -17,6 +17,12 @@ using Draftmaster.Controls;
 // step into — the crew chief's headset in the HUD corner (CrewChiefController), the TEAM panel, co-op
 // possession — plus the keyboard shortcut below and an AUTO button: the touch controls' top row on a phone,
 // and on PC one of its own, stacked above the headset (AUTO with an ON / OFF chip, green ON while the AI has the car).
+//
+// Draftmaster 2's lane controls (OPTIONS > AI Drivers > Controls: Lanes, LegacyLaneControls): the car is put on Auto
+// as soon as the player is racing it - rolling off pit road, or on the grid before the start - and left / right no
+// longer steer it. Each press moves it a lane across the road (Draftmaster.Controls.LaneSelect): the inside line, the
+// middle line or the outside line, which the AI then drives (AIRacingBehaviour.playerLane), speed and following its
+// own. V and the AUTO button do nothing meanwhile - the car is the AI's to drive until the setting is turned off.
 public class DriveModeController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -44,6 +50,12 @@ public class DriveModeController : MonoBehaviour
              "chief's TIMING stack goes — that only shows while the player is on foot, and this only in the car.")]
     public Vector2 buttonCorner = new Vector2(92f, 50f);
 
+    [Header("Lane controls (Draftmaster 2)")]
+    [Tooltip("With the lane controls on, the player's car goes onto Auto once it is rolling at this speed (mph) off " +
+             "pit road. Below it - pulling out of the pit box - the player still drives. On the grid before the start " +
+             "it goes onto Auto whatever the speed.")]
+    public float laneEngageMph = 20f;
+
     public bool IsDriving => _driving;
     // Auto has been switched off and the AI is still driving, waiting for the player to tap a pedal.
     public bool HandBackPending => _handBack.Waiting;
@@ -57,6 +69,14 @@ public class DriveModeController : MonoBehaviour
 
     bool _keyPrev;
     readonly AutoHandBack _handBack = new AutoHandBack();
+    readonly LaneSelect _laneSelect = new LaneSelect();
+    bool _laneActive;            // the lane controls have the player's lane on the car's brain
+    AIRacingBehaviour _laneBrain;
+
+    // The Draftmaster 2 lane controls are driving the player's car: Auto on, left / right picking the lane.
+    public bool LaneSteering => _laneActive;
+    // The lane they have it in, by name (Inside / Middle / Outside, or Left / Right on a road course). "" when off.
+    public string LaneName => _laneActive && _laneBrain != null ? _laneBrain.PlayerLaneName(_laneSelect.Lane) : "";
 
     // The scene's one auto-drive switch, for the touch controls' AUTO button (a phone has no V).
     public static DriveModeController Current { get; private set; }
@@ -93,7 +113,81 @@ public class DriveModeController : MonoBehaviour
         if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
 
         UpdateHandBack();
+        UpdateLanes();
         UpdateButton();
+    }
+
+    // ---- Draftmaster 2 lane controls ----
+
+    // In the seat and the car theirs: not on foot, not running the race from the pit wall, not being brought home.
+    bool InSeat => playerCar != null && !PadInput.OnFoot && !CrewChiefController.IsCrewChief &&
+                   !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
+
+    void UpdateLanes()
+    {
+        if (!LegacyLaneControls.Enabled) { StopLanes(); return; }
+        if (_driving)
+        {
+            StopLanes();
+            // Racing it: put it on Auto. Not from the pit box - the player drives it out - and not over a menu.
+            if (!InSeat || PadInput.ModalOpen || _pvc == null || PlayerVehicleController.Human != _pvc) return;
+            bool onGrid = RaceStart.IsPreGrid || RaceStart.IsFormation;
+            var limiter = playerCar.GetComponent<PitLimiter>();
+            bool onPitRoad = limiter != null && limiter.InPitZone;
+            if (onPitRoad || (!onGrid && _pvc.SpeedMph < laneEngageMph)) return;
+            SetDriving(false);
+            if (_driving) return;
+        }
+        if (!InSeat) { StopLanes(); return; }
+
+        var brain = playerCar.GetComponent<AIRacingBehaviour>();
+        if (brain == null) return;
+        float steer = ReadSteer();
+        if (!_laneActive || brain != _laneBrain)
+        {
+            StopLanes();
+            _laneBrain = brain;
+            _laneActive = true;
+            // Start in the lane the car is nearest, so taking over does not swerve it; a held turn has to be let go.
+            _laneSelect.Reset(brain.NearestPlayerLane(), steer);
+        }
+        else if (!PadInput.ModalOpen) _laneSelect.Update(steer);
+        brain.playerLane = _laneSelect.Lane;
+    }
+
+    // The lane goes back to the brain to choose.
+    void StopLanes()
+    {
+        if (!_laneActive) return;
+        _laneActive = false;
+        if (_laneBrain != null) _laneBrain.playerLane = AIRacingBehaviour.NoPlayerLane;
+        _laneBrain = null;
+    }
+
+    // Left / right, read the way PlayerVehicleController reads its steering when the human drives: the left stick,
+    // the phone's steer buttons, A / D or the arrow keys - whatever the car's control scheme listens to. Not the
+    // d-pad: from the seat its left and right open the tyre and rivalry panels.
+    float ReadSteer()
+    {
+        float steer = 0f;
+        var scheme = _pvc != null ? _pvc.controlScheme : PlayerVehicleController.ControlScheme.Auto;
+        if (scheme != PlayerVehicleController.ControlScheme.Keyboard)
+        {
+            var gp = Gamepad.current;
+            if (gp != null) steer = gp.leftStick.ReadValue().x;
+        }
+        if (scheme == PlayerVehicleController.ControlScheme.Auto && TouchDriveControls.Active && TouchDriveControls.Steer != 0f)
+            steer = TouchDriveControls.Steer;
+        if (scheme != PlayerVehicleController.ControlScheme.Gamepad)
+        {
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steer = -1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steer = 1f;
+            }
+        }
+        return steer;
     }
 
     // ---- Hand-back on a pedal tap ----
@@ -164,6 +258,7 @@ public class DriveModeController : MonoBehaviour
     Image _chipFill;
     TMP_Text _chipLabel;
     GameObject _hint;
+    TMP_Text _hintText;
     bool _buttonShowsDriving;
 
     void BuildButton()
@@ -243,6 +338,7 @@ public class DriveModeController : MonoBehaviour
         hrt.anchoredPosition = new Vector2(0f, 3f);
         hrt.sizeDelta = new Vector2(160f, 10f);
         _hint = hint.gameObject;
+        _hintText = hint;
         _hint.SetActive(false);
 
         _buttonRoot = rootGo;
@@ -273,7 +369,14 @@ public class DriveModeController : MonoBehaviour
                     (PlayerVehicleController.Human != null || !_driving) &&
                     !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
         if (_buttonRoot.activeSelf != show) _buttonRoot.SetActive(show);
-        if (_hint != null && _hint.activeSelf != _handBack.Waiting) _hint.SetActive(_handBack.Waiting);
+        bool hintShown = _handBack.Waiting || _laneActive;
+        if (_hint != null)
+        {
+            if (_hint.activeSelf != hintShown) _hint.SetActive(hintShown);
+            // Over the button: what takes the car back, or with the lane controls on, the lane it is in.
+            string hintText = _laneActive ? "< " + LaneName.ToUpperInvariant() + " >" : "TAP GAS OR BRAKE";
+            if (_hintText != null && _hintText.text != hintText) _hintText.text = hintText;
+        }
         if (_buttonShowsDriving == _driving) return;
         _buttonShowsDriving = _driving;
 
@@ -294,6 +397,8 @@ public class DriveModeController : MonoBehaviour
     {
         // The session is over and the AI is bringing the player's car home: it is not theirs to take back.
         if (PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine) return;
+        // The lane controls keep the car on Auto: left / right are all the driving there is.
+        if (LegacyLaneControls.Enabled && !_driving) return;
         if (_driving) { SetDriving(false); return; }
         // Auto off: the AI drives on until a pedal is tapped. Asked again while it waits: Auto stays on.
         if (_handBack.Waiting) { _handBack.Cancel(); return; }
@@ -306,6 +411,7 @@ public class DriveModeController : MonoBehaviour
     public void RetargetPlayerCar(GameObject car)
     {
         if (car == null) return;
+        StopLanes();
         playerCar = car;
         _pvc = car.GetComponent<PlayerVehicleController>();
         _spline = car.GetComponent<SplineDriver>();
@@ -346,6 +452,7 @@ public class DriveModeController : MonoBehaviour
 
     void ResumeDriving()
     {
+        StopLanes();
         if (_pvc != null && _spline != null)
         {
             FormationController.HandBack(_spline);

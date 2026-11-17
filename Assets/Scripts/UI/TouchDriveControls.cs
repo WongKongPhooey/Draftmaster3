@@ -123,6 +123,10 @@ public class TouchDriveControls : MonoBehaviour
     // DRIVE) or a phone could never take the car back.
     static bool Broadcasting => DriveModeController.Current != null && !DriveModeController.Current.IsDriving;
 
+    // Draftmaster 2's lane controls have the car on Auto: the steer buttons stay up to pick the lane, the pedals go,
+    // and the AUTO button's place shows the lane.
+    static bool LaneSteering => DriveModeController.Current != null && DriveModeController.Current.LaneSteering;
+
     // The limiter button only while there is something to toggle: in the pit lane, with a hand toggle allowed.
     static PitLimiter Limiter
     {
@@ -151,10 +155,11 @@ public class TouchDriveControls : MonoBehaviour
         var limiter = Limiter;
         // Auto switched off but waiting for a pedal tap to hand the car back: the pedals (and wheel) come up so
         // there is something to tap; the AUTO button stays, and tapping it keeps Auto on.
-        _state.ButtonsOnly = Broadcasting && !DriveModeController.Current.HandBackPending;
+        bool lanes = LaneSteering;
+        _state.ButtonsOnly = Broadcasting && !DriveModeController.Current.HandBackPending && !lanes;
         _state.LimiterShown = limiter != null && !Broadcasting;
         _state.BroadcastShown = DriveModeController.Current != null;
-        _state.SteerMode = SteerButtons ? TouchSteerMode.Buttons : TouchSteerMode.Wheel;
+        _state.SteerMode = SteerButtons || lanes ? TouchSteerMode.Buttons : TouchSteerMode.Wheel;
         _state.Update(_touches, _layout);
         Active = true;
 
@@ -197,7 +202,13 @@ public class TouchDriveControls : MonoBehaviour
         if (!Active || Event.current.type != EventType.Repaint) return;
         GUI.depth = -10;   // over the race HUD's panels
 
-        if (!_state.ButtonsOnly)
+        bool lanes = LaneSteering;
+        if (lanes)
+        {
+            DrawPedal(_layout.steerLeft, "<", _state.SteerLeftHeld, PixelGUI.Gold);
+            DrawPedal(_layout.steerRight, ">", _state.SteerRightHeld, PixelGUI.Gold);
+        }
+        else if (!_state.ButtonsOnly)
         {
             if (_state.SteerMode == TouchSteerMode.Buttons)
             {
@@ -215,7 +226,11 @@ public class TouchDriveControls : MonoBehaviour
             var limiter = Limiter;
             DrawTopButton(_layout.limiter, "LIMIT", limiter != null && limiter.Armed, PixelGUI.Gold);
         }
-        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "Drive" : "Auto", false, PixelGUI.Confirm);
+        if (_state.BroadcastShown)
+        {
+            string label = lanes ? DriveModeController.Current.LaneName : _state.ButtonsOnly ? "Drive" : "Auto";
+            DrawTopButton(_layout.broadcast, label, lanes, PixelGUI.Confirm);
+        }
     }
 
     void DrawTopButton(TouchRect r, string text, bool on, Color tint)

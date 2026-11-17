@@ -380,7 +380,8 @@ public class OvalLaneTests
         Debug.Log(sb.ToString());
     }
 
-    LaneResult DriveLane(string lane, float pace)
+    // One AI car on the dynamic model at the start line in `lane`, built as GridSpawner builds a field car.
+    Component BuildLaneCar(string lane, float pace, out GameObject go, out Component pvc, out Component input)
     {
         var trackType = Runtime("TrackBuilder");
         var track = (Component)_package.GetComponentInChildren(trackType, true);
@@ -388,7 +389,7 @@ public class OvalLaneTests
         var vehicleInfo = Resources.Load("Vehicles/Cup24");
         Assert.IsNotNull(vehicleInfo, "No Cup24 VehicleInfo.");
 
-        var go = new GameObject("LaneCar");
+        go = new GameObject("LaneCar");
         _cars.Add(go);
         var splineType = Runtime("SplineDriver");
         var pvcType = Runtime("PlayerVehicleController");
@@ -406,7 +407,7 @@ public class OvalLaneTests
         Set(spline, "paceMultiplier", pace);
         SetLane(spline, lane);
 
-        var pvc = go.AddComponent(pvcType);
+        pvc = go.AddComponent(pvcType);
         Set(pvc, "vehicleInfo", vehicleInfo);
         Set(pvc, "track", track);
         Set(pvc, "spriteFacesUp", false);
@@ -419,7 +420,7 @@ public class OvalLaneTests
         Set(pvc, "impactDebris", false);
         Set(pvc, "corneringStiffness", 15f);   // GridSpawner.aiCorneringStiffness
 
-        var input = go.AddComponent(inputType);
+        input = go.AddComponent(inputType);
 
         Call(spline, "Awake");
         Call(input, "Awake");
@@ -428,6 +429,83 @@ public class OvalLaneTests
         Call(spline, "Start");
 
         Assert.IsTrue((bool)splineType.GetProperty("LaneFollowing").GetValue(spline), "The car isn't following its lane.");
+        return spline;
+    }
+
+    // Draftmaster 2's lane controls: the player picks the lane (SplineDriver.forcedOvalLane) and the car moves into it,
+    // stays in it, and makes no lane changes of its own. Inside -> outside -> ideal, one car at Texas.
+    [Test]
+    public void AChosenLaneIsDrivenInto_OutsideThenTheIdeal_AtTexas()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var raceStart = Runtime("RaceStart");
+        try
+        {
+            calib.Invoke(null, new object[] { TrackId });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+            float aiPace = (float)Runtime("TrackConditions").GetField("AiPaceMultiplier").GetValue(null);
+            SpawnTrack(TrackId);
+            var spline = BuildLaneCar("Inside", aiPace, out var go, out var pvc, out var input);
+            var splineType = spline.GetType();
+            var laneField = splineType.GetField("ovalLane");
+            var forced = splineType.GetField("forcedOvalLane");
+            Assert.IsNotNull(forced, "SplineDriver.forcedOvalLane is gone.");
+            var changing = splineType.GetProperty("LaneChanging");
+            var started = splineType.GetProperty("LaneChangesStarted");
+            var centreDistance = splineType.GetProperty("CentreDistanceOnTrack");
+            var carLateral = splineType.GetProperty("CarLateral");
+            var laneLateralAt = splineType.GetMethod("LaneLateralAt");
+            var onLegal = Runtime("LapTimingManager").GetMethod("OnLegalSurface", BindingFlags.Public | BindingFlags.Static);
+            var track = (Component)_package.GetComponentInChildren(Runtime("TrackBuilder"), true);
+            Action stepInput = Step(input), stepPvc = Step(pvc), stepSpline = Step(spline);
+            float dt = Time.fixedDeltaTime;
+            int offs = 0;
+
+            // Drive `seconds`; true once the car has landed in `lane` and sat within 1 m of its line for 2 s.
+            bool DriveInto(string lane, float seconds, out string why)
+            {
+                var want = Enum.Parse(laneField.FieldType, lane);
+                forced.SetValue(spline, want);
+                float settled = 0f, worst = 0f;
+                for (float t = 0f; t < seconds; t += dt)
+                {
+                    stepInput(); stepPvc(); stepSpline();
+                    if (!(bool)onLegal.Invoke(null, new object[] { track, go.transform.position, 1f })) offs++;
+                    bool landed = Equals(laneField.GetValue(spline), want) && !(bool)changing.GetValue(spline);
+                    float cd = (float)centreDistance.GetValue(spline);
+                    float err = Mathf.Abs((float)carLateral.GetValue(spline) - (float)laneLateralAt.Invoke(spline, new[] { want, (object)cd }));
+                    worst = landed ? Mathf.Max(worst, err) : 0f;
+                    settled = landed && err < 1f ? settled + dt : 0f;
+                    if (settled >= 2f) { why = ""; return true; }
+                }
+                why = $"lane {laneField.GetValue(spline)}, changing {changing.GetValue(spline)}, worst error {worst:0.00} m";
+                return false;
+            }
+
+            // A lap's run-up in the inside lane, then the player's choices.
+            Assert.IsTrue(DriveInto("Inside", 10f, out string why0), "Never settled in the inside lane: " + why0);
+            int before = (int)started.GetValue(spline);
+            Assert.IsTrue(DriveInto("Outside", 30f, out string why1), "Never got to the outside lane: " + why1);
+            Assert.IsTrue(DriveInto("Ideal", 30f, out string why2), "Never got to the ideal (middle) line: " + why2);
+            Assert.AreEqual(before + 2, (int)started.GetValue(spline), "One move per choice - no lane changes of the car's own.");
+            Assert.AreEqual(0, offs, "The car left the racing surface.");
+        }
+        finally
+        {
+            calib.Invoke(null, new object[] { "" });
+            raceStart.GetMethod("ResetToDefault").Invoke(null, null);
+        }
+    }
+
+    LaneResult DriveLane(string lane, float pace)
+    {
+        var trackType = Runtime("TrackBuilder");
+        var track = (Component)_package.GetComponentInChildren(trackType, true);
+        var splineType = Runtime("SplineDriver");
+        var pvcType = Runtime("PlayerVehicleController");
+        var inputType = Runtime("SplineInputDriver");
+        var spline = BuildLaneCar(lane, pace, out var go, out var pvc, out var input);
+
 
         // The centreline, for the road's half width and the infield side at the car.
         var samples = (System.Collections.IList)splineType.GetField("_mainSamples", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(spline);

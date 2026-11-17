@@ -790,6 +790,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // so the brain's tactical offset is ignored while LaneFollowing - which left a car on an oval no way round a
     // wreck in its lane but to brake for it. Zero whenever the car is not holding a lane.
     [System.NonSerialized] public float laneAvoidLateral;
+    // The oval lane the player has picked for this car (legacy lane controls, AIRacingBehaviour.playerLane). While set
+    // the car makes no lane changes of its own - no passes, no side-by-side splits - and moves into this lane when the
+    // corner and the room allow. None = the lane AI decides.
+    [System.NonSerialized] public Draftmaster.Tracks.OvalLanes.Lane forcedOvalLane = Draftmaster.Tracks.OvalLanes.Lane.None;
     // This step the brain is steering round a stopped car (AIRacingBehaviour). The lane train then leaves stopped
     // cars to the brain's own stop-short cap instead of braking for one the car is already steering out from behind.
     [System.NonSerialized] public bool avoidingStopped;
@@ -1156,6 +1160,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         _laneCooldown -= dt;
+        // The player chose this car's lane (legacy lane controls): no passes or splits of its own, only the move into
+        // that lane, made as soon as the corner and the room allow - the same checks a move back to the ideal makes.
+        if (forcedOvalLane != Draftmaster.Tracks.OvalLanes.Lane.None)
+        {
+            _passAdvantage = 0f;
+            if (ovalLane != forcedOvalLane && LaneFollowing && !_onPit && !usePitLane && _pitApproachBlend <= 0f
+                && !_apronEntryActive && _apronExitBlend <= 0f && RaceStart.IsGreen && _startSide == 0)
+                TryStartChosenLane(forcedOvalLane);
+            return;
+        }
         // Nor while still on (or easing off) a start lane: the field stays two-wide in its start lanes until up to speed.
         if (!LaneFollowing || !lanePassing || _onPit || usePitLane || _pitApproachBlend > 0f || _apronEntryActive || _apronExitBlend > 0f
             || !RaceStart.IsGreen || _startSide != 0)
@@ -1213,6 +1227,22 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (!OvalPass.TargetLaneClear(this, target, TrainGap, 1f)) return false;
         BeginLaneMove(target, _trainAhead, false);
         return true;
+    }
+
+    // Into the lane the player chose (forcedOvalLane), once the corner allows the sideways move and the lane has room.
+    // Until then the car stays where it is and the next step asks again.
+    void TryStartChosenLane(Draftmaster.Tracks.OvalLanes.Lane target)
+    {
+        var spec = OvalPass.Spec;
+        float here = CentreDistanceOnTrack;
+        float spacing = Mathf.Abs(LaneLateralAt(target, here) - LaneLateralAt(ovalLane, here));
+        if (spacing > 0.05f)
+        {
+            float v = OvalTrain.SpeedOf(this);
+            if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, spacing), spec.maxCornerAccel)) return;
+            if (!OvalPass.TargetLaneClear(this, target, 0f, spec.abortShare)) return;
+        }
+        BeginLaneMove(target, null, false);
     }
 
     void BeginLaneMove(Draftmaster.Tracks.OvalLanes.Lane target, SplineDriver passing, bool split)
