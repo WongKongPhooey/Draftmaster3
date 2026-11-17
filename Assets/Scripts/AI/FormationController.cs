@@ -654,8 +654,12 @@ public class FormationController : MonoBehaviour
         // target under cars still nosing out of their boxes (Darlington's pit exit).
         float carLat = _spline.LateralOnTrack;
         bool onTheRoad = carLat >= boundLo && carLat <= boundHi;
-        float fitted = FormationLanes.FitColumn(column, _spline.UntacticalLateral, boundLo, boundHi,
-                                                _ovalTrack == 1 && onTheRoad ? columnEdgeMarginM : 0f);
+        float edgeMargin = _ovalTrack == 1 && onTheRoad ? columnEdgeMarginM : 0f;
+        // Making way under a caution is one car moving over to a spot, not half of a two-wide pair: fitted as a pair it
+        // was slid across with its imaginary partner, and a car going by the safety car on the outside ran to the wall.
+        float fitted = makingWay
+            ? FormationLanes.FitOffset(column, _spline.UntacticalLateral, boundLo, boundHi, edgeMargin)
+            : FormationLanes.FitColumn(column, _spline.UntacticalLateral, boundLo, boundHi, edgeMargin);
         // Squeezed against the road edge, the column offset (relative to the racing line) has to keep up with the line
         // swinging across a corner — at the gentle weave slew the inside car lagged into its partner alongside. Only
         // in the close-up, where the rows are drawn level side by side; the staggered train before it never needed it.

@@ -290,6 +290,28 @@ public class PackAvoidanceTests
     }
 
     [Test]
+    public void ACarMakingWayGoesToItsSpotNotTheWall()
+    {
+        // Daytona behind the safety car crawling on the inside (limits +/-3.9, line low at -3.5, safety car at -3.45):
+        // going by on the outside 3.8 m off it is a move to +0.35. Fitted as half of a pair it slid across to the
+        // outside limit (+3.85) - into the wall.
+        const float lo = -3.9f, hi = 3.9f, line = -3.5f, margin = 1.5f;
+        float passAt = -3.45f + 3.8f;
+        Assert.AreEqual(passAt, line + FormationLanes.FitOffset(passAt - line, line, lo, hi, margin), 1e-4f);
+        Assert.Greater(line + FormationLanes.FitColumn(passAt - line, line, lo, hi, margin), hi - 0.1f,
+                       "FitColumn no longer slides a lone offset to the limit - this test's premise is stale");
+
+        // A spot past the limits is held edgeMargin inside them, either side.
+        Assert.AreEqual(hi - margin, line + FormationLanes.FitOffset(10f, line, lo, hi, margin), 1e-4f);
+        Assert.AreEqual(lo + margin, 2f + FormationLanes.FitOffset(-10f, 2f, lo, hi, margin), 1e-4f);
+        // Yielding to the inside edge (the yield's own inset is inside the margin): unchanged.
+        Assert.AreEqual(lo + 1.6f, 1f + FormationLanes.FitOffset(lo + 1.6f - 1f, 1f, lo, hi, margin), 1e-4f);
+        // A corridor too narrow for the margin: the middle of it. No bounds known: untouched.
+        Assert.AreEqual(0f, FormationLanes.FitOffset(3f, 0f, -1f, 1f, margin), 1e-4f);
+        Assert.AreEqual(5f, FormationLanes.FitOffset(5f, 0f, float.NegativeInfinity, float.PositiveInfinity, margin), 1e-4f);
+    }
+
+    [Test]
     public void TheCautionCatchUpClosesHardFromFarBackAndRunsOutAtTheTrain()
     {
         // Run out at the arrival point, capped far back, and never more than could be shed at the rate before the

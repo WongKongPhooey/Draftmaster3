@@ -305,6 +305,20 @@ namespace Draftmaster.Sim
             return centre + (column < 0f ? -half : half) - line;
         }
 
+        // One car moving over on its own - making way under a caution (yielding to the inside, going by a caught car
+        // or the safety car on the outside) - as an offset from its line: the spot it is heading for (line + offset)
+        // kept edgeMargin inside the corridor [lo, hi], and nothing else. Not FitColumn: that keeps a two-wide PAIR
+        // either side of the line inside, so it read a 4 m move outward as half of an 8 m pair and slid the whole
+        // pair across - with the line near the inside edge (Daytona, behind the safety car crawling on the apron) a
+        // car going by on the outside was put on the outside limit, against the wall, instead of 3.8 m off the
+        // safety car. The margin gives way on a corridor too narrow for it.
+        public static float FitOffset(float offset, float line, float lo, float hi, float edgeMargin = 0f)
+        {
+            if (float.IsInfinity(lo) || float.IsInfinity(hi) || !(hi > lo)) return offset;
+            float margin = Mathf.Clamp(edgeMargin, 0f, 0.5f * (hi - lo));
+            return Mathf.Clamp(line + offset, lo + margin, hi - margin) - line;
+        }
+
         // A car filing out of its pit box for the formation lap: its lateral (box strip -> pit driving line) as a
         // function of the distance it has rolled, an S-curve from `from` to 0 over `length` metres. The kinematic car
         // points down its own path (SplineDriver.Place: heading = atan(lateral rate / forward speed)), so easing the
