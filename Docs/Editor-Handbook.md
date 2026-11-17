@@ -40,6 +40,14 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   (`SavedObjective`, per weekend id), flushes, and dates the CONTINUE row (`CareerSave.Stamp`). CONTINUE
   calls `SaveAnytime.RestoreMarker`, which re-books that marker only if nothing is booked and the sheet can
   still do it. Position in the paddock and half-finished conversations are not kept.
+* **SINGLE RACE** opens `Assets/Scenes/SingleRace.unity` (`SingleRaceUI`): Track › Series › Car select, built
+  to the race-flow design handoff (`Designs/draftmaster3_race_flow_unity_handoff`). Tile grids, whole-number
+  Constant Pixel Size canvas (`RaceFlow.ScaleFactor`), PC 4 x 140 / phone 5 x 150 tiles, cars 6 x 92 / 7 x 100.
+  Track layouts are traced off each track's own spline at runtime (`RaceFlowArt`), not the handoff's 17 PNGs;
+  series stripes and asphalt are drawn too. Rules (towns, tags, filters, grid cursor, scale) in
+  `Draftmaster.Tracks.RaceFlow` (headless-tested). Tap selects, tap again or NEXT/RACE moves on; Q/E or the
+  shoulders step the ALL/ROAD/OVAL/DIRT filter. A Truck/National pick races in that carset's paint
+  (`PlayerCarLivery.SingleRaceLivery`). Preview the phone layout with `SingleRaceUI.ForceHandheld`.
 * **OPTIONS** opens `Assets/Scenes/Options.unity` (`OptionsUI`), which is where the player sets their
   first and last name. Both halves are saved, and so is the joined name in `career.drivername` — the one
   key the garage plate, the timing tower and every `{playerfirst}` an NPC speaks already read, so nothing
@@ -783,7 +791,8 @@ Delete Offline Profile (next visit starts from a fresh Starter Pack). `Docs/Mast
 ### `Draftmaster > UI`
 Build Demo UI Prefabs · Build Car Setup Panel Prefab · Build Control Hint Prefab ·
 Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild) ·
-Build Single Race Scene · Build Options Scene · Add SINGLE RACE Row To Title Screen ·
+Build Single Race Scene · Build Race Flow Fonts (Pixelify Bold 30 for SINGLE RACE's series codes) ·
+Build Options Scene · Add SINGLE RACE Row To Title Screen ·
 Add MASTER DRAFT Row To Title Screen (wires it to the Master Draft scene) ·
 Wire MULTIPLAYER Row To Co-op Join · Wire OPTIONS Row To Options Screen ·
 Rename CONTINUE Row To CAREER · Set Up Demo Rows On Title Screen.

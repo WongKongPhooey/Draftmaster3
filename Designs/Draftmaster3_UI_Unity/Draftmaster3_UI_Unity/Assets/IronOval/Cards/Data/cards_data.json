@@ -1,0 +1,406 @@
+{
+ "rarities": {
+  "COMMON": {
+   "c": "#8b93ad",
+   "bg": "#1a1d27",
+   "need": 10,
+   "cost": 400,
+   "rank": 0
+  },
+  "RARE": {
+   "c": "#5a9ad6",
+   "bg": "#14213a",
+   "need": 20,
+   "cost": 900,
+   "rank": 1
+  },
+  "EPIC": {
+   "c": "#a06fd0",
+   "bg": "#221838",
+   "need": 30,
+   "cost": 1800,
+   "rank": 2
+  },
+  "LEGEND": {
+   "c": "#e8b13c",
+   "bg": "#2e2412",
+   "need": 50,
+   "cost": 4000,
+   "rank": 3
+  }
+ },
+ "statNames": [
+  "Top Speed",
+  "Accel",
+  "Grip",
+  "Durability"
+ ],
+ "cards": [
+  {
+   "id": 1,
+   "num": "1",
+   "sprite": "sprites/car01.png",
+   "name": "THUNDERJET 84",
+   "driver": "CASSIDY HALE",
+   "rar": "RARE",
+   "lv": 4,
+   "parts": 14,
+   "owned": 1,
+   "st": [
+    8,
+    6,
+    7,
+    7
+   ],
+   "trait": "DRAFT MAGNET",
+   "traitTxt": "Draft bar fills 15% faster when tucked in behind a car."
+  },
+  {
+   "id": 2,
+   "num": "8",
+   "sprite": "sprites/car08.png",
+   "name": "MARCHETTI TURBO 6",
+   "driver": "DEE MARCHETTI",
+   "rar": "EPIC",
+   "lv": 3,
+   "parts": 6,
+   "owned": 1,
+   "st": [
+    6,
+    9,
+    8,
+    5
+   ],
+   "trait": "RAIN DANCER",
+   "traitTxt": "No grip loss on a wet track."
+  },
+  {
+   "id": 3,
+   "num": "24",
+   "sprite": "sprites/car24.png",
+   "name": "IRON BUCK V8",
+   "driver": "BOOKER LYLES",
+   "rar": "LEGEND",
+   "lv": 2,
+   "parts": 9,
+   "owned": 1,
+   "st": [
+    9,
+    7,
+    5,
+    9
+   ],
+   "trait": "BULLDOZER",
+   "traitTxt": "Bump contact costs you no speed."
+  },
+  {
+   "id": 4,
+   "num": "9",
+   "sprite": "sprites/car09.png",
+   "name": "R-ROTOR PROTO",
+   "driver": "YUNA OKADA",
+   "rar": "EPIC",
+   "lv": 1,
+   "parts": 30,
+   "owned": 1,
+   "st": [
+    5,
+    7,
+    9,
+    6
+   ],
+   "trait": "TIRE WHISPER",
+   "traitTxt": "Tires wear 20% slower through the corners."
+  },
+  {
+   "id": 5,
+   "num": "11",
+   "sprite": "sprites/car11.png",
+   "name": "VANCE STREAKER",
+   "driver": "P. VANCE",
+   "rar": "COMMON",
+   "lv": 6,
+   "parts": 12,
+   "owned": 1,
+   "st": [
+    6,
+    6,
+    5,
+    6
+   ],
+   "trait": "STEADY",
+   "traitTxt": "+1 consistency on long green-flag runs."
+  },
+  {
+   "id": 6,
+   "num": "58",
+   "name": "TREMBLE HAULER",
+   "driver": "R. TREMBLE",
+   "rar": "COMMON",
+   "lv": 3,
+   "parts": 4,
+   "owned": 1,
+   "st": [
+    5,
+    4,
+    5,
+    8
+   ],
+   "trait": "TANK",
+   "traitTxt": "Takes 25% less damage from contact."
+  },
+  {
+   "id": 7,
+   "num": "03",
+   "name": "ODOM SEDAN",
+   "driver": "M. ODOM",
+   "rar": "COMMON",
+   "lv": 5,
+   "parts": 7,
+   "owned": 1,
+   "st": [
+    5,
+    6,
+    6,
+    5
+   ],
+   "trait": "PIT PRO",
+   "traitTxt": "Pit stops are one second quicker."
+  },
+  {
+   "id": 8,
+   "num": "12",
+   "sprite": "sprites/car12.png",
+   "name": "BRISCOE BULLET",
+   "driver": "L. BRISCOE",
+   "rar": "RARE",
+   "lv": 2,
+   "parts": 3,
+   "owned": 1,
+   "st": [
+    8,
+    7,
+    4,
+    5
+   ],
+   "trait": "SLINGSHOT",
+   "traitTxt": "Boost lasts longer when you pull out of the draft."
+  },
+  {
+   "id": 9,
+   "num": "29",
+   "name": "BLUE STREAK GT",
+   "driver": "T. AVERY",
+   "rar": "RARE",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    7,
+    7,
+    6,
+    6
+   ],
+   "trait": "LATE BRAKER",
+   "traitTxt": "Brake later into turns without spinning.",
+   "from": "ROOKIE PACK"
+  },
+  {
+   "id": 10,
+   "num": "45",
+   "sprite": "sprites/car45.png",
+   "name": "NIGHT OWL SS",
+   "driver": "J. ROURKE",
+   "rar": "EPIC",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    8,
+    8,
+    6,
+    6
+   ],
+   "trait": "NIGHT RACER",
+   "traitTxt": "+2 reflex in night races.",
+   "from": "ROOKIE PACK"
+  },
+  {
+   "id": 11,
+   "num": "31",
+   "name": "DUSTER GT",
+   "driver": "K. PRUITT",
+   "rar": "COMMON",
+   "lv": 1,
+   "parts": 1,
+   "owned": 1,
+   "st": [
+    4,
+    5,
+    5,
+    5
+   ],
+   "trait": "SCRAPPER",
+   "traitTxt": "Earns 10% more parts from races."
+  },
+  {
+   "id": 12,
+   "num": "02",
+   "name": "GOLDEN HOUR",
+   "driver": "\"KING\" CALLOWAY",
+   "rar": "LEGEND",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    9,
+    9,
+    8,
+    8
+   ],
+   "trait": "CROWD FAVOURITE",
+   "traitTxt": "Purse +25% for every win.",
+   "from": "SEASON PACK"
+  },
+  {
+   "id": 13,
+   "num": "64",
+   "name": "RED DELTA",
+   "driver": "S. NUNEZ",
+   "rar": "RARE",
+   "lv": 1,
+   "parts": 2,
+   "owned": 1,
+   "st": [
+    7,
+    6,
+    7,
+    5
+   ],
+   "trait": "HOT LAP",
+   "traitTxt": "Boost meter starts the race full."
+  },
+  {
+   "id": 14,
+   "num": "35",
+   "name": "MUD PUPPY",
+   "driver": "B. HARLAN",
+   "rar": "COMMON",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    4,
+    5,
+    6,
+    6
+   ],
+   "trait": "DIRT TRACKER",
+   "traitTxt": "Ignores grip loss off the racing line.",
+   "from": "ANY PACK"
+  },
+  {
+   "id": 15,
+   "num": "50",
+   "name": "SILVER SPUR",
+   "driver": "D. KEOGH",
+   "rar": "EPIC",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    7,
+    8,
+    7,
+    6
+   ],
+   "trait": "CLOSER",
+   "traitTxt": "+1 to all stats on the final lap.",
+   "from": "SEASON PACK"
+  },
+  {
+   "id": 16,
+   "num": "19",
+   "name": "PRAIRIE FIRE",
+   "driver": "A. WEST",
+   "rar": "RARE",
+   "lv": 1,
+   "parts": 0,
+   "owned": 0,
+   "st": [
+    7,
+    6,
+    6,
+    7
+   ],
+   "trait": "RIVAL",
+   "traitTxt": "Bonus XP for passing the leader.",
+   "from": "RIVAL REWARD"
+  }
+ ],
+ "packs": [
+  {
+   "hero": 10,
+   "rest": [
+    [
+     5,
+     3
+    ],
+    [
+     6,
+     3
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     7,
+     3
+    ]
+   ]
+  },
+  {
+   "hero": 12,
+   "rest": [
+    [
+     11,
+     3
+    ],
+    [
+     8,
+     2
+    ],
+    [
+     6,
+     3
+    ],
+    [
+     5,
+     3
+    ]
+   ]
+  },
+  {
+   "hero": 9,
+   "rest": [
+    [
+     7,
+     3
+    ],
+    [
+     11,
+     3
+    ],
+    [
+     13,
+     2
+    ],
+    [
+     1,
+     2
+    ]
+   ]
+  }
+ ]
+}

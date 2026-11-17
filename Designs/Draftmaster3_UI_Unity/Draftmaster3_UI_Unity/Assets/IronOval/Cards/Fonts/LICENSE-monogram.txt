@@ -1,0 +1,2 @@
+monogram by datagoblin (Vinicius Menezio), CC0 1.0 Universal.
+monogram-extended-bold.ttf is a derivative made for Draftmaster 3: each glyph thickened by one pixel to the right, without closing 1px counters. Also CC0.

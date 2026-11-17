@@ -22,6 +22,7 @@ public static class PixelFontBake
         "Assets/Resources/Fonts/Monogram Pixel.asset",
         "Assets/Resources/Fonts/Silkscreen Pixel.asset",
         "Assets/Resources/Fonts/Pixelify Sans Pixel.asset",
+        "Assets/Resources/Fonts/Pixelify Bold Pixel.asset",   // SINGLE RACE series codes, 30 px (RaceFlowFonts)
     };
 
     // Printable ASCII + Latin-1 (accented names) + the typographic punctuation dialogue gets pasted with.

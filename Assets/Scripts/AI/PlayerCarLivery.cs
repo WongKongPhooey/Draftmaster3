@@ -17,6 +17,11 @@ public static class PlayerCarLivery
     // MasterDraftRaceLauncher before the race scene loads; only read in GameSession.Mode.MasterDraft. Null = none.
     public static string MasterDraftLivery;
 
+    // The livery sprite a SINGLE RACE pick races in ("cts25livery19"), set by SingleRaceUI when the chosen car is in
+    // a carset of its own (a Truck or National pick), so the race car is the paint the Car Select tile showed. Null =
+    // repaint the scene's car by number in its own carset, as before.
+    public static string SingleRaceLivery;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void Install()
     {
@@ -41,6 +46,9 @@ public static class PlayerCarLivery
 
         var car = CarIdentity.FindPlayerCar();
         if (car == null || car.scene != scene) return;
+
+        if (GameSession.CurrentMode == GameSession.Mode.SingleRace && !string.IsNullOrEmpty(SingleRaceLivery)
+            && ApplySprite(car, SingleRaceLivery)) return;
 
         Apply(car, number);
     }

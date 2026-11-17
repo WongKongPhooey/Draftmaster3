@@ -1,0 +1,339 @@
+{
+  "units": "design px at 1x, origin top-left of the screen",
+  "tracks": [
+    {
+      "id": "cota",
+      "name": "Circuit of the Americas",
+      "place": "Austin",
+      "state": "TX",
+      "miles": 3.41,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/cota_idle.png",
+      "sprite_selected": "sprites/tracks/cota_selected.png",
+      "layout_svg_path_100x64": "M14 46 L22 14 L34 20 L40 14 L48 22 L56 16 L64 24 L86 30 L90 40 L70 44 L60 52 L40 50 Z"
+    },
+    {
+      "id": "indyrc",
+      "name": "Indianapolis Road Course",
+      "place": "Speedway",
+      "state": "IN",
+      "miles": 2.439,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/indyrc_idle.png",
+      "sprite_selected": "sprites/tracks/indyrc_selected.png",
+      "layout_svg_path_100x64": "M20 14 H80 A14 14 0 0 1 80 42 L64 42 L58 32 L50 42 L44 50 L22 50 A18 18 0 0 1 20 14 Z"
+    },
+    {
+      "id": "limerock",
+      "name": "Lime Rock Park",
+      "place": "Lakeville",
+      "state": "CT",
+      "miles": 1.5,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/limerock_idle.png",
+      "sprite_selected": "sprites/tracks/limerock_selected.png",
+      "layout_svg_path_100x64": "M16 40 L22 18 L58 14 L84 22 L86 36 L72 46 L40 48 Z"
+    },
+    {
+      "id": "midohio",
+      "name": "Mid-Ohio Sports Car Course",
+      "place": "Lexington",
+      "state": "OH",
+      "miles": 2.258,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/midohio_idle.png",
+      "sprite_selected": "sprites/tracks/midohio_selected.png",
+      "layout_svg_path_100x64": "M14 30 L22 16 L48 14 L56 24 L74 18 L88 28 L80 44 L60 40 L46 50 L24 48 Z"
+    },
+    {
+      "id": "coronado",
+      "name": "Naval Base Coronado",
+      "place": "San Diego",
+      "state": "CA",
+      "miles": 3,
+      "type": "street",
+      "sprite_idle": "sprites/tracks/coronado_idle.png",
+      "sprite_selected": "sprites/tracks/coronado_selected.png",
+      "layout_svg_path_100x64": "M14 16 H86 V30 H66 V48 H40 V38 H14 Z"
+    },
+    {
+      "id": "portland",
+      "name": "Portland International",
+      "place": "Portland",
+      "state": "OR",
+      "miles": 1.967,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/portland_idle.png",
+      "sprite_selected": "sprites/tracks/portland_selected.png",
+      "layout_svg_path_100x64": "M12 40 L18 30 L60 26 L82 18 L90 26 L80 38 L50 44 L24 46 Z"
+    },
+    {
+      "id": "roadam",
+      "name": "Road America",
+      "place": "Elkhart Lake",
+      "state": "WI",
+      "miles": 4.048,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/roadam_idle.png",
+      "sprite_selected": "sprites/tracks/roadam_selected.png",
+      "layout_svg_path_100x64": "M18 50 L16 20 L32 12 L54 16 L60 30 L76 22 L88 34 L82 50 L60 46 L44 54 Z"
+    },
+    {
+      "id": "sonoma",
+      "name": "Sonoma Raceway",
+      "place": "Sonoma",
+      "state": "CA",
+      "miles": 2.52,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/sonoma_idle.png",
+      "sprite_selected": "sprites/tracks/sonoma_selected.png",
+      "layout_svg_path_100x64": "M14 22 L30 14 L44 26 L60 16 L84 22 L86 34 L66 40 L58 52 L36 50 L28 38 Z"
+    },
+    {
+      "id": "watkins",
+      "name": "Watkins Glen International",
+      "place": "Watkins Glen",
+      "state": "NY",
+      "miles": 2.45,
+      "type": "road",
+      "sprite_idle": "sprites/tracks/watkins_idle.png",
+      "sprite_selected": "sprites/tracks/watkins_selected.png",
+      "layout_svg_path_100x64": "M20 50 L20 30 L28 18 L44 14 L52 22 L66 20 L80 12 L88 18 L84 30 L70 34 L72 46 L60 52 Z"
+    },
+    {
+      "id": "bristol",
+      "name": "Bristol Motor Speedway",
+      "place": "Bristol",
+      "state": "TN",
+      "miles": 0.533,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/bristol_idle.png",
+      "sprite_selected": "sprites/tracks/bristol_selected.png",
+      "layout_svg_path_100x64": "M30 16 H70 A16 16 0 0 1 70 48 H30 A16 16 0 0 1 30 16 Z"
+    },
+    {
+      "id": "charlotte",
+      "name": "Charlotte Motor Speedway",
+      "place": "Concord",
+      "state": "NC",
+      "miles": 1.5,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/charlotte_idle.png",
+      "sprite_selected": "sprites/tracks/charlotte_selected.png",
+      "layout_svg_path_100x64": "M26 14 H74 A18 18 0 0 1 74 50 L56 53 L50 56 L44 53 L26 50 A18 18 0 0 1 26 14 Z"
+    },
+    {
+      "id": "daytona",
+      "name": "Daytona International",
+      "place": "Daytona Beach",
+      "state": "FL",
+      "miles": 2.5,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/daytona_idle.png",
+      "sprite_selected": "sprites/tracks/daytona_selected.png",
+      "layout_svg_path_100x64": "M24 14 H76 A18 18 0 0 1 76 50 L50 56 L24 50 A18 18 0 0 1 24 14 Z"
+    },
+    {
+      "id": "dover",
+      "name": "Dover Motor Speedway",
+      "place": "Dover",
+      "state": "DE",
+      "miles": 1,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/dover_idle.png",
+      "sprite_selected": "sprites/tracks/dover_selected.png",
+      "layout_svg_path_100x64": "M32 12 H68 A20 20 0 0 1 68 52 H32 A20 20 0 0 1 32 12 Z"
+    },
+    {
+      "id": "martinsville",
+      "name": "Martinsville Speedway",
+      "place": "Ridgeway",
+      "state": "VA",
+      "miles": 0.526,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/martinsville_idle.png",
+      "sprite_selected": "sprites/tracks/martinsville_selected.png",
+      "layout_svg_path_100x64": "M26 22 H74 A10 10 0 0 1 74 42 H26 A10 10 0 0 1 26 22 Z"
+    },
+    {
+      "id": "richmond",
+      "name": "Richmond Raceway",
+      "place": "Richmond",
+      "state": "VA",
+      "miles": 0.75,
+      "type": "oval",
+      "sprite_idle": "sprites/tracks/richmond_idle.png",
+      "sprite_selected": "sprites/tracks/richmond_selected.png",
+      "layout_svg_path_100x64": "M28 12 H72 A20 20 0 0 1 72 52 Q50 58 28 52 A20 20 0 0 1 28 12 Z"
+    },
+    {
+      "id": "duquoin",
+      "name": "Du Quoin State Fairgrounds",
+      "place": "Du Quoin",
+      "state": "IL",
+      "miles": 1,
+      "type": "dirt",
+      "sprite_idle": "sprites/tracks/duquoin_idle.png",
+      "sprite_selected": "sprites/tracks/duquoin_selected.png",
+      "layout_svg_path_100x64": "M30 14 H70 A18 18 0 0 1 70 50 H30 A18 18 0 0 1 30 14 Z"
+    },
+    {
+      "id": "eldora",
+      "name": "Eldora Speedway",
+      "place": "Rossburg",
+      "state": "OH",
+      "miles": 0.5,
+      "type": "dirt",
+      "sprite_idle": "sprites/tracks/eldora_idle.png",
+      "sprite_selected": "sprites/tracks/eldora_selected.png",
+      "layout_svg_path_100x64": "M34 16 H66 A16 16 0 0 1 66 48 H34 A16 16 0 0 1 34 16 Z"
+    }
+  ],
+  "series": [
+    {
+      "id": "cup",
+      "name": "Premier Cup Series",
+      "code": "CUP",
+      "kind": "STOCK",
+      "entered": 48,
+      "colour": "#c4452f",
+      "background": "sprites/series/cup_bg.png"
+    },
+    {
+      "id": "chal",
+      "name": "Challenger Series",
+      "code": "CHL",
+      "kind": "STOCK",
+      "entered": 0,
+      "colour": "#5a9ad6",
+      "background": "sprites/series/chal_bg.png"
+    },
+    {
+      "id": "truck",
+      "name": "Truck Series",
+      "code": "TRK",
+      "kind": "TRUCK",
+      "entered": 27,
+      "colour": "#e08a3c",
+      "background": "sprites/series/truck_bg.png"
+    },
+    {
+      "id": "nat",
+      "name": "National Stock Series",
+      "code": "NSS",
+      "kind": "STOCK",
+      "entered": 34,
+      "colour": "#6fa85a",
+      "background": "sprites/series/nat_bg.png"
+    },
+    {
+      "id": "indy",
+      "name": "Indy Open Wheel",
+      "code": "IOW",
+      "kind": "OPEN WHEEL",
+      "entered": 0,
+      "colour": "#a06fd0",
+      "background": "sprites/series/indy_bg.png"
+    },
+    {
+      "id": "owl",
+      "name": "Open Wheel Lights",
+      "code": "OWL",
+      "kind": "OPEN WHEEL",
+      "entered": 0,
+      "colour": "#5cc8b0",
+      "background": "sprites/series/owl_bg.png"
+    },
+    {
+      "id": "dirt",
+      "name": "Outlaw Dirt Sprints",
+      "code": "ODS",
+      "kind": "DIRT",
+      "entered": 0,
+      "colour": "#b07a4a",
+      "background": "sprites/series/dirt_bg.png"
+    }
+  ],
+  "cars": [
+    {
+      "number": "62",
+      "driver": "Anthony Alfredo",
+      "team": "Beard Motorsports",
+      "sprite": "sprites/cars/car01.png",
+      "last_name": "Alfredo",
+      "is_player": false
+    },
+    {
+      "number": "66",
+      "driver": "Chad Finchum",
+      "team": "Garage 66",
+      "sprite": "sprites/cars/car08.png",
+      "last_name": "Finchum",
+      "is_player": false
+    },
+    {
+      "number": "67",
+      "driver": "Corey Heim",
+      "team": "23XI Racing",
+      "sprite": "sprites/cars/car09.png",
+      "last_name": "Heim",
+      "is_player": false
+    },
+    {
+      "number": "71",
+      "driver": "Michael McDowell",
+      "team": "Spire Motorsports",
+      "sprite": "sprites/cars/car11.png",
+      "last_name": "McDowell",
+      "is_player": false
+    },
+    {
+      "number": "77",
+      "driver": "Carson Hocevar",
+      "team": "Spire Motorsports",
+      "sprite": "sprites/cars/car12.png",
+      "last_name": "Hocevar",
+      "is_player": false
+    },
+    {
+      "number": "78",
+      "driver": "Katherine Legge",
+      "team": "Live Fast Motorsports",
+      "sprite": "sprites/cars/car24.png",
+      "last_name": "Legge",
+      "is_player": false
+    },
+    {
+      "number": "84",
+      "driver": "Jimmie Johnson",
+      "team": "Legacy Motor Club",
+      "sprite": "sprites/cars/car45.png",
+      "last_name": "Johnson",
+      "is_player": false
+    },
+    {
+      "number": "88",
+      "driver": "Shane van Gisbergen",
+      "team": "Trackhouse Racing",
+      "sprite": "sprites/cars/car08.png",
+      "last_name": "van Gisbergen",
+      "is_player": false
+    },
+    {
+      "number": "89",
+      "driver": "Ace Emerson",
+      "team": "Emerson Motorsports",
+      "sprite": "sprites/cars/car89.png",
+      "last_name": "Emerson",
+      "is_player": true
+    }
+  ],
+  "speedometer": {
+    "max_mph": 200,
+    "sweep_deg": 270,
+    "zero_at_deg_clockwise_from_up": -135,
+    "needle_rotation_z": "135 - 270 * mph / 200  (Unity z-rotation, CCW positive; needle sprite points straight up at 0)",
+    "redline_from_mph": 160,
+    "demo_mph": 121
+  }
+}

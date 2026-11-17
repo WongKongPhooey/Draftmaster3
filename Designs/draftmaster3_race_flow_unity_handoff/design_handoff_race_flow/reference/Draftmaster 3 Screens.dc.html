@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draftmaster 3 — Screens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'Fixedsys Excelsior';src:url(fonts/FSEX302.ttf) format('truetype');font-display:block}
+@font-face{font-family:'monogram';src:url(fonts/monogram-extended.ttf) format('truetype');font-display:block}
+@font-face{font-family:'monogram Bold';src:url(fonts/monogram-extended-bold.ttf) format('truetype');font-display:block}
+@font-face{font-family:'Peaberry';src:url(fonts/PeaberryBase.ttf) format('truetype');font-display:block}
+html,body{margin:0;background:#0b0c11}
+*{image-rendering:pixelated;-webkit-font-smoothing:none;font-smooth:never;box-sizing:border-box}
+button{font-family:inherit}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.keycap{display:inline-block;padding:1px 4px;background:#f4ead7;color:#12141c;box-shadow:0 2px 0 #8b93ad;font:700 8px/1 'Silkscreen',monospace;letter-spacing:0}
+.pc .opt:hover{background:#1b2840!important}
+.pc .mi:hover span:last-child{color:#f4ead7!important}
+button:focus-visible{box-shadow:0 0 0 3px #e8b13c!important}
+.tgrid{scrollbar-width:none}
+.tgrid::-webkit-scrollbar{display:none}
+.pc .tile:hover{background:#1b2840!important}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0b0c11;padding:34px 40px 60px;display:flex;flex-direction:column;align-items:center;gap:18px">
+
+  <div style="display:flex;align-items:baseline;gap:12px;width:900px">
+    <span style="font:700 13px 'Silkscreen',monospace;color:#f4ead7;letter-spacing:1px">DRAFTMASTER 3</span>
+    <span style="font:400 10px 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">{{ platformLabel }} — IN-GAME SCREENS — KIT PASS 03</span>
+  </div>
+
+  <div style="display:flex;gap:8px;width:900px;flex-wrap:wrap">
+    <sc-for list="{{ navs }}" as="nv" hint-placeholder-count="8">
+      <button onClick="{{ nv.on }}" style="font:700 10px 'Silkscreen',monospace;letter-spacing:1px;padding:9px 12px;background:{{ nv.bg }};color:{{ nv.fg }};border:0;outline:2px solid #0a0b10;box-shadow:3px 3px 0 #05060a;cursor:pointer">{{ nv.label }}</button>
+    </sc-for>
+    <span style="width:12px"></span>
+    <sc-for list="{{ plats }}" as="pl" hint-placeholder-count="2">
+      <button onClick="{{ pl.on }}" aria-pressed="{{ pl.pressed }}" style="font:700 10px 'Silkscreen',monospace;letter-spacing:1px;padding:9px 12px;background:{{ pl.bg }};color:{{ pl.fg }};border:0;outline:2px solid #0a0b10;box-shadow:3px 3px 0 #05060a;cursor:pointer">{{ pl.label }}</button>
+    </sc-for>
+    <span style="width:12px"></span>
+    <sc-for list="{{ types }}" as="ty" hint-placeholder-count="2">
+      <button onClick="{{ ty.on }}" aria-pressed="{{ ty.pressed }}" style="font:700 10px 'Silkscreen',monospace;letter-spacing:1px;padding:9px 12px;background:{{ ty.bg }};color:{{ ty.fg }};border:0;outline:2px solid #0a0b10;box-shadow:3px 3px 0 #05060a;cursor:pointer">{{ ty.label }}</button>
+    </sc-for>
+  </div>
+
+  <div style="padding:14px;background:#191b24;outline:3px solid #05060a;box-shadow:8px 8px 0 #05060a">
+    <div data-frame="1" class="{{ platformClass }}" style="position:relative;width:{{ frameW }};height:{{ frameH }};overflow:hidden;background:#12141c">
+
+      <!-- ============ TITLE ============ -->
+      <sc-if value="{{ isTitle }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,#1b2130 0 8px,#20283a 8px 16px)">
+          <img src="art/title_hero.png" alt="" style="position:absolute;right:0;top:0;height:100%;width:auto">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:{{ L.titleW }};background:linear-gradient(90deg,#0d0f16 72%,rgba(13,15,22,0));padding:{{ L.titlePad }};display:flex;flex-direction:column">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:2px">V0.8.12</span>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <div style="display:grid;grid-template-columns:auto auto auto;row-gap:3px">
+                <span style="font:700 32px/0.86 'Pixelify Sans',monospace;color:#f4ead7;letter-spacing:1px;text-shadow:2px 2px 0 #05060a;text-align:right">DRAF</span>
+                <span style="font:700 32px/0.86 'Pixelify Sans',monospace;color:#f4ead7;letter-spacing:1px;text-shadow:2px 2px 0 #05060a">T</span>
+                <img src="design_handoff_draftmaster3_logo/sprites/bolt_top_1x.png" alt="" width="34" height="16" style="margin:11px 0 0 3px">
+                <img src="design_handoff_draftmaster3_logo/sprites/bolt_bottom_1x.png" alt="" width="34" height="16" style="justify-self:end;align-self:end;margin:0 3px 8px 0">
+                <span style="font:700 32px/0.86 'Pixelify Sans',monospace;color:#f4ead7;letter-spacing:1px;text-shadow:2px 2px 0 #05060a">M</span>
+                <span style="font:700 32px/0.86 'Pixelify Sans',monospace;color:#f4ead7;letter-spacing:1px;text-shadow:2px 2px 0 #05060a">ASTER</span>
+                <span></span>
+                <div style="grid-column:2 / span 2;display:flex;align-items:center;gap:6px;margin-top:3px">
+                  <div style="width:16px;height:2px;background:#e8b13c"></div>
+                  <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">A PHOOEY GAME</span>
+                </div>
+              </div>
+              <img src="design_handoff_draftmaster3_logo/sprites/digit3_1x.png" alt="Draftmaster 3" width="66" height="69">
+            </div>
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px;margin-top:{{ L.titleSubTop }}">FORT WORTH — FRI AM</span>
+            <div style="display:flex;flex-direction:column;gap:{{ L.menuGap }};margin-top:8px">
+              <sc-for list="{{ menu }}" as="m" hint-placeholder-count="6">
+                <button class="mi" onClick="{{ m.on }}" style="border:0;background:transparent;padding:0;display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left">
+                  <span style="width:10px;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:{{ m.anim }}">{{ m.cursor }}</span>
+                  <span style="font:{{ T.menu }};letter-spacing:{{ T.lsmenu }};color:{{ m.fg }}">{{ m.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <span style="margin-top:auto;font:{{ T.row }};color:#8b93ad">(c) Phooey 2026</span>
+          </div>
+          <sc-if value="{{ isPc }}">
+            <div style="position:absolute;right:12px;bottom:10px;display:flex;gap:6px;align-items:center;background:#0d0f16cc;padding:5px 7px;outline:2px solid #2c3145">
+              <span class="keycap">W</span><span class="keycap">S</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#b9ae9a;letter-spacing:1px;margin-right:6px">MOVE</span>
+              <span class="keycap">ENTER</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#b9ae9a;letter-spacing:1px">SELECT</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ TRACK SELECT ============ -->
+      <sc-if value="{{ isTracks }}">
+        <div style="position:absolute;inset:0;background:#0d0f16;display:flex;flex-direction:column">
+          <div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7;white-space:nowrap">SELECT TRACK</span>
+            <span style="font:{{ T.row }};color:#8b93ad;white-space:nowrap">{{ trackCount }}</span>
+            <div style="margin-left:auto;display:flex;gap:4px">
+              <sc-for list="{{ tFilters }}" as="tf" hint-placeholder-count="4">
+                <button onClick="{{ tf.on }}" aria-pressed="{{ tf.pressed }}" style="height:20px;border:0;padding:0 6px;background:{{ tf.bg }};outline:2px solid #05060a;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ tf.fg }};cursor:pointer">{{ tf.label }}</button>
+              </sc-for>
+            </div>
+            <button onClick="{{ goTitle }}" aria-label="Back" style="flex:none;height:22px;border:0;background:#2c3145;outline:2px solid #05060a;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ESC</span></sc-if>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">BACK</span>
+            </button>
+          </div>
+          <div class="tgrid" style="flex:1;min-height:0;overflow-y:auto;padding:8px 0;display:grid;grid-template-columns:repeat({{ L.tCols }},{{ L.tile }});grid-auto-rows:{{ L.tile }};gap:10px;justify-content:center;align-content:start">
+            <sc-for list="{{ tTiles }}" as="t" hint-placeholder-count="8">
+              <button class="tile" onClick="{{ t.on }}" aria-pressed="{{ t.pressed }}" aria-label="{{ t.aria }}" style="border:0;padding:6px;background:{{ t.bg }};outline:3px solid {{ t.ring }};box-shadow:{{ t.shadow }};display:flex;flex-direction:column;gap:4px;text-align:left;cursor:pointer;min-width:0">
+                <div style="position:relative;flex:1;min-height:0;width:100%;background:#0f1420;background-image:linear-gradient(#182136 1px,transparent 1px),linear-gradient(90deg,#182136 1px,transparent 1px);background-size:8px 8px;outline:2px solid #05060a">
+                  <svg viewBox="0 0 100 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true" shape-rendering="crispEdges" style="position:absolute;inset:14px 4px 4px;width:calc(100% - 8px);height:calc(100% - 18px)">
+                    <path d="{{ t.d }}" fill="none" stroke="#05060a" stroke-width="7" stroke-linejoin="miter" vector-effect="non-scaling-stroke"></path>
+                    <path d="{{ t.d }}" fill="none" stroke="{{ t.line }}" stroke-width="3" stroke-linejoin="miter" vector-effect="non-scaling-stroke"></path>
+                    <rect x="{{ t.sx }}" y="{{ t.sy }}" width="5" height="5" fill="#c4452f" stroke="#f4ead7" stroke-width="1" vector-effect="non-scaling-stroke"></rect>
+                  </svg>
+                  <span style="position:absolute;left:3px;top:3px;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ t.tagFg }}">{{ t.type }}</span>
+                  <span style="position:absolute;right:3px;top:2px;background:#05060a;padding:2px 3px;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ t.lenFg }}">{{ t.len }}</span>
+                </div>
+                <span style="flex:none;width:100%;display:flex;align-items:center;gap:4px;font:{{ T.row }};color:{{ t.fg }};white-space:nowrap;overflow:hidden">
+                  <sc-if value="{{ t.sel }}"><span style="flex:none;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:blink 0.9s steps(1) infinite">▶</span></sc-if>
+                  <span style="overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                </span>
+                <span style="flex:none;width:100%;font:{{ T.row }};color:#8b93ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.place }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="flex:none;height:{{ L.tFoot }};display:flex;align-items:center;gap:8px;padding:0 10px;border-top:2px solid #1b2030">
+            <sc-if value="{{ isPc }}">
+              <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px;margin-right:6px">MOVE</span>
+              <span class="keycap">Q</span><span class="keycap">E</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">FILTER</span>
+            </sc-if>
+            <sc-if value="{{ isMobile }}">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">TAP A TRACK · SWIPE FOR MORE</span>
+            </sc-if>
+            <span style="margin-left:auto;font:{{ T.row }};color:#8b93ad">{{ tPos }}</span>
+            <button onClick="{{ goSeries }}" style="height:{{ L.tBtn }};border:0;background:#c4452f;outline:2px solid #05060a;box-shadow:3px 3px 0 #05060a;display:flex;align-items:center;gap:6px;padding:0 10px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ENTER</span></sc-if>
+              <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">NEXT</span>
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SERIES SELECT ============ -->
+      <sc-if value="{{ isSeries }}">
+        <div style="position:absolute;inset:0;background:#0d0f16;display:flex;flex-direction:column">
+          <div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7;white-space:nowrap">SELECT SERIES</span>
+            <span style="min-width:0;font:{{ T.row }};color:#8b93ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ crumbTrack }}</span>
+            <button onClick="{{ goTracks }}" aria-label="Back" style="margin-left:auto;flex:none;height:22px;border:0;background:#2c3145;outline:2px solid #05060a;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ESC</span></sc-if>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">BACK</span>
+            </button>
+          </div>
+          <div class="tgrid" style="flex:1;min-height:0;overflow-y:auto;padding:8px 0;display:grid;grid-template-columns:repeat({{ L.tCols }},{{ L.tile }});grid-auto-rows:{{ L.tile }};gap:10px;justify-content:center;align-content:start">
+            <sc-for list="{{ sTiles }}" as="t" hint-placeholder-count="7">
+              <button class="tile" onClick="{{ t.on }}" aria-pressed="{{ t.pressed }}" aria-label="{{ t.aria }}" style="border:0;padding:6px;background:{{ t.bg }};outline:3px solid {{ t.ring }};box-shadow:{{ t.shadow }};display:flex;flex-direction:column;gap:4px;text-align:left;cursor:pointer;min-width:0">
+                <div style="position:relative;flex:1;min-height:0;width:100%;background:{{ t.art }};outline:2px solid #05060a;display:flex;align-items:center;justify-content:center">
+                  <div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:{{ t.col }}"></div>
+                  <span style="font:700 30px/1 'Pixelify Sans',monospace;letter-spacing:1px;color:{{ t.codeFg }};text-shadow:3px 3px 0 #05060a;margin-top:6px">{{ t.code }}</span>
+                  <span style="position:absolute;left:3px;top:3px;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ t.tagFg }};background:#05060acc;padding:2px 3px">{{ t.kind }}</span>
+                  <span style="position:absolute;right:3px;top:2px;background:#05060a;padding:2px 3px;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ t.chipFg }}">{{ t.chip }}</span>
+                </div>
+                <span style="flex:none;width:100%;display:flex;align-items:center;gap:4px;font:{{ T.row }};color:{{ t.fg }};white-space:nowrap;overflow:hidden">
+                  <sc-if value="{{ t.sel }}"><span style="flex:none;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:blink 0.9s steps(1) infinite">▶</span></sc-if>
+                  <span style="overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                </span>
+                <span style="flex:none;width:100%;font:{{ T.row }};color:{{ t.subFg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.sub }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="flex:none;height:{{ L.tFoot }};display:flex;align-items:center;gap:8px;padding:0 10px;border-top:2px solid #1b2030">
+            <sc-if value="{{ isPc }}">
+              <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">MOVE</span>
+            </sc-if>
+            <sc-if value="{{ isMobile }}">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">TAP A SERIES</span>
+            </sc-if>
+            <span style="margin-left:auto;font:{{ T.row }};color:#8b93ad">{{ sPos }}</span>
+            <button onClick="{{ goCars }}" style="height:{{ L.tBtn }};border:0;background:#c4452f;outline:2px solid #05060a;box-shadow:3px 3px 0 #05060a;display:flex;align-items:center;gap:6px;padding:0 10px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ENTER</span></sc-if>
+              <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">NEXT</span>
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ CAR SELECT ============ -->
+      <sc-if value="{{ isCars }}">
+        <div style="position:absolute;inset:0;background:#0d0f16;display:flex;flex-direction:column">
+          <div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7;white-space:nowrap">SELECT CAR</span>
+            <span style="min-width:0;font:{{ T.row }};color:#8b93ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ crumbTrack }} › {{ crumbSeries }}</span>
+            <button onClick="{{ goSeries }}" aria-label="Back" style="margin-left:auto;flex:none;height:22px;border:0;background:#2c3145;outline:2px solid #05060a;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ESC</span></sc-if>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">BACK</span>
+            </button>
+          </div>
+          <div class="tgrid" style="flex:1;min-height:0;overflow-y:auto;padding:8px 0;display:grid;grid-template-columns:repeat({{ L.cCols }},{{ L.cTile }});grid-auto-rows:{{ L.cTile }};gap:8px;justify-content:center;align-content:start">
+            <sc-for list="{{ cTiles }}" as="t" hint-placeholder-count="9">
+              <button class="tile" onClick="{{ t.on }}" aria-pressed="{{ t.pressed }}" aria-label="{{ t.aria }}" style="border:0;padding:5px;background:{{ t.bg }};outline:3px solid {{ t.ring }};box-shadow:{{ t.shadow }};display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;min-width:0">
+                <div style="position:relative;flex:1;min-height:0;width:100%;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px);outline:2px solid #05060a;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                  <img src="{{ t.src }}" alt="" width="{{ L.cSpriteW }}" height="{{ L.cSpriteH }}" style="position:relative">
+                  <sc-if value="{{ t.mine }}"><span style="position:absolute;right:2px;top:2px;background:#e8b13c;outline:1px solid #05060a;padding:2px 3px;font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:#0b0c11">YOU</span></sc-if>
+                </div>
+                <span style="flex:none;width:100%;display:flex;align-items:center;gap:4px;font:{{ T.row }};color:{{ t.fg }};white-space:nowrap;overflow:hidden">
+                  <sc-if value="{{ t.sel }}"><span style="flex:none;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:blink 0.9s steps(1) infinite">▶</span></sc-if>
+                  <span style="overflow:hidden;text-overflow:ellipsis">{{ t.last }}</span>
+                </span>
+                <span style="flex:none;width:100%;display:flex;gap:4px;font:{{ T.row }};color:#8b93ad;white-space:nowrap;overflow:hidden">
+                  <span style="flex:none;color:#e0604a">#{{ t.num }}</span>
+                  <span style="overflow:hidden;text-overflow:ellipsis">{{ t.team }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="flex:none;height:{{ L.tFoot }};display:flex;align-items:center;gap:8px;padding:0 10px;border-top:2px solid #1b2030">
+            <sc-if value="{{ isPc }}">
+              <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">MOVE</span>
+            </sc-if>
+            <sc-if value="{{ isMobile }}">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">TAP A CAR · SWIPE FOR MORE</span>
+            </sc-if>
+            <span style="margin-left:auto;font:{{ T.row }};color:#8b93ad">{{ cPos }}</span>
+            <button onClick="{{ goHud }}" style="height:{{ L.tBtn }};border:0;background:#c4452f;outline:2px solid #05060a;box-shadow:3px 3px 0 #05060a;display:flex;align-items:center;gap:6px;padding:0 10px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ENTER</span></sc-if>
+              <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">RACE</span>
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ DRIVESCOUT ============ -->
+      <sc-if value="{{ isScout }}">
+        <div style="position:absolute;inset:0;background:#0d0f16;display:flex;flex-direction:column">
+          <div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7">DRIVESCOUT</span>
+            <span style="font:{{ T.row }};color:#8b93ad;margin-right:4px">v3.1</span>
+            <button style="flex:1;min-width:0;height:22px;border:0;background:#12141c;outline:2px solid #2c3145;display:flex;align-items:center;justify-content:space-between;padding:0 6px;cursor:pointer">
+              <span style="font:{{ T.row }};color:#f4ead7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Premier Cup Series</span>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c">▼</span>
+            </button>
+            <button style="flex:1;min-width:0;height:22px;border:0;background:#12141c;outline:2px solid #2c3145;display:flex;align-items:center;justify-content:space-between;padding:0 6px;cursor:pointer">
+              <span style="font:{{ T.row }};color:#f4ead7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#89 Ace Emerson</span>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c">▼</span>
+            </button>
+            <button onClick="{{ goTitle }}" aria-label="Close" style="flex:none;height:22px;border:0;background:#2c3145;outline:2px solid #05060a;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ESC</span></sc-if>
+              <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">X</span>
+            </button>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;gap:8px;padding:8px">
+            <div style="width:{{ L.scoutLeft }};flex:none;display:flex;flex-direction:column;gap:8px">
+              <div style="height:76px;flex:none;background:repeating-linear-gradient(45deg,#1b2130 0 6px,#222a3c 6px 12px);outline:3px solid #f4ead7;display:flex;align-items:center;justify-content:center">
+                <img src="art/car89.png" alt="" width="128" height="64">
+              </div>
+              <div style="flex:1;min-height:0;background:#182136;outline:3px solid #f4ead7;padding:8px 10px;display:flex;flex-direction:column;gap:1px">
+                <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:4px">PERSONAL</span>
+                <sc-for list="{{ personal }}" as="r" hint-placeholder-count="2">
+                  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:6px"><span style="font:{{ T.row }};color:#b9ae9a">{{ r.k }}</span><span style="margin-left:auto;white-space:nowrap;font:{{ T.row }};color:#f4ead7">{{ r.v }}</span></div>
+                </sc-for>
+                <div style="height:1px;background:#2c3145;margin:5px 0"></div>
+                <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:4px">CAREER</span>
+                <sc-for list="{{ career }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;gap:6px"><span style="font:{{ T.row }};color:#b9ae9a">{{ r.k }}</span><span style="font:{{ T.row }};color:#f4ead7">{{ r.v }}</span></div>
+                </sc-for>
+                <div style="height:1px;background:#2c3145;margin:5px 0"></div>
+                <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:4px">ACCOLADES</span>
+                <span style="font:{{ T.row }};color:#8b93ad">No starts yet</span>
+              </div>
+            </div>
+
+            <div style="flex:1;min-width:0;background:#182136;outline:3px solid #f4ead7;padding:8px {{ L.midPadX }};display:flex;flex-direction:column;gap:1px">
+              <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:5px">DRIVER STATS</span>
+              <sc-for list="{{ ability }}" as="a" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:8px;height:17px">
+                  <span style="width:{{ L.abW }};flex:none;font:{{ T.row }};color:#b9ae9a">{{ a.k }}</span>
+                  <div style="flex:1;display:flex;gap:2px">
+                    <sc-for list="{{ a.cells }}" as="c" hint-placeholder-count="10">
+                      <div style="flex:1;max-width:14px;height:10px;background:{{ c.bg }}"></div>
+                    </sc-for>
+                  </div>
+                  <span style="font:{{ T.row }};color:#f4ead7">{{ a.v }}</span>
+                </div>
+              </sc-for>
+              <div style="height:1px;background:#2c3145;margin:5px 0 6px"></div>
+              <div style="flex:1;min-height:0;display:flex;gap:{{ L.subGap }}">
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                  <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:4px;white-space:nowrap">TRACK TYPES</span>
+                  <sc-for list="{{ tracks }}" as="r" hint-placeholder-count="6">
+                    <div style="display:flex;justify-content:space-between;gap:6px"><span style="font:{{ T.row }};color:#b9ae9a;white-space:nowrap">{{ r.k }}</span><span style="font:{{ T.row }};color:{{ r.fg }}">{{ r.v }}</span></div>
+                  </sc-for>
+                  <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin:9px 0 4px">STANDING</span>
+                  <sc-for list="{{ standing }}" as="r" hint-placeholder-count="3">
+                    <div style="display:flex;justify-content:space-between;gap:6px"><span style="font:{{ T.row }};color:#b9ae9a;white-space:nowrap">{{ r.k }}</span><span style="font:{{ T.row }};color:{{ r.fg }}">{{ r.v }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                  <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:4px">CRAFT</span>
+                  <sc-for list="{{ craft }}" as="r" hint-placeholder-count="7">
+                    <div style="display:flex;justify-content:space-between;gap:6px"><span style="font:{{ T.row }};color:#b9ae9a;white-space:nowrap">{{ r.k }}</span><span style="font:{{ T.row }};color:{{ r.fg }}">{{ r.v }}</span></div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="width:{{ L.scoutRight }};flex:none;display:flex;flex-direction:column;gap:8px">
+              <div style="flex:1;background:#182136;outline:3px solid #f4ead7;padding:8px 10px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;margin-bottom:3px">TRAITS</span>
+                <sc-for list="{{ traits }}" as="t" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;flex:none;background:{{ t.dot }}"></div><span style="font:{{ T.row }};color:#f4ead7">{{ t.k }}</span></div>
+                </sc-for>
+              </div>
+              <div style="flex:1;background:#182136;outline:3px solid #f4ead7;padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+                <span style="font:{{ T.head }};letter-spacing:{{ T.lshead }};color:#e8b13c;white-space:nowrap">RELATIONSHIP</span>
+                <span style="font:{{ T.row }};color:#8b93ad">N/A</span>
+                <span style="margin-top:auto;font:400 8px/1.5 'Silkscreen',monospace;color:#8b93ad;letter-spacing:1px">RACE TOGETHER TO BUILD A RAPPORT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ MAP ============ -->
+      <sc-if value="{{ isMap }}">
+        <div style="position:absolute;inset:0;background:#0d0f16;display:flex;flex-direction:column">
+          <div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7">IDROID MAPS</span>
+            <span style="font:{{ T.row }};color:#8b93ad">· Watkins Glen</span>
+            <button onClick="{{ goTitle }}" aria-label="Close map" style="margin-left:auto;height:22px;border:0;background:#2c3145;outline:2px solid #05060a;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer">
+              <sc-if value="{{ isPc }}"><span class="keycap">ESC</span></sc-if>
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">CLOSE</span>
+            </button>
+          </div>
+          <div style="flex:1;min-height:0;padding:8px 8px 0">
+            <div style="position:relative;width:100%;height:100%;background:#182136;outline:3px solid #f4ead7;overflow:hidden">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%">
+                <sc-for list="{{ edges }}" as="e" hint-placeholder-count="20">
+                  <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ e.col }}" stroke-width="2" vector-effect="non-scaling-stroke"></line>
+                </sc-for>
+              </svg>
+              <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="30">
+                <div style="{{ n.boxStyle }}"></div>
+                <span style="{{ n.labelStyle }}">{{ n.label }}</span>
+              </sc-for>
+              <div style="position:absolute;left:{{ here.x }};top:{{ here.y }};width:12px;height:14px;margin:-26px 0 0 -6px;background:#c4452f;outline:2px solid #05060a;display:flex;align-items:center;justify-content:center;animation:bob 1s steps(2) infinite"><div style="width:4px;height:4px;background:#f4ead7"></div></div>
+              <span style="position:absolute;left:{{ here.x }};top:{{ here.y }};margin:10px 0 0 -40px;font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7;text-shadow:2px 2px 0 #05060a;white-space:nowrap">WATKINS GLEN</span>
+              <div style="position:absolute;left:{{ factory.x }};top:{{ factory.y }};width:22px;height:22px;margin:-11px 0 0 -11px;background:#1f4a46;outline:2px solid #e08a3c;display:flex;align-items:center;justify-content:center"><span style="font:{{ T.row }};color:#5cc8b0">⌂</span></div>
+              <span style="position:absolute;left:{{ factory.x }};top:{{ factory.y }};margin:-34px 0 0 -12px;font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#5cc8b0;text-shadow:2px 2px 0 #05060a;white-space:nowrap">TEAM FACTORY</span>
+              <div style="position:absolute;right:8px;bottom:8px;background:#0d0f16ee;outline:2px solid #2c3145;padding:7px 9px;display:flex;flex-direction:column;gap:5px">
+                <sc-for list="{{ legend }}" as="lg" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <div style="width:7px;height:7px;flex:none;background:{{ lg.fill }};outline:{{ lg.ring }}"></div>
+                    <span style="font:400 8px/1 'Silkscreen',monospace;color:{{ lg.fg }};letter-spacing:1px">{{ lg.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="flex:none;height:26px;display:flex;align-items:center;gap:8px;padding:0 10px">
+            <span style="font:{{ T.row }};color:#8b93ad">{{ mapHint }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ LIAISON (overworld dialogue) ============ -->
+      <sc-if value="{{ isLiaison }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px)">
+          <div style="position:absolute;left:15%;top:0;bottom:0;width:15%;background:repeating-linear-gradient(0deg,#c9cbd6 0 2px,#bfc1cc 2px 4px)"></div>
+          <div style="position:absolute;left:15.5%;top:13%;width:14%;height:9%;background:#2c3145"></div>
+          <div style="position:absolute;left:84%;top:0;bottom:0;right:0;background:repeating-linear-gradient(0deg,#a9ab84 0 2px,#a2a47d 2px 4px)"></div>
+          <div style="position:absolute;left:90%;top:42%;width:10%;height:20%;background:#f4ead7;outline:3px solid #3a3a3a"></div>
+          <div style="position:absolute;left:52%;top:62%;width:16px;height:8px;background:#e8b13c;outline:1px solid #05060a"><div style="width:8px;height:8px;background:#6fa85a"></div></div>
+
+          <div style="position:absolute;left:38%;top:32%;display:flex;flex-direction:column;align-items:flex-start">
+            <span style="background:#101a30;outline:2px solid #f4ead7;padding:3px 6px;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px;margin-left:2px;margin-bottom:5px">TEAM LIAISON</span>
+            <div style="width:{{ L.bubbleW }};background:#101a30;outline:3px solid #f4ead7;box-shadow:4px 4px 0 #05060a;padding:8px 10px 6px;display:flex;flex-direction:column;gap:2px">
+              <span style="font:{{ T.body }};color:#f4ead7">Only if you miss the team strategy briefing at your team's garage, 08:00.</span>
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px">
+                <sc-if value="{{ isPc }}"><span class="keycap">E</span></sc-if>
+                <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:bob 1s steps(2) infinite">▼</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:0;right:0;top:0;height:{{ L.barH }};background:#05060a;display:flex;align-items:center;padding:0 12px;gap:10px">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">FRI · AM</span>
+            <span style="font:{{ T.data }};color:#f4ead7">07:42</span>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:{{ L.barH }};background:#05060a"></div>
+
+          <div style="position:absolute;left:12px;{{ L.objPos }};display:flex;gap:6px;align-items:stretch">
+            <div style="width:24px;background:#101a30;outline:2px solid #f4ead7;display:flex;align-items:center;justify-content:center"><span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c">◀</span></div>
+            <div style="background:#101a30dd;outline:2px solid #2c3145;padding:5px 8px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">TEAM STRATEGY BRIEFING</span>
+              <span style="font:{{ T.row }};color:#f4ead7">299 m · garage 4</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ isMobile }}">
+            <div style="position:absolute;left:14px;bottom:42px;width:72px;height:72px;background:#12141c99;outline:3px solid #6d7590;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))">
+              <div></div><div style="background:#2c3145"></div><div></div>
+              <div style="background:#2c3145"></div><div style="background:#3a4152"></div><div style="background:#2c3145"></div>
+              <div></div><div style="background:#2c3145"></div><div></div>
+            </div>
+            <button style="position:absolute;right:16px;bottom:44px;width:60px;height:60px;border:0;background:#12141cdd;outline:3px solid #e8b13c;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px;cursor:pointer">TALK</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ CHOICE ============ -->
+      <sc-if value="{{ isChoice }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px)">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:24%;background:repeating-linear-gradient(0deg,#e6d28f 0 2px,#ddc985 2px 4px)"></div>
+          <div style="position:absolute;left:4%;top:62%;width:10%;height:16%;background:#05060a"></div>
+          <div style="position:absolute;left:24%;top:0;bottom:0;width:53%;background:repeating-linear-gradient(0deg,#8a8c94 0 2px,#82848c 2px 4px)"></div>
+          <div style="position:absolute;left:40%;top:78%;width:22%;height:22%;background:#8b1d14;outline:3px solid #05060a"></div>
+
+          <div style="position:absolute;left:0;right:0;top:0;height:{{ L.barH }};background:#05060a"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:{{ L.barH }};background:#05060a"></div>
+
+          <div style="position:absolute;left:20px;right:20px;top:{{ L.choiceTop }};background:#101a30;outline:3px solid #f4ead7;box-shadow:5px 5px 0 #05060a;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">CREW CHIEF — RAY</span>
+            <span style="font:{{ T.body }};color:#f4ead7;margin:4px 0 6px">How are we running the weekend?</span>
+            <sc-for list="{{ options }}" as="o" hint-placeholder-count="3">
+              <button class="opt" onClick="{{ o.on }}" style="height:{{ L.optH }};border:0;background:{{ o.bg }};outline:{{ o.ring }};display:flex;align-items:center;gap:8px;padding:0 10px;text-align:left;cursor:pointer">
+                <span style="width:8px;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;animation:{{ o.anim }}">{{ o.cursor }}</span>
+                <span style="font:{{ T.body }};color:{{ o.fg }}">{{ o.text }}</span>
+              </button>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <sc-if value="{{ isPc }}">
+                <span class="keycap">W</span><span class="keycap">S</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:2px;margin-right:8px">CHOOSE</span>
+                <span class="keycap">E</span><span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:2px">ANSWER</span>
+              </sc-if>
+              <sc-if value="{{ isMobile }}">
+                <span style="font:400 8px/1 'Silkscreen',monospace;color:#8b93ad;letter-spacing:2px">TAP AN ANSWER</span>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ DAY SUMMARY POPUP ============ -->
+      <sc-if value="{{ isPopup }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px)">
+          <div style="position:absolute;left:30%;top:0;bottom:0;width:40%;background:repeating-linear-gradient(0deg,#5a5e6c 0 2px,#545866 2px 4px)"></div>
+          <div style="position:absolute;inset:0;background:#05060ab3"></div>
+          <div style="position:absolute;left:0;right:0;top:12px;display:flex;flex-direction:column;align-items:center;gap:3px">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">CUP PRACTICE</span>
+            <span style="font:{{ T.data }};color:#f4ead7">5 m</span>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;padding-top:22px">
+            <div style="width:{{ L.popupW }};background:#182136;outline:3px solid #e8b13c;box-shadow:6px 6px 0 #05060a;display:flex;flex-direction:column">
+              <div style="height:28px;display:flex;align-items:center;padding:0 10px;background:#1b2030;border-bottom:3px solid #05060a">
+                <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7">SKIPPED FRI AM</span>
+              </div>
+              <div style="padding:9px 10px 10px;display:flex;flex-direction:column;gap:1px">
+                <span style="font:{{ T.body }};color:#f4ead7">Gave up the rest of Friday morning and went back to the motorhome. It's now Friday afternoon.</span>
+                <div style="height:1px;background:#2c3145;margin:7px 0 6px"></div>
+                <sc-for list="{{ summary }}" as="r" hint-placeholder-count="5">
+                  <div style="display:flex;justify-content:space-between;gap:8px"><span style="font:{{ T.row }};color:#b9ae9a">{{ r.k }}</span><span style="font:{{ T.row }};color:{{ r.fg }}">{{ r.v }}</span></div>
+                </sc-for>
+                <button onClick="{{ goLiaison }}" style="margin-top:10px;height:32px;border:0;background:#c4452f;outline:3px solid #05060a;box-shadow:4px 4px 0 #05060a;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+                  <sc-if value="{{ isPc }}"><span class="keycap">E</span></sc-if>
+                  <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">GOT IT</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ RACE HUD ============ -->
+      <sc-if value="{{ isHud }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#2f6b2a 0 4px,#2b6427 4px 8px)">
+          <!-- grandstand -->
+          <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:calc(34% - 3px);background:#2a2d38;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:none;height:9px;background:#1b2030;border-bottom:2px solid #05060a;background-image:repeating-linear-gradient(90deg,#3a4152 0 2px,transparent 2px 48px)"></div>
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden">
+              <sc-for list="{{ crowd }}" as="cr" hint-placeholder-count="12">
+                <div style="{{ cr.style }}"></div>
+              </sc-for>
+            </div>
+            <div style="flex:none;height:10px;background:repeating-linear-gradient(90deg,#8b93ad 0 1px,transparent 1px 5px);border-top:2px solid #b9ae9a;border-bottom:3px solid #5a5e6c"></div>
+          </div>
+          <div aria-hidden="true" style="position:absolute;left:0;top:0;width:34%;height:calc(34% - 3px);background:linear-gradient(90deg,#05060a99,rgba(5,6,10,0))"></div>
+          <!-- paddock -->
+          <div aria-hidden="true" style="position:absolute;left:0;right:0;top:calc(65% + 8px);height:48px;overflow:hidden">
+            <div style="position:absolute;left:0;right:0;top:0;height:4px;background:repeating-linear-gradient(90deg,#b9ae9a 0 2px,transparent 2px 10px);border-top:1px solid #8b93ad"></div>
+            <div style="position:absolute;left:0;right:0;top:20px;height:22px;background:#3a3d47;border-top:2px solid #2b2b30;border-bottom:2px solid #2b2b30"></div>
+            <sc-for list="{{ paddock }}" as="pd" hint-placeholder-count="60">
+              <div style="{{ pd }}"></div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:34%;height:4px;background:repeating-linear-gradient(90deg,#f4ead7 0 8px,#c4452f 8px 16px)"></div>
+          <div style="position:absolute;left:0;right:0;top:calc(34% + 4px);height:31%;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px)">
+            <div style="position:absolute;left:0;right:0;top:3px;height:2px;background:#f4ead7"></div>
+            <div style="position:absolute;left:0;right:0;bottom:3px;height:2px;background:#f4ead7"></div>
+            <sc-for list="{{ hudCars }}" as="hc" hint-placeholder-count="5">
+              <img src="{{ hc.src }}" alt="" width="64" height="32" style="position:absolute;left:{{ hc.x }};top:{{ hc.y }}">
+            </sc-for>
+            <div style="position:absolute;left:{{ L.playerX }};top:6%;width:6px;height:6px;margin-left:29px;background:#e8b13c;outline:1px solid #05060a"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:calc(65% + 4px);height:4px;background:repeating-linear-gradient(90deg,#f4ead7 0 8px,#c4452f 8px 16px)"></div>
+
+          <div style="position:absolute;left:14px;top:10px;display:flex;align-items:flex-end;gap:4px">
+            <span style="font:700 44px/1 'Pixelify Sans',monospace;color:#f4ead7;text-shadow:3px 3px 0 #05060a">P3</span>
+            <span style="font:{{ T.data }};color:#b9ae9a;padding-bottom:5px">/44</span>
+          </div>
+          <span style="position:absolute;left:16px;top:60px;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">LAP 1/5</span>
+
+          <div style="position:absolute;left:0;right:0;top:12px;display:flex;justify-content:center">
+            <div style="background:#2a1210ee;outline:2px solid #e0604a;padding:5px 9px;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:2px;animation:blink 0.9s steps(1) infinite">OUT OF POSITION</span>
+              <span style="font:{{ T.body }};color:#f4ead7">Drop in behind car #21</span>
+            </div>
+          </div>
+
+          <div style="position:absolute;right:12px;top:12px;width:116px;height:66px;background:#12141c;outline:3px solid #f4ead7;display:flex;align-items:center;justify-content:center">
+            <img src="art/track_minimap.png" alt="" width="104" height="56">
+          </div>
+          <div style="position:absolute;right:12px;top:88px;width:116px;background:#12141ce8;outline:3px solid #f4ead7;padding:7px 8px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:1px">TIRE</span>
+              <div style="display:flex;gap:2px"><sc-for list="{{ tireCells }}" as="c" hint-placeholder-count="10"><div style="width:8px;height:9px;background:{{ c.bg }}"></div></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#5a9ad6;letter-spacing:1px">DRAFT</span>
+              <div style="display:flex;gap:2px"><sc-for list="{{ draftCells }}" as="c" hint-placeholder-count="10"><div style="width:8px;height:9px;background:{{ c.bg }}"></div></sc-for></div>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center">
+            <div style="position:relative;background:#101a30;outline:3px solid #f4ead7;box-shadow:4px 4px 0 #05060a;padding:6px 10px;display:flex;gap:14px">
+              <sc-if value="{{ isPc }}"><span class="keycap" style="position:absolute;left:-3px;top:-17px">F1</span></sc-if>
+              <sc-for list="{{ laps }}" as="lp" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:1px">{{ lp.k }}</span>
+                  <span style="font:{{ T.data }};color:#f4ead7">{{ lp.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="position:absolute;right:{{ L.speedoRight }};bottom:{{ L.speedoBottom }};width:104px;height:104px;filter:drop-shadow(3px 3px 0 #05060a)">
+            <svg viewBox="0 0 100 100" width="104" height="104" role="img" aria-label="Speedometer, {{ speedo.v }} miles per hour">
+              <circle cx="50" cy="50" r="49" fill="#05060a"></circle>
+              <circle cx="50" cy="50" r="47" fill="#8b93ad"></circle>
+              <circle cx="50" cy="50" r="44" fill="#f4ead7"></circle>
+              <path d="{{ speedo.red }}" fill="none" stroke="#c4452f" stroke-width="4"></path>
+              <g shape-rendering="crispEdges">
+                <sc-for list="{{ speedo.ticks }}" as="tk" hint-placeholder-count="21">
+                  <line x1="{{ tk.x1 }}" y1="{{ tk.y1 }}" x2="{{ tk.x2 }}" y2="{{ tk.y2 }}" stroke="#12141c" stroke-width="{{ tk.w }}"></line>
+                </sc-for>
+              </g>
+              <text x="29.5" y="70.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">0</text>
+              <text x="21.4" y="45.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">40</text>
+              <text x="36.8" y="24.2" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">80</text>
+              <text x="63.2" y="24.2" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">120</text>
+              <text x="78.6" y="45.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#c4452f">160</text>
+              <text x="70.5" y="70.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#c4452f">200</text>
+              <text x="50" y="74" text-anchor="middle" dominant-baseline="central" style="font:700 14px 'Pixelify Sans',monospace" fill="#12141c">121</text>
+              <text x="50" y="85" text-anchor="middle" dominant-baseline="central" style="font:400 6px 'Silkscreen',monospace;letter-spacing:1px" fill="#5a5e6c">MPH</text>
+              <line x1="{{ speedo.tx }}" y1="{{ speedo.ty }}" x2="{{ speedo.nx }}" y2="{{ speedo.ny }}" stroke="#c4452f" stroke-width="3" stroke-linecap="square"></line>
+              <circle cx="50" cy="50" r="5" fill="#12141c"></circle>
+            </svg>
+          </div>
+
+          <button onClick="{{ toggleAuto }}" aria-pressed="{{ autoPressed }}" style="position:absolute;right:12px;bottom:{{ L.autoBottom }};height:26px;border:0;background:#12141cdd;outline:3px solid {{ autoEdge }};display:flex;align-items:center;gap:6px;padding:0 8px;cursor:pointer">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">AUTO</span>
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#0b0c11;background:{{ autoChip }};padding:2px 3px">{{ autoLabel }}</span>
+          </button>
+
+          <sc-if value="{{ isPc }}">
+            <div style="position:absolute;left:12px;bottom:10px;display:flex;flex-direction:column;gap:4px">
+              <sc-for list="{{ keyHints }}" as="kh" hint-placeholder-count="3">
+                <div style="display:flex;gap:6px;align-items:center;background:#12141ccc;outline:2px solid #2c3145;padding:3px 5px">
+                  <span class="keycap">{{ kh.key }}</span>
+                  <span style="font:400 8px/1 'Silkscreen',monospace;letter-spacing:1px;color:{{ kh.fg }}">{{ kh.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isMobile }}">
+            <div style="position:absolute;left:14px;bottom:12px;width:72px;height:72px;background:#12141c99;outline:3px solid #6d7590;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))">
+              <div></div><div style="background:#2c3145"></div><div></div>
+              <div style="background:#2c3145"></div><div style="background:#3a4152"></div><div style="background:#2c3145"></div>
+              <div></div><div style="background:#2c3145"></div><div></div>
+            </div>
+            <div style="position:absolute;right:14px;bottom:12px;display:flex;gap:8px;align-items:flex-end">
+              <button style="width:56px;height:56px;border:0;background:#12141cdd;outline:3px solid #c4452f;font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:1px;cursor:pointer">DRIFT</button>
+              <button style="width:68px;height:68px;border:0;background:#12141cdd;outline:3px solid #e8b13c;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:1px;cursor:pointer">BOOST</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ RACE HUD · PORTRAIT (mobile 390x844) ============ -->
+      <sc-if value="{{ isHudP }}">
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#2f6b2a 0 4px,#2b6427 4px 8px)">
+          <!-- grandstand -->
+          <div aria-hidden="true" style="position:absolute;left:0;right:0;top:82px;height:236px;background:#2a2d38;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:none;height:9px;background:#1b2030;border-bottom:2px solid #05060a;background-image:repeating-linear-gradient(90deg,#3a4152 0 2px,transparent 2px 48px)"></div>
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden">
+              <sc-for list="{{ crowd }}" as="cr" hint-placeholder-count="30">
+                <div style="{{ cr.style }}"></div>
+              </sc-for>
+            </div>
+            <div style="flex:none;height:10px;background:repeating-linear-gradient(90deg,#8b93ad 0 1px,transparent 1px 5px);border-top:2px solid #b9ae9a;border-bottom:3px solid #5a5e6c"></div>
+          </div>
+          <!-- track -->
+          <div style="position:absolute;left:0;right:0;top:318px;height:4px;background:repeating-linear-gradient(90deg,#f4ead7 0 8px,#c4452f 8px 16px)"></div>
+          <div style="position:absolute;left:0;right:0;top:322px;height:150px;background:repeating-linear-gradient(0deg,#2b2b30 0 2px,#303036 2px 3px);overflow:hidden">
+            <div style="position:absolute;left:0;right:0;top:3px;height:2px;background:#f4ead7"></div>
+            <div style="position:absolute;left:0;right:0;bottom:3px;height:2px;background:#f4ead7"></div>
+            <sc-for list="{{ hudCars }}" as="hc" hint-placeholder-count="5">
+              <img src="{{ hc.src }}" alt="" width="64" height="32" style="position:absolute;left:{{ hc.x }};top:{{ hc.y }}">
+            </sc-for>
+            <div style="position:absolute;left:40%;top:6%;width:6px;height:6px;margin-left:29px;background:#e8b13c;outline:1px solid #05060a"></div>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:472px;height:4px;background:repeating-linear-gradient(90deg,#f4ead7 0 8px,#c4452f 8px 16px)"></div>
+          <!-- paddock -->
+          <div aria-hidden="true" style="position:absolute;left:0;right:0;top:476px;height:48px;overflow:hidden">
+            <div style="position:absolute;left:0;right:0;top:0;height:4px;background:repeating-linear-gradient(90deg,#b9ae9a 0 2px,transparent 2px 10px);border-top:1px solid #8b93ad"></div>
+            <div style="position:absolute;left:0;right:0;top:20px;height:22px;background:#3a3d47;border-top:2px solid #2b2b30;border-bottom:2px solid #2b2b30"></div>
+            <sc-for list="{{ paddock }}" as="pd" hint-placeholder-count="60">
+              <div style="{{ pd }}"></div>
+            </sc-for>
+          </div>
+
+          <!-- top status bar -->
+          <div style="position:absolute;left:0;right:0;top:0;height:82px;background:#0d0f16;border-bottom:3px solid #05060a">
+            <div style="position:absolute;left:14px;top:10px;display:flex;align-items:flex-end;gap:4px">
+              <span style="font:700 44px/1 'Pixelify Sans',monospace;color:#f4ead7;text-shadow:3px 3px 0 #05060a">P3</span>
+              <span style="font:{{ T.data }};color:#b9ae9a;padding-bottom:5px">/44</span>
+            </div>
+            <span style="position:absolute;left:16px;top:62px;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">LAP 1/5</span>
+            <div style="position:absolute;right:10px;top:8px;width:116px;height:66px;background:#12141c;outline:3px solid #f4ead7;display:flex;align-items:center;justify-content:center">
+              <img src="art/track_minimap.png" alt="" width="104" height="56">
+            </div>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:96px;display:flex;justify-content:center">
+            <div style="background:#2a1210ee;outline:2px solid #e0604a;padding:5px 9px;display:flex;flex-direction:column;align-items:center;gap:3px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:2px;animation:blink 0.9s steps(1) infinite">OUT OF POSITION</span>
+              <span style="font:{{ T.body }};color:#f4ead7">Drop in behind car #21</span>
+            </div>
+          </div>
+
+          <!-- lap times -->
+          <div style="position:absolute;left:12px;right:12px;top:538px;background:#101a30;outline:3px solid #f4ead7;box-shadow:4px 4px 0 #05060a;padding:6px 10px;display:flex;justify-content:space-between">
+            <sc-for list="{{ laps }}" as="lp" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:1px">{{ lp.k }}</span>
+                <span style="font:{{ T.data }};color:#f4ead7">{{ lp.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- gauges row -->
+          <div style="position:absolute;left:12px;top:600px;width:116px;background:#12141ce8;outline:3px solid #f4ead7;padding:7px 8px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:1px">TIRE</span>
+              <div style="display:flex;gap:2px"><sc-for list="{{ tireCells }}" as="c" hint-placeholder-count="10"><div style="width:8px;height:9px;background:{{ c.bg }}"></div></sc-for></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 8px/1 'Silkscreen',monospace;color:#5a9ad6;letter-spacing:1px">DRAFT</span>
+              <div style="display:flex;gap:2px"><sc-for list="{{ draftCells }}" as="c" hint-placeholder-count="10"><div style="width:8px;height:9px;background:{{ c.bg }}"></div></sc-for></div>
+            </div>
+          </div>
+          <button onClick="{{ toggleAuto }}" aria-pressed="{{ autoPressed }}" style="position:absolute;left:12px;top:680px;height:26px;border:0;background:#12141cdd;outline:3px solid {{ autoEdge }};display:flex;align-items:center;gap:6px;padding:0 8px;cursor:pointer">
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#f4ead7;letter-spacing:2px">AUTO</span>
+            <span style="font:400 8px/1 'Silkscreen',monospace;color:#0b0c11;background:{{ autoChip }};padding:2px 3px">{{ autoLabel }}</span>
+          </button>
+          <div style="position:absolute;right:16px;top:594px;width:128px;height:128px;filter:drop-shadow(3px 3px 0 #05060a)">
+            <svg viewBox="0 0 100 100" width="128" height="128" role="img" aria-label="Speedometer, {{ speedo.v }} miles per hour">
+              <circle cx="50" cy="50" r="49" fill="#05060a"></circle>
+              <circle cx="50" cy="50" r="47" fill="#8b93ad"></circle>
+              <circle cx="50" cy="50" r="44" fill="#f4ead7"></circle>
+              <path d="{{ speedo.red }}" fill="none" stroke="#c4452f" stroke-width="4"></path>
+              <g shape-rendering="crispEdges">
+                <sc-for list="{{ speedo.ticks }}" as="tk" hint-placeholder-count="21">
+                  <line x1="{{ tk.x1 }}" y1="{{ tk.y1 }}" x2="{{ tk.x2 }}" y2="{{ tk.y2 }}" stroke="#12141c" stroke-width="{{ tk.w }}"></line>
+                </sc-for>
+              </g>
+              <text x="29.5" y="70.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">0</text>
+              <text x="21.4" y="45.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">40</text>
+              <text x="36.8" y="24.2" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">80</text>
+              <text x="63.2" y="24.2" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#12141c">120</text>
+              <text x="78.6" y="45.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#c4452f">160</text>
+              <text x="70.5" y="70.5" text-anchor="middle" dominant-baseline="central" style="font:400 8px 'Silkscreen',monospace" fill="#c4452f">200</text>
+              <text x="50" y="74" text-anchor="middle" dominant-baseline="central" style="font:700 14px 'Pixelify Sans',monospace" fill="#12141c">121</text>
+              <text x="50" y="85" text-anchor="middle" dominant-baseline="central" style="font:400 6px 'Silkscreen',monospace;letter-spacing:1px" fill="#5a5e6c">MPH</text>
+              <line x1="{{ speedo.tx }}" y1="{{ speedo.ty }}" x2="{{ speedo.nx }}" y2="{{ speedo.ny }}" stroke="#c4452f" stroke-width="3" stroke-linecap="square"></line>
+              <circle cx="50" cy="50" r="5" fill="#12141c"></circle>
+            </svg>
+          </div>
+
+          <!-- touch controls -->
+          <div style="position:absolute;left:18px;bottom:28px;width:96px;height:96px;background:#12141c99;outline:3px solid #6d7590;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))">
+            <div></div><div style="background:#2c3145"></div><div></div>
+            <div style="background:#2c3145"></div><div style="background:#3a4152"></div><div style="background:#2c3145"></div>
+            <div></div><div style="background:#2c3145"></div><div></div>
+          </div>
+          <div style="position:absolute;right:18px;bottom:28px;display:flex;gap:10px;align-items:flex-end">
+            <button style="width:64px;height:64px;border:0;background:#12141cdd;outline:3px solid #c4452f;font:400 8px/1 'Silkscreen',monospace;color:#e0604a;letter-spacing:1px;cursor:pointer">DRIFT</button>
+            <button style="width:84px;height:84px;border:0;background:#12141cdd;outline:3px solid #e8b13c;font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:1px;cursor:pointer">BOOST</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ RESULTS ============ -->
+      <sc-if value="{{ isResults }}">
+        <div style="position:absolute;inset:0;background:#12141c;display:flex;flex-direction:column">
+          <div style="flex:none;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#1b2030;border-bottom:3px solid #05060a">
+            <span style="font:{{ T.title }};letter-spacing:{{ T.lstitle }};color:#f4ead7">RACE RESULTS</span>
+            <span style="font:{{ T.row }};color:#b9ae9a">Watkins Glen · Rd 3</span>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;gap:10px;padding:10px 12px">
+            <div style="flex:1;min-width:0;background:#182136;outline:3px solid #f4ead7;padding:6px 8px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ finish }}" as="f" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:8px;height:{{ L.rowH }};padding:0 6px;background:{{ f.bg }}">
+                  <span style="width:32px;flex:none;font:{{ T.row }};color:{{ f.posFg }}">{{ f.pos }}</span>
+                  <span style="width:32px;flex:none;font:{{ T.row }};color:#e0604a">#{{ f.num }}</span>
+                  <span style="flex:1;min-width:0;font:{{ T.row }};color:{{ f.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.name }}</span>
+                  <span style="font:{{ T.data }};color:#8b93ad">{{ f.time }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="width:{{ L.resRight }};flex:none;display:flex;flex-direction:column;gap:8px">
+              <div style="background:#e8b13c;outline:3px solid #05060a;padding:5px;text-align:center;font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#12141c;animation:blink 1.1s steps(1) infinite">LEVEL UP!</div>
+              <div style="flex:1;background:#182136;outline:3px solid #f4ead7;padding:8px 10px;display:flex;flex-direction:column;gap:3px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:400 8px/1 'Silkscreen',monospace;color:#e8b13c;letter-spacing:2px">EXP</span><span style="font:{{ T.row }};color:#6fa85a">720 / 1000</span></div>
+                <div style="height:9px;background:#2c3145;outline:2px solid #05060a;margin:2px 0 6px"><div style="height:9px;width:72%;background:#6fa85a"></div></div>
+                <sc-for list="{{ rewards }}" as="rw" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:3px;border-bottom:1px solid #2c3145"><span style="font:{{ T.row }};color:#b9ae9a">{{ rw.k }}</span><span style="font:{{ T.row }};color:{{ rw.fg }}">{{ rw.v }}</span></div>
+                </sc-for>
+                <span style="margin-top:auto;font:{{ T.body }};color:#e8b13c">Aggression +1. New part unlocked in the garage.</span>
+              </div>
+              <button onClick="{{ goTitle }}" style="height:32px;border:0;background:#c4452f;outline:3px solid #05060a;box-shadow:4px 4px 0 #05060a;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+                <sc-if value="{{ isPc }}"><span class="keycap">ENTER</span></sc-if>
+                <span style="font:{{ T.btn }};letter-spacing:{{ T.lsbtn }};color:#f4ead7">CONTINUE</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ scan }}">
+        <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.16) 0 1px,rgba(0,0,0,0) 1px 3px)"></div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="width:900px;font:400 10px/1.7 'Silkscreen',monospace;color:#8b93ad">
+    TYPE STANDARD: MONOGRAM BOLD 16 — menu items, section headers, window titles, primary buttons · SILKSCREEN 8 spaced — tags, small labels, hints · MONOGRAM BOLD 16 — body, data rows, values, dialogue, footers · PIXELIFY SANS BOLD — big display numerals only (position, speed, the logo wordmark). Everything sits in the Iron Oval kit: cream window frames, navy panels, gold headers, red reserved for alarms and the main confirm button, key prompts on PC, touch controls on mobile.
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"platform":{"editor":"enum","options":["mobile","pc"],"default":"pc","tsType":"string"},"typeset":{"editor":"enum","options":["game","kit","monogram","peaberry"],"default":"game","tsType":"string"},"showScanlines":{"editor":"boolean","default":true,"tsType":"boolean"}}'>
+const SCREENS = [['TITLE','title'],['TRACK SELECT','tracks'],['SERIES SELECT','series'],['CAR SELECT','cars'],['DRIVESCOUT','scout'],['MAP','map'],['LIAISON','liaison'],['CHOICE','choice'],['DAY SUMMARY','popup'],['RACE HUD','hud'],['HUD PORTRAIT','hudp'],['RESULTS','results']];
+const MENU = ['CAREER','SINGLE RACE','MASTER DRAFT','MULTIPLAYER','OPTIONS','RESTART DEMO'];
+const OPTIONS = ["Your call. You've been right more than I have.","Aggressive on strategy. Track position over tyres.","Play it safe. Points now, swings later in the year."];
+// map nodes traced from the iDroid Maps screenshot: [id, x, y, label, label side]
+const MAP_PANEL = {x:28, y:75, w:1240, h:575};
+const MAP_NODES = [
+  ['elko',255,120,'ELKO','b'],['madison',420,206,'MADISON INTL','l'],['n1',474,201,'',''],['berlin',564,200,'BERLIN RACEWAY','a'],
+  ['michigan',615,247,'MICHIGAN','l'],['flatrock',683,238,'FLAT ROCK','a'],['toledo',656,286,'TOLEDO','r'],['iowa',267,271,'IOWA','b'],
+  ['chicagoland',472,282,'CHICAGOLAND','b'],['winchester',609,342,'WINCHESTER','b'],['midohio',696,323,'MID-OHIO','b'],['springfield',406,368,'SPRINGFIELD MILE','a'],
+  ['n2',514,369,'',''],['n3',567,377,'',''],['kansas',192,405,'KANSAS','b'],['salem',550,431,'SALEM','b'],['kentucky',605,426,'KENTUCKY','r'],
+  ['duquoin',425,464,'DUQUOIN','b'],['n4',385,428,'',''],['nashfair',506,562,'NASHVILLE FAIRGROUNDS','a'],['nashss',560,560,'NASHVILLE SPWY','b'],
+  ['bristol',655,537,'BRISTOL','b'],['martinsville',814,516,'MARTINSVILLE','a'],['richmond',912,485,'RICHMOND','b'],['bowman',807,571,'BOWMAN GRAY','a'],
+  ['n5',722,559,'',''],['charlotte',748,612,'CHARLOTTE','b'],['rockingham',831,620,'ROCKINGHAM','r'],['dover',990,402,'DOVER','a'],
+  ['watkins',932,237,'',''],['nh',1158,183,'NEW HAMPSHIRE','l'],['limerock',1078,258,'LIME ROCK PARK','a'],['n6',990,304,'',''],
+  ['q1',230,338,'?','u'],['q2',288,416,'?','u'],['q3',395,398,'?','u'],['q4',474,241,'?','u'],['q5',540,373,'?','u'],['q6',588,360,'?','u'],
+  ['q7',586,402,'?','u'],['q8',629,481,'?','u'],['q9',735,585,'?','u'],['q10',950,443,'?','u'],['q11',1034,330,'?','u'],['q12',1045,210,'?','u'],['q13',1118,221,'?','u'],['q14',670,262,'?','u'],
+  ['eb',868,428,'ENGINE BUILDER','e'],['fab',340,160,'FABRICATOR','f'],['salv',690,498,'SALVAGE YARD','s']
+];
+const MAP_EDGES = 'elko-iowa elko-madison madison-n1 n1-berlin madison-iowa iowa-q1 q1-kansas kansas-q2 q2-n4 iowa-springfield madison-chicagoland n1-q4 q4-chicagoland berlin-michigan michigan-flatrock michigan-chicagoland flatrock-watkins flatrock-q14 q14-toledo toledo-midohio toledo-winchester chicagoland-springfield chicagoland-n2 springfield-n2 springfield-q3 q3-n4 n4-duquoin n2-q5 q5-n3 n3-q6 q6-winchester winchester-midohio n3-q7 q7-salem n2-salem salem-kentucky salem-duquoin duquoin-nashfair salem-nashss nashfair-nashss kentucky-q8 q8-bristol nashss-bristol bristol-n5 n5-q9 q9-charlotte n5-bowman bowman-martinsville martinsville-midohio martinsville-richmond richmond-q10 q10-dover dover-n6 n6-watkins n6-q11 q11-limerock watkins-limerock watkins-q12 q12-q13 q13-nh limerock-nh bowman-rockingham charlotte-rockingham midohio-watkins midohio-eb eb-dover elko-fab fab-madison kentucky-salv salv-bristol'.split(' ');
+const FACTORY = [144,560];
+// track select: [id, name, place, state, miles, type, layout path in a 100x64 box]
+const TRACKS = [
+  ['cota','Circuit of the Americas','Austin','TX','3.41','road','M14 46 L22 14 L34 20 L40 14 L48 22 L56 16 L64 24 L86 30 L90 40 L70 44 L60 52 L40 50 Z'],
+  ['indyrc','Indianapolis Road Course','Speedway','IN','2.439','road','M20 14 H80 A14 14 0 0 1 80 42 L64 42 L58 32 L50 42 L44 50 L22 50 A18 18 0 0 1 20 14 Z'],
+  ['limerock','Lime Rock Park','Lakeville','CT','1.5','road','M16 40 L22 18 L58 14 L84 22 L86 36 L72 46 L40 48 Z'],
+  ['midohio','Mid-Ohio Sports Car Course','Lexington','OH','2.258','road','M14 30 L22 16 L48 14 L56 24 L74 18 L88 28 L80 44 L60 40 L46 50 L24 48 Z'],
+  ['coronado','Naval Base Coronado','San Diego','CA','3.0','street','M14 16 H86 V30 H66 V48 H40 V38 H14 Z'],
+  ['portland','Portland International','Portland','OR','1.967','road','M12 40 L18 30 L60 26 L82 18 L90 26 L80 38 L50 44 L24 46 Z'],
+  ['roadam','Road America','Elkhart Lake','WI','4.048','road','M18 50 L16 20 L32 12 L54 16 L60 30 L76 22 L88 34 L82 50 L60 46 L44 54 Z'],
+  ['sonoma','Sonoma Raceway','Sonoma','CA','2.52','road','M14 22 L30 14 L44 26 L60 16 L84 22 L86 34 L66 40 L58 52 L36 50 L28 38 Z'],
+  ['watkins','Watkins Glen International','Watkins Glen','NY','2.45','road','M20 50 L20 30 L28 18 L44 14 L52 22 L66 20 L80 12 L88 18 L84 30 L70 34 L72 46 L60 52 Z'],
+  ['bristol','Bristol Motor Speedway','Bristol','TN','0.533','oval','M30 16 H70 A16 16 0 0 1 70 48 H30 A16 16 0 0 1 30 16 Z'],
+  ['charlotte','Charlotte Motor Speedway','Concord','NC','1.5','oval','M26 14 H74 A18 18 0 0 1 74 50 L56 53 L50 56 L44 53 L26 50 A18 18 0 0 1 26 14 Z'],
+  ['daytona','Daytona International','Daytona Beach','FL','2.5','oval','M24 14 H76 A18 18 0 0 1 76 50 L50 56 L24 50 A18 18 0 0 1 24 14 Z'],
+  ['dover','Dover Motor Speedway','Dover','DE','1.0','oval','M32 12 H68 A20 20 0 0 1 68 52 H32 A20 20 0 0 1 32 12 Z'],
+  ['martinsville','Martinsville Speedway','Ridgeway','VA','0.526','oval','M26 22 H74 A10 10 0 0 1 74 42 H26 A10 10 0 0 1 26 22 Z'],
+  ['richmond','Richmond Raceway','Richmond','VA','0.75','oval','M28 12 H72 A20 20 0 0 1 72 52 Q50 58 28 52 A20 20 0 0 1 28 12 Z'],
+  ['duquoin','Du Quoin State Fairgrounds','Du Quoin','IL','1.0','dirt','M30 14 H70 A18 18 0 0 1 70 50 H30 A18 18 0 0 1 30 14 Z'],
+  ['eldora','Eldora Speedway','Rossburg','OH','0.5','dirt','M34 16 H66 A16 16 0 0 1 66 48 H34 A16 16 0 0 1 34 16 Z']
+];
+const TFILTERS = [['ALL','all'],['ROAD','road'],['OVAL','oval'],['DIRT','dirt']];
+// series select: [id, name, short code, kind, cars entered (0 = no field), livery colour]
+const SERIES = [
+  ['cup','Premier Cup Series','CUP','STOCK',48,'#c4452f'],
+  ['chal','Challenger Series','CHL','STOCK',0,'#5a9ad6'],
+  ['truck','Truck Series','TRK','TRUCK',27,'#e08a3c'],
+  ['nat','National Stock Series','NSS','STOCK',34,'#6fa85a'],
+  ['indy','Indy Open Wheel','IOW','OPEN WHEEL',0,'#a06fd0'],
+  ['owl','Open Wheel Lights','OWL','OPEN WHEEL',0,'#5cc8b0'],
+  ['dirt','Outlaw Dirt Sprints','ODS','DIRT',0,'#b07a4a']
+];
+// car select: [number, driver, team, sprite]
+const CARS = [
+  ['62','Anthony Alfredo','Beard Motorsports','sprites/car01.png'],
+  ['66','Chad Finchum','Garage 66','sprites/car08.png'],
+  ['67','Corey Heim','23XI Racing','sprites/car09.png'],
+  ['71','Michael McDowell','Spire Motorsports','sprites/car11.png'],
+  ['77','Carson Hocevar','Spire Motorsports','sprites/car12.png'],
+  ['78','Katherine Legge','Live Fast Motorsports','sprites/car24.png'],
+  ['84','Jimmie Johnson','Legacy Motor Club','sprites/car45.png'],
+  ['88','Shane van Gisbergen','Trackhouse Racing','sprites/car08.png'],
+  ['89','Ace Emerson','Emerson Motorsports','art/car89.png']
+];
+const MY_CAR = '89';
+// race HUD speedometer: round white dial, 0-200 mph over 270deg (0 at bottom-left), centre (50,50)
+const SPEEDO = (() => {
+  const MAX = 200, v = 121, rad = Math.PI / 180;
+  const pt = (mph, r) => { const a = (225 - 270 * mph / MAX) * rad; return [(50 + r * Math.cos(a)).toFixed(1), (50 - r * Math.sin(a)).toFixed(1)]; };
+  const p = pt(160, 40), q = pt(MAX, 40);
+  const ticks = Array.from({length: 21}, (_, i) => { const mph = i * 10, major = i % 2 === 0, o = pt(mph, 43), n = pt(mph, major ? 36 : 39);
+    return {x1: o[0], y1: o[1], x2: n[0], y2: n[1], w: major ? 2 : 1}; });
+  const nums = [0, 40, 80, 120, 160, 200].map(m => { const c = pt(m, 29); return {t: String(m), x: c[0], y: c[1], col: m >= 160 ? '#c4452f' : '#12141c'}; });
+  const nd = pt(v, 38), tail = pt(v, -8);
+  return {v: String(v), red: `M${p[0]} ${p[1]} A40 40 0 0 1 ${q[0]} ${q[1]}`, ticks, nums, nx: nd[0], ny: nd[1], tx: tail[0], ty: tail[1]};
+})();
+// race HUD scenery: grandstand crowd rows + paddock vehicles (px rects)
+const CROWD = (() => {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const SHIRT = ['#a8443a','#3f6fa0','#c79a3a','#4f8a4a','#8a5aa8','#c9c2b4','#1b2030','#b0683a','#5a8a96','#9c3a52','#e8b13c'];
+  const HEAD = ['#e0b48c','#c48b62','#8d5a3b','#f0c9a4','#5c3b28','#c4452f','#1b2030'];
+  const N = 37, W = N * 4;
+  const strip = (pal, empty) => 'linear-gradient(90deg,' + empty.map((e, i) => {
+    const c = e ? 'transparent' : pal[Math.floor(rnd() * pal.length)];
+    return `${c} ${i * 4}px ${i * 4 + 3}px,transparent ${i * 4 + 3}px ${i * 4 + 4}px`; }).join(',') + ')';
+  return Array.from({length: 30}, (_, r) => {
+    const empty = Array.from({length: N}, () => rnd() < 0.12), off = (r % 2) * 2;
+    const seat = r % 2 ? '#343846' : '#3a3e4c';
+    return {style: `flex:none;height:8px;background:${strip(HEAD, empty)} ${off}px 0/${W}px 3px repeat-x,${strip(SHIRT, empty)} ${off}px 3px/${W}px 4px repeat-x,${seat}`};
+  });
+})();
+const PADDOCK = (() => {
+  const out = [], R = (x, y, w, h, c) => out.push(`position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${c}`);
+  const wheels = (xs, y) => xs.forEach(x => R(x, y, 5, 4, '#05060a'));
+  const hauler = (x, c) => { R(x, 18, 70, 18, c); R(x, 25, 70, 3, '#f4ead7'); R(x, 18, 70, 18, 'transparent;outline:1px solid #05060a');
+    R(x + 71, 22, 17, 14, c); R(x + 81, 24, 6, 5, '#9ec3e0'); wheels([x + 6, x + 14, x + 54, x + 61, x + 79], 35); };
+  const pickup = (x, c) => { R(x, 28, 28, 8, c); R(x + 4, 22, 12, 7, c); R(x + 10, 23, 5, 4, '#9ec3e0'); wheels([x + 3, x + 20], 35); };
+  const ambulance = (x) => { R(x, 20, 32, 16, '#f4ead7'); R(x, 27, 32, 3, '#c4452f'); R(x + 33, 25, 10, 11, '#f4ead7'); R(x + 37, 27, 5, 4, '#9ec3e0'); wheels([x + 4, x + 34], 35); };
+  const tent = (x, c) => { R(x, 4, 28, 6, `repeating-linear-gradient(90deg,${c} 0 4px,#f4ead7 4px 8px)`); R(x + 1, 10, 1, 9, '#b9ae9a'); R(x + 26, 10, 1, 9, '#b9ae9a'); };
+  tent(6, '#c4452f'); hauler(40, '#c4452f'); pickup(140, '#3f6fa0'); hauler(178, '#5a9ad6'); tent(282, '#e8b13c');
+  ambulance(318); hauler(372, '#6fa85a'); pickup(470, '#c79a3a'); tent(508, '#5a9ad6'); hauler(546, '#a06fd0');
+  pickup(646, '#c9c2b4'); hauler(684, '#e08a3c'); tent(790, '#6fa85a'); pickup(826, '#9c3a52');
+  return out;
+})();
+const KIND = {e:'#5a9ad6', f:'#a06fd0', s:'#e08a3c'};
+const LAYOUT = {
+  pc:     {titleW:'352px', titlePad:'18px 22px 14px', titleSubTop:'14px', menuGap:'11px', scoutLeft:'150px', scoutRight:'156px',
+           bubbleW:'300px', barH:'24px', objPos:'bottom:34px', choiceTop:'42px', optH:'26px', popupW:'300px', autoBottom:'124px', speedoRight:'12px', speedoBottom:'10px',
+           playerX:'40%', resRight:'232px', rowH:'22px', midPadX:'12px', subGap:'16px', abW:'72px',
+           tCols:4, tile:'140px', tFoot:'28px', tBtn:'20px', cCols:6, cTile:'92px', cSpriteW:'64', cSpriteH:'32'},
+  mobile: {titleW:'440px', titlePad:'22px 30px 16px', titleSubTop:'16px', menuGap:'15px', scoutLeft:'176px', scoutRight:'190px',
+           bubbleW:'330px', barH:'26px', objPos:'top:36px', choiceTop:'44px', optH:'32px', popupW:'330px', autoBottom:'96px', speedoRight:'162px', speedoBottom:'12px',
+           playerX:'40%', resRight:'290px', rowH:'26px', midPadX:'12px', subGap:'16px', abW:'86px',
+           tCols:5, tile:'150px', tFoot:'34px', tBtn:'26px', cCols:7, cTile:'100px', cSpriteW:'64', cSpriteH:'32'}
+};
+const pct = (v) => (Math.round(v * 100) / 100) + '%';
+
+const TYPESETS = {
+  game: {menu:"400 16px/1 'monogram Bold',monospace", lsmenu:'0px', title:"400 16px/1 'monogram Bold',monospace", lstitle:'0px',
+         head:"400 16px/1 'monogram Bold',monospace", lshead:'0px', btn:"400 16px/1 'monogram Bold',monospace", lsbtn:'0px',
+         body:"400 16px/1.12 'monogram Bold',monospace", row:"400 16px/1 'monogram Bold',monospace", data:"400 16px/1 'monogram Bold',monospace",
+         name:"400 16px/1 'monogram Bold',monospace", namelg:"400 16px/1 'monogram Bold',monospace"},
+  kit:  {menu:"700 15px/1 'Pixelify Sans',monospace", lsmenu:'1px', title:"700 12px/1 'Silkscreen',monospace", lstitle:'2px',
+         head:"400 9px/1 'Silkscreen',monospace", lshead:'2px', btn:"700 11px/1 'Silkscreen',monospace", lsbtn:'2px',
+         body:"400 13px/1.45 'Pixelify Sans',monospace", row:"400 12px/1.25 'Pixelify Sans',monospace", data:"400 10px/1 'Silkscreen',monospace",
+         name:"400 11px/1 'Pixelify Sans',monospace", namelg:"700 15px/1 'Pixelify Sans',monospace"}
+};
+['monogram','Peaberry'].forEach((fam) => {
+  const f = "400 16px/1 '" + fam + "',monospace", fb = "400 16px/1.12 '" + fam + "',monospace";
+  TYPESETS[fam.toLowerCase()] = Object.assign({}, TYPESETS.game, {body: fb, row: f, data: f, name: f, namelg: f});
+});
+class Component extends DCLogic {
+  state = {screen:'title', platform:null, fw:null, fh:null, menu:0, choice:0, auto:true, typeset:null, tf:'all', track:'watkins', series:'cup', car:'89'};
+
+  renderVals(){
+    const s = this.state;
+    const pc = (s.platform ?? this.props.platform ?? 'pc') === 'pc';
+    const portrait = s.screen === 'hudp';
+    const fw = portrait ? 390 : (s.fw ?? (pc ? 640 : 844)), fh = portrait ? 844 : (s.fh ?? (pc ? 360 : 390));
+    const tsPick = s.typeset ?? this.props.typeset ?? 'game';
+    // Peaberry is ~8% wider than Fixedsys: give the densest PC panels a little more room
+    const L = Object.assign({}, LAYOUT[pc ? 'pc' : 'mobile'],
+      (tsPick === 'peaberry' && pc) ? {scoutLeft:'140px', scoutRight:'150px', midPadX:'8px', subGap:'9px', abW:'86px'} : {});
+    const P = MAP_PANEL, nx = (x) => (x - P.x) / P.w * 100, ny = (y) => (y - P.y) / P.h * 100;
+    const byId = {}; MAP_NODES.forEach(n => byId[n[0]] = n);
+    const nodes = MAP_NODES.filter(n => n[0] !== 'watkins').map(([id, x, y, label, side]) => {
+      const X = pct(nx(x)), Y = pct(ny(y));
+      const unknown = side === 'u', special = KIND[side];
+      const size = unknown ? 7 : 9, half = size / 2;
+      const fill = unknown ? '#6d7590' : (special || '#e8b13c');
+      const boxStyle = `position:absolute;left:${X};top:${Y};width:${size}px;height:${size}px;margin:-${half}px 0 0 -${half}px;background:${fill};outline:1px solid #05060a`;
+      let lab = 'position:absolute;white-space:nowrap;font:400 8px/1 Silkscreen,monospace;letter-spacing:1px;text-shadow:1px 1px 0 #05060a;';
+      const col = unknown ? '#8b93ad' : (special || '#e8b13c');
+      if (side === 'b' || unknown) lab += `left:${X};top:${Y};margin:${unknown ? 6 : 8}px 0 0 -${unknown ? 2 : 10}px;`;
+      else if (special) lab += `left:${X};top:${Y};margin:8px 0 0 -10px;`;
+      else if (side === 'a') lab += `left:${X};top:${Y};margin:-16px 0 0 -10px;`;
+      else if (side === 'r') lab += `left:${X};top:${Y};margin:-4px 0 0 9px;`;
+      else if (side === 'l') lab += `right:calc(100% - ${X});top:${Y};margin:-4px 9px 0 0;`;
+      return {boxStyle, labelStyle: lab + `color:${col}`, label};
+    });
+    const edges = MAP_EDGES.map(p => { const [a, b] = p.split('-'); const A = byId[a], B = byId[b];
+      return {x1: nx(A[1]).toFixed(2), y1: ny(A[2]).toFixed(2), x2: nx(B[1]).toFixed(2), y2: ny(B[2]).toFixed(2), col: '#3d5a94'}; });
+    [['kansas'], ['n4'], ['duquoin']].forEach(([id]) => { const N = byId[id];
+      edges.push({x1: nx(FACTORY[0]).toFixed(2), y1: ny(FACTORY[1]).toFixed(2), x2: nx(N[1]).toFixed(2), y2: ny(N[2]).toFixed(2), col: '#3a9a8a'}); });
+    edges.push({x1: nx(FACTORY[0]).toFixed(2), y1: ny(FACTORY[1]).toFixed(2), x2: '4', y2: '100', col: '#3a9a8a'});
+    edges.push({x1: nx(192).toFixed(2), y1: ny(405).toFixed(2), x2: '0', y2: '52', col: '#3d5a94'});
+    const W = byId['watkins'];
+    nodes.push({boxStyle: `position:absolute;left:${pct(nx(W[1]))};top:${pct(ny(W[2]))};width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:#e8b13c;outline:2px solid #f4ead7;box-shadow:0 0 0 4px #05060a`, labelStyle: 'display:none', label: ''});
+
+    const cell = (v, max, on) => Array.from({length: 10}, (_, i) => ({bg: i < Math.round(v / max * 10) ? on : '#2c3145'}));
+    const hi = (v) => v >= 18 ? '#e8b13c' : '#f4ead7';
+    const row = ([k, v]) => ({k, v: String(v), fg: hi(v)});
+
+    const tList = TRACKS.filter(t => s.tf === 'all' || t[5] === s.tf || (s.tf === 'road' && t[5] === 'street'));
+    const tSel = tList.some(t => t[0] === s.track) ? s.track : (tList[0] || [])[0];
+    const tTiles = tList.map(([id, name, place, st, mi, type, d]) => { const sel = id === tSel;
+      const m = d.match(/^M\s*([\d.]+)\s+([\d.]+)/);
+      return {name, place: place + ', ' + st, len: mi + ' MI', type: type.toUpperCase(), d, sel,
+        sx: String(+m[1] - 2.5), sy: String(+m[2] - 2.5),
+        aria: name + ', ' + place + ', ' + st + ', ' + mi + ' miles',
+        pressed: sel ? 'true' : 'false', on: () => this.setState({track: id}),
+        bg: sel ? '#243a5e' : '#182136', ring: sel ? '#e8b13c' : '#2c3145', shadow: sel ? '4px 4px 0 #05060a' : 'none',
+        line: sel ? '#e8b13c' : '#b9ae9a', fg: sel ? '#f4ead7' : '#b9ae9a', tagFg: sel ? '#e8b13c' : '#8b93ad', lenFg: sel ? '#f4ead7' : '#b9ae9a'}; });
+    const tIdx = tList.findIndex(t => t[0] === tSel);
+    const tile = (sel) => ({pressed: sel ? 'true' : 'false', bg: sel ? '#243a5e' : '#182136', ring: sel ? '#e8b13c' : '#2c3145',
+      shadow: sel ? '4px 4px 0 #05060a' : 'none', fg: sel ? '#f4ead7' : '#b9ae9a', tagFg: sel ? '#e8b13c' : '#8b93ad', sel});
+    const sTiles = SERIES.map(([id, name, code, kind, n, col]) => { const sel = id === s.series, open = n > 0;
+      return Object.assign(tile(sel), {name, code, kind, col, on: () => this.setState({series: id}),
+        art: `repeating-linear-gradient(135deg,${col}${open ? '66' : '2e'} 0 6px,${col}${open ? '33' : '18'} 6px 12px),#0f1420`,
+        codeFg: open ? '#f4ead7' : '#8b93ad',
+        chip: open ? n + ' CARS' : 'NO FIELD', chipFg: open ? (sel ? '#f4ead7' : '#b9ae9a') : '#8b93ad',
+        sub: open ? n + ' entered' : 'No field entered', subFg: open ? '#b9ae9a' : '#8b93ad',
+        aria: name + ', ' + (open ? n + ' entered' : 'no field entered')}); });
+    const sIdx = SERIES.findIndex(x => x[0] === s.series);
+    const cTiles = CARS.map(([num, name, team, src]) => { const sel = num === s.car;
+      return Object.assign(tile(sel), {num, name, last: name.split(' ').slice(1).join(' ') || name, team, src, mine: num === MY_CAR, on: () => this.setState({car: num}),
+        aria: '#' + num + ' ' + name + ', ' + team}); });
+    const cIdx = CARS.findIndex(c => c[0] === s.car);
+    const trackRow = TRACKS.find(t => t[0] === s.track) || TRACKS[0];
+
+const tsReq = s.typeset ?? this.props.typeset ?? 'game', ts = TYPESETS[tsReq] ? tsReq : 'game';
+        return {
+      T: TYPESETS[ts],
+      types: [['TYPE: GAME BUILD','game'],['IRON OVAL UI','kit'],['MONOGRAM','monogram'],['PEABERRY','peaberry']].map(([label,k])=>{ const on = ts===k;
+        return {label, pressed: on ? 'true' : 'false', on:()=>this.setState({typeset:k}), bg: on ? '#e8b13c' : '#1b2030', fg: on ? '#0b0c11' : '#b9ae9a'}; }),
+      L, isPc: pc, isMobile: !pc, platformClass: pc ? 'pc' : 'mobile', frameW: fw + 'px', frameH: fh + 'px',
+      platformLabel: portrait ? 'MOBILE PORTRAIT ' + fw + '×' + fh : (pc ? 'PC ' + fw + '×' + fh : 'MOBILE ' + fw + '×' + fh),
+      isHudP: portrait,
+      scan: this.props.showScanlines ?? true,
+      navs: SCREENS.map(([label, k]) => ({label, on: () => this.setState({screen: k}), bg: s.screen === k ? '#c4452f' : '#1b2030', fg: s.screen === k ? '#f4ead7' : '#b9ae9a'})),
+      plats: [['MOBILE', 'mobile'], ['PC', 'pc']].map(([label, k]) => { const on = (pc ? 'pc' : 'mobile') === k;
+        return {label, pressed: on ? 'true' : 'false', on: () => this.setState({platform: k}), bg: on ? '#5a9ad6' : '#1b2030', fg: on ? '#0b0c11' : '#b9ae9a'}; }),
+      crowd: CROWD, paddock: PADDOCK, speedo: SPEEDO,
+      isSeries: s.screen === 'series', isCars: s.screen === 'cars', sTiles, cTiles,
+      sPos: (sIdx + 1) + ' / ' + SERIES.length, cPos: (cIdx + 1) + ' / ' + CARS.length,
+      crumbTrack: trackRow[1], crumbSeries: (SERIES[sIdx] || SERIES[0])[1],
+      goTracks: () => this.setState({screen: 'tracks'}), goSeries: () => this.setState({screen: 'series', track: tSel || s.track}),
+      goCars: () => this.setState({screen: 'cars'}), goHud: () => this.setState({screen: 'hud'}),
+      isTracks: s.screen === 'tracks', tTiles, trackCount: tList.length + ' TRACKS', tPos: (tIdx + 1) + ' / ' + tList.length,
+      tFilters: TFILTERS.map(([label, k]) => { const on = s.tf === k;
+        return {label, pressed: on ? 'true' : 'false', on: () => this.setState({tf: k}), bg: on ? '#e8b13c' : '#12141c', fg: on ? '#0b0c11' : '#b9ae9a'}; }),
+      isTitle: s.screen === 'title', isScout: s.screen === 'scout', isMap: s.screen === 'map', isLiaison: s.screen === 'liaison',
+      isChoice: s.screen === 'choice', isPopup: s.screen === 'popup', isHud: s.screen === 'hud', isResults: s.screen === 'results',
+      goTitle: () => this.setState({screen: 'title'}), goLiaison: () => this.setState({screen: 'liaison'}),
+      menu: MENU.map((label, i) => ({label, cursor: s.menu === i ? '▶' : '', anim: s.menu === i ? 'blink 0.9s steps(1) infinite' : 'none',
+        fg: s.menu === i ? '#f4ead7' : '#b9ae9a', on: () => this.setState({menu: i})})),
+      personal: [{k: 'Name', v: 'A. Emerson'}, {k: 'Age', v: '48'}],
+      career: [{k: 'Starts', v: '0'}, {k: 'Wins', v: '0'}, {k: 'Top 10s', v: '0'}],
+      ability: [['Ability', 84], ['Potential', 84]].map(([k, v]) => ({k, v: String(v), cells: cell(v, 100, '#e8b13c')})),
+      tracks: [['Short Tracks', 18], ['Speedways', 16], ['Superspeedway', 20], ['Road Courses', 12], ['Dirt Courses', 12], ['Open Wheel', 8]].map(row),
+      standing: [['Sponsor Appeal', 17], ['Fan Appeal', 18], ['Prestige', 18]].map(row),
+      craft: [['Qualifying', 13], ['Consistency', 16], ['Aggression', 20], ['Awareness', 14], ['Adaptability', 16], ['Tyre Mgmt', 18], ['Fuel Mgmt', 18]].map(row),
+      traits: [{k: 'Icon', dot: '#e8b13c'}, {k: 'Fan Favourite', dot: '#6fa85a'}, {k: 'Aggressive', dot: '#e0604a'}],
+      nodes, edges,
+      here: {x: pct(nx(W[1])), y: pct(ny(W[2]))},
+      factory: {x: pct(nx(FACTORY[0])), y: pct(ny(FACTORY[1]))},
+      legend: [['RACETRACK', '#e8b13c', 'none', '#e8b13c'], ['ENGINE BUILDER', '#5a9ad6', 'none', '#5a9ad6'], ['FABRICATOR', '#a06fd0', 'none', '#a06fd0'],
+               ['SALVAGE YARD', '#e08a3c', 'none', '#e08a3c'], ['YOUR FACTORY', '#1f4a46', '2px solid #e08a3c', '#5cc8b0'], ["THIS WEEK'S RACE", '#e8b13c', '2px solid #f4ead7', '#f4ead7']]
+              .map(([label, fill, ring, fg]) => ({label, fill, ring, fg})),
+      mapHint: pc ? 'Wheel zooms · right-drag pans · click a track for details' : 'Pinch to zoom · drag to pan · tap a track',
+      options: OPTIONS.map((text, i) => { const on = s.choice === i;
+        return {text, on: () => this.setState({choice: i}), cursor: on ? '▶' : '', anim: on ? 'blink 0.9s steps(1) infinite' : 'none',
+          bg: on ? '#243a5e' : 'transparent', ring: on ? '2px solid #e8b13c' : '0', fg: on ? '#f4ead7' : '#b9ae9a'}; }),
+      summary: [['Sponsor photo shoot', 'No-show', '#e0604a'], ['TRK practice', 'Skipped', '#8b93ad'], ['TRK qualifying', 'Skipped', '#8b93ad'],
+                ['Cost', '−$600', '#e0604a'], ['Sponsor mood', '−18', '#e0604a']].map(([k, v, fg]) => ({k, v, fg})),
+      hudCars: [['sprites/car08.png', '8%', '14%'], ['sprites/car24.png', '22%', '52%'], ['sprites/car45.png', L.playerX, '14%'],
+                ['sprites/car12.png', '58%', '52%'], ['sprites/car11.png', '74%', '20%']].map(([src, x, y]) => ({src, x, y})),
+      tireCells: cell(10, 10, '#6fa85a'), draftCells: cell(3, 10, '#5a9ad6'),
+      laps: [{k: 'LAP', v: '--:--.---'}, {k: 'LAST', v: '--:--.---'}, {k: 'BEST', v: '--:--.---'}],
+      toggleAuto: () => this.setState({auto: !s.auto}),
+      autoPressed: s.auto ? 'true' : 'false', autoLabel: s.auto ? 'ON' : 'OFF', autoChip: s.auto ? '#6fa85a' : '#8b93ad', autoEdge: s.auto ? '#6fa85a' : '#2c3145',
+      keyHints: [{key: 'SHIFT', label: 'DRIFT', fg: '#e0604a'}, {key: 'SPACE', label: 'BOOST', fg: '#e8b13c'}, {key: 'ESC', label: 'PAUSE', fg: '#b9ae9a'}],
+      finish: [['1st', '41', 'Booker Lyles', '1:12.08'], ['2nd', '22', 'Dee Marchetti', '1:12.55'], ['3rd', '89', 'Ace Emerson', '1:12.71'],
+               ['4th', '07', 'Cassidy Hale', '1:13.44'], ['5th', '93', 'Yuna Okada', '1:13.62'], ['6th', '58', 'Ray Tremble', '1:13.90'],
+               ['7th', '21', 'Mo Odom', '1:14.19'], ['8th', '77', 'Lou Briscoe', '1:14.30']]
+              .map(([pos, num, name, time]) => { const me = num === '89';
+                return {pos, num, name, time, bg: me ? '#3a2f16' : 'transparent', fg: me ? '#f4ead7' : '#b9ae9a', posFg: me ? '#e8b13c' : '#8b93ad'}; }),
+      rewards: [['Purse', '$2,150', '#e8b13c'], ['Sponsor pts', '+18', '#f4ead7'], ['Championship', '3rd ▲1', '#6fa85a']].map(([k, v, fg]) => ({k, v, fg}))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -97,8 +97,6 @@ public class SingleRaceFlowTests
             Assert.IsTrue(InBuildSettings($"Assets/Scenes/{title}.unity"),
                           $"SingleRaceUI backs out to '{title}', which is not in the build settings.");
 
-            Assert.Greater(ui.FindProperty("visibleRows").intValue, 2,
-                           "A list that shows fewer than three rows is not a list.");
         }
         finally { EditorSceneManager.CloseScene(scene, true); }
     }

@@ -91,6 +91,14 @@ public class PitCrewSpawner : MonoBehaviour
 
     Transform _boxes;
     int _builtFor = -1;
+    // The ladder the crews were built against (exit gap, spacing, park lateral). PitLane is static, so it
+    // outlives the scene: the race before this one leaves its ladder Configured, the crews get built off it
+    // at once, and when this scene's GridSpawner republishes the same box COUNT on the other side of pit road
+    // (or at another spacing) the count alone said nothing had changed - crews stood across the lane from
+    // their boxes. The shape has to match as well.
+    Vector3 _builtGeometry;
+
+    static Vector3 Geometry() => new Vector3(PitLane.ExitGap, PitLane.Spacing, PitLane.ParkLateral);
     // The one build in flight. Start's build waits for PitLane to be configured, and the Changed event that
     // configuring raises started a second; both then built a full set of crews, the second destroying the
     // first's — so only ever one runs.
@@ -114,7 +122,7 @@ public class PitCrewSpawner : MonoBehaviour
     {
         if (!isActiveAndEnabled) return;
         int want = boxCount > 0 ? boxCount : (PitLane.Configured ? PitLane.BoxCount : 0);
-        if (want == _builtFor) return;
+        if (want == _builtFor && (!PitLane.Configured || Geometry() == _builtGeometry)) return;
 
         if (_spawning != null) { StopCoroutine(_spawning); _spawning = null; }
         Clear();
@@ -164,6 +172,7 @@ public class PitCrewSpawner : MonoBehaviour
         root.SetParent(transform, false);
         _boxes = root;
         _builtFor = count;
+        _builtGeometry = Geometry();
 
         // Unconfigured fallback spreads the boxes inside the grey box-lane strip (not the full lane —
         // that would drop boxes on the entry/exit ramps outside the grey surface).
