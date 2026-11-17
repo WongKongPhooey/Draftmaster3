@@ -8,8 +8,8 @@ using Draftmaster.Controls;
 // the player's relationships. Created on demand by DriverRelationships.Ensure() calls — scene-local,
 // so it dies with the race scene and never leaks into menus.
 //
-// Who sees which toast is RivalryFeedAudience's rule: only the notices the player is named in, in every
-// session — two other drivers falling out somewhere in the field is not something the player would know.
+// Who sees which toast is RivalryFeedAudience's rule: only while the player is crew chief (never driving or
+// on foot), and only the notices the player is named in. The F4 standings panel is unaffected.
 public class RivalryFeed : MonoBehaviour
 {
     public static RivalryFeed Instance { get; private set; }
@@ -19,7 +19,7 @@ public class RivalryFeed : MonoBehaviour
     [Tooltip("Max toasts shown at once.")]
     public int maxToasts = 5;
     [Tooltip("Contact toasts obey the audience rule (the player's own contacts only). Turn off to show " +
-             "every contact in the field at all times.")]
+             "every contact in the field - still on the pit wall only.")]
     public bool playerContactsOnly = true;
     [Tooltip("Key toggling the relationship standings panel.")]
     public KeyCode standingsKey = KeyCode.F4;
@@ -76,7 +76,7 @@ public class RivalryFeed : MonoBehaviour
     void OnContact(string striker, string victim, float severity)
     {
         bool playerInvolved = DriverRelationships.IsPlayerName(striker) || DriverRelationships.IsPlayerName(victim);
-        if (playerContactsOnly && !RivalryFeedAudience.ShouldAnnounce(playerInvolved)) return;
+        if (!RivalryFeedAudience.ShouldAnnounce(playerInvolved || !playerContactsOnly, CrewChiefController.IsCrewChief)) return;
         string verb = severity > 0.55f ? "slams into" : "trades paint with";
         Push($"{striker} {verb} {victim}", playerInvolved ? PixelGUI.Gold : PixelGUI.TextDim);
     }
@@ -84,7 +84,7 @@ public class RivalryFeed : MonoBehaviour
     void OnChanged(string a, string b, float value, float delta)
     {
         bool playerInvolved = DriverRelationships.IsPlayerName(a) || DriverRelationships.IsPlayerName(b);
-        if (!RivalryFeedAudience.ShouldAnnounce(playerInvolved)) return;
+        if (!RivalryFeedAudience.ShouldAnnounce(playerInvolved, CrewChiefController.IsCrewChief)) return;
 
         // Announce only threshold crossings, not every nudge.
         float prev = value - delta;
@@ -114,7 +114,7 @@ public class RivalryFeed : MonoBehaviour
     void OnPayback(string attacker, string target)
     {
         bool playerInvolved = DriverRelationships.IsPlayerName(attacker) || DriverRelationships.IsPlayerName(target);
-        if (!RivalryFeedAudience.ShouldAnnounce(playerInvolved)) return;
+        if (!RivalryFeedAudience.ShouldAnnounce(playerInvolved, CrewChiefController.IsCrewChief)) return;
         Push($"{attacker} wants payback on {target}!", PixelGUI.Danger);
     }
 

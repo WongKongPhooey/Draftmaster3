@@ -59,7 +59,6 @@ public class FullCourseCaution : MonoBehaviour
     }
 
     FormationDirector _director;
-    float _cautionMsgTimer;
     int _oval = -1;   // -1 unresolved, 0 no, 1 yes
 
     // How long each car has been flagged as stopped on the track (Time.time it was first seen).
@@ -172,7 +171,6 @@ public class FullCourseCaution : MonoBehaviour
         FreezeRestartOrder(Time.time);
         sc.PickupLeader = RestartLeader();
         CautionSeconds = 0f;
-        _cautionMsgTimer = 4f;
 
         // The player's own car, if the AI has it (Drive/Broadcast, crew chief): it has no formation brain while the
         // race is green, and a bare SplineDriver would run race pace into the back of the train.
@@ -299,53 +297,21 @@ public class FullCourseCaution : MonoBehaviour
         bool Blocks(float gap) => gap > -clearRoadBehindM && gap < clearRoadAheadM;
     }
 
-    void Update()
+    // Where the caution stands, as one line for the caution prompt box (PaceLapAssist → RacePromptBox) to carry
+    // under its instruction; null under green. This used to be a full-width banner of its own (a flash as the
+    // flag came out, then a slim plate, "Overtime · …" in an overtime caution) — dropped 2026-11-17 for the
+    // single boxed prompt at the top of the screen.
+    public static string StatusLine
     {
-        if (_cautionMsgTimer > 0f) _cautionMsgTimer -= Time.deltaTime;
-    }
-
-    // The caution banner when it comes out, then a slim plate for as long as it lasts.
-    void OnGUI()
-    {
-        if (!RaceStart.IsCaution) return;
-        var style = PixelGUI.Heading;
-        var prevAlign = style.alignment;
-        var prevColour = style.normal.textColor;
-        style.alignment = TextAnchor.MiddleCenter;
-        var yellow = new Color(1f, 0.85f, 0.1f, 1f);
-        // An overtime caution (RaceDirector): the race is extended for a two-lap dash once it goes green.
-        bool overtime = RaceDirector.OvertimePending;
-
-        if (_cautionMsgTimer > 0f)
+        get
         {
-            float alpha = Mathf.Clamp01(_cautionMsgTimer);
-            float h = PixelGUI.Px(34f);
-            float y = Mathf.Round(Screen.height * 0.18f);
-            float kerb = PixelGUI.Px(4f);
-            var prevGui = GUI.color;
-            GUI.color = new Color(1f, 1f, 1f, alpha);
-            PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);
-            PixelGUI.Kerb(new Rect(0f, y - kerb, Screen.width, kerb));
-            PixelGUI.Kerb(new Rect(0f, y + h, Screen.width, kerb));
-            style.normal.textColor = new Color(yellow.r, yellow.g, yellow.b, alpha);
-            GUI.Label(new Rect(0f, y, Screen.width, h), overtime ? "Caution · Overtime" : "Caution · Safety Car", style);
-            GUI.color = prevGui;
+            if (!RaceStart.IsCaution) return null;
+            var director = FormationDirector.Instance;
+            var sc = director != null ? director.SafetyCarInstance : null;
+            return sc != null && (sc.ClosingUp || sc.Pitted) ? "Green at the line"
+                 : sc == null || sc.PitRoadOpen ? "Pit road open"
+                 : sc.PickingUp ? "Pit road closed"
+                 : "Green next time by";
         }
-        else
-        {
-            var sc = _director != null ? _director.SafetyCarInstance : null;
-            string head = overtime ? "Overtime" : "Caution";
-            string text = sc != null && (sc.ClosingUp || sc.Pitted) ? head + " · Green At The Line"
-                        : sc == null || sc.PitRoadOpen ? head + " · Pit Road Open"
-                        : sc.PickingUp ? head + " · Pit Road Closed"
-                        : head + " · Green Next Time By";
-            float h = PixelGUI.Px(22f);
-            float y = Mathf.Round(Screen.height * 0.72f);   // where the pace lap's throttle prompt sits
-            PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);
-            style.normal.textColor = yellow;
-            GUI.Label(new Rect(0f, y, Screen.width, h), text, style);
-        }
-        style.alignment = prevAlign;
-        style.normal.textColor = prevColour;
     }
 }

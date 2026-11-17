@@ -69,6 +69,7 @@ public class PaceLapAssist : MonoBehaviour
     readonly Dictionary<int, Vector2> _prevPos = new();
     readonly Dictionary<int, float> _speedMps = new();
 
+    string _promptTitle;
     string _promptText;
     Color _promptColor;
     bool _showPrompt;
@@ -297,9 +298,9 @@ public class PaceLapAssist : MonoBehaviour
         _showPrompt = true;
         _outOfPosition = gap < -2f;
         _outOfPositionWho = who;
-        if (gap < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
-        else if (gap > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
-        else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
+        if (gap < -2f) { _promptTitle = "Out of position"; _promptText = $"Drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
+        else if (gap > catchUpGap) { _promptTitle = "Pace lap"; _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
+        else { _promptTitle = "Pace lap"; _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
     }
 
     // Caution: hold behind the nearest car in front on the road, whoever it is and whichever lane it is in, capped at
@@ -372,17 +373,18 @@ public class PaceLapAssist : MonoBehaviour
         _showPrompt = true;
         _outOfPosition = false;
         _promptColor = new Color(1f, 0.85f, 0.2f);
-        if (letBy) { _promptText = "CAUGHT IN THE WRECK — move low, let the field by"; return; }
-        if (meCaught) { _promptText = "CAUGHT IN THE WRECK — restart from the tail"; return; }
+        if (letBy) { _promptTitle = "Caught in the wreck"; _promptText = "Move low, let the field by"; _promptColor = new Color(1f, 0.3f, 0.2f); return; }
+        if (meCaught) { _promptTitle = "Caught in the wreck"; _promptText = "Restart from the tail"; _promptColor = new Color(1f, 0.3f, 0.2f); return; }
         if (passSc != null && !passSc.IsOnPit && passSc.TrackLength > 0f
             && Mathf.Repeat(passSc.DistanceOnTrack - playerDist, passSc.TrackLength) < 200f)
         {
-            _promptText = "CAUTION — safety car picking up the leader: pass it on the outside";
+            _promptTitle = "Caution"; _promptText = "Safety car picking up the leader: pass it on the outside";
             return;
         }
-        if (ahead == null) { _promptText = "CAUTION — hold your position"; return; }
+        _promptTitle = "Caution";
+        if (ahead == null) { _promptText = "Hold your position"; return; }
         string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
-        _promptText = gap > catchUpGap ? $"CAUTION — close up behind {who}" : $"CAUTION — hold station behind {who}";
+        _promptText = gap > catchUpGap ? $"Close up behind {who}" : $"Hold station behind {who}";
     }
 
     // On the pit road past its exit line (PitLimiter's zone ends there), the stretch where the car rejoins the track.
@@ -400,9 +402,9 @@ public class PaceLapAssist : MonoBehaviour
         _showPrompt = true;
         _outOfPosition = fwdDist < -2f;
         _outOfPositionWho = who;
-        if (fwdDist < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
-        else if (fwdDist > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
-        else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
+        if (fwdDist < -2f) { _promptTitle = "Out of position"; _promptText = $"Drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
+        else if (fwdDist > catchUpGap) { _promptTitle = "Pace lap"; _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
+        else { _promptTitle = "Pace lap"; _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
     }
 
     static int CarNumberOf(Transform t)
@@ -419,16 +421,10 @@ public class PaceLapAssist : MonoBehaviour
     void OnGUI()
     {
         if (!_showPrompt) return;
-        // Out of position is the design's boxed, flashing red warning; the other formation and caution prompts
-        // keep their plain coloured line.
+        // Out of position is the design's boxed, flashing red warning; the other formation and caution prompts go
+        // in the quest-box-style panel, the heading in the prompt's colour, with where the caution stands (pit
+        // road open/closed, green next time by) under the instruction.
         if (_outOfPosition) { OutOfPositionBox.Draw($"Drop in behind {_outOfPositionWho}"); return; }
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 26,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
-        style.normal.textColor = _promptColor;
-        GUI.Label(new Rect(0, Screen.height * 0.08f, Screen.width, 40f), _promptText, style);
+        RacePromptBox.Draw(_promptTitle, _promptColor, _promptText, FullCourseCaution.StatusLine);
     }
 }

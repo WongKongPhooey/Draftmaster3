@@ -64,10 +64,10 @@ public class SessionHudTests
     }
 
     [Test]
-    public void HeadingOut_LeavesOnlyLapTimingUp()
+    public void HeadingOut_HidesEveryPanel_LapTimingToo()
     {
         var lapTiming = Make("LapTimingManager");
-        Set(lapTiming, "showPlayerHud", false);
+        Set(lapTiming, "showPlayerHud", true);
 
         // Each panel, the member that says whether it is up, and the value that means "up".
         var panels = new (Component c, string member, object shown, object hidden)[]
@@ -87,7 +87,7 @@ public class SessionHudTests
 
         HeadOut();
 
-        Assert.AreEqual(true, Get(lapTiming, "showPlayerHud"), "F1 lap timing should be up");
+        Assert.AreEqual(false, Get(lapTiming, "showPlayerHud"), "F1 lap timing should be hidden");
         foreach (var p in panels)
             Assert.AreEqual(p.hidden, Get(p.c, p.member), $"{p.c.GetType().Name} should be hidden");
         Assert.AreEqual(false, diag.GetValue(null), "F8 formation diagnostics should be closed");

@@ -21,8 +21,9 @@ public class LapTimingManager : MonoBehaviour
     [Tooltip("Half a car width (m). Track limits are judged at the car's inside wheels, not at its centre, " +
              "so a lap survives while any part of the car is still on the road or its kerb.")]
     public float carHalfWidth = 1f;
-    [Tooltip("Draw the player's last/best lap readout.")]
-    public bool showPlayerHud = true;
+    // Draw the player's lap / last / best strip. Every session starts with it hidden and F1 (or the pad's lap-timing
+    // button) brings it up. Not serialised: a scene that saved it as visible would otherwise put it back on screen.
+    [System.NonSerialized] public bool showPlayerHud = false;
     [Tooltip("Key toggling the lap readout (iRacing-style F1).")]
     public KeyCode toggleKey = KeyCode.F1;
 

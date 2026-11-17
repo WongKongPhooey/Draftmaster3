@@ -294,7 +294,7 @@ public static class DaytonaPackageAuthoring
             if (envBuilder != null && envBuilder.environment != null)
             {
                 var env = envBuilder.environment;
-                if (venue.apron) EnsureApron(env, geometry, notes);
+                if (venue.apron) EnsureApron(env, geometry, builder, notes);
                 // Left of travel on an anticlockwise oval is BarrierSide.Outer - the infield wall. Daytona's stands
                 // three track widths in from the apron's edge, with the back straight's infield paved up to it.
                 if (venue.setBackInfieldWall)
@@ -395,7 +395,7 @@ public static class DaytonaPackageAuthoring
     const string ApronLabel = "Apron";
     const string ApronFallbackMaterial = "Assets/Materials/TarmacLight.mat";
 
-    static void EnsureApron(TrackEnvironment env, TrackInfoV2 geometry, List<string> notes)
+    static void EnsureApron(TrackEnvironment env, TrackInfoV2 geometry, TrackBuilder builder, List<string> notes)
     {
         if (geometry.segments == null || geometry.segments.Length == 0) return;
         var strips = new List<TrackEnvironment.Strip>(env.strips ?? new TrackEnvironment.Strip[0]);
@@ -413,9 +413,10 @@ public static class DaytonaPackageAuthoring
             lateralOffset = -ApronMetres * 0.5f,   // centred half its width outboard of the left edge
             width = ApronMetres,
             sortingOrder = env.runoffSortingOrder + 1,
-            // The environment's run-off tarmac if it has one, else a lighter tarmac than the racing surface - an
-            // apron reads paler than the groove from the air.
-            material = env.tarmacRunoffMaterial != null ? env.tarmacRunoffMaterial
+            // Same asphalt as the racing surface, so the apron reads as one continuous paved band; the yellow
+            // line is the only divide. Falls back to the run-off tarmac only if the road has no material.
+            material = builder != null && builder.surfaceMaterial != null ? builder.surfaceMaterial
+                     : env.tarmacRunoffMaterial != null ? env.tarmacRunoffMaterial
                      : AssetDatabase.LoadAssetAtPath<Material>(ApronFallbackMaterial),
             uvLengthScale = 1f,
         });

@@ -1,8 +1,8 @@
 using UnityEngine;
 
-// The in-race HUD from the Iron Oval design file's RACE HUD screen: position and speed as big Pixelify
-// numerals with a hard shadow, the lap count in gold Silkscreen under them, and a tyre/draft/fuel meter
-// plate on the right under the track map.
+// The in-race HUD from the Iron Oval design file's RACE HUD screen: position ("POS 7 /40") and lap ("LAP 12 /200")
+// stacked top left and speed ("187 MPH") bottom right, all in the same big numerals with a hard shadow and a
+// dim suffix, and a tyre/draft/fuel meter plate on the right under the track map.
 //
 // It replaces three older readouts rather than sitting on top of them — the authored speedometer dial,
 // the "P x / N" position panel and RaceDirector's own lap counter all stand down while this is running,
@@ -118,6 +118,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         if (RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
 
         DrawPositionBlock();
+        DrawLapBlock();
         DrawSpeedBlock();
         DrawMeters();
         DrawCautionFlag();
@@ -132,23 +133,42 @@ public class IronOvalRaceHUD : MonoBehaviour
         int field = tracker != null ? tracker.FieldSize : 0;
         if (pos <= 0) return;
 
-        float x = PixelGUI.Px(10f), y = PixelGUI.Px(8f);
-        Shadowed(new Rect(x, y, PixelGUI.Px(120f), PixelGUI.Px(30f)), "P" + pos, PixelGUI.Display);
-
-        var style = PixelGUI.Row;
-        var prev = style.normal.textColor;
-        style.normal.textColor = PixelGUI.TextDim;
-        GUI.Label(new Rect(x + PixelGUI.Px(2f) + Measure(PixelGUI.Display, "P" + pos), y + PixelGUI.Px(14f),
-                           PixelGUI.Px(60f), PixelGUI.DataLineH), "/" + Mathf.Max(field, pos), style);
-        style.normal.textColor = prev;
-
-        string lap = LapText();
-        if (string.IsNullOrEmpty(lap)) return;
-        var heading = PixelGUI.HeadingSmall;
-        GUI.Label(new Rect(x + PixelGUI.Px(2f), y + PixelGUI.Px(32f), PixelGUI.Px(120f), PixelGUI.LineH),
-                  lap, heading);
+        float numeralX = PixelGUI.Px(10f) + LabelColumnW;
+        SmallLabel(PixelGUI.Px(10f), PixelGUI.Px(8f), "POS");
+        NumeralWithSuffix(numeralX, PixelGUI.Px(8f), pos.ToString(), "/" + Mathf.Max(field, pos));
     }
 
+    // The lap, in the position block's own layout directly under it: small "LAP", the lap in the big numerals,
+    // "/200" dim beside it. Practice and open-ended sessions have no total, so just the lap.
+    void DrawLapBlock()
+    {
+        int lap = CurrentLap(out int total);
+        if (lap <= 0) return;
+        float numeralX = PixelGUI.Px(10f) + LabelColumnW;
+        SmallLabel(PixelGUI.Px(10f), PixelGUI.Px(44f), "LAP");
+        NumeralWithSuffix(numeralX, PixelGUI.Px(44f), lap.ToString(), total > 0 ? "/" + total : null);
+    }
+
+    // POS and LAP share one column, as wide as the wider of the two plus a gap, so the two numbers start at the
+    // same x and read as a column.
+    static float LabelColumnW =>
+        Mathf.Max(Measure(PixelGUI.HeadingSmall, "POS"), Measure(PixelGUI.HeadingSmall, "LAP")) + PixelGUI.Px(3f);
+
+    // A small Silkscreen caption beside a numeral, its cap tops level with the numeral's. Drawn at the numeral's
+    // own rect y: measured off a 1080p frame, the big monogram digits' tops sit Px(4) into their rect and
+    // Silkscreen's caps Px(3.7) into theirs, so the same y puts them within a screen pixel of each other.
+    static void SmallLabel(float x, float y, string text)
+    {
+        var style = PixelGUI.HeadingSmall;
+        var prev = style.normal.textColor;
+        style.normal.textColor = PixelGUI.TextDim;
+        GUI.Label(new Rect(x, y, Measure(style, text) + PixelGUI.Px(2f), PixelGUI.LineH), text, style);
+        style.normal.textColor = prev;
+    }
+
+    // Speed in the bottom-right corner — the corner the old speedometer dial owned, which the crew chief's
+    // headset already steps in to clear (CrewChiefController.buttonCorner). Right-aligned so the block grows
+    // leftward as the number gains a digit; on a phone it stands on top of the touch pedals, as the headset does.
     void DrawSpeedBlock()
     {
         if (_speed == null) return;
@@ -157,14 +177,27 @@ public class IronOvalRaceHUD : MonoBehaviour
         _shownMph = Mathf.Lerp(_shownMph, mph, 1f - Mathf.Exp(-12f * Time.unscaledDeltaTime));
         string text = Mathf.RoundToInt(_shownMph).ToString();
 
-        float x = PixelGUI.Px(10f), y = PixelGUI.Px(48f);
-        Shadowed(new Rect(x, y, PixelGUI.Px(140f), PixelGUI.Px(30f)), text, PixelGUI.Display);
+        float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
+        float x = Screen.width - PixelGUI.Px(8f) - w;
+        float y = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
+        NumeralWithSuffix(x, y, text, "MPH");
+    }
+
+    // Height of a numeral block: the big numerals' 30 px rect, with the dim suffix sitting low beside them.
+    static float BlockH => PixelGUI.Px(14f) + PixelGUI.DataLineH;
+
+    // The HUD's one readout layout: big shadowed numerals, then a dim suffix sitting low beside them.
+    static void NumeralWithSuffix(float x, float y, string numeral, string suffix)
+    {
+        float bigW = Measure(PixelGUI.Display, numeral);
+        Shadowed(new Rect(x, y, bigW + PixelGUI.Px(4f), PixelGUI.Px(30f)), numeral, PixelGUI.Display);
+        if (string.IsNullOrEmpty(suffix)) return;
 
         var style = PixelGUI.Row;
         var prev = style.normal.textColor;
         style.normal.textColor = PixelGUI.TextDim;
-        GUI.Label(new Rect(x + PixelGUI.Px(2f) + Measure(PixelGUI.Display, text), y + PixelGUI.Px(14f),
-                           PixelGUI.Px(40f), PixelGUI.DataLineH), "MPH", style);
+        GUI.Label(new Rect(x + PixelGUI.Px(2f) + bigW, y + PixelGUI.Px(14f),
+                           Measure(style, suffix) + PixelGUI.Px(4f), PixelGUI.DataLineH), suffix, style);
         style.normal.textColor = prev;
     }
 
@@ -245,17 +278,20 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     // ------------------------------------------------------------------ data
 
-    string LapText()
+    // The player's lap, 1-based, and the race distance (0 in practice or when there isn't one). 0 = no lap.
+    int CurrentLap(out int total)
     {
+        total = 0;
         var tracker = RacePositionTracker.Instance;
-        if (tracker == null || _player == null) return "";
+        if (tracker == null || _player == null) return 0;
         // A car that starts short of the line is on lap -1 until it crosses it (RaceLaps.FirstLap).
         int lap = Mathf.Max(1, tracker.LapOf(_player) + 1);
 
         var director = RaceDirector.Instance;
-        int total = director != null ? director.raceLaps : 0;
-        if (RaceWeekend.IsPracticeLike || total <= 0) return $"Lap {lap}";
-        return $"Lap {Mathf.Min(lap, total)}/{total}";
+        int laps = director != null ? director.raceLaps : 0;
+        if (RaceWeekend.IsPracticeLike || laps <= 0) return lap;
+        total = laps;
+        return Mathf.Min(lap, total);
     }
 
     // How much tow the player is getting, 0..1 — the same TowFactor the car's physics runs on. That is

@@ -2,13 +2,17 @@ namespace Draftmaster.Sim
 {
     // Who a rivalry notice is actually for.
     //
-    // Only the player's own feuds: the popup that says another car is furious with you, or that you have just
-    // traded paint, is information a driver has (they felt the hit, their spotter is shouting). Two AI cars
-    // falling out somewhere else in the field is not, and a stream of other people's arguments over the
-    // screen is noise — in every session, and on the pit wall as much as in the car.
+    // Rivalry popups — contacts, "now rivals", "furious with", "wants payback" — are pit-wall notices: the crew
+    // chief is the one reading the room. In the car they are banners over the racing for things the driver
+    // can't act on, so none show while driving or on foot; they show only while the player is crew chief.
+    //
+    // Even on the pit wall it is only the player's own feuds. Two AI cars falling out somewhere else in the
+    // field is a stream of other people's arguments over the screen — noise.
     public static class RivalryFeedAudience
     {
         // playerInvolved: the player is one of the two drivers named in the notice.
-        public static bool ShouldAnnounce(bool playerInvolved) => playerInvolved;
+        // crewChiefActive: the player is on the pit wall (CrewChiefController.IsCrewChief).
+        public static bool ShouldAnnounce(bool playerInvolved, bool crewChiefActive)
+            => playerInvolved && crewChiefActive;
     }
 }

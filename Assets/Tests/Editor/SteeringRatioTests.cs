@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The steering ratio on the car setup panel: 1:6 to 1:16, with 1:8 meaning "how the car always steered".
+// The steering ratio on the car setup panel: 1:4 to 1:32, with 1:8 meaning "how the car always steered".
 // Ovals open on a slower rack than road courses.
 public class SteeringRatioTests
 {
@@ -21,17 +21,19 @@ public class SteeringRatioTests
     public void SlowerRackMeansLessSteering()
     {
         Assert.AreEqual(0.5f, SteeringRatio.Gain(16f), 1e-6f);
-        Assert.AreEqual(8f / 6f, SteeringRatio.Gain(6f), 1e-6f);
+        Assert.AreEqual(0.25f, SteeringRatio.Gain(32f), 1e-6f);
+        Assert.AreEqual(2f, SteeringRatio.Gain(4f), 1e-6f);
         Assert.Less(SteeringRatio.Gain(12f), SteeringRatio.Gain(8f));
     }
 
     [Test]
-    public void RatioIsClampedToSixToSixteen()
+    public void RatioIsClampedToFourToThirtyTwo()
     {
-        Assert.AreEqual(6f, SteeringRatio.Clamp(2f));
-        Assert.AreEqual(16f, SteeringRatio.Clamp(40f));
-        Assert.AreEqual(0.5f, SteeringRatio.Gain(100f), 1e-6f);
-        Assert.AreEqual("1:16", SteeringRatio.Label(30f));
+        Assert.AreEqual(4f, SteeringRatio.Clamp(2f));
+        Assert.AreEqual(32f, SteeringRatio.Clamp(40f));
+        Assert.AreEqual(0.25f, SteeringRatio.Gain(100f), 1e-6f);
+        Assert.AreEqual("1:30", SteeringRatio.Label(30f));
+        Assert.AreEqual("1:32", SteeringRatio.Label(50f));
         Assert.AreEqual("1:8", SteeringRatio.Label(8f));
     }
 
