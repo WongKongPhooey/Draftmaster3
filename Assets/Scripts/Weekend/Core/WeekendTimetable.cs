@@ -72,7 +72,13 @@ namespace Draftmaster.Weekend
 
         // ---------------------------------------------------------------- build
 
-        public static WeekendTimetable Build(RacingSeries playerSeries, int weekendId, string trackName = "")
+        // `demoRound` is the venue's 0-based round on the demo calendar (Draftmaster.Tracks.DemoCalendar), or -1
+        // for a track that is not on it. A demo round does not get the whole generated sheet: its weekend
+        // carries one quest a day (BuildRoundQuests) on top of the sessions, the team meetings and the race-day
+        // ceremony, so the four demo venues share the weekend's quests out between them instead of the opener
+        // running every one of them and each round after it repeating the lot.
+        public static WeekendTimetable Build(RacingSeries playerSeries, int weekendId, string trackName = "",
+                                             int demoRound = -1)
         {
             var t = new WeekendTimetable { playerSeries = playerSeries, weekendId = weekendId, trackName = trackName ?? "" };
 
@@ -86,10 +92,18 @@ namespace Draftmaster.Weekend
                 return t;
             }
 
-            var rng = WeekendRandom.For(weekendId, (int)playerSeries, 7717);
             t.BuildSessions();
             t.BuildTeamMeetings();
-            t.BuildObligations(ref rng);
+            if (demoRound >= 0 && demoRound < DemoRounds)
+            {
+                t.demoRound = demoRound;
+                t.BuildRoundQuests(demoRound);
+            }
+            else
+            {
+                var rng = WeekendRandom.For(weekendId, (int)playerSeries, 7717);
+                t.BuildObligations(ref rng);
+            }
             t.BuildRaceDayCeremony();
             t.ApplyHouseRules();
             t._activities.Sort(Chronological);
@@ -119,6 +133,11 @@ namespace Draftmaster.Weekend
                 a.skipReason = "";
             }
         }
+
+        // The demo round this sheet was built for, or -1 for the full generated weekend (or a plan file). A demo
+        // round carries only its own share of the quests, so a kind missing from it was never booked here
+        // rather than taken off - which is what PhotoShootProgress needs to tell apart.
+        public int demoRound = -1;
 
         // Built from a plan file rather than generated. The schedule screen says so, and the editor tooling
         // uses it to decide whether it is looking at something it is allowed to overwrite.
@@ -267,36 +286,131 @@ namespace Draftmaster.Weekend
             Fan(WeekendSlot.FridayAM, 9 * 60, 30, ActivityKind.HaulerParade, "Hauler Parade",
                 "Walk the transporters in past the fence with the crew. Cheap goodwill, and the fans remember it.",
                 "Main gate", 0);
-            Sponsor(WeekendSlot.FridayAM, 9 * 60 + 45, 60, ActivityKind.PhotoShoot, "Sponsor Photo Shoot",
-                "Stills for the season's marketing: firesuit on, same three poses, an hour of standing still.",
-                "Sponsor hospitality", 1200, "The photographer flew in for that hour and shot an empty backdrop.");
+            SponsorPhotoShoot();
 
             // ---- Friday afternoon ----
-            Media(WeekendSlot.FridayPM, 14 * 60 + 15, 45, ActivityKind.PressConference, "Media Availability",
-                "The written press get their twenty minutes. Whatever you say here is the quote of the weekend.",
-                "Media centre");
-            Fan(WeekendSlot.FridayPM, 16 * 60 + 30, 60, ActivityKind.Autographs, "Signing Session",
-                "A queue down the midway with hero cards and sharpies. Sign as many as the hour allows.",
-                "Souvenir midway", 750);
+            MediaAvailability(WeekendSlot.FridayPM, 14 * 60 + 15);
+            SigningSession();
             BuildPitChallenge();
 
             // ---- Saturday afternoon ----
-            Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "Press Conference",
-                "Top table, three microphones, and the story they already decided to write.", "Media centre");
-            Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "Suite Meet & Greet",
-                "The people who pay for the hood want an hour of your evening, and the race is on the TV behind them.",
-                "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.")
-                .sponsorExtra = true;
+            PressConference();
+            SuiteMeetAndGreet();
 
             // ---- Sunday ----
-            Media(WeekendSlot.SundayAM, 11 * 60 + 30, 20, ActivityKind.MediaHit, "Broadcast Hit",
-                "Ninety seconds live on the pre-race show. One question, no second take.", "TV compound");
-            Media(WeekendSlot.SundayPM, 13 * 60 + 30, 20, ActivityKind.MediaHit, "Grid Walk Interview",
-                "Handed a microphone on the grid with the cars firing up behind you.", "Starting grid");
+            BroadcastHit();
+            GridWalkInterview(13 * 60 + 30);
 
             BuildGridWalk();
             AddFeature(ref rng);
         }
+
+        // ---------------------------------------------------------------- the demo's quests, a day at a time
+
+        // How many demo rounds have their own share of the quests: Watkins Glen, Daytona, Texas, Martinsville.
+        public const int DemoRounds = 4;
+
+        // One quest per day of a demo round, on top of the sessions, the team meetings and the race-day
+        // ceremony. Every quest the generated weekend has gets one turn somewhere across the four rounds (the
+        // retired hauler parade and its charity-run feature aside), and each round has one sponsor duty and at
+        // least one media appearance in it, so no venue is all sponsor or all microphones:
+        //
+        //   round             Friday               Saturday             Sunday
+        //   0 Watkins Glen    sponsor photo shoot  press conference     VIP grid walk
+        //   1 Daytona         signing session      suite meet & greet   broadcast hit
+        //   2 Texas           pit-stop challenge   radio row            grid walk interview
+        //   3 Martinsville    media availability   new livery reveal    podcast taping
+        //
+        // Times are picked clear of a Cup driver's own practice, qualifying, debrief, drivers meeting and
+        // intros, because the day's one quest should not be a straight choice against the car. The VIP grid
+        // walk is the one that moves: it is held on the morning of the player's own race (GridWalkTime), which
+        // for a truck or National driver is Friday or Saturday rather than Sunday.
+        void BuildRoundQuests(int round)
+        {
+            switch (round)
+            {
+                case 0:
+                    SponsorPhotoShoot();
+                    PressConference();
+                    BuildGridWalk();
+                    break;
+                case 1:
+                    SigningSession();
+                    SuiteMeetAndGreet();
+                    BroadcastHit();
+                    break;
+                case 2:
+                    BuildPitChallenge();
+                    RadioRow();
+                    // Between the drivers meeting (12:00) and the intros (13:30) of a Cup race day, rather than
+                    // the generated sheet's 13:30, which sits on top of the intros.
+                    GridWalkInterview(13 * 60);
+                    break;
+                default:
+                    // Before the truck qualifying at 13:00, rather than the generated 14:15, which sits on top
+                    // of the Cup practice.
+                    MediaAvailability(WeekendSlot.FridayPM, 12 * 60 + 15);
+                    LiveryReveal();
+                    PodcastTaping(WeekendSlot.SundayAM, 10 * 60);
+                    break;
+            }
+        }
+
+        // ---------------------------------------------------------------- the quests themselves
+
+        WeekendActivity SponsorPhotoShoot() =>
+            Sponsor(WeekendSlot.FridayAM, 9 * 60 + 45, 60, ActivityKind.PhotoShoot, "Sponsor Photo Shoot",
+                "Stills for the season's marketing: firesuit on, same three poses, an hour of standing still.",
+                "Sponsor hospitality", 1200, "The photographer flew in for that hour and shot an empty backdrop.");
+
+        WeekendActivity MediaAvailability(WeekendSlot slot, int start) =>
+            Media(slot, start, 45, ActivityKind.PressConference, "Media Availability",
+                "The written press get their twenty minutes. Whatever you say here is the quote of the weekend.",
+                "Media centre");
+
+        WeekendActivity SigningSession() =>
+            Fan(WeekendSlot.FridayPM, 16 * 60 + 30, 60, ActivityKind.Autographs, "Signing Session",
+                "A queue down the midway with hero cards and sharpies. Sign as many as the hour allows.",
+                "Souvenir midway", 750);
+
+        WeekendActivity PressConference() =>
+            Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "Press Conference",
+                "Top table, three microphones, and the story they already decided to write.", "Media centre");
+
+        WeekendActivity SuiteMeetAndGreet()
+        {
+            var a = Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "Suite Meet & Greet",
+                "The people who pay for the hood want an hour of your evening, and the race is on the TV behind them.",
+                "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.");
+            a.sponsorExtra = true;
+            return a;
+        }
+
+        WeekendActivity BroadcastHit() =>
+            Media(WeekendSlot.SundayAM, 11 * 60 + 30, 20, ActivityKind.MediaHit, "Broadcast Hit",
+                "Ninety seconds live on the pre-race show. One question, no second take.", "TV compound");
+
+        WeekendActivity GridWalkInterview(int start) =>
+            Media(WeekendSlot.SundayPM, start, 20, ActivityKind.MediaHit, "Grid Walk Interview",
+                "Handed a microphone on the grid with the cars firing up behind you.", "Starting grid");
+
+        WeekendActivity SeasonMediaDay() =>
+            Media(WeekendSlot.FridayAM, 11 * 60, 45, ActivityKind.PressConference, "Season Media Day",
+                "Every outlet at the track in one room, and a season's worth of narrative to set.", "Media centre");
+
+        WeekendActivity LiveryReveal() =>
+            Sponsor(WeekendSlot.SaturdayPM, 12 * 60 + 15, 40, ActivityKind.PhotoShoot, "New Livery Reveal",
+                "Pull the sheet off the car for the cameras and say the sponsor's name four times.",
+                "Display stage", 2500, "The car got unveiled by a marketing manager instead.");
+
+        WeekendActivity RadioRow() =>
+            Media(WeekendSlot.SaturdayAM, 10 * 60 + 15, 30, ActivityKind.MediaHit, RadioRowContent.Title,
+                "Six stations in a row of folding tables, and every one of them wants you to name a driver.",
+                "Radio row");
+
+        WeekendActivity PodcastTaping(WeekendSlot slot, int start) =>
+            Media(slot, start, 30, ActivityKind.MediaHit, "Podcast Taping",
+                "An hour of questions cut down to twenty minutes people will actually quote.", "Media centre");
 
         // The sponsor's pit-stop challenge, driven: one run down pit road with the limiter off, a tyre change
         // in the box, and the clock stopped when the car is clean out of it. Friday evening, after the signing
@@ -341,26 +455,20 @@ namespace Draftmaster.Weekend
             switch (rng.Range(0, 5))
             {
                 case 0:
-                    Media(WeekendSlot.FridayAM, 11 * 60, 45, ActivityKind.PressConference, "Season Media Day",
-                        "Every outlet at the track in one room, and a season's worth of narrative to set.", "Media centre");
+                    SeasonMediaDay();
                     break;
                 case 1:
                     Fan(WeekendSlot.SaturdayAM, 8 * 60 + 30, 45, ActivityKind.HaulerParade, "Charity Fun Run",
                         "A lap of the infield with two hundred fans in branded t-shirts before it gets hot.", "Infield road", 0);
                     break;
                 case 2:
-                    Sponsor(WeekendSlot.SaturdayPM, 12 * 60 + 15, 40, ActivityKind.PhotoShoot, "New Livery Reveal",
-                        "Pull the sheet off the car for the cameras and say the sponsor's name four times.",
-                        "Display stage", 2500, "The car got unveiled by a marketing manager instead.");
+                    LiveryReveal();
                     break;
                 case 3:
-                    Media(WeekendSlot.SaturdayAM, 10 * 60 + 15, 30, ActivityKind.MediaHit, RadioRowContent.Title,
-                        "Six stations in a row of folding tables, and every one of them wants you to name a driver.",
-                        "Radio row");
+                    RadioRow();
                     break;
                 default:
-                    Media(WeekendSlot.FridayPM, 12 * 60 + 15, 30, ActivityKind.MediaHit, "Podcast Taping",
-                        "An hour of questions cut down to twenty minutes people will actually quote.", "Media centre");
+                    PodcastTaping(WeekendSlot.FridayPM, 12 * 60 + 15);
                     break;
             }
         }

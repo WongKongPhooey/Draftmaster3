@@ -29,8 +29,10 @@ namespace Draftmaster.Weekend
                 if (WeekendLedger.IsDone(a.id)) return PhotoShootState.Done;
                 if (!WeekendLedger.IsMissed(a.id)) pending = true;
             }
+            // A demo round only carries its own share of the quests, so a round with no shoot on it simply never
+            // had one this weekend.
             if (!booked)
-                return CareerModes.Keeps(mode, ActivityKind.PhotoShoot)
+                return CareerModes.Keeps(mode, ActivityKind.PhotoShoot) && timetable.demoRound < 0
                     ? PhotoShootState.Done
                     : PhotoShootState.NeverHappening;
             return pending ? PhotoShootState.Waiting : PhotoShootState.NeverHappening;

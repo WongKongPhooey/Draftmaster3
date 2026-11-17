@@ -3,11 +3,12 @@ using System.Collections.Generic;
 
 namespace Draftmaster.Tracks
 {
-    // The demo's season: three rounds, in order. NEXT WEEKEND walks it so finishing a race moves the career
-    // on to the next venue instead of reloading the one just raced.
+    // The demo's season: four rounds, in order (FortWorth is Texas). NEXT WEEKEND walks it so finishing a race
+    // moves the career on to the next venue instead of reloading the one just raced. The round number also
+    // picks which of the weekend's quests that venue runs (WeekendTimetable.BuildRoundQuests).
     public static class DemoCalendar
     {
-        public static readonly IReadOnlyList<string> Rounds = new[] { "WatkinsGlen", "Daytona", "Martinsville" };
+        public static readonly IReadOnlyList<string> Rounds = new[] { "WatkinsGlen", "Daytona", "FortWorth", "Martinsville" };
 
         public static string Opener => Rounds[0];
 

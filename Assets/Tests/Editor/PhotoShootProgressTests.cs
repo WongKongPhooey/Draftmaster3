@@ -74,4 +74,22 @@ public class PhotoShootProgressTests
         t.WaiveSponsorExtras();
         Assert.AreEqual(PhotoShootState.NeverHappening, PhotoShootProgress.Of(t, true, CareerMode.Full));
     }
+
+    // Daytona's share of the demo's quests has no shoot in it: the rep has no room to have watched.
+    [Test]
+    public void DemoRoundWithoutAShoot_NeverSendsTheRep()
+    {
+        var t = WeekendTimetable.Build(Series, TestWeekend, Track, demoRound: 1);
+        WeekendLedger.Timetable = t;
+        Assert.IsFalse(t.Activities.Any(a => a.kind == ActivityKind.PhotoShoot), "Daytona's round books no shoot.");
+        Assert.AreEqual(PhotoShootState.NeverHappening, PhotoShootProgress.Of(t, false, CareerMode.Full));
+    }
+
+    [Test]
+    public void DemoRoundWithAShoot_WaitsForIt()
+    {
+        var t = WeekendTimetable.Build(Series, TestWeekend, Track, demoRound: 0);
+        WeekendLedger.Timetable = t;
+        Assert.AreEqual(PhotoShootState.Waiting, PhotoShootProgress.Of(t, false, CareerMode.Full));
+    }
 }

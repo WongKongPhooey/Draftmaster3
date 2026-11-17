@@ -98,6 +98,26 @@ else's practice and qualifying are optional** (`ActivityKinds.IsOptional`): stil
 but `WeekendSchedulePlan.NextWorthDoing` never routes you to one, and they carry no penalty for not going.
 Their race is still routed as before.
 
+**The demo spreads the quests out (2026-11-17).** The four demo-calendar venues — Watkins Glen, Daytona,
+Texas (`FortWorth`), Martinsville, in that order (`Draftmaster.Tracks.DemoCalendar`) — do not each run the
+whole generated sheet. Each round keeps every session (yours and the two championships you watch), the team
+meetings (briefing, debrief, race plan) and the race-day drivers meeting and intros, and carries **one quest
+a day** on top (`WeekendTimetable.BuildRoundQuests`, picked by the `demoRound` argument `WeekendDirector`
+passes from `DemoCalendar.RoundOf`):
+
+| Round | Friday | Saturday | Sunday |
+|---|---|---|---|
+| Watkins Glen | Sponsor Photo Shoot | Press Conference | VIP Grid Walk |
+| Daytona | Signing Session | Suite Meet & Greet | Broadcast Hit |
+| Texas | Pit-Stop Challenge | Radio Row | Grid Walk Interview |
+| Martinsville | Media Availability | New Livery Reveal | Podcast Taping |
+
+No quest repeats across the four, each round has one sponsor duty and at least one media appearance, and
+times sit clear of a Cup driver's own sessions and meetings (the VIP grid walk follows the player's race
+morning, so a truck or National driver has it on Friday or Saturday). Any other track — a travel-map detour —
+still gets the full generated weekend. With fewer bookings a round with no shoot reads as "never had one"
+for the sponsor-poach beat (`PhotoShootProgress`). Tests: `DemoRoundQuestsTests`.
+
 **Scouting.** The reason to watch: every driver's stats on the RV laptop (garage sheet) read `??` until
 scouted. A session uncovers some for every driver in its field — your own practice 1, qualifying 1, race 2
 (4 a weekend, so your field is fully known on the 5th weekend); a watched session of another series 1. What
@@ -478,7 +498,7 @@ running underneath an open menu. One depth counter, saved once in and restored o
 
 **A new activity kind:** add to `ActivityKind` and the right `ActivityKinds.Is*` group (that alone gives it
 a tag and a colour on the sheet), give it a venue in `WeekendVenues.For`, book it in
-`WeekendTimetable.BuildObligations`, and add a case to `WeekendScripts.For` returning a
+`WeekendTimetable.BuildObligations` (and give it a demo round in `BuildRoundQuests`), and add a case to `WeekendScripts.For` returning a
 `WeekendConversation`. The content goes in `Core/Conversations/` — beats of speaker, line and answers,
 where each answer carries what it is worth. Nothing else needs writing: the venue's host plays it, and the
 ledger takes the outcome. `WeekendVenueTests` will fail the build if a kind has no venue or a beat has

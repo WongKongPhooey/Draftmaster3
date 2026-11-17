@@ -59,7 +59,9 @@ public class WeekendDirector : MonoBehaviour
             var series = SeriesCatalog.PlayerSeries;
             if (_timetable == null || _builtForWeekend != id || _builtForSeries != series)
             {
-                _timetable = WeekendTimetable.Build(series, id, TrackSelection.CurrentDisplayName);
+                // A demo-calendar venue runs its own share of the quests, one a day, rather than all of them.
+                _timetable = WeekendTimetable.Build(series, id, TrackSelection.CurrentDisplayName,
+                    Draftmaster.Tracks.DemoCalendar.RoundOf(TrackSelection.CurrentId));
                 _builtForWeekend = id;
                 _builtForSeries = series;
                 WeekendLedger.EnsureWeekend(id, series);

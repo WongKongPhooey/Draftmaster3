@@ -2,13 +2,13 @@ using Draftmaster.Tracks;
 using NUnit.Framework;
 using UnityEngine;
 
-// The demo's three rounds: finishing one has to move the career on, not reload the venue just raced.
+// The demo's four rounds: finishing one has to move the career on, not reload the venue just raced.
 public class DemoCalendarTests
 {
     [Test]
-    public void Rounds_RunWatkinsGlen_Daytona_Martinsville()
+    public void Rounds_RunWatkinsGlen_Daytona_Texas_Martinsville()
     {
-        CollectionAssert.AreEqual(new[] { "WatkinsGlen", "Daytona", "Martinsville" }, DemoCalendar.Rounds);
+        CollectionAssert.AreEqual(new[] { "WatkinsGlen", "Daytona", "FortWorth", "Martinsville" }, DemoCalendar.Rounds);
         Assert.AreEqual("WatkinsGlen", DemoCalendar.Opener);
     }
 
@@ -16,7 +16,8 @@ public class DemoCalendarTests
     public void After_WalksTheCalendarInOrder_AndWrapsAtTheEnd()
     {
         Assert.AreEqual("Daytona", DemoCalendar.After("WatkinsGlen"));
-        Assert.AreEqual("Martinsville", DemoCalendar.After("Daytona"));
+        Assert.AreEqual("FortWorth", DemoCalendar.After("Daytona"));
+        Assert.AreEqual("Martinsville", DemoCalendar.After("FortWorth"));
         Assert.AreEqual("WatkinsGlen", DemoCalendar.After("Martinsville"));
     }
 

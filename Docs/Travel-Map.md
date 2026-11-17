@@ -17,7 +17,7 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
    walk to the motorhome, then the satnav in its cab opens the fullscreen map — an authored Canvas prefab
    (`Assets/Resources/UI/TravelMap.prefab`) with the `TravelMapScreen` binder on its root.
    The sheet's START NEXT WEEKEND jumps straight to the next round of the demo
-   calendar — `Draftmaster.Tracks.DemoCalendar`: Watkins Glen → Daytona → Martinsville, then back round.
+   calendar — `Draftmaster.Tracks.DemoCalendar`: Watkins Glen → Daytona → Texas (`FortWorth`) → Martinsville, then back round.
    Arriving at a circuit on the map selects that circuit (`TrackSelection.Select`) instead.
    **Tutorial leg** (Watkins Glen → Daytona, once per save): the prompt "Stop off at Team HQ to apply new
    parts and sponsors." comes up (notice line + sticky control hint). The car will not move until Team HQ

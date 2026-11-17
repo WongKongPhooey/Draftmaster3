@@ -61,7 +61,9 @@ public class WeekendCastWindow : EditorWindow
 
     void Rebuild()
     {
-        _timetable = WeekendTimetable.Build(_series, _weekendId, PlacedNPCSceneContext.PreviewTrack);
+        // Same sheet the game builds: a demo-calendar venue previews its own round's quests.
+        _timetable = WeekendTimetable.Build(_series, _weekendId, PlacedNPCSceneContext.PreviewTrack,
+            Draftmaster.Tracks.DemoCalendar.RoundOf(PlacedNPCSceneContext.PreviewTrack));
         // The scene-view gizmos, the Director's table and the inspector card all read these, so picking a
         // half-day here shows that half-day's paddock everywhere at once. The session comes off the real
         // sheet — this window has the timetable, so it knows Saturday afternoon is the National race.
