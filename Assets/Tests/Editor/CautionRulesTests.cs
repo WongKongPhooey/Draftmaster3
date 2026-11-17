@@ -2,8 +2,8 @@ using Draftmaster.Sim;
 using NUnit.Framework;
 using UnityEngine;
 
-// Full-course caution rules (FullCourseCaution / SafetyCar.DeployForCaution): when one comes out, when the safety car
-// is held out, and how far it must run before it may pit.
+// Full-course caution rules (FullCourseCaution / SafetyCar.DeployForCaution): when one comes out, when pit road is open,
+// and how far the safety car runs from the pickup before it pits.
 public class CautionRulesTests
 {
     const float Lap = 4000f;
@@ -68,41 +68,46 @@ public class CautionRulesTests
         Assert.IsFalse(CautionRules.Declare(true, true, false, 60f, 5f, -1f, 2f));
     }
 
+    // The plan from the pickup: round to pit road once with pit road open, then in the next time by.
     [Test]
-    public void TheSafetyCarStaysOutUntilTheTrackHasBeenClearLongEnough()
+    public void ThePitsOpenPassIsTheNextPitEntryAtLeastHalfALapOn()
     {
-        Assert.IsTrue(CautionRules.HoldOut(clearForSeconds: -1f, clearNeededSeconds: 3f, lapsRun: 1f, maxLaps: 5f));
-        Assert.IsTrue(CautionRules.HoldOut(1f, 3f, 1f, 5f));
-        Assert.IsFalse(CautionRules.HoldOut(3f, 3f, 1f, 5f));
+        Assert.That(CautionRules.PitsOpenPass(Lap, 3000f), Is.EqualTo(3000f).Within(0.01f));
+        Assert.That(CautionRules.PitsOpenPass(Lap, 2000f), Is.EqualTo(2000f).Within(0.01f));
+        // Picked up just short of pit road: the field has not fallen in yet - the pass after.
+        Assert.That(CautionRules.PitsOpenPass(Lap, 300f), Is.EqualTo(300f + Lap).Within(0.01f));
+        Assert.That(CautionRules.PitsOpenPass(Lap, -1f), Is.LessThan(0f));
     }
 
     [Test]
-    public void AStuckCarNeverHoldsTheCautionPastTheMaximum()
+    public void TheSafetyCarDrivesByOnThePitsOpenPassAndPitsTheTimeAfter()
     {
-        Assert.IsFalse(CautionRules.HoldOut(-1f, 3f, 5f, 5f));
+        const float window = 25f;
+        foreach (float toEntry in new[] { 0f, 300f, 1999f, 2000f, 3000f, 3990f })
+        {
+            float pass = CautionRules.PitsOpenPass(Lap, toEntry);
+            float floor = CautionRules.PitInFloor(Lap, toEntry);
+            // Not on the pits-open pass, even at the far end of the commit window...
+            Assert.That(pass + window, Is.LessThan(floor), $"to entry {toEntry}");
+            // ...but on the next arrival, from the start of the window.
+            Assert.That(pass + Lap - window, Is.GreaterThanOrEqualTo(floor), $"to entry {toEntry}");
+            // Never more than two and a half laps behind it from the pickup to the pit-in.
+            Assert.That(pass + Lap, Is.LessThan(2.5f * Lap), $"to entry {toEntry}");
+        }
     }
 
     [Test]
-    public void TheGreenComesAfterAtLeastTheMinimumLaps()
+    public void PitRoadShutsBeforeTheGreenFlagLapComesBackToIt()
     {
-        // Pit entry 300 m before the line: the safety car commits within 20 m of the entry, then the leader runs on to
-        // the line, so travel at the green is at least floor + 20 + 300 = 2 laps.
-        float pitEntry = 3700f, line = 0f, window = 20f;
-        float floor = CautionRules.PitFloor(Lap, pitEntry, line, 2f, window);
-        Assert.That(floor + window + 300f, Is.GreaterThanOrEqualTo(2f * Lap - 0.01f));
-        Assert.That(floor, Is.LessThan(2f * Lap));
-    }
-
-    [Test]
-    public void ThePitFloorIsNeverUnderHalfALap()
-    {
-        Assert.That(CautionRules.PitFloor(Lap, 100f, 50f, 0f, 20f), Is.EqualTo(Lap * 0.5f).Within(0.01f));
-    }
-
-    [Test]
-    public void WithNoPitEntryTheFloorIsTheWholeLaps()
-    {
-        Assert.That(CautionRules.PitFloor(Lap, -1f, 0f, 2f, 20f), Is.EqualTo(2f * Lap).Within(0.01f));
+        foreach (float toEntry in new[] { 300f, 2000f, 3000f })
+        {
+            float pass = CautionRules.PitsOpenPass(Lap, toEntry);
+            float until = CautionRules.PitsOpenUntil(Lap, toEntry);
+            Assert.That(until, Is.GreaterThan(pass), "open as the safety car goes by pit road");
+            Assert.That(until, Is.LessThan(pass + Lap - 500f), "shut well before it comes round to it again");
+        }
+        Assert.AreEqual(float.MaxValue, CautionRules.PitsOpenUntil(Lap, -1f), "no pit entry known: never shut");
+        Assert.Less(CautionRules.PitInFloor(Lap, -1f), 0f);
     }
 
     // ---- Overtime (RaceDirector): a caution out with under two laps left extends the race for two laps of green.

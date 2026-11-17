@@ -11,10 +11,11 @@ using UnityEngine;
 // Sent back out for a full-course caution (DeployForCaution, from FullCourseCaution): it pulls out of where it parked
 // at the top of pit road, drives down the lane and out of the pit exit, then crawls round low on the inside line
 // while the field drives past it on the outside - until the restart leader (PickupLeader, kept up to date by
-// FullCourseCaution) comes up behind it. Then it moves up onto the racing line in front of the leader, and from there
-// it runs cruise pace until it has covered the caution's minimum distance and the director stops holding it out
-// (HoldOut), then closes the field up and pits exactly as at the end of the pace lap. (It used to be put straight
-// onto the track ahead of the leader - it appeared out of nowhere.)
+// FullCourseCaution) comes up behind it. Then it moves up onto the racing line in front of the leader and runs cruise
+// pace on a fixed plan (CautionRules.PitsOpenPass): round to pit road once with pit road open (PitRoadOpen - the one
+// chance to stop), and the next time it comes to the pit entry it closes the field up and pits exactly as at the end
+// of the pace lap, and the green waves at the line. (It used to be put straight onto the track ahead of the leader -
+// it appeared out of nowhere - and to stay out for as long as anything was stopped on the track.)
 [RequireComponent(typeof(SplineDriver))]
 public class SafetyCar : MonoBehaviour
 {
@@ -119,12 +120,13 @@ public class SafetyCar : MonoBehaviour
     // (FormationDirector).
     public event Action OnPitEntry;
 
-    // Under a caution: while true the car stays out (the track is not clear yet) — no close-up, no pit-in.
-    [NonSerialized] public bool HoldOut;
     // True from DeployForCaution until the car next pits.
     public bool CautionLap => _caution;
     // Metres covered since the car came out (the formation lap), or since it picked up the leader (a caution).
     public float Travelled => _travelled;
+    // Under a caution, pit road is open: from the pickup until the field has been by pit road once
+    // (CautionRules.PitsOpenUntil). Closed while it is still out picking up the leader, and on the green-flag lap.
+    public bool PitRoadOpen => _caution && _stage == CautionStage.Leading && !_pitting && _travelled < _pitsOpenUntil;
 
     // The car this caution's safety car is out to pick up: the head of the restart order on the track (set by
     // FullCourseCaution). Until it has it (PickingUp), every other car drives past the safety car on the outside.
@@ -149,7 +151,8 @@ public class SafetyCar : MonoBehaviour
 
     SplineDriver _spline;
     bool _caution;
-    float _cautionPitFloor;   // metres it must cover under this caution before it may pit
+    float _cautionPitFloor;   // metres it must cover since the pickup before it may pit
+    float _pitsOpenUntil;     // metres since the pickup that pit road stays open for
     float _travelled;
     float _prevDist;
     bool _hasPrev;
@@ -261,8 +264,8 @@ public class SafetyCar : MonoBehaviour
                 if (_travelled + toPit < PitFloor(lap)) toPit = float.MaxValue;
             }
             // Under caution the line only counts on the run in to the pit entry it will take (every other lap it
-            // is just the line), and nothing counts while the director is holding the car out.
-            if (_caution && (HoldOut || toPit == float.MaxValue)) toLine = toPit = float.MaxValue;
+            // is just the line).
+            if (_caution && toPit == float.MaxValue) toLine = toPit = float.MaxValue;
             if (Mathf.Min(toLine, toPit) <= closeUpDistanceM)
             {
                 ClosingUp = true;
@@ -291,7 +294,7 @@ public class SafetyCar : MonoBehaviour
         // authored fraction OR the arc from where this car joined to the entry, whichever is shorter, so it
         // always fires on the first pass. It is still a floor — a car that spawned yards short of the entry
         // does not pit off the line — it just cannot be set past the point it is guarding any more.
-        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= PitFloor(lap) && !(_caution && HoldOut))
+        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= PitFloor(lap))
         {
             float gap = _pitEntryDistance - cur;
             if (gap < 0f) gap += lap;
@@ -509,20 +512,18 @@ public class SafetyCar : MonoBehaviour
         }
     }
 
-    // Back out for a full-course caution, held out until HoldOut is cleared and it has covered at least `minLaps` laps
-    // in front of the leader - counted so the green, which waves as the leader reaches the line after this car pits,
-    // comes after that many laps behind it. From where it parked at the top of pit road it drives down the lane and out
-    // of the pit exit, and crawls round on the inside until it picks up the leader (PickupLeader). Only a car that is
-    // not on pit road at all (a track with no pit lane) is put on the track at `distance` (main-spline metres) and
+    // Back out for a full-course caution. From where it parked at the top of pit road it drives down the lane and out
+    // of the pit exit, and crawls round on the inside until it picks up the leader (PickupLeader); from there it leads
+    // the field round to pit road once with pit road open, and pits the next time by (PlanFromPickup). Only a car that
+    // is not on pit road at all (a track with no pit lane) is put on the track at `distance` (main-spline metres) and
     // leads from there, as it used to.
-    public void DeployForCaution(float distance, float minLaps)
+    public void DeployForCaution(float distance)
     {
         if (_spline == null) _spline = GetComponent<SplineDriver>();
         gameObject.SetActive(true);
         float lap = _spline.TrackLength;
 
         _caution = true;
-        HoldOut = true;
         _pitting = false;
         ClosingUp = false;
         _travelled = 0f;
@@ -544,7 +545,8 @@ public class SafetyCar : MonoBehaviour
 
         if (_pitEntryDistance < 0f && _spline.track != null && _spline.track.track != null)
             _pitEntryDistance = _spline.track.track.PitEntryDistanceOnLap;
-        _cautionPitFloor = CautionRules.PitFloor(lap, _pitEntryDistance, StartFinishDistance, minLaps, pitEntryWindow);
+        _cautionPitFloor = float.MaxValue;   // set at the pickup (PlanFromPickup)
+        _pitsOpenUntil = 0f;
 
         if (_spline.PitLength > 0f && (_spline.IsOnPit || _spline.usePitLane))
         {
@@ -567,6 +569,20 @@ public class SafetyCar : MonoBehaviour
         _spline.speed = cruiseMph * PackAvoidance.MphToMps;
         _spline.startDistance = lap > 0f ? Mathf.Repeat(distance, lap) : distance;
         _spline.PlaceAtStartDistance();
+        PlanFromPickup(_spline.startDistance);
+    }
+
+    // The caution's plan from here, where the safety car has the leader: pit road open until the field has been by it
+    // once, then in at the pit entry the time after. Travel is counted from here.
+    void PlanFromPickup(float at)
+    {
+        float lap = _spline.TrackLength;
+        float toEntry = _pitEntryDistance >= 0f && lap > 0f ? Mathf.Repeat(_pitEntryDistance - at, lap) : -1f;
+        _cautionPitFloor = CautionRules.PitInFloor(lap, toEntry);
+        if (_cautionPitFloor < 0f) _cautionPitFloor = float.MaxValue;   // no pit entry: it never pits (as before)
+        _pitsOpenUntil = CautionRules.PitsOpenUntil(lap, toEntry);
+        _travelled = 0f;
+        _hasPrev = false;
     }
 
     // Under a caution, down pit road from the parked spot: wait for a car coming down the lane to go by, pull off the
@@ -690,9 +706,8 @@ public class SafetyCar : MonoBehaviour
         _stage = CautionStage.Leading;
         PickupSeconds = _cautionTime;
         PickupTimedOut = !found;
-        // The caution's laps are counted from here, in front of the leader.
-        _travelled = 0f;
-        _hasPrev = false;
+        // The caution's plan runs from here, in front of the leader.
+        PlanFromPickup(_spline.DistanceOnTrack);
         _paceMph = Mathf.Max(_spline.CurrentMph, 1f);
         _awaitTuckIn = found;
         Debug.Log(found

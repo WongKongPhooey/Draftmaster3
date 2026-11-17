@@ -261,10 +261,10 @@ public class FormationLapSimTests
 
     // A full-course caution on an oval (FullCourseCaution): from racing speed, the safety car drives out of the pits
     // (no jump), crawls on the inside while the field goes by until the leader comes up behind it, picks the leader
-    // up, the field forms up behind it on the formation brain, and once the track is clear and it has run its
-    // minimum laps it pits and the green waves again near the line — after at least two laps behind it.
+    // up, the field forms up behind it on the formation brain, it leads the field round to pit road once with pit road
+    // open (the one chance to stop), and the next time by it pits and the green waves near the line.
     [TestCase("Daytona")]
-    public void ACautionRunsTwoLapsBehindTheSafetyCarThenGoesGreen(string trackId)
+    public void ACautionRunsAPitsOpenLapThenGoesGreenTheNextTimeBy(string trackId)
     {
         var r = Run(trackId, 20);
         Assert.IsTrue(r.wentGreen, Report($"{trackId}: the formation lap never went green", r, 5));
@@ -332,10 +332,9 @@ public class FormationLapSimTests
         bool scInPitsAtFlag = (float)splineType.GetProperty("PitLength").GetValue(scSpline) > 0f
                               && ((bool)onPitProp.GetValue(scSpline) || (bool)splineType.GetField("usePitLane").GetValue(scSpline));
         var scPosAtFlag = (Vector2)posProp.GetValue(scSpline);
-        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup, 2f });
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup });
         scType.GetField("PickupLeader").SetValue(sc, cars[leaderIdx].transform);
         currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
-        var holdOut = scType.GetField("HoldOut");
         var pickingUpProp = scType.GetProperty("PickingUp");
 
         // How the field slows as the flag comes out: each car's speed then, the field's mean speed 3 s on against it,
@@ -382,19 +381,22 @@ public class FormationLapSimTests
         var contacts = new List<string>();
         var greenPhase = Enum.Parse(phaseType, "Green");
         float t = 0f, scTravelAtPit = -1f;
+        float pitsOpenFrom = -1f, pitsShutAt = -1f;   // safety car travel since the pickup
+        var pitRoadOpenProp = scType.GetProperty("PitRoadOpen");
         bool green = false;
         int steps = Mathf.RoundToInt(900f / dt);
         for (int step = 0; step < steps && !green; step++)
         {
             t = (step + 1) * dt;
-            // The wreck is cleared 10 s in (CautionWatch sees nothing stopped any more).
-            if (t > 10f) holdOut.SetValue(sc, false);
             for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
             scStep.Invoke(sc, null);
             directorStep.Invoke(director, null);
             foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);
             if (scTravelAtPit < 0f && (bool)scType.GetProperty("Pitted").GetValue(sc))
                 scTravelAtPit = (float)scType.GetProperty("Travelled").GetValue(sc);
+            bool pitsOpen = (bool)pitRoadOpenProp.GetValue(sc);
+            if (pitsOpen && pitsOpenFrom < 0f) pitsOpenFrom = (float)scType.GetProperty("Travelled").GetValue(sc);
+            if (!pitsOpen && pitsOpenFrom >= 0f && pitsShutAt < 0f) pitsShutAt = (float)scType.GetProperty("Travelled").GetValue(sc);
             green = Equals(currentProp.GetValue(null), greenPhase);
 
             int perSecond = Mathf.RoundToInt(1f / dt);
@@ -493,6 +495,7 @@ public class FormationLapSimTests
                          $"safety car {(scInPitsAtFlag ? "in the pits" : "NOT in the pits")} at the flag, " +
                          $"{(scLeftPitRoad ? "drove out" : "never left pit road")}, biggest step {scBiggestStep:0.00} m ({scBiggestAt}) (pit-in {scPitInStep:0.00} m), " +
                          $"picked up the leader at t{pickupSeconds:0} s{(pickupTimedOut ? " (TIMED OUT)" : "")}; " +
+                         $"pit road open {pitsOpenFrom / lap:0.00}-{pitsShutAt / lap:0.00} laps after the pickup; " +
                          $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
                          $"tail {tailAtCaution:0} m behind the safety car (widest gap {widestAtCaution:0} m) as it picked up the leader, " +
                          $"{tailAtLap:0} m (widest {widestAtLap:0} m) after its first lap; closed up (all gaps < 40 m) at t{closedUpAt:0} s (tightest widest gap {minWidest:0} m at t{minWidestAt:0}); " +
@@ -507,8 +510,14 @@ public class FormationLapSimTests
         Assert.Greater(pickupSeconds, 0f, summary);
         Assert.IsFalse(pickupTimedOut, summary);
         Assert.IsTrue(green, summary);
-        Assert.Greater(scTravelAtPit, 0f, summary);
-        Assert.GreaterOrEqual(leaderLaps, 1.95f, summary);
+        // From the pickup: round to pit road with pit road open (at least half a lap, so the field has fallen in), on by
+        // it, then in the next time by - no hold-out, however long anything was stopped.
+        Assert.Greater(scTravelAtPit, 1.4f * lap, summary);
+        Assert.Less(scTravelAtPit, 2.5f * lap, summary);
+        Assert.That(pitsOpenFrom, Is.EqualTo(0f).Within(1f), summary);
+        Assert.Greater(pitsShutAt, 0.9f * lap, summary);
+        Assert.Less(pitsShutAt, scTravelAtPit, summary);
+        Assert.GreaterOrEqual(leaderLaps, 1.4f, summary);
         Assert.IsEmpty(contacts, summary);
         Assert.IsEmpty(passes, summary);
         // No stamp on the brakes at the flag: the field drives on round at most of its pace (CautionRules.ApproachPace)
@@ -593,10 +602,9 @@ public class FormationLapSimTests
             if (nearest > best) { best = nearest; leader = d; leaderIdx = i; leaderMph = (float)mphProp.GetValue(cars[i]); }
         }
         float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap(leaderMph / 2.237f, 60f / 2.237f, 80f);
-        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup, 2f });
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup });
         scType.GetField("PickupLeader").SetValue(sc, cars[leaderIdx].transform);
         currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
-        var holdOut = scType.GetField("HoldOut");
 
         void StepAll(List<Component> field)
         {
@@ -619,7 +627,6 @@ public class FormationLapSimTests
         for (int step = 0; step < Mathf.RoundToInt(240f / dt) && (behindSafetyCar ? huntFor < 3f : handoverAtS >= 0f ? t < handoverAtS : ledFor < 20f); step++)
         {
             t += dt;
-            if (t > 10f) holdOut.SetValue(sc, false);
             StepAll(cars);
             if (!(bool)pickingUpProp.GetValue(sc) && !(bool)onPitProp.GetValue(scSpline)) ledFor += dt;
             if ((bool)pickingUpProp.GetValue(sc) && !(bool)onPitProp.GetValue(scSpline)) huntFor += dt;
@@ -800,7 +807,7 @@ public class FormationLapSimTests
 
         float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap((float)splineType.GetProperty("CurrentMph").GetValue(cars[leaderIdx]) / 2.237f,
                                                                      60f / 2.237f, 80f);   // as FullCourseCaution.Declare
-        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leaderD + pickup, 2f });
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leaderD + pickup });
         lineupType.GetMethod("Begin").Invoke(null, new object[]
         {
             null, new List<Transform> { cars[leaderIdx].transform }, 0f, 0f
@@ -818,7 +825,6 @@ public class FormationLapSimTests
         Assert.Greater(restartIdx, 0);
         scType.GetField("PickupLeader").SetValue(sc, cars[restartIdx].transform);
         currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
-        var holdOut = scType.GetField("HoldOut");
 
         var travelled = new float[n];
         var prevD = new float[n];
@@ -842,8 +848,7 @@ public class FormationLapSimTests
             for (int step = 0; step < steps && !green; step++)
             {
                 t = (step + 1) * dt;
-                if (t > 10f) holdOut.SetValue(sc, false);
-                for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
+                    for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
                 scStep.Invoke(sc, null);
                 directorStep.Invoke(director, null);
                 foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);

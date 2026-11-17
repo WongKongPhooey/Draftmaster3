@@ -2,9 +2,9 @@ namespace Draftmaster.Sim
 {
     // The full-course caution's rules, lifted out of FullCourseCaution / SafetyCar so they can be pinned in EditMode.
     //
-    // On an oval a car stopped on the track brings out the safety car: the field closes up single file behind it,
-    // pit road stays open so damaged cars can be repaired, and once the safety car has run its minimum laps and the
-    // track is clear it pits and the green waves at the line.
+    // On an oval a car stopped on the track brings out the safety car: it picks up the leader, leads the field round
+    // to pit road once with pit road open (the one chance to stop), and pits the next time by - the green waves as the
+    // leader reaches the line.
     public static class CautionRules
     {
         // Whether a car stopped on the track brings out a full-course caution now.
@@ -18,15 +18,6 @@ namespace Draftmaster.Sim
             if (!oval || !racing || raceOver) return false;
             if (secondsSinceGreen < minSecondsAfterGreen) return false;
             return stoppedSeconds >= 0f && stoppedSeconds >= declareAfterSeconds;
-        }
-
-        // Whether the safety car is held out for now: the track has not been clear for `clearNeededSeconds` yet
-        // (`clearForSeconds` < 0 = something is still stopped on it). Never past `maxLaps` laps behind it — a car that
-        // cannot be moved must not hold the race under yellow for ever.
-        public static bool HoldOut(float clearForSeconds, float clearNeededSeconds, float lapsRun, float maxLaps)
-        {
-            if (maxLaps > 0f && lapsRun >= maxLaps) return false;
-            return clearForSeconds < clearNeededSeconds;
         }
 
         // How far (m) up the road from the race leader the safety car comes out: at least `minGap`, and far enough for a
@@ -72,18 +63,38 @@ namespace Draftmaster.Sim
             return UnityEngine.Mathf.Max(target, previous - UnityEngine.Mathf.Max(0f, easeMps2) * UnityEngine.Mathf.Max(0f, dt));
         }
 
-        // Metres the safety car must cover, from where it came out, before it may take the pit entry. The green waves
-        // as the leader reaches the line after it pits, so the run from the entry to the line counts towards `minLaps`
-        // laps; the window it commits inside (`window`) is taken off so it is not a whole lap late. Never under half a
-        // lap, so it can't come straight back in. `pitEntry` < 0 = no pit entry known: the full laps.
-        public static float PitFloor(float lap, float pitEntry, float startFinish, float minLaps, float window)
+        // A caution runs to a fixed plan from the moment the safety car picks up the leader: it leads the field round
+        // to pit road once - the pits-open pass, the one chance under this caution to make a stop - and the next time
+        // it comes round to the pit entry it dives in, and the green waves as the leader reaches the line. The
+        // pits-open pass is the first arrival at the pit entry at least `minPitLapShare` of a lap after the pickup, so
+        // the field has had time to fall in behind before pit road opens.
+        public const float MinPitLapShare = 0.5f;
+
+        // Metres (safety car travel since the pickup) to its pits-open pass of the pit entry. `toPitEntry`: the road
+        // from where it picked up the leader on to the pit entry. Negative = no pit entry known.
+        public static float PitsOpenPass(float lap, float toPitEntry)
         {
-            if (lap <= 0f) return 0f;
-            float laps = minLaps > 0f ? minLaps : 0f;
-            if (pitEntry < 0f) return laps * lap;
-            float entryToLine = Repeat(startFinish - pitEntry, lap);
-            float floor = laps * lap - entryToLine - (window > 0f ? window : 0f);
-            return floor > lap * 0.5f ? floor : lap * 0.5f;
+            if (lap <= 0f || toPitEntry < 0f) return -1f;
+            float first = Repeat(toPitEntry, lap);
+            return first < lap * MinPitLapShare ? first + lap : first;
+        }
+
+        // Pit road is open from the pickup until the safety car is this far (metres since the pickup) round: half a lap
+        // past its pits-open pass, so the train strung out behind it gets its pass of the entry too, and shut well
+        // before the leader comes round on the green-flag lap. No pit entry: open the whole caution.
+        public static float PitsOpenUntil(float lap, float toPitEntry)
+        {
+            float pass = PitsOpenPass(lap, toPitEntry);
+            return pass < 0f ? float.MaxValue : pass + lap * 0.5f;
+        }
+
+        // The least the safety car must have covered since the pickup before it may take the pit entry: past the
+        // pits-open pass (it drives on by there), short of the next arrival a lap later (the one it takes). Half a lap
+        // between the two, so the commit window at either end can never put it on the wrong side. No pit entry: -1.
+        public static float PitInFloor(float lap, float toPitEntry)
+        {
+            float pass = PitsOpenPass(lap, toPitEntry);
+            return pass < 0f ? -1f : pass + lap * 0.5f;
         }
 
         static float Repeat(float t, float length)

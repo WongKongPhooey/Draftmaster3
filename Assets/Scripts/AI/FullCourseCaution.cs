@@ -10,10 +10,12 @@ using UnityEngine;
 //     moves up onto the line in front of the leader and runs cruise pace (SafetyCar.DeployForCaution, PickupLeader);
 //   * every AI car goes back on the formation brain, single file behind it (FormationController), and the player is
 //     held behind the car in front (PaceLapAssist);
-//   * pit road stays open — a damaged car comes in for repairs (PitStopController.cautionRepairDamage, PlayerPitService);
-//   * once the safety car has run at least minCautionLaps laps and the track has been clear for clearSeconds, it
-//     closes the field up and pits, and the green waves as the leader reaches the line (FormationDirector) — the
-//     same restart as the end of the pace lap.
+//   * pit road is closed until the safety car has the leader; then it leads the field round to pit road once with pit
+//     road open (PitRoadOpen) - the one chance under the caution to stop, for tyres or repairs
+//     (PitStopController.cautionRepairDamage, PlayerPitService);
+//   * the next time it comes round to the pit entry it closes the field up and pits, and the green waves as the
+//     leader reaches the line (FormationDirector) — the same restart as the end of the pace lap. Nothing holds it
+//     out longer: a car still stopped on the track has had its caution (CautionRules.PitsOpenPass).
 //
 // A caution out with fewer than two laps left is an overtime caution (RaceDirector extends the race for two laps of
 // green after it) and the plate says so.
@@ -24,16 +26,10 @@ public class FullCourseCaution : MonoBehaviour
 {
     [Tooltip("Run full-course cautions on ovals. Off = local yellows only, as on a road course.")]
     public bool cautionsOnOvals = true;
-    [Tooltip("Least number of laps run behind the safety car before the green, so every car gets the chance to pit.")]
-    public float minCautionLaps = 2f;
-    [Tooltip("A car still stopped on the track holds the caution out past minCautionLaps — but never past this many laps.")]
-    public float maxCautionLaps = 5f;
     [Tooltip("How long (s) a car must have been flagged as stopped on the track (CautionWatch) before the caution comes out. A spin the driver gets going again from straight away is a local yellow, not a caution.")]
     public float declareAfterSeconds = 2f;
     [Tooltip("No caution this soon (s) after a green — the start, or the restart after the last caution.")]
     public float minSecondsAfterGreen = 5f;
-    [Tooltip("The track must have been clear of stopped cars this long (s) before the safety car may come in.")]
-    public float clearSeconds = 3f;
     [Tooltip("The safety car comes out at least this far (m) ahead of the race leader - further at racing speed, so the leader has room to come down to it gently (CautionRules.CautionPickupGap).")]
     public float pickupGapM = 80f;
     [Tooltip("Road (m) the safety car must have to itself, behind and ahead, where it comes out. Pushed on up the road until it has it.")]
@@ -48,11 +44,21 @@ public class FullCourseCaution : MonoBehaviour
 
     // Seconds into the current caution; -1 when there is none.
     public float CautionSeconds { get; private set; } = -1f;
-    // Laps the safety car has run under this caution.
-    public float LapsRun { get; private set; }
+
+    // Whether a car may come into the pits now. Always under green; under a caution only on the pits-open pass, once
+    // the safety car has the leader (SafetyCar.PitRoadOpen).
+    public static bool PitRoadOpen
+    {
+        get
+        {
+            if (!RaceStart.IsCaution) return true;
+            var director = FormationDirector.Instance;
+            var sc = director != null ? director.SafetyCarInstance : null;
+            return sc == null || sc.PitRoadOpen;
+        }
+    }
 
     FormationDirector _director;
-    float _clearFor = -1f;
     float _cautionMsgTimer;
     int _oval = -1;   // -1 unresolved, 0 no, 1 yes
 
@@ -85,8 +91,6 @@ public class FullCourseCaution : MonoBehaviour
             foreach (var kv in _stoppedSince) if (kv.Key != null) _spent.Add(kv.Key);
         }
         CautionSeconds = -1f;
-        LapsRun = 0f;
-        _clearFor = -1f;
     }
 
     bool OnOval()
@@ -111,7 +115,7 @@ public class FullCourseCaution : MonoBehaviour
 
         if (RaceStart.IsCaution)
         {
-            StepCaution(_stoppedSince.Count > 0, Time.fixedDeltaTime);
+            StepCaution(Time.fixedDeltaTime);
             return;
         }
 
@@ -164,12 +168,10 @@ public class FullCourseCaution : MonoBehaviour
         float at = ClearSpot(Mathf.Repeat(leader + gap, lap), lap, scSpline);
 
         // Out of the pits to pick up the leader (`at` only places a safety car that has no pit lane to come out of).
-        sc.DeployForCaution(at, minCautionLaps);
+        sc.DeployForCaution(at);
         FreezeRestartOrder(Time.time);
         sc.PickupLeader = RestartLeader();
         CautionSeconds = 0f;
-        LapsRun = 0f;
-        _clearFor = -1f;
         _cautionMsgTimer = 4f;
 
         // The player's own car, if the AI has it (Drive/Broadcast, crew chief): it has no formation brain while the
@@ -183,8 +185,8 @@ public class FullCourseCaution : MonoBehaviour
         }
 
         RaceStart.Current = RaceStart.Phase.Caution;
-        Debug.Log($"[Caution] full-course caution: safety car out at {at:0} m (leader {leader:0} m), " +
-                  $"at least {minCautionLaps:0.#} laps");
+        Debug.Log($"[Caution] full-course caution: safety car out at {at:0} m (leader {leader:0} m) - " +
+                  "pick up the leader, one lap with pit road open, green the next time by");
     }
 
     // The running order now is the restart order (positions are frozen at the flag), with every car caught up in the
@@ -215,7 +217,7 @@ public class FullCourseCaution : MonoBehaviour
         }
     }
 
-    void StepCaution(bool somethingStopped, float dt)
+    void StepCaution(float dt)
     {
         CautionSeconds += dt;
         CautionLineup.Step(RacePositionTracker.Instance, Time.time);
@@ -223,13 +225,6 @@ public class FullCourseCaution : MonoBehaviour
         if (sc == null) return;
         // Who the safety car is out to pick up, for as long as it is looking: the leader may pit, or be caught out.
         if (sc.PickingUp) sc.PickupLeader = RestartLeader();
-        var spline = sc.GetComponent<SplineDriver>();
-        float lap = spline != null ? spline.TrackLength : 0f;
-        LapsRun = lap > 0f ? sc.Travelled / lap : 0f;
-
-        if (somethingStopped) _clearFor = -1f;
-        else _clearFor = _clearFor < 0f ? 0f : _clearFor + dt;
-        sc.HoldOut = CautionRules.HoldOut(_clearFor, clearSeconds, LapsRun, maxCautionLaps);
     }
 
     // Where the race leader is along the main spline (the scale every SplineDriver works in), skipping cars in the
@@ -339,9 +334,11 @@ public class FullCourseCaution : MonoBehaviour
         else
         {
             var sc = _director != null ? _director.SafetyCarInstance : null;
-            string text = sc != null && (sc.ClosingUp || sc.Pitted) ? (overtime ? "OVERTIME · GREEN AT THE LINE" : "CAUTION · GREEN AT THE LINE")
-                        : sc != null && sc.HoldOut && LapsRun >= minCautionLaps ? (overtime ? "OVERTIME · TRACK NOT CLEAR" : "CAUTION · TRACK NOT CLEAR")
-                        : overtime ? "Overtime · Pit Road Open" : "Caution · Pit Road Open";
+            string head = overtime ? "Overtime" : "Caution";
+            string text = sc != null && (sc.ClosingUp || sc.Pitted) ? head + " · Green At The Line"
+                        : sc == null || sc.PitRoadOpen ? head + " · Pit Road Open"
+                        : sc.PickingUp ? head + " · Pit Road Closed"
+                        : head + " · Green Next Time By";
             float h = PixelGUI.Px(22f);
             float y = Mathf.Round(Screen.height * 0.72f);   // where the pace lap's throttle prompt sits
             PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);

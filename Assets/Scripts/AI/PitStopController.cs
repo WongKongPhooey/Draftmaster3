@@ -4,8 +4,9 @@ using UnityEngine;
 
 // AI pit strategy: once the tyres are worn past a threshold, the car peels into the pit lane at the entry node,
 // drives to its box, holds for a service stop (fresh tyres + repaired bodywork), then rejoins. The racing brain
-// is parked while on pit road so it doesn't try to race down the lane. Under a full-course caution pit road stays
-// open, and a damaged car comes in for repairs (cautionRepairDamage).
+// is parked while on pit road so it doesn't try to race down the lane. Under a full-course caution pit road is open
+// for one pass only (FullCourseCaution.PitRoadOpen) - the field's one chance to stop - and a damaged car comes in then
+// for repairs (cautionRepairDamage).
 //
 // When the race is over (RaceDirector.TookChequer) the car runs its cool-down lap, then comes in the same way
 // and parks in its box for good — no service, no rejoin.
@@ -580,6 +581,11 @@ public class PitStopController : MonoBehaviour
         bool knownRace = director != null && director.isActiveAndEnabled && director.raceLaps > 0;
         if (knownRace && RaceDirector.Progress01 >= 1f - 1f / director.raceLaps) return false;
 
+        // Under caution, only on the pits-open pass, and decided on the run in to the entry - a car a lap away when
+        // pit road opens would otherwise still be heading in after it has shut, on the green-flag lap.
+        bool caution = RaceStart.IsCaution;
+        if (caution && (!FullCourseCaution.PitRoadOpen || !NearPitEntry())) return false;
+
         // Demo guarantee: pit once a set time into the race even on fresh tyres, so stops are always visible —
         // but not in a race too short for a stop to make sense.
         bool forceAllowed = forcedPit && (!knownRace || director.raceLaps >= forcedPitMinRaceLaps);
@@ -587,12 +593,21 @@ public class PitStopController : MonoBehaviour
             return true;
 
         // Under caution: come in to have damage repaired, and for tyres well before they would be due under green.
-        bool caution = RaceStart.IsCaution;
         if (caution && _bodywork != null && _bodywork.DamageLevel >= cautionRepairDamage) return true;
 
         // Strategy: pit when the tyres are worn past this car's threshold.
         if (_tires == null) return false;
         float avgWear = 0.5f * (_tires.FrontWear + _tires.RearWear);
         return avgWear >= (caution ? _threshold * cautionWearShare : _threshold);
+    }
+
+    // On the run in to the pit entry: inside the approach lead, plus room to start it.
+    bool NearPitEntry()
+    {
+        var tb = _spline.track;
+        float lap = _spline.TrackLength;
+        if (tb == null || tb.track == null || lap <= 0f) return false;
+        float toEntry = Mathf.Repeat(tb.track.PitEntryDistanceOnLap - _spline.DistanceOnTrack, lap);
+        return toEntry > pitEntryWindow && toEntry <= pitApproachLeadM + 150f;
     }
 }
