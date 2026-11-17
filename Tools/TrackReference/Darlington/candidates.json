@@ -1,0 +1,83 @@
+{
+ "trackId": "Darlington",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "",
+   "lengthM": 2104.7,
+   "lengthErrPct": -4.54,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 35.91,
+    "p95M": 59.23,
+    "maxM": 66.11,
+    "scale": 0.9047
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    104277971
+   ],
+   "lengthM": 2104.7,
+   "lengthErrPct": -4.54,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 35.91,
+    "p95M": 59.23,
+    "maxM": 66.11,
+    "scale": 0.9047
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    104277971,
+    918351834
+   ],
+   "lengthM": 1977.6,
+   "lengthErrPct": -10.3,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 36.72,
+    "p95M": 68.73,
+    "maxM": 88.1,
+    "scale": 0.8328
+   },
+   "index": 2
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 35.91,
+  "p95M": 59.23,
+  "maxM": 66.11,
+  "refToBuiltMaxM": 66.13,
+  "worstStretches": [
+   {
+    "fromM": 634,
+    "toM": 732,
+    "meanM": 64.2
+   },
+   {
+    "fromM": 534,
+    "toM": 632,
+    "meanM": 45.0
+   },
+   {
+    "fromM": 734,
+    "toM": 832,
+    "meanM": 44.8
+   }
+  ],
+  "scale": 0.9047
+ },
+ "verdict": "wrong shape",
+ "notes": []
+}
