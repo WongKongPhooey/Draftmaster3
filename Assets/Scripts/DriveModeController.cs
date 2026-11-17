@@ -7,7 +7,11 @@ using Draftmaster.Controls;
 // Driving vs Auto, the hand-off itself.
 // - Driving ON  : the player drives their car normally (PlayerVehicleController).
 // - Driving OFF : Auto. The car is handed to the AI (kinematic SplineDriver) and the camera stays on it. Watching
-//                 the rest of the field is the crew chief's job (CrewChiefController). Flip back to resume control.
+//                 the rest of the field is the crew chief's job (CrewChiefController).
+// - Flipping Auto back OFF does not hand the car straight back: the AI keeps driving until the player taps the
+//   accelerator or the brake (AutoHandBack), so control changes hands on a pedal the player chose to press, not
+//   mid-corner with their thumbs off everything. Toggling again while it waits keeps Auto on. Only the player's
+//   own toggle waits; a system putting them back in the car (SetDriving(true)) hands it over at once.
 //
 // Handing the car over is also what happens when the player steps out of it, so it is driven by whoever they
 // step into — the crew chief's headset in the HUD corner (CrewChiefController), the TEAM panel, co-op
@@ -41,6 +45,8 @@ public class DriveModeController : MonoBehaviour
     public Vector2 buttonCorner = new Vector2(92f, 50f);
 
     public bool IsDriving => _driving;
+    // Auto has been switched off and the AI is still driving, waiting for the player to tap a pedal.
+    public bool HandBackPending => _handBack.Waiting;
     public GameObject PlayerCar => playerCar;
 
     PlayerVehicleController _pvc;
@@ -50,6 +56,7 @@ public class DriveModeController : MonoBehaviour
     GameObject _inputAddedTo;   // the car Auto put a SplineInputDriver on, to take it off again on the way back
 
     bool _keyPrev;
+    readonly AutoHandBack _handBack = new AutoHandBack();
 
     // The scene's one auto-drive switch, for the touch controls' AUTO button (a phone has no V).
     public static DriveModeController Current { get; private set; }
@@ -85,7 +92,57 @@ public class DriveModeController : MonoBehaviour
         // with nothing open over the race.
         if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
 
+        UpdateHandBack();
         UpdateButton();
+    }
+
+    // ---- Hand-back on a pedal tap ----
+
+    void UpdateHandBack()
+    {
+        if (!_handBack.Waiting) return;
+        // Out of the seat (crew chief, on foot) or the car is being brought home: the wait is off and Auto stays on.
+        if (_driving || PadInput.OnFoot || CrewChiefController.IsCrewChief ||
+            PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine)
+        {
+            _handBack.Cancel();
+            return;
+        }
+        ReadPedals(out float throttle, out float brake);
+        // A menu over the race owns the pedals' keys; a pedal held through it is not a tap when it closes.
+        if (PadInput.ModalOpen) { _handBack.Arm(throttle, brake); return; }
+        if (_handBack.Update(throttle, brake)) SetDriving(true);
+    }
+
+    // The player's pedals, read the way PlayerVehicleController reads them when the human drives: pad triggers,
+    // the phone's touch pedals, W/S or the arrow keys — whatever the car's control scheme listens to.
+    void ReadPedals(out float throttle, out float brake)
+    {
+        throttle = 0f; brake = 0f;
+        var scheme = _pvc != null ? _pvc.controlScheme : PlayerVehicleController.ControlScheme.Auto;
+        if (scheme != PlayerVehicleController.ControlScheme.Keyboard)
+        {
+            var gp = Gamepad.current;
+            if (gp != null)
+            {
+                throttle = gp.rightTrigger.ReadValue();
+                brake = gp.leftTrigger.ReadValue();
+            }
+        }
+        if (scheme == PlayerVehicleController.ControlScheme.Auto && TouchDriveControls.Active)
+        {
+            throttle = Mathf.Max(throttle, TouchDriveControls.Throttle);
+            brake = Mathf.Max(brake, TouchDriveControls.Brake);
+        }
+        if (scheme != PlayerVehicleController.ControlScheme.Gamepad)
+        {
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttle = 1f;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brake = 1f;
+            }
+        }
     }
 
     // ---- PC button ----
@@ -106,6 +163,7 @@ public class DriveModeController : MonoBehaviour
     RectTransform _chip;
     Image _chipFill;
     TMP_Text _chipLabel;
+    GameObject _hint;
     bool _buttonShowsDriving;
 
     void BuildButton()
@@ -174,6 +232,19 @@ public class DriveModeController : MonoBehaviour
         crt.offsetMin = new Vector2(0f, 0f);
         crt.offsetMax = new Vector2(0f, 0f);
 
+        // Over the button while Auto is off but the AI still has the car: what takes it back.
+        var hint = IronOvalUI.Label(root, "HandBackHint", "TAP GAS OR BRAKE", IronOvalUI.Role.HeaderSmall, DriveScoutStyle.Text);
+        hint.alignment = TextAlignmentOptions.BottomRight;
+        hint.textWrappingMode = TextWrappingModes.NoWrap;
+        hint.raycastTarget = false;
+        var hrt = hint.rectTransform;
+        hrt.anchorMin = hrt.anchorMax = new Vector2(1f, 1f);
+        hrt.pivot = new Vector2(1f, 0f);
+        hrt.anchoredPosition = new Vector2(0f, 3f);
+        hrt.sizeDelta = new Vector2(160f, 10f);
+        _hint = hint.gameObject;
+        _hint.SetActive(false);
+
         _buttonRoot = rootGo;
         _buttonShowsDriving = !_driving;   // forces the first paint
         UpdateButton();
@@ -202,6 +273,7 @@ public class DriveModeController : MonoBehaviour
                     (PlayerVehicleController.Human != null || !_driving) &&
                     !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
         if (_buttonRoot.activeSelf != show) _buttonRoot.SetActive(show);
+        if (_hint != null && _hint.activeSelf != _handBack.Waiting) _hint.SetActive(_handBack.Waiting);
         if (_buttonShowsDriving == _driving) return;
         _buttonShowsDriving = _driving;
 
@@ -222,7 +294,11 @@ public class DriveModeController : MonoBehaviour
     {
         // The session is over and the AI is bringing the player's car home: it is not theirs to take back.
         if (PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine) return;
-        SetDriving(!_driving);
+        if (_driving) { SetDriving(false); return; }
+        // Auto off: the AI drives on until a pedal is tapped. Asked again while it waits: Auto stays on.
+        if (_handBack.Waiting) { _handBack.Cancel(); return; }
+        ReadPedals(out float throttle, out float brake);
+        _handBack.Arm(throttle, brake);
     }
 
     // Team switching moved the human into a different chassis: auto/resume must now operate on THAT
@@ -237,6 +313,7 @@ public class DriveModeController : MonoBehaviour
 
     public void SetDriving(bool driving)
     {
+        _handBack.Cancel();   // set outright: nothing left to wait for
         if (driving == _driving) return;
         _driving = driving;
         if (_driving) ResumeDriving();

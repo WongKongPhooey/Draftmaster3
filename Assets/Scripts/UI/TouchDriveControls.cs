@@ -149,7 +149,9 @@ public class TouchDriveControls : MonoBehaviour
         _layout = CurrentLayout();
         ReadTouches();
         var limiter = Limiter;
-        _state.ButtonsOnly = Broadcasting;
+        // Auto switched off but waiting for a pedal tap to hand the car back: the pedals (and wheel) come up so
+        // there is something to tap; the AUTO button stays, and tapping it keeps Auto on.
+        _state.ButtonsOnly = Broadcasting && !DriveModeController.Current.HandBackPending;
         _state.LimiterShown = limiter != null && !Broadcasting;
         _state.BroadcastShown = DriveModeController.Current != null;
         _state.SteerMode = SteerButtons ? TouchSteerMode.Buttons : TouchSteerMode.Wheel;
