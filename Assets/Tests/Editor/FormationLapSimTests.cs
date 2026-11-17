@@ -522,6 +522,194 @@ public class FormationLapSimTests
         Assert.Less(widestAtLap, 60f, summary);
     }
 
+    // Auto under a caution (DriveModeController.EnterAuto): the human is pacing in the train behind the safety car and
+    // hands the car to the AI. AIHandover.ToAI engages the car's own SplineDriver where it is and FormationController
+    // .TakeOver puts the formation brain on it, which goes kinematic behind the safety car. The car must carry on in
+    // its place in the line - not swing off it across the road into the wall.
+    [TestCase("Daytona", 0f, 0f, 0f, 3f)]
+    [TestCase("Daytona", 0f, 0f, 0f, 8f)]
+    [TestCase("Daytona", 1.5f, -4f, 0f, 5f)]
+    public void ThePlayersCarHandedToTheAIUnderACautionStaysInLine(string trackId, float humanLatOff, float humanYawDeg, float humanMphOver,
+                                                                   float handoverAtS = -1f)
+    {
+        var r = Run(trackId, 20);
+        Assert.IsTrue(r.wentGreen, Report($"{trackId}: the formation lap never went green", r, 5));
+
+        var splineType = Runtime("SplineDriver");
+        var fcType = Runtime("FormationController");
+        var scType = Runtime("SafetyCar");
+        var directorType = Runtime("FormationDirector");
+        var raceStartType = Runtime("RaceStart");
+        var phaseType = raceStartType.GetNestedType("Phase");
+        var currentProp = raceStartType.GetProperty("Current");
+        var cars = _lastCars;
+        var scSpline = cars[0];
+        var sc = scSpline.GetComponent(scType);
+        var director = (Component)directorType.GetProperty("Instance").GetValue(null);
+        var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fcStep = fcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var scStep = scType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var directorStep = directorType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var onPitProp = splineType.GetProperty("IsOnPit");
+        var distProp = splineType.GetProperty("DistanceOnTrack");
+        var centreProp = splineType.GetProperty("CentreDistanceOnTrack");
+        var latProp = splineType.GetProperty("LateralOnTrack");
+        var mphProp = splineType.GetProperty("CurrentMph");
+        var boundsMethod = splineType.GetMethod("GetLateralBounds");
+        var pickingUpProp = scType.GetProperty("PickingUp");
+        float lap = (float)splineType.GetProperty("TrackLength").GetValue(scSpline);
+        float dt = Time.fixedDeltaTime;
+        int n = cars.Count;
+
+        // Race two-wide for 20 s, then the caution, as ACautionRunsTwoLapsBehindTheSafetyCarThenGoesGreen throws it.
+        for (int i = 1; i < n; i++)
+        {
+            Set(cars[i], "aiMaxSpeedMph", 200f);
+            int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+            Set(cars[i], "tacticalLateralOffset", (slot & 1) == 0 ? -2.2f : 2.2f);
+        }
+        for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
+            foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
+        float leader = -1f, best = -1f, leaderMph = 0f;
+        int leaderIdx = -1;
+        for (int i = 1; i < n; i++)
+        {
+            if ((bool)onPitProp.GetValue(cars[i])) continue;
+            float d = (float)distProp.GetValue(cars[i]);
+            float nearest = float.MaxValue;
+            for (int j = 1; j < n; j++)
+                if (j != i && !(bool)onPitProp.GetValue(cars[j]))
+                    nearest = Mathf.Min(nearest, Mathf.Repeat((float)distProp.GetValue(cars[j]) - d, lap));
+            if (nearest > best) { best = nearest; leader = d; leaderIdx = i; leaderMph = (float)mphProp.GetValue(cars[i]); }
+        }
+        float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap(leaderMph / 2.237f, 60f / 2.237f, 80f);
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup, 2f });
+        scType.GetField("PickupLeader").SetValue(sc, cars[leaderIdx].transform);
+        currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
+        var holdOut = scType.GetField("HoldOut");
+
+        void StepAll(List<Component> field)
+        {
+            for (int i = 1; i < field.Count; i++)
+            {
+                if (field[i] == null || !field[i].gameObject.activeSelf) continue;
+                var fc = field[i].GetComponent(fcType);
+                if (fc != null) fcStep.Invoke(fc, null);
+            }
+            scStep.Invoke(sc, null);
+            directorStep.Invoke(director, null);
+            foreach (var c in field)
+                if (c != null && c.gameObject.activeSelf) splineStep.Invoke(c, null);
+        }
+
+        // Pace behind the safety car until it has picked the leader up and the field has run 20 s in line behind it.
+        float t = 0f, ledFor = 0f;
+        for (int step = 0; step < Mathf.RoundToInt(240f / dt) && (handoverAtS >= 0f ? t < handoverAtS : ledFor < 20f); step++)
+        {
+            t += dt;
+            if (t > 10f) holdOut.SetValue(sc, false);
+            StepAll(cars);
+            if (!(bool)pickingUpProp.GetValue(sc) && !(bool)onPitProp.GetValue(scSpline)) ledFor += dt;
+        }
+        if (handoverAtS < 0f) Assert.GreaterOrEqual(ledFor, 20f, $"{trackId}: the safety car never picked up the leader ({t:0} s)");
+        Assert.IsFalse(Equals(currentProp.GetValue(null), Enum.Parse(phaseType, "Green")), "went green before the handover");
+
+        // The human's car: the mid-field car on the main track furthest round behind the safety car's tenth place, in
+        // the train. Swap it for a car the AI has never driven - its SplineDriver configured as RaceScene's PlayerCar
+        // (spawnInPit, lineFactor 0, no grid offset) - pacing exactly where that car was.
+        float scD = (float)centreProp.GetValue(scSpline);
+        var order = new List<int>();
+        for (int i = 1; i < n; i++) if (!(bool)onPitProp.GetValue(cars[i])) order.Add(i);
+        order.Sort((a, b) => Mathf.Repeat(scD - (float)centreProp.GetValue(cars[a]), lap)
+                             .CompareTo(Mathf.Repeat(scD - (float)centreProp.GetValue(cars[b]), lap)));
+        var replaced = cars[order[Mathf.Min(8, order.Count - 1)]];
+        var replacedFc = replaced.GetComponent(fcType);
+        float mph = (float)mphProp.GetValue(replaced) + humanMphOver;
+        float latBefore = (float)latProp.GetValue(replaced);
+        var trackComp = (Component)splineType.GetField("track").GetValue(replaced);
+        var vehicleInfo = splineType.GetField("vehicleInfo").GetValue(replaced);
+        var pose = replaced.transform;
+
+        var playerGo = new GameObject("Player");
+        _spawned.Add(playerGo);
+        // Where a human pacing in that place really is: a little off the line, pointing a little across it.
+        float poseHeading = (pose.eulerAngles.z - 180f) * Mathf.Deg2Rad;
+        Vector3 poseRight = new Vector3(Mathf.Sin(poseHeading), -Mathf.Cos(poseHeading), 0f);
+        playerGo.transform.SetPositionAndRotation(pose.position + poseRight * humanLatOff,
+                                                  Quaternion.Euler(0f, 0f, pose.eulerAngles.z + humanYawDeg));
+        var playerSpline = playerGo.AddComponent(splineType);
+        Set(playerSpline, "track", trackComp);
+        Set(playerSpline, "vehicleInfo", vehicleInfo);
+        Set(playerSpline, "spawnInPit", true);
+        Set(playerSpline, "spriteFacesUp", false);   // AIHandover copies these from the car's PlayerVehicleController
+        Set(playerSpline, "angleOffsetDeg", 180f);
+        Set(playerSpline, "cornerSpeedScale", 0.95f);
+        Call(playerSpline, "Awake");
+
+        // Out of the race: the car it stands in for.
+        Call(replacedFc, "OnDisable");
+        Call(replaced, "OnDisable");
+        _enabled.Remove(replacedFc);
+        _enabled.Remove(replaced);
+        replaced.gameObject.SetActive(false);
+
+        // AIHandover.ToAI: the spline into RaceField and engaged where the car is, then SplineInputDriver's OnEnable hands
+        // the transform to the dynamic model; then DriveModeController's FormationController.TakeOver.
+        Call(playerSpline, "OnEnable");
+        _enabled.Add(playerSpline);
+        splineType.GetMethod("EngageFromCurrentPose").Invoke(playerSpline, new object[] { mph });
+        Set(playerSpline, "externalMotionController", true);
+        var playerFc = (Component)fcType.GetMethod("TakeOver").Invoke(null, new object[] { playerSpline, 9, true });
+        Assert.IsNotNull(playerFc, "TakeOver refused the car under the caution");
+        Call(playerFc, "Awake");
+        Call(playerFc, "OnEnable");
+        _enabled.Add(playerFc);
+        int me = cars.IndexOf(replaced);
+        cars[me] = playerSpline;
+
+        // 20 s on in Auto: how far it strays from where the field runs, and how near the road's edge it gets.
+        float worstOff = 0f, worstOffAt = 0f, worstStep = 0f, minEdge = float.MaxValue, minEdgeAt = 0f;
+        var trace = new StringBuilder();
+        float prevLat = (float)latProp.GetValue(playerSpline);
+        float firstLat = prevLat;
+        for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
+        {
+            float ts = (step + 1) * dt;
+            StepAll(cars);
+            float lat = (float)latProp.GetValue(playerSpline);
+            var args = new object[] { 0f, 0f };
+            boundsMethod.Invoke(playerSpline, args);
+            float lo = (float)args[0], hi = (float)args[1];
+            float edge = Mathf.Min(lat - lo, hi - lat);
+            if (edge < minEdge) { minEdge = edge; minEdgeAt = ts; }
+            // The car ahead in the train: where the line runs here.
+            float myC = (float)centreProp.GetValue(playerSpline);
+            float aheadLat = float.NaN, aheadGap = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                if (i == me || !cars[i].gameObject.activeSelf || (bool)onPitProp.GetValue(cars[i])) continue;
+                float g = Mathf.Repeat((float)centreProp.GetValue(cars[i]) - myC, lap);
+                if (g < aheadGap) { aheadGap = g; aheadLat = (float)latProp.GetValue(cars[i]); }
+            }
+            float off = float.IsNaN(aheadLat) ? 0f : Mathf.Abs(lat - aheadLat);
+            if (aheadGap < 40f && off > worstOff) { worstOff = off; worstOffAt = ts; }
+            worstStep = Mathf.Max(worstStep, Mathf.Abs(lat - prevLat));
+            prevLat = lat;
+            if (step % Mathf.RoundToInt(0.5f / dt) == 0 || ts < 2f && step % 5 == 0)
+                trace.Append($"\n  t{ts:0.00} lat {lat:0.00} (bounds {lo:0.0}..{hi:0.0}) ahead {aheadGap:0} m at lat {aheadLat:0.00}, " +
+                             $"tactical {(float)splineType.GetField("tacticalLateralOffset").GetValue(playerSpline):0.00} " +
+                             $"merge {(float)splineType.GetProperty("MergeLateralBias").GetValue(playerSpline):0.00} " +
+                             $"{(float)mphProp.GetValue(playerSpline):0} mph onPit {(bool)onPitProp.GetValue(playerSpline)}");
+        }
+        string summary = $"[CautionSim] {trackId} Auto under caution at t{t:0.0} (human {humanLatOff:+0.0;-0.0} m, {humanYawDeg:+0;-0} deg, +{humanMphOver:0} mph): handed over at {mph:0} mph, lat {latBefore:0.00} (engaged at {firstLat:0.00}); " +
+                         $"worst off the car ahead's line {worstOff:0.00} m at t{worstOffAt:0.0}, least room to the edge {minEdge:0.00} m at t{minEdgeAt:0.0}, " +
+                         $"biggest sideways step {worstStep:0.000} m" + trace;
+        Debug.Log(summary);
+        Assert.Less(worstStep, 0.15f, summary);
+        Assert.Greater(minEdge, 0.3f, summary);
+        Assert.Less(worstOff, 1.5f, summary);
+    }
+
     // Caught up in the crash under a caution (CautionLineup): the car that was leading when the caution came out is
     // marked caught and goes to the tail of the restart order. With the rest of the field due ahead of it coming up
     // behind, it slows and moves down to the inside, the field goes by on the outside, and before the green it is

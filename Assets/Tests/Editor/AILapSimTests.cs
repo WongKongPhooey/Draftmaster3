@@ -72,6 +72,8 @@ public class AILapSimTests
         public readonly List<Incident> incidents = new List<Incident>();
         public float maxSlip;
         public float maxBrainGap;   // metres between the brain's track distance and where the car really is
+        // The most the car ran right of (+) / left of (-) the line its brain planned, over the timed laps (m).
+        public float maxRightOfLine, maxLeftOfLine;
         // How jerky the driving looks: the steering command's rate of change and the car's yaw acceleration,
         // RMS and 99th percentile over the timed laps. A car snapping straight out of a corner shows up as
         // yaw-acceleration spikes; a smooth driver unwinds the lock progressively.
@@ -213,6 +215,25 @@ public class AILapSimTests
             float p90 = r.cornerSlips.Count > 0 ? r.cornerSlips[(int)(r.cornerSlips.Count * 0.9f)] : 0f;
             sb.AppendLine().Append($"  {trackId} stiffness {stiffness:0}: corner slip mean {mean:0.0}° p90 {p90:0.0}° | ")
               .Append(Report("", r).Replace('\n', '|'));
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
+    [Explicit("Diagnostic: Daytona at race pace on the AI's handling knobs and on the player car's (RaceScene PlayerCar), as Auto drives it.")]
+    public void DaytonaOnThePlayersHandling()
+    {
+        var sb = new StringBuilder("[LapSim] Daytona, AI vs player handling knobs");
+        var player = new Dictionary<string, object>
+        {
+            { "highSpeedSteerScale", 0.26f }, { "corneringStiffness", 13f }, { "yawDamping", 2.5f }, { "coastDecel", 2f },
+        };
+        foreach (var knobs in new[] { null, player })
+        {
+            Despawn();
+            SpawnTrack("Assets/Resources/TrackPackages/Daytona.prefab");
+            var r = Drive(2, pace: TopAIPace, vehicleOverrides: knobs);
+            sb.AppendLine().Append(Report(knobs == null ? "  AI knobs" : "  player knobs", r));
         }
         Debug.Log(sb.ToString());
     }
@@ -506,6 +527,7 @@ public class AILapSimTests
     {
         var sb = new StringBuilder(title);
         sb.Append($": laps {string.Join(", ", r.lapTimes.ConvertAll(t => t.ToString("0.00")))} s, max slip {r.maxSlip:0.0}°, {r.incidents.Count} incidents, " +
+                  $"off the line {r.maxLeftOfLine:0.00}..{r.maxRightOfLine:+0.00;-0.00} m, " +
                   $"steer rate rms {r.steerRateRms:0.00}/s p99 {r.steerRateP99:0.00}/s, yaw accel rms {r.yawAccelRms:0}°/s² p99 {r.yawAccelP99:0}°/s², " +
                   $"slip rate rms {r.slipRateRms:0.0}°/s p99 {r.slipRateP99:0.0}°/s");
         foreach (var i in r.incidents)
@@ -649,6 +671,17 @@ public class AILapSimTests
             }
             if (lap >= 0 && step % 10 == 0)
             {
+                var pathPoint = splineType.GetMethod("PathPointAhead");
+                Vector2 p0 = (Vector2)pathPoint.Invoke(spline, new object[] { 0f }), p1 = (Vector2)pathPoint.Invoke(spline, new object[] { 3f });
+                Vector2 tl = p1 - p0;
+                if (tl.sqrMagnitude > 1e-4f)
+                {
+                    tl.Normalize();
+                    Vector2 carLocal = ((Component)track).transform.InverseTransformPoint(go.transform.position);
+                    float right = Vector2.Dot(carLocal - p0, new Vector2(tl.y, -tl.x));
+                    result.maxRightOfLine = Mathf.Max(result.maxRightOfLine, right);
+                    result.maxLeftOfLine = Mathf.Min(result.maxLeftOfLine, right);
+                }
                 // The brain's point sits PathPointAheadOfCentre in front of the car's centre.
                 float carD = (float)nearest.Invoke(track, new object[] { go.transform.position }) + 2.4f;
                 float gap = Mathf.Abs(Mathf.Repeat(d - carD + length * 0.5f, length) - length * 0.5f);
