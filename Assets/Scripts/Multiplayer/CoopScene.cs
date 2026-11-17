@@ -53,7 +53,7 @@ public static class CoopScene
             return;
         }
 
-        SceneManager.LoadScene(sceneName);
+        LoadingScreen.Load(sceneName);
     }
 
     // Same, for the callers that already hold a build index rather than a name.
@@ -67,6 +67,6 @@ public static class CoopScene
             string name = System.IO.Path.GetFileNameWithoutExtension(path);
             if (!string.IsNullOrEmpty(name)) { Load(name); return; }
         }
-        SceneManager.LoadScene(buildIndex);
+        LoadingScreen.Load(buildIndex);
     }
 }

@@ -362,7 +362,7 @@ public class TitleScreenUI : MonoBehaviour
             return;
         }
         _loading = true;
-        SceneManager.LoadScene(sceneName);
+        LoadingScreen.Load(sceneName);
     }
 
     bool IsAvailable(Row row)

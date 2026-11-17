@@ -91,9 +91,9 @@ public class MasterDraftRaceHost : MonoBehaviour
         if (DriveOrientationController.HoldSceneChangeForLandscape(ReturnToMenu)) return;
         RaceWeekend.SessionLive = false;
         if (Application.CanStreamedLevelBeLoaded(MasterDraftRaceLauncher.MenuScene))
-            SceneManager.LoadScene(MasterDraftRaceLauncher.MenuScene);
+            LoadingScreen.Load(MasterDraftRaceLauncher.MenuScene);
         else
-            SceneManager.LoadScene(0);
+            LoadingScreen.Load(0);
     }
 
     void Awake()

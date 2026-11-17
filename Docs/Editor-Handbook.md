@@ -114,6 +114,14 @@ is a scene object marked `DontSave`, not `DontDestroyOnLoad`, so a single-mode l
 running your coroutine — the run does not fail, it hangs in play mode forever. Load through
 `NavigationFlowTests.Go(sceneName)`, which moves the runner out of the way first.
 
+**Loading screen.** Game code that loads or leaves a heavy scene (the race scene, an on-foot world) calls
+`LoadingScreen.Load(name)` instead of `SceneManager.LoadScene` — a self-installing IMGUI card ("Loading" +
+bar) that fades up, loads asynchronously, holds over the new scene's first frames and fades off, so the
+couple of seconds `RaceScene` takes to build read as loading rather than a hang. It draws in front of
+`ScreenFade`. Every title row, SINGLE RACE's commit, the race exits (quit to title, race again, next
+weekend, practice reload), Master Draft's race in/out, the factory door and `CoopScene.Load`'s local path use
+it; menu-to-menu backs (SINGLE RACE/OPTIONS/MASTER DRAFT back to the title) stay plain loads.
+
 ## Which scene do I open?
 
 | Job | Open |

@@ -238,8 +238,8 @@ public class RacePauseMenu : MonoBehaviour
         // client on a NetworkManager that is already a server. Leave() tears all of that down before the
         // scene load, and is harmless when there was never a session.
         if (NetworkLauncher.Instance != null) NetworkLauncher.Instance.Leave();
-        if (Application.CanStreamedLevelBeLoaded(titleSceneName)) SceneManager.LoadScene(titleSceneName);
-        else SceneManager.LoadScene(0);   // the title is the first scene in the build list
+        if (Application.CanStreamedLevelBeLoaded(titleSceneName)) LoadingScreen.Load(titleSceneName);
+        else LoadingScreen.Load(0);   // the title is the first scene in the build list
     }
 
     void OnGUI()

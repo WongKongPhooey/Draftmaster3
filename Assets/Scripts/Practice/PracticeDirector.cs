@@ -255,7 +255,7 @@ public class PracticeDirector : MonoBehaviour
     static void ReloadScene()
     {
         if (DriveOrientationController.HoldSceneChangeForLandscape(ReloadScene)) return;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        LoadingScreen.Load(SceneManager.GetActiveScene().name);
     }
 
     // True when this session is a booking off the weekend timetable rather than the standalone flow.

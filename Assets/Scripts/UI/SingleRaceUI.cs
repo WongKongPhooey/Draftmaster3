@@ -454,7 +454,7 @@ public class SingleRaceUI : MonoBehaviour
         }
 
         _loading = true;
-        SceneManager.LoadScene(raceSceneName);
+        LoadingScreen.Load(raceSceneName);
     }
 
     // The carset a championship's cars are painted in — the three GridSpawner puts on track. Null for a series

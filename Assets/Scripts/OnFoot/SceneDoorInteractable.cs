@@ -31,7 +31,7 @@ public class SceneDoorInteractable : NPCInteractable
             Debug.LogError($"SceneDoorInteractable on '{name}': '{sceneName}' is not in the Build Settings — the door leads nowhere.");
             return false;
         }
-        SceneManager.LoadScene(sceneName);
+        LoadingScreen.Load(sceneName);
         return false;
     }
 }

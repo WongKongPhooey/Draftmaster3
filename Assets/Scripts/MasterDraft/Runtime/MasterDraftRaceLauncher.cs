@@ -127,6 +127,6 @@ public static class MasterDraftRaceLauncher
         GameSession.CurrentMode = GameSession.Mode.MasterDraft;
         RaceWeekend.Current = RaceWeekend.Session.Race;
         RaceWeekend.SessionLive = true;
-        SceneManager.LoadScene(RaceScene);
+        LoadingScreen.Load(RaceScene);
     }
 }

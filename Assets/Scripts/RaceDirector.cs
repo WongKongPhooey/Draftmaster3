@@ -549,7 +549,7 @@ public class RaceDirector : MonoBehaviour
 
         WeekendDirector.NextWeekend();
         WeekendDirector.OpenAfterLoad();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        LoadingScreen.Load(SceneManager.GetActiveScene().name);
     }
 
     // END RACE: the race is put away. Every car still out on its cool-down lap or rolling down pit road is
@@ -583,15 +583,15 @@ public class RaceDirector : MonoBehaviour
     void RaceAgain()
     {
         if (DriveOrientationController.HoldSceneChangeForLandscape(RaceAgain)) return;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        LoadingScreen.Load(SceneManager.GetActiveScene().name);
     }
 
     void QuitToTitle()
     {
         if (DriveOrientationController.HoldSceneChangeForLandscape(QuitToTitle)) return;
         RaceWeekend.SessionLive = false;
-        if (Application.CanStreamedLevelBeLoaded("TitleScreen")) SceneManager.LoadScene("TitleScreen");
-        else SceneManager.LoadScene(0);   // the title is the first scene in the build list
+        if (Application.CanStreamedLevelBeLoaded("TitleScreen")) LoadingScreen.Load("TitleScreen");
+        else LoadingScreen.Load(0);   // the title is the first scene in the build list
     }
 
     // ---- HUD ----
