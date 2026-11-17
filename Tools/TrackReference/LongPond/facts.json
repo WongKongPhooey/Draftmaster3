@@ -1,0 +1,163 @@
+{
+ "trackId": "LongPond",
+ "displayName": "Pocono Raceway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 2.5,
+  "surfaceWidthM": 15.24,
+  "hasCommittedTrace": true,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Pocono Raceway",
+  "url": "https://en.wikipedia.org/wiki/Pocono_Raceway",
+  "coordinates": [
+   41.0611,
+   -75.5084
+  ],
+  "location": "1234 Long Pond Road; Blakeslee, Pennsylvania; 18610",
+  "opened": "1969 (initial oval); 1971 (tri-oval)",
+  "capacity": "Not publicly known; 2021 estimate at 76,812",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Pocono Raceway 2024.svg",
+    "caption": "Tri-Oval (1971–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Tri-Oval (1971–present)",
+   "surface": "Asphalt",
+   "length_km": "4.023",
+   "length_mi": "2.500",
+   "turns": "3",
+   "banking": "Turn 1: 14°; Turn 2: 8°; Turn 3: 6°",
+   "record_time": "0:40.9009",
+   "record_driver": "Ryan Briscoe",
+   "record_year": "2014",
+   "record_class": "IndyCar",
+   "miles": 2.5,
+   "index": 1
+  },
+  {
+   "layout": "Road Course (1985–present)",
+   "surface": "Asphalt",
+   "length_km": "4.023",
+   "length_mi": "2.500",
+   "turns": "7",
+   "banking": "Turn 1: 14°; Turn 2: 8°",
+   "record_time": "1:15.440",
+   "record_driver": "Al Holbert",
+   "record_year": "1985",
+   "record_class": "IMSA GTP",
+   "miles": 2.5,
+   "index": 2
+  },
+  {
+   "layout": "Road Course (1973–1984)",
+   "surface": "Asphalt",
+   "length_km": "4.506",
+   "length_mi": "2.800",
+   "turns": "8",
+   "banking": "Turn 1: 14°; Turn 2: 8°",
+   "record_time": "1:20.200",
+   "record_driver": "Danny Ongais/ Vern Schuppan",
+   "record_year": "1976",
+   "record_class": "F5000",
+   "miles": 2.8,
+   "index": 3
+  },
+  {
+   "layout": "Short Road Course (1969–1984)",
+   "surface": "Asphalt",
+   "length_km": "2.897",
+   "length_mi": "1.800",
+   "turns": "7",
+   "banking": "Turn 3: 6°",
+   "record_time": "0:54.344",
+   "record_driver": "Eppie Wietzes",
+   "record_year": "1973",
+   "record_class": "F5000",
+   "miles": 1.8,
+   "index": 4
+  },
+  {
+   "layout": "Original Short Oval (1969–1990s)",
+   "surface": "Asphalt",
+   "length_km": "1.207",
+   "length_mi": "0.750",
+   "turns": "4",
+   "banking": "",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 0.75,
+   "index": 5
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Tri-Oval (1971–present)",
+  "surface": "Asphalt",
+  "length_km": "4.023",
+  "length_mi": "2.500",
+  "turns": "3",
+  "banking": "Turn 1: 14°; Turn 2: 8°; Turn 3: 6°",
+  "record_time": "0:40.9009",
+  "record_driver": "Ryan Briscoe",
+  "record_year": "2014",
+  "record_class": "IndyCar",
+  "miles": 2.5,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  41.055001,
+  -75.508706
+ ],
+ "osmRadiusM": 1637,
+ "osmCounts": {
+  "raceway": 15,
+  "pit": 1,
+  "wall": 0,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 0,
+  "building": 29,
+  "parking": 8,
+  "water": 1,
+  "road": 109
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 563465040,
+   "name": "Pit Lane",
+   "lengthM": 729.0
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 3335,
+  "height": 2817,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Pocono Raceway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Pocono_Raceway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Tri-Oval (1971–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

@@ -1,0 +1,121 @@
+{
+ "trackId": "Iowa",
+ "displayName": "Iowa Speedway",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.88,
+  "surfaceWidthM": 18.29,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Iowa Speedway",
+  "url": "https://en.wikipedia.org/wiki/Iowa_Speedway",
+  "coordinates": [
+   41.67777777777778,
+   -93.01444444444445
+  ],
+  "location": "3333 Rusty Wallace Drive, Newton, Iowa, United States, 50208",
+  "opened": "2006",
+  "capacity": "30,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Iowa Speedway 2024.svg",
+    "caption": "D-shaped Oval (2006–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "D-shaped Oval (2006–present)",
+   "surface": "Asphalt",
+   "length_mi": "0.875{{efn|name=alpha|Length disputed; IndyCar uses a length of .}}",
+   "length_km": "1.408",
+   "turns": "4",
+   "banking": "Turns: 12–14°; Frontstretch: 10°; Backstretch: 4°",
+   "record_time": "0:17.4908",
+   "record_driver": "Ryan Briscoe",
+   "record_year": "2008",
+   "record_class": "IndyCar",
+   "miles": 0.875,
+   "index": 1
+  },
+  {
+   "layout": "Road Course (2006–present)",
+   "surface": "Asphalt",
+   "length_mi": "1.300",
+   "length_km": "2.092",
+   "turns": "9",
+   "banking": "Turns 1–2: 12–14°; Frontstretch: 10°; Backstretch: 4°",
+   "record_time": "0:41.624",
+   "record_driver": "Michael Valiante",
+   "record_year": "2007",
+   "record_class": "DP",
+   "miles": 1.3,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "D-shaped Oval (2006–present)",
+  "surface": "Asphalt",
+  "length_mi": "0.875{{efn|name=alpha|Length disputed; IndyCar uses a length of .}}",
+  "length_km": "1.408",
+  "turns": "4",
+  "banking": "Turns: 12–14°; Frontstretch: 10°; Backstretch: 4°",
+  "record_time": "0:17.4908",
+  "record_driver": "Ryan Briscoe",
+  "record_year": "2008",
+  "record_class": "IndyCar",
+  "miles": 0.875,
+  "index": 1
+ },
+ "lengthCheckPct": -0.57,
+ "venueCentre": [
+  41.674699,
+  -93.013379
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 5,
+  "pit": 1,
+  "wall": 2,
+  "fence": 3,
+  "surface": 0,
+  "grandstand": 3,
+  "stadium": 0,
+  "building": 27,
+  "parking": 5,
+  "water": 5,
+  "road": 50
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 920711271,
+   "name": "Pit Road",
+   "lengthM": 847.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1582,
+  "height": 1659,
+  "groundMetresPerPixel": 0.6001,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Iowa Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Iowa_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "D-shaped Oval (2006–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

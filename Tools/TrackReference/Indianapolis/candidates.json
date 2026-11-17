@@ -1,0 +1,188 @@
+{
+ "trackId": "Indianapolis",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780334,
+    588780335,
+    588780332,
+    588780343,
+    588780345,
+    588780347,
+    588780351,
+    588780349,
+    51308226,
+    588780333
+   ],
+   "lengthM": 4069.9,
+   "lengthErrPct": 1.16,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 150.27,
+    "p95M": 177.08,
+    "maxM": 177.62,
+    "scale": 1.0421
+   },
+   "index": 0
+  },
+  {
+   "label": "wall ring as the OUTER edge, 7.6 m in",
+   "kind": "wall-outer",
+   "ways": [
+    589280293,
+    589285814,
+    589332674,
+    589332672,
+    588795275,
+    588795271,
+    122651187,
+    589308992,
+    589308991,
+    589308988,
+    589308989,
+    589308988,
+    589308990,
+    589280302,
+    589280300,
+    589280299,
+    589280298,
+    589280296,
+    589280293,
+    589285817
+   ],
+   "lengthM": 4075.1,
+   "lengthErrPct": 1.29,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 150.56,
+    "p95M": 177.07,
+    "maxM": 177.21,
+    "scale": 1.0429
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780332,
+    317832611,
+    588780277,
+    317832611,
+    1502457322,
+    588780264,
+    588780328,
+    588780327,
+    588780337,
+    588780335
+   ],
+   "lengthM": 3965.7,
+   "lengthErrPct": -1.43,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 146.55,
+    "p95M": 176.75,
+    "maxM": 176.85,
+    "scale": 1.0199
+   },
+   "index": 2
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 7.6 m out",
+   "kind": "wall-inner",
+   "ways": [
+    589280293,
+    589285814,
+    589332674,
+    589332672,
+    588795275,
+    588795271,
+    122651187,
+    589308992,
+    589308991,
+    589308988,
+    589308989,
+    589308988,
+    589308990,
+    589280302,
+    589280300,
+    589280299,
+    589280298,
+    589280296,
+    589280293,
+    589285817
+   ],
+   "lengthM": 4170.8,
+   "lengthErrPct": 3.66,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 158.78,
+    "p95M": 191.24,
+    "maxM": 191.43,
+    "scale": 1.05
+   },
+   "index": 3
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780271,
+    588780336,
+    588780271,
+    317832622,
+    588780329,
+    588780264,
+    1502457322,
+    588780283,
+    588780268,
+    588780370,
+    588780290,
+    1213055864,
+    588780277,
+    1213055864,
+    297115178,
+    1213055865
+   ],
+   "lengthM": 4177.1,
+   "lengthErrPct": 3.82,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 83.41,
+    "p95M": 154.93,
+    "maxM": 167.79,
+    "scale": 0.95
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 150.27,
+  "p95M": 177.08,
+  "maxM": 177.62,
+  "refToBuiltMaxM": 177.63,
+  "worstStretches": [
+   {
+    "fromM": 2319,
+    "toM": 2417,
+    "meanM": 177.5
+   },
+   {
+    "fromM": 2419,
+    "toM": 2517,
+    "meanM": 177.2
+   },
+   {
+    "fromM": 2519,
+    "toM": 2617,
+    "meanM": 176.9
+   }
+  ],
+  "scale": 1.0421
+ },
+ "verdict": "wrong shape",
+ "notes": []
+}

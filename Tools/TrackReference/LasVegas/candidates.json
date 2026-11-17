@@ -1,0 +1,126 @@
+{
+ "trackId": "LasVegas",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 2477.5,
+   "lengthErrPct": 2.63,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.25,
+    "p95M": 12.06,
+    "maxM": 13.24,
+    "scale": 1.0202
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    1548033195,
+    1548033197,
+    130583370,
+    130583373,
+    27545409,
+    27545411
+   ],
+   "lengthM": 2420.5,
+   "lengthErrPct": 0.27,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 24.46,
+    "p95M": 47.68,
+    "maxM": 51.68,
+    "scale": 0.9802
+   },
+   "index": 1
+  },
+  {
+   "label": "wall ring as the OUTER edge, 9.1 m in",
+   "kind": "wall-outer",
+   "ways": [
+    342868473
+   ],
+   "lengthM": 2463.9,
+   "lengthErrPct": 2.07,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.22,
+    "p95M": 12.66,
+    "maxM": 13.72,
+    "scale": 1.0152
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    27545411,
+    1548033196,
+    130583370,
+    1548033195
+   ],
+   "lengthM": 2477.5,
+   "lengthErrPct": 2.63,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.25,
+    "p95M": 12.06,
+    "maxM": 13.24,
+    "scale": 1.0202
+   },
+   "index": 3
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 9.1 m out",
+   "kind": "wall-inner",
+   "ways": [
+    342868473
+   ],
+   "lengthM": 2578.8,
+   "lengthErrPct": 6.83,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.25,
+    "p95M": 15.23,
+    "maxM": 16.15,
+    "scale": 1.05
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 7.25,
+  "p95M": 12.06,
+  "maxM": 13.24,
+  "refToBuiltMaxM": 13.26,
+  "worstStretches": [
+   {
+    "fromM": 738,
+    "toM": 836,
+    "meanM": 12.9
+   },
+   {
+    "fromM": 374,
+    "toM": 472,
+    "meanM": 11.0
+   },
+   {
+    "fromM": 838,
+    "toM": 936,
+    "meanM": 9.9
+   }
+  ],
+  "scale": 1.0202
+ },
+ "verdict": "close",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}

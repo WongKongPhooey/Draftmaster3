@@ -1,0 +1,103 @@
+{
+ "trackId": "Iowa",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 1431.5,
+   "lengthErrPct": 1.08,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 4.03,
+    "p95M": 6.44,
+    "maxM": 8.91,
+    "scale": 1.0111
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    119238784
+   ],
+   "lengthM": 1431.5,
+   "lengthErrPct": 1.08,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 4.03,
+    "p95M": 6.44,
+    "maxM": 8.91,
+    "scale": 1.0111
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    119238784,
+    920711271
+   ],
+   "lengthM": 1342.0,
+   "lengthErrPct": -5.24,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 17.94,
+    "p95M": 26.9,
+    "maxM": 27.74,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    119238784,
+    1089497443,
+    1089497446,
+    1089497443
+   ],
+   "lengthM": 1576.7,
+   "lengthErrPct": 11.33,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.08,
+    "p95M": 10.86,
+    "maxM": 36.55,
+    "scale": 0.9548
+   },
+   "index": 3
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 4.03,
+  "p95M": 6.44,
+  "maxM": 8.91,
+  "refToBuiltMaxM": 8.93,
+  "worstStretches": [
+   {
+    "fromM": 416,
+    "toM": 514,
+    "meanM": 7.3
+   },
+   {
+    "fromM": 208,
+    "toM": 306,
+    "meanM": 5.3
+   },
+   {
+    "fromM": 638,
+    "toM": 736,
+    "meanM": 5.1
+   }
+  ],
+  "scale": 1.0111
+ },
+ "verdict": "close",
+ "notes": []
+}

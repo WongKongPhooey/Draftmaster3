@@ -1,0 +1,141 @@
+{
+ "trackId": "IRP",
+ "displayName": "Lucas Oil Indianapolis Raceway Park",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.69,
+  "surfaceWidthM": 16.76,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Lucas Oil Indianapolis Raceway Park",
+  "url": "https://en.wikipedia.org/wiki/Lucas_Oil_Indianapolis_Raceway_Park",
+  "coordinates": [
+   39.812777777777775,
+   -86.34083333333332
+  ],
+  "location": "Brownsburg, Indiana, United States",
+  "opened": "1960",
+  "capacity": "30,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Indianapolis Raceway Park-Oval.svg",
+    "caption": "Oval (1960–present)"
+   },
+   {
+    "file": "Indianapolis Raceway Park-Streetcircuit.svg",
+    "caption": "Road Course (1968–2007)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1960–present)",
+   "surface": "Asphalt",
+   "length_km": "1.104",
+   "length_mi": "0.686",
+   "turns": "4",
+   "banking": "12°",
+   "record_time": "0:19.7522",
+   "record_driver": "Braden Eves",
+   "record_year": "2024",
+   "record_class": "USF Pro 2000",
+   "miles": 0.686,
+   "index": 1
+  },
+  {
+   "layout": "Road Course (1968–present)",
+   "surface": "Asphalt",
+   "length_km": "4.023",
+   "length_mi": "2.500",
+   "turns": "15",
+   "banking": "",
+   "record_time": "1:23.622",
+   "record_driver": "Eliseo Salazar",
+   "record_year": "1994",
+   "record_class": "WSC",
+   "miles": 2.5,
+   "index": 2
+  },
+  {
+   "layout": "Drag Strip",
+   "surface": "Concrete/Asphalt",
+   "length_km": "0.402",
+   "length_mi": "0.250",
+   "miles": 0.25,
+   "index": 3
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1960–present)",
+  "surface": "Asphalt",
+  "length_km": "1.104",
+  "length_mi": "0.686",
+  "turns": "4",
+  "banking": "12°",
+  "record_time": "0:19.7522",
+  "record_driver": "Braden Eves",
+  "record_year": "2024",
+  "record_class": "USF Pro 2000",
+  "miles": 0.686,
+  "index": 1
+ },
+ "lengthCheckPct": -0.58,
+ "venueCentre": [
+  39.812778,
+  -86.340833
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 4,
+  "pit": 1,
+  "wall": 4,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 3,
+  "stadium": 0,
+  "building": 22,
+  "parking": 1,
+  "water": 4,
+  "road": 89
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 531132316,
+   "name": "Pitlane",
+   "lengthM": 616.2
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1193,
+  "height": 1606,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Indianapolis Raceway Park-Oval.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Indianapolis_Raceway_Park-Oval.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Pitlane02",
+   "caption": "Oval (1960–present)",
+   "saved": "trackmap.png"
+  },
+  {
+   "file": "Indianapolis Raceway Park-Streetcircuit.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Indianapolis_Raceway_Park-Streetcircuit.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Pitlane02",
+   "caption": "Road Course (1968–2007)",
+   "saved": "trackmap2.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

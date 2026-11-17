@@ -1,0 +1,111 @@
+{
+ "trackId": "LongPond",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "",
+   "lengthM": 4062.3,
+   "lengthErrPct": 0.97,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.38,
+    "p95M": 14.31,
+    "maxM": 18.33,
+    "scale": 1.0017
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    109767460
+   ],
+   "lengthM": 4062.3,
+   "lengthErrPct": 0.97,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 7.38,
+    "p95M": 14.31,
+    "maxM": 18.33,
+    "scale": 1.0017
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    109767460,
+    563465040
+   ],
+   "lengthM": 4074.6,
+   "lengthErrPct": 1.27,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 15.26,
+    "p95M": 28.57,
+    "maxM": 28.69,
+    "scale": 0.9939
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    109767460,
+    563465023,
+    563465017,
+    563465020,
+    563465016,
+    563465020,
+    563465016,
+    563465020,
+    563465019,
+    563465022,
+    563465014,
+    563465015
+   ],
+   "lengthM": 3643.8,
+   "lengthErrPct": -9.43,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 68.85,
+    "p95M": 131.81,
+    "maxM": 162.07,
+    "scale": 0.95
+   },
+   "index": 3
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 7.38,
+  "p95M": 14.31,
+  "maxM": 18.33,
+  "refToBuiltMaxM": 18.35,
+  "worstStretches": [
+   {
+    "fromM": 1322,
+    "toM": 1420,
+    "meanM": 17.8
+   },
+   {
+    "fromM": 1422,
+    "toM": 1521,
+    "meanM": 14.9
+   },
+   {
+    "fromM": 1222,
+    "toM": 1320,
+    "meanM": 13.7
+   }
+  ],
+  "scale": 1.0017
+ },
+ "verdict": "close",
+ "notes": []
+}

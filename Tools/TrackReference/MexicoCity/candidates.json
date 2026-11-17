@@ -1,0 +1,155 @@
+{
+ "trackId": "MexicoCity",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 4340.6,
+   "lengthErrPct": 1.02,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 121.32,
+    "p95M": 194.66,
+    "maxM": 247.53,
+    "scale": 0.95
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754604,
+    772754605,
+    772754604,
+    772754608,
+    772754607,
+    772754608,
+    1128592396,
+    605367312,
+    772755822,
+    772755821,
+    772754606
+   ],
+   "lengthM": 4238.1,
+   "lengthErrPct": -1.37,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 122.45,
+    "p95M": 204.82,
+    "maxM": 256.6,
+    "scale": 0.95
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    772755821,
+    638504647,
+    772763792,
+    772763791,
+    772754606,
+    772763791,
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754604,
+    772754605,
+    772754604,
+    772754608,
+    772754607,
+    772754608,
+    1128592396,
+    605367312,
+    772755822
+   ],
+   "lengthM": 4226.5,
+   "lengthErrPct": -1.64,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 123.28,
+    "p95M": 199.51,
+    "maxM": 251.11,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    605367312,
+    823823139,
+    823823141,
+    772755824,
+    1128592396,
+    605367312,
+    1128592396,
+    772754608,
+    772754607,
+    772754608,
+    772754604,
+    772754605,
+    772754604,
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754606,
+    772755821,
+    772755822
+   ],
+   "lengthM": 4668.3,
+   "lengthErrPct": 8.64,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 121.08,
+    "p95M": 218.88,
+    "maxM": 269.06,
+    "scale": 0.95
+   },
+   "index": 3
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 121.32,
+  "p95M": 194.66,
+  "maxM": 247.53,
+  "refToBuiltMaxM": 205.51,
+  "worstStretches": [
+   {
+    "fromM": 1886,
+    "toM": 1984,
+    "meanM": 240.6
+   },
+   {
+    "fromM": 1986,
+    "toM": 2084,
+    "meanM": 203.7
+   },
+   {
+    "fromM": 1786,
+    "toM": 1884,
+    "meanM": 193.5
+   }
+  ],
+  "scale": 0.95
+ },
+ "verdict": "wrong shape",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}

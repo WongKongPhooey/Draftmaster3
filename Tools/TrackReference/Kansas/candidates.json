@@ -1,0 +1,120 @@
+{
+ "trackId": "Kansas",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 2419.7,
+   "lengthErrPct": 0.24,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 46.39,
+    "p95M": 59.29,
+    "maxM": 60.51,
+    "scale": 1.0357
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    37552701,
+    42240617,
+    920943071
+   ],
+   "lengthM": 2419.7,
+   "lengthErrPct": 0.24,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 46.39,
+    "p95M": 59.29,
+    "maxM": 60.51,
+    "scale": 1.0357
+   },
+   "index": 1
+  },
+  {
+   "label": "fence ring as the OUTER edge, 8.4 m in",
+   "kind": "fence-outer",
+   "ways": [
+    72664727
+   ],
+   "lengthM": 2468.5,
+   "lengthErrPct": 2.26,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 69.83,
+    "p95M": 123.19,
+    "maxM": 125.75,
+    "scale": 1.05
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    37552701
+   ],
+   "lengthM": 2476.8,
+   "lengthErrPct": 2.6,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 70.23,
+    "p95M": 124.5,
+    "maxM": 126.96,
+    "scale": 1.05
+   },
+   "index": 3
+  },
+  {
+   "label": "fence ring as the INSIDE edge, 8.4 m out",
+   "kind": "fence-inner",
+   "ways": [
+    72664727
+   ],
+   "lengthM": 2573.8,
+   "lengthErrPct": 6.62,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 78.76,
+    "p95M": 139.95,
+    "maxM": 142.51,
+    "scale": 1.05
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 46.39,
+  "p95M": 59.29,
+  "maxM": 60.51,
+  "refToBuiltMaxM": 60.52,
+  "worstStretches": [
+   {
+    "fromM": 506,
+    "toM": 604,
+    "meanM": 59.8
+   },
+   {
+    "fromM": 100,
+    "toM": 198,
+    "meanM": 59.1
+   },
+   {
+    "fromM": 406,
+    "toM": 504,
+    "meanM": 55.0
+   }
+  ],
+  "scale": 1.0357
+ },
+ "verdict": "wrong shape",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}
