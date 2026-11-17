@@ -98,8 +98,10 @@ can be saved but the picture will not come back with it - re-run the menu item. 
   venue is `unmeasured`; the aerial and the OSM layers are still drawn, and the shape has to be traced off
   the aerial by hand (add a synthetic way to an `--osm` file as Martinsville's turn 3 gap was, or reshape
   the layout over the Unity overlay).
-- **Overpass turns work away when it is busy** ("at capacity", 502/504). The client backs off for about ten
-  minutes before giving up on a venue; finished venues come from the cache, so just run `--all` again.
+- **Overpass turns work away when it is busy** ("at capacity", 502/504), sometimes for hours; a venue can take
+  ten minutes. The client backs off for about ten minutes before giving up on a venue; finished venues come
+  from the cache, so just run `--all` again (run it in the background). `--all --offline` rebuilds every
+  report and `STATUS.md` from whatever is cached, listing venues not fetched yet.
   The track features are fetched first and the context layers (buildings, roads) second, so a busy server
   costs the decoration before it costs the measurement.
 - Street circuits rarely have a closed raceway ring in OSM; their streets do, but the walker only follows

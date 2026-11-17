@@ -699,7 +699,7 @@ def save_json(path, obj):
         json.dump(obj, f, indent=1, ensure_ascii=False)
 
 
-def build(tid, refresh=False, offline=False):
+def build(tid, refresh=False, offline=False, batch=False):
     export = load_json(os.path.join(EXPORTS, tid + '.json'))
     if not export:
         return {'trackId': tid, 'error': 'no Tools/TrackExports/%s.json (Unity: Export Geometry For Paddock Layout)' % tid}
@@ -736,6 +736,8 @@ def build(tid, refresh=False, offline=False):
 
     # OSM.
     opath = os.path.join(cache, 'osm.json')
+    if offline and not os.path.exists(opath):
+        return {'trackId': tid, 'error': 'not fetched yet (no cache/osm.json); run without --offline'}
     osm = None if refresh else load_json(opath)
     if osm is None and not offline:
         osm = overpass(osm_query(centre[0], centre[1], radius, OSM_TRACK))
@@ -747,7 +749,7 @@ def build(tid, refresh=False, offline=False):
             log.append('Overpass did not answer; no OSM layers (it turns work away when busy - re-run later, '
                        'finished venues come from the cache)')
     if osm and osm.get('contextMissing') and not offline:
-        ctx = overpass(osm_query(centre[0], centre[1], radius, OSM_CONTEXT), waits=(0, 30, 90))
+        ctx = overpass(osm_query(centre[0], centre[1], radius, OSM_CONTEXT), waits=(0,) if batch else (0, 30, 90))
         if ctx:
             seen = {e['id'] for e in osm['elements']}
             osm['elements'] += [e for e in ctx['elements'] if e['id'] not in seen]
@@ -1082,7 +1084,7 @@ def main():
     for i, tid in enumerate(ids):
         had_cache = os.path.exists(os.path.join(OUT, tid, 'cache', 'osm.json'))
         try:
-            r = build(tid, refresh, offline)
+            r = build(tid, refresh, offline, batch=len(ids) > 1)
         except Exception as e:                       # one venue failing must not lose the rest of --all
             r = {'trackId': tid, 'error': '%s: %s' % (type(e).__name__, e)}
         results.append(r)
