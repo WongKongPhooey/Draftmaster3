@@ -221,6 +221,7 @@ public static class TrackSceneryGenerator
                     if (area.points == null || area.points.Length < 3 || area.surface == TrackEnvironment.SurfaceType.Grass) continue;
                     req.blockedPolygons.Add(new SceneryPolygon(area.points.Select(q => ToRoot(space, q)).ToArray(), scenery.propClearance));
                 }
+                KeepWallBandsClear(req, builder, env.environment, scenery.roadClearance, ToRoot);
                 continue;
             }
 
@@ -275,6 +276,30 @@ public static class TrackSceneryGenerator
             float r = Mathf.Max(1f, piece.size.magnitude * 0.5f);
             req.blockedCircles.Add(new SceneryCircle(p, r + 1f));
         }
+    }
+
+    // A wall set further off the road than roadClearance (Daytona's infield wall, three track widths in) leaves a
+    // band of grass between the road and the wall. Nothing is scattered in it: the scenery stands behind the wall,
+    // roadClearance past its face, as it does behind a wall at the road's edge. Only the generated walls on each
+    // side are measured; hand-drawn manual spans are not.
+    static void KeepWallBandsClear(SceneryRequest req, TrackBuilder builder, TrackEnvironment env, float roadClearance,
+                                   System.Func<Transform, Vector2, Vector2> toRoot)
+    {
+        if (env == null || !env.generateBarriers) return;
+        var main = builder.SampleCenterline();
+        void Band(float sign, float wallOffset)
+        {
+            if (wallOffset <= roadClearance) return;
+            float depth = wallOffset + roadClearance;   // road edge to the first scenery behind the wall
+            foreach (var s in main)
+            {
+                Vector2 centre = s.position + s.normal * sign * (s.width * 0.5f + depth * 0.5f);
+                req.keepClear.Add(new SceneryEdge(toRoot(builder.transform, centre), Vector2.zero, depth * 0.5f));
+            }
+        }
+        // Sample normals point right of travel: Inner = right, Outer = left (TrackEnvironment.BarrierSide).
+        if (env.innerSideBarrier) Band(1f, env.innerEdgeOffset);
+        if (env.outerSideBarrier) Band(-1f, env.outerEdgeOffset);
     }
 
     // The ground plane's footprint if there is one (generated TrackGround, or Watkins' bare "Ground" quad),

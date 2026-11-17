@@ -6,16 +6,30 @@ using UnityEngine;
 // and would overwrite hand edits in the package.
 public static class TrackWallRebuildMenu
 {
-    [MenuItem("Draftmaster/Tracks/Daytona/Remove Infield Wall (rebuild walls only)")]
-    static void DaytonaNoInfieldWall()
+    // Daytona's infield wall, three track widths in from the infield edge, and the paved back straight
+    // (DaytonaInfieldWall), then a re-scatter so the scenery and fan RVs stand behind the wall, not in front of it.
+    [MenuItem("Draftmaster/Tracks/Daytona/Infield Wall + Paved Back Straight (rebuild walls, re-scatter)")]
+    static void DaytonaInfieldWallMenu()
     {
-        var env = AssetDatabase.LoadAssetAtPath<TrackEnvironment>("Assets/Resources/Tracks/DaytonaEnvironment.asset");
-        if (env == null) { Debug.LogError("TrackWallRebuildMenu: no DaytonaEnvironment asset."); return; }
-        // Left of travel on an anticlockwise oval is BarrierSide.Outer - the infield wall.
-        env.outerSideBarrier = false;
-        EditorUtility.SetDirty(env);
-        AssetDatabase.SaveAssets();
-        Debug.Log("TrackWallRebuildMenu: " + RebuildEnvironment("Daytona"));
+        Debug.Log("TrackWallRebuildMenu: " + ApplyDaytonaInfieldWall());
+    }
+
+    public static string ApplyDaytonaInfieldWall()
+    {
+        string note = null;
+        string walls = RebuildEnvironment(DaytonaInfieldWall.TrackId, contents =>
+        {
+            var package = contents.GetComponent<TrackPackage>();
+            var builder = package != null ? package.Builder : contents.GetComponentInChildren<TrackBuilder>(true);
+            var envBuilder = contents.GetComponentInChildren<TrackEnvironmentBuilder>(true);
+            if (builder == null || builder.track == null || envBuilder == null || envBuilder.environment == null)
+                return false;
+            note = DaytonaInfieldWall.Apply(envBuilder.environment, builder);
+            AssetDatabase.SaveAssets();
+            return true;
+        });
+        if (note == null) return $"Daytona left alone - {walls}";
+        return $"{note}; {walls}; {TrackSceneryGenerator.ScatterPackage(DaytonaInfieldWall.TrackId)}";
     }
 
     // Texas (FortWorth): open the infield wall along the whole trioval - the front stretch from the end of turn 4 to
@@ -77,13 +91,15 @@ public static class TrackWallRebuildMenu
 
     static string Path(Transform t) => t.parent == null ? t.name : Path(t.parent) + "/" + t.name;
 
-    public static string RebuildEnvironment(string trackId)
+    // editFirst: optional edit to the environment asset(s) with the package loaded; returning false stops without saving.
+    public static string RebuildEnvironment(string trackId, System.Func<GameObject, bool> editFirst = null)
     {
         string path = $"Assets/Resources/TrackPackages/{trackId}.prefab";
         var contents = PrefabUtility.LoadPrefabContents(path);
         if (contents == null) return $"no package at {path}";
         try
         {
+            if (editFirst != null && !editFirst(contents)) return $"{trackId}: package has no TrackBuilder / environment to edit";
             var builders = contents.GetComponentsInChildren<TrackEnvironmentBuilder>(true);
             int before = 0;
             foreach (var b in builders)

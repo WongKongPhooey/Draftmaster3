@@ -46,13 +46,14 @@ public static class DaytonaPackageAuthoring
     class Venue
     {
         public string id;
-        public bool infieldWall;      // Martinsville has a pit wall along its inside edge; Daytona runs onto grass
+        public bool infieldWall;      // Martinsville has a pit wall along its inside edge
+        public bool setBackInfieldWall; // Daytona: the infield wall three track widths in, back straight paved (DaytonaInfieldWall)
         public bool apron;            // Daytona's 3.5 m paved strip below the yellow line
         public bool infieldLayout;    // too small for Watkins' paddock: lay the lots out in the clear infield
         public bool joinedFrontStand; // one long stand bent round the front stretch, as at Daytona's tri-oval
     }
 
-    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = false, apron = true, infieldLayout = false, joinedFrontStand = true };
+    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = true, setBackInfieldWall = true, apron = true, infieldLayout = false, joinedFrontStand = true };
     static readonly Venue Martinsville = new Venue { id = "Martinsville", infieldWall = true, apron = false, infieldLayout = true };
 
     // How far the infield paddock stays from the edge of the racing surface, and its bands' depths.
@@ -294,10 +295,15 @@ public static class DaytonaPackageAuthoring
             {
                 var env = envBuilder.environment;
                 if (venue.apron) EnsureApron(env, geometry, notes);
-                // Daytona has no infield wall: the apron runs straight onto the grass, as at the real track. Left of
-                // travel on an anticlockwise oval is BarrierSide.Outer.
-                env.outerSideBarrier = venue.infieldWall;
-                env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
+                // Left of travel on an anticlockwise oval is BarrierSide.Outer - the infield wall. Daytona's stands
+                // three track widths in from the apron's edge, with the back straight's infield paved up to it.
+                if (venue.setBackInfieldWall)
+                    notes.Add(DaytonaInfieldWall.Apply(env, builder));
+                else
+                {
+                    env.outerSideBarrier = venue.infieldWall;
+                    env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
+                }
                 EnsurePaddockTarmac(env, blueprint, map, frame, infield?.outline, notes);
                 EditorUtility.SetDirty(env);
                 AssetDatabase.SaveAssets();

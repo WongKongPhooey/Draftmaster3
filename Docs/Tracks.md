@@ -135,7 +135,9 @@ drawn. Rows are placed in order against one piece cap, so put the cheap or impor
 paddock boundaries and lot areas (40 m), placed NPCs and `*_Marker` venues (25 m), anything else hand-placed
 (its drawn bounds + 4 m), and the player's RV / spawn points (**220 m** — the drivers' motorhome lot and team
 garages are laid out from the RV at play time, so the clearance covers where they will be). Nothing hangs off
-the ground plane.
+the ground plane. A generated wall set further off the road than the road clearance (Daytona's infield wall)
+keeps the whole band between road and wall clear, plus the road clearance behind the wall, so scenery stands
+behind it.
 
 **The pieces are recipes, not renderers.** A `SceneryPiece` saves which sprite, size, tint and outfit seed it
 has; its art is built on enable (edit and play) on a `SceneryArt` child that is never saved — a spectator's
@@ -416,6 +418,18 @@ The pit-box gizmo draws both lines; a pit-spline strip labelled `PitEntryLine` i
 Every lateral the
 builder publishes (`PitBoxLaneCenterLateral` / `Outer` / `Inner`) carries the sign (`PitBoxSide`), and the
 scene-wide `wallSide` on the crew, autograph-fan and sponsor-rep spawners is read relative to it.
+
+**The infield wall stands three track widths in** (33 m off the infield edge of the 11 m surface; added
+2026-11-17, `Assets/Editor/DaytonaInfieldWall.cs`). The apron runs onto grass before the wall, as the real
+track's does. Pit road crosses the wall's line where the chord peels off the front stretch and where it rejoins,
+and the wall opens only there (`PitGaps` with a wall set back more than `SetBackWallOffset` = 20 m cuts no fixed
+window round the pit nodes, which are inside the wall). Along the middle of the front stretch the wall runs
+between the racing surface and pit road. The infield of the back straight (the longest straight, segment 0) is
+paved between the road and the wall with the racing surface's own asphalt — a `TarmacRunoff` run-off area
+labelled `Back straight infield (paved)`, so it drives as tarmac. Author Daytona applies both;
+`Draftmaster > Tracks > Daytona > Infield Wall + Paved Back Straight (rebuild walls, re-scatter)` applies them
+alone (walls rebuilt, paddock untouched) and re-scatters the scenery so the fan RVs and crowd stand behind the
+wall.
 
 Re-run the menu item after regenerating Daytona. Do not follow it with an overwriting `Dress Selected
 Package`, which regenerates the paddock pocket from the pit lane.

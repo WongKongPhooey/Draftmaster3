@@ -220,6 +220,9 @@ public static class TrackDressingFactory
     public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float wallOffset = 1f)
         => PitGaps(builder, wallOffset, wallOffset);
 
+    // Past this far off the road's edge (m) a wall is "set back": no fixed window round the pit nodes.
+    public const float SetBackWallOffset = 20f;
+
     // rightWallOffset / leftWallOffset: how far each wall stands off its edge of the road (innerEdgeOffset /
     // outerEdgeOffset), so the cut is measured against the wall on the pit road's side where it really is.
     public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float rightWallOffset, float leftWallOffset)
@@ -247,11 +250,15 @@ public static class TrackDressingFactory
         const float halfWindow = 35f;   // the minimum, either side of each node
         const float clearance = 3f;     // wall to pit-road edge, below which the wall is cut
         const float pad = 10f;          // run-out either side of a measured cut
-        var ranges = new List<Vector2>
+        var ranges = new List<Vector2>();
+        // A wall near the road's edge is cut round the entry and exit nodes, where the pit lane peels off. A wall
+        // set well back (Daytona's infield wall, three track widths in) is behind pit road there, and only opens
+        // where pit road actually crosses it - which the measured cuts below find.
+        if (wallOffset <= SetBackWallOffset)
         {
-            new Vector2(track.pitEntryDistance - halfWindow, track.pitEntryDistance + halfWindow),
-            new Vector2(track.pitExitDistance - halfWindow, track.pitExitDistance + halfWindow),
-        };
+            ranges.Add(new Vector2(track.pitEntryDistance - halfWindow, track.pitEntryDistance + halfWindow));
+            ranges.Add(new Vector2(track.pitExitDistance - halfWindow, track.pitExitDistance + halfWindow));
+        }
 
         float boxLane = builder.HasPitBoxLane ? builder.pitBoxLaneWidth : 0f;
         var main = builder.SampleCenterline();
