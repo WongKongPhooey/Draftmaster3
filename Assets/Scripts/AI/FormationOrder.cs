@@ -53,9 +53,12 @@ public static class FormationOrder
 
     // The member one ROW ahead of `grid` in a two-wide formation: the nearest member ahead in the SAME column
     // (same grid parity). Even-parity cars chain down to the safety car (its sentinel grid is even); odd-parity
-    // front-row car has no same-column car ahead, so it also falls back to the safety car. Used to pack the
-    // field into tight rows of two for the close-up before the green.
-    public static IFormationMember RowAhead(int grid)
+    // front-row car has no same-column car ahead, so it also falls back to the safety car. The field runs
+    // double-file the whole formation lap, so this - not MemberAhead, which for the right-hand column is the row
+    // partner ALONGSIDE - is the car a two-wide car lines up behind (PaceLapAssist's hold and prompt).
+    // `excludeCar`: a car whose members never count - the player's own, whose SplineDriver joins the order under
+    // Auto with whatever grid it was left at (0 by default) and would otherwise be "the car ahead" of itself.
+    public static IFormationMember RowAhead(int grid, UnityEngine.GameObject excludeCar = null)
     {
         int parity = Parity(grid);
         IFormationMember best = null;
@@ -65,6 +68,7 @@ public static class FormationOrder
         {
             var m = _members[i];
             if (m == null || !m.FormationActive) continue;
+            if (excludeCar != null && m is UnityEngine.Component c && c != null && c.gameObject == excludeCar) continue;
             int g = m.GridPosition;
             if (g == SafetyCarGrid) safety = m;
             if (g < grid && Parity(g) == parity && g > bestGrid) { bestGrid = g; best = m; }

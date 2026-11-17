@@ -207,8 +207,21 @@ public class PaceLapAssist : MonoBehaviour
         bool leaderOnPit = false;   // its distance is a pit-lane value, not comparable with the player's
         float gap = float.MaxValue; // signed in grid-order mode (+ ahead, - behind); positive-only in fallback
 
-        // Preferred: the member directly ahead of the player in grid order.
-        var member = pvc.GridPosition >= 0 ? FormationOrder.MemberAhead(pvc.GridPosition) : null;
+        // Under Auto the AI drives this car on its own SplineDriver and the controller stops projecting itself onto
+        // the track (it is no longer an obstacle), so pvc.TrackDistance froze where Auto took over: the gap to the
+        // car ahead grew all lap, wrapped past half a lap and read as "behind it" - out of position with the
+        // formation exactly right. Read where the brain has the car instead, in the same terms as every other car.
+        var ownSpline = GetComponent<SplineDriver>();
+        bool autoDriven = ownSpline != null && ownSpline.isActiveAndEnabled && ownSpline.TrackLength > 0f;
+        if (autoDriven) playerDist = ownSpline.DistanceOnTrack;
+
+        // Preferred: the car one ROW ahead in the player's own column. The field runs two-wide the whole formation
+        // lap (grid slots 2k and 2k+1 share a row), so the car directly ahead in grid order is, for the right-hand
+        // column, the row partner ALONGSIDE: drawn level with it the gap jittered either side of zero and the
+        // prompt flashed "out of position" with the player exactly in their slot (and held them at 0.8x its speed).
+        // The front row falls back to the safety car. The player's own car never counts (under Auto its
+        // SplineDriver is in the order too).
+        var member = pvc.GridPosition >= 0 ? FormationOrder.RowAhead(pvc.GridPosition, gameObject) : null;
         var sdMember = member as SplineDriver;
         if (sdMember != null)
         {
@@ -230,7 +243,7 @@ public class PaceLapAssist : MonoBehaviour
             for (int i = 0; i < field.Count; i++)
             {
                 var d = field[i];
-                if (d == null || d.IsOnPit) continue;
+                if (d == null || d.IsOnPit || d == ownSpline) continue;
                 float g = d.DistanceOnTrack - playerDist;
                 if (g <= 0f) g += trackLen;
                 if (g > 0f && g < best) { best = g; leader = d; }

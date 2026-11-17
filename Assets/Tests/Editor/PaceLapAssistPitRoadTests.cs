@@ -61,7 +61,7 @@ public class PaceLapAssistPitRoadTests
             var vehicleInfo = Resources.Load("Vehicles/Cup24");
             Assert.IsNotNull(vehicleInfo);
 
-            // The car ahead in grid order, out on the track 8 m BEHIND the player and crawling (it is following them).
+            // The car a row ahead in the player's column (slot 0 for slot 2), out on the track 8 m BEHIND the player and crawling (it is following them).
             var spline = aiGo.AddComponent(Runtime("SplineDriver"));
             Set(spline, "track", track);
             Set(spline, "vehicleInfo", vehicleInfo);
@@ -83,7 +83,7 @@ public class PaceLapAssistPitRoadTests
             var pvc = playerGo.AddComponent(pvcType);
             Set(pvc, "vehicleInfo", vehicleInfo);
             Set(pvc, "track", track);
-            Call(pvc, "SetFormationGrid", 1);
+            Call(pvc, "SetFormationGrid", 2);
             float mainDistance = (float)trackType.GetMethod("NearestCenterlineDistance").Invoke(track, new object[] { at });
             Set(pvc, "<TrackDistance>k__BackingField", mainDistance);
 
@@ -125,7 +125,7 @@ public class PaceLapAssistPitRoadTests
             var vehicleInfo = Resources.Load("Vehicles/Cup24");
             Assert.IsNotNull(vehicleInfo);
 
-            // The car ahead in grid order, rolling down pit road at the limit 300 m along the lane.
+            // The car a row ahead in the player's column (slot 0 for slot 2), rolling down pit road at the limit 300 m along the lane.
             var spline = aiGo.AddComponent(Runtime("SplineDriver"));
             Set(spline, "track", track);
             Set(spline, "vehicleInfo", vehicleInfo);
@@ -138,7 +138,7 @@ public class PaceLapAssistPitRoadTests
             Call(spline, "Start");
             Assert.IsTrue((bool)spline.GetType().GetProperty("IsOnPit").GetValue(spline), "The AI car is not on pit road.");
 
-            // The player, next on the grid: 50 m behind it on pit road, or out on the main track.
+            // The player, a row back: 50 m behind it on pit road, or out on the main track.
             Vector3 at;
             if (playerOnPitRoad)
             {
@@ -162,7 +162,7 @@ public class PaceLapAssistPitRoadTests
             var pvc = playerGo.AddComponent(pvcType);
             Set(pvc, "vehicleInfo", vehicleInfo);
             Set(pvc, "track", track);
-            Call(pvc, "SetFormationGrid", 1);
+            Call(pvc, "SetFormationGrid", 2);
             float mainDistance = (float)trackType.GetMethod("NearestCenterlineDistance").Invoke(track, new object[] { at });
             Set(pvc, "<TrackDistance>k__BackingField", mainDistance);
 
