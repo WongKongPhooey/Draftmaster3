@@ -1,16 +1,16 @@
 using UnityEngine;
 
 // The in-race HUD from the Iron Oval design file's RACE HUD screen: position and speed as big Pixelify
-// numerals with a hard shadow, the lap count in gold Silkscreen under them, and a tyre/draft meter plate
-// on the right under the track map.
+// numerals with a hard shadow, the lap count in gold Silkscreen under them, and a tyre/draft/fuel meter
+// plate on the right under the track map.
 //
 // It replaces three older readouts rather than sitting on top of them — the authored speedometer dial,
 // the "P x / N" position panel and RaceDirector's own lap counter all stand down while this is running,
 // so nothing is drawn twice. Turn `enabled` off and they come back.
 //
 // Everything is read live: RacePositionTracker for the order, LapTimingManager and RaceDirector for the
-// lap, the player car's speed readout, and TireModel for wear. Draft is the car's own slipstream tow
-// (PlayerVehicleController.TowFactor), shown in the design's telemetry blue.
+// lap, the player car's speed readout, TireModel for wear and FuelTank for the tank. Draft is the car's own
+// slipstream tow (PlayerVehicleController.TowFactor), shown in the design's telemetry blue.
 public class IronOvalRaceHUD : MonoBehaviour
 {
     public static IronOvalRaceHUD Instance { get; private set; }
@@ -35,6 +35,7 @@ public class IronOvalRaceHUD : MonoBehaviour
     Transform _player;
     IVehicleSpeedReadout _speed;
     TireModel _tires;
+    FuelTank _fuel;
     PlayerVehicleController _pvc;
     float _rebindTimer;
     float _shownMph;
@@ -78,6 +79,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         _player = _pvc != null ? _pvc.transform : null;
         _speed = _pvc as IVehicleSpeedReadout;
         _tires = _pvc != null ? _pvc.GetComponent<TireModel>() : null;
+        _fuel = _pvc != null ? _pvc.GetComponent<FuelTank>() : null;
     }
 
     // The older readouts covered the same three numbers in three different visual languages. This owns
@@ -166,8 +168,8 @@ public class IronOvalRaceHUD : MonoBehaviour
         style.normal.textColor = prev;
     }
 
-    // Tyre life and draft, as the design's two cell rows: alarm red for the rubber, telemetry blue for
-    // the tow. Sits on the right, under where the track map lives.
+    // Tyre life, draft and fuel, as the design's cell rows: alarm red for the rubber, telemetry blue for
+    // the tow, gold for the tank. Sits on the right, under where the track map lives.
     void DrawMeters()
     {
         // Sized from what goes in it rather than from a round number: a ten-cell row is CellsWidth(10)
@@ -175,7 +177,8 @@ public class IronOvalRaceHUD : MonoBehaviour
         // narrower than the rows drawn inside it.
         float inset = PixelGUI.Px(4f) + PixelGUI.Px(6f);
         float w = PixelGUI.CellsWidth(10) + inset * 2f;
-        float h = inset * 2f + 2f * PixelGUI.LineH + 2f * PixelGUI.CellsHeight + PixelGUI.Px(6f);
+        // Three label + row sections, a Px(4) gap between each, and the same Px(2) of slack at the foot.
+        float h = inset * 2f + 3f * PixelGUI.LineH + 3f * PixelGUI.CellsHeight + PixelGUI.Px(10f);
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
 
@@ -203,6 +206,16 @@ public class IronOvalRaceHUD : MonoBehaviour
         cy += PixelGUI.LineH;
         PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight),
                        Mathf.RoundToInt(Draft01() * 10f), 10, PixelGUI.Info);
+        cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
+
+        // Fuel left in the tank. A car without a FuelTank reads full, as a car without a TireModel reads
+        // fresh rubber. The last fifth turns alarm red — time to pit.
+        label.normal.textColor = PixelGUI.Gold;
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Fuel", label);
+        cy += PixelGUI.LineH;
+        float fuel = _fuel != null ? _fuel.Fraction : 1f;
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), Mathf.RoundToInt(fuel * 10f), 10,
+                       fuel > 0.2f ? PixelGUI.Gold : PixelGUI.Danger);
 
         label.normal.textColor = prev;
     }
