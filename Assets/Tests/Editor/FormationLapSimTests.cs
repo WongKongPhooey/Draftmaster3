@@ -307,8 +307,32 @@ public class FormationLapSimTests
             int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
             Set(cars[i], "tacticalLateralOffset", (slot & 1) == 0 ? -2.2f : 2.2f);
         }
+        // The safety car carries on down pit road to its spot meanwhile, as in the game (SafetyCar.StepPitIn runs
+        // whatever the phase), and then on its own until it has parked and been hidden.
         for (int step = 0; step < Mathf.RoundToInt(20f / dt); step++)
+        {
+            if (scSpline.gameObject.activeSelf) { scStep.Invoke(sc, null); splineStep.Invoke(scSpline, null); }
             foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
+        }
+        for (int step = 0; step < Mathf.RoundToInt(120f / dt) && scSpline.gameObject.activeSelf; step++)
+        {
+            scStep.Invoke(sc, null);
+            splineStep.Invoke(scSpline, null);
+        }
+        // Parked at the END of pit road: past box 0 (nearest the exit), short of the pit exit line - not at the top of
+        // the lane, where it used to park and drive the whole lane out from under the caution.
+        {
+            float pitLenNow = (float)splineType.GetProperty("PitLength").GetValue(scSpline);
+            var pitLaneT = Runtime("PitLane");
+            float box0 = (float)pitLaneT.GetMethod("BoxDistance", new[] { typeof(int), typeof(float) }).Invoke(null, new object[] { 0, pitLenNow });
+            float parkedAt = (float)splineType.GetProperty("CentreDistanceOnPit").GetValue(scSpline);
+            string where = $"{trackId}: safety car parked at {parkedAt:0} m of a {pitLenNow:0} m pit road (box 0 at {box0:0} m), " +
+                           $"on pit {(bool)onPitProp.GetValue(scSpline)}, hidden {!scSpline.gameObject.activeSelf}";
+            Debug.Log("[CautionSim] " + where);
+            Assert.IsFalse(scSpline.gameObject.activeSelf, where);
+            Assert.IsTrue((bool)onPitProp.GetValue(scSpline), where);
+            Assert.Greater(parkedAt, box0 + 5f, where);
+        }
         float raceMph = 0f;
         for (int i = 1; i < n; i++) raceMph = Mathf.Max(raceMph, (float)mphProp.GetValue(cars[i]));
 

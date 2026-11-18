@@ -8,8 +8,11 @@ using UnityEngine;
 // into the pit lane and parks. Rides a kinematic SplineDriver on the main spline; this component only
 // caps its pace, counts the lap, triggers the pit-in, blinks its roof light and despawns afterwards.
 //
+// It parks at the END of pit road, just short of the pit exit line in the box-side lane, past the last box (box 0) -
+// so it drives down the lane past the boxes to get there - and is hidden once parked.
+//
 // Sent back out for a full-course caution (DeployForCaution, from FullCourseCaution): it pulls out of where it parked
-// at the top of pit road, drives down the lane and out of the pit exit, then crawls round low on the inside line
+// at the end of pit road and out of the pit exit, then crawls round low on the inside line
 // while the field drives past it on the outside - until the restart leader (PickupLeader, kept up to date by
 // FullCourseCaution) comes up behind it. Then it moves up onto the racing line in front of the leader and runs cruise
 // pace on a fixed plan (CautionRules.PitsOpenPass): round to pit road once with pit road open (PitRoadOpen - the one
@@ -27,9 +30,15 @@ public class SafetyCar : MonoBehaviour
     [Range(0f, 1f)] public float minFirstPassFraction = 0.5f;
     [Tooltip("Commit to the pit lane when within this distance (m) of the authored pit-entry node — the same continuous merge an AI pit stop uses. Lane-flipping anywhere else snaps onto the nearest pit-spline point, which past the entry means driving across the pit wall.")]
     public float pitEntryWindow = 20f;
-    [Tooltip("Seconds after pit-in before the safety car is hidden (lets it roll out of sight down the pit).")]
+    [Tooltip("Seconds after pit-in before the safety car may be hidden. It is hidden once it has also parked at the end of pit road (or after parkHideBackstopSeconds, parked or not).")]
     public float despawnAfterPitSeconds = 6f;
-    [Tooltip("Park this far (m) BEFORE the first pit box (the one nearest the pit entrance), so the pace car stops at the start of the lane rather than rolling down it.")]
+    [Tooltip("Backstop (s): hide the safety car this long after pit-in even if it has not reached its parking spot (stuck behind pit traffic).")]
+    public float parkHideBackstopSeconds = 90f;
+    [Tooltip("Park with the car's centre this far (m) short of the pit exit line (the end of the speed limit), in the box-side lane, past box 0.")]
+    public float parkShortOfPitExitM = 10f;
+    [Tooltip("The exit-end parking spot must be at least this far (m, centre to centre) past box 0, so the car leaving box 0 gets by it. Short of that, it parks at the entrance end instead (parkGapBeforeFirstBox).")]
+    public float parkMinPastBox0M = 9f;
+    [Tooltip("Fallback only (no room past box 0, or a one-lane pit road): park this far (m) before the box nearest the pit entrance.")]
     public float parkGapBeforeFirstBox = 4f;
 
     [Header("Close-up / peel-away")]
@@ -150,6 +159,8 @@ public class SafetyCar : MonoBehaviour
     float _pitOutFrom, _pitOutTo, _pitOutStartD, _pitOutLength;
     float _huntLat;
     bool _awaitTuckIn;   // picked up the leader, still at crawl until it is tucked in behind
+    bool _parkedAtExit;  // its parking spot is the box-side lane at the end of pit road (not the entrance fallback)
+    float _sincePitIn;
 
     SplineDriver _spline;
     bool _caution;
@@ -202,6 +213,10 @@ public class SafetyCar : MonoBehaviour
     {
         BlinkLight();
 
+        // Down pit road to its spot at the end of the lane - stepped whatever the phase, since the green usually
+        // waves while it is still on its way down.
+        if (_pitting) { StepPitIn(); return; }
+
         if (!RaceStart.UnderSafetyCar) return;
         _spline.aiMaxSpeedMph = cruiseMph;
         _spline.aiMinDecelMphPerSec = 0f;
@@ -213,15 +228,6 @@ public class SafetyCar : MonoBehaviour
         // Picked the leader up: back up from the inside onto the racing line in front of it.
         if (_spline.tacticalLateralOffset != 0f)
             _spline.tacticalLateralOffset = Mathf.MoveTowards(_spline.tacticalLateralOffset, 0f, huntSlewPerSec * Time.fixedDeltaTime);
-
-        if (_pitting)
-        {
-            // The car hard-parks at _spline.pitParkDistance (set in PitIn) — just before the first box at the
-            // pit-lane entrance — so it stops at the start of the lane, not out by the exit.
-            _despawnTimer -= Time.fixedDeltaTime;
-            if (_despawnTimer <= 0f) gameObject.SetActive(false);
-            return;
-        }
 
         // Accumulate distance covered on the main spline (ignore once we've dived into the pit).
         float lap = _spline.TrackLength;
@@ -514,8 +520,8 @@ public class SafetyCar : MonoBehaviour
         }
     }
 
-    // Back out for a full-course caution. From where it parked at the top of pit road it drives down the lane and out
-    // of the pit exit, and crawls round on the inside until it picks up the leader (PickupLeader); from there it leads
+    // Back out for a full-course caution. From where it parked at the end of pit road it drives out of the pit exit,
+    // and crawls round on the inside until it picks up the leader (PickupLeader); from there it leads
     // the field round to pit road once with pit road open, and pits the next time by (PlanFromPickup). Only a car that
     // is not on pit road at all (a track with no pit lane) is put on the track at `distance` (main-spline metres) and
     // leads from there, as it used to.
@@ -552,7 +558,7 @@ public class SafetyCar : MonoBehaviour
 
         if (_spline.PitLength > 0f && (_spline.IsOnPit || _spline.usePitLane))
         {
-            // Parked (or still rolling to its spot) at the top of pit road: drive out from there. It rejoins the
+            // Parked (or still rolling to its spot) at the end of pit road: drive out from there. It rejoins the
             // track at the pit exit as any car leaving the pits does (SplineDriver.autoPitExit, the continuous merge).
             _stage = CautionStage.PitOut;
             _pitOutRolling = false;
@@ -611,7 +617,10 @@ public class SafetyCar : MonoBehaviour
             _pitOutRolling = true;
             _pitOutStartD = myD;
             _pitOutFrom = _spline.lateralOffset;
-            _pitOutTo = PitDrivingLateral();
+            // Parked in the box-side lane past box 0 there is nothing to pull out across - nobody comes in to a box
+            // further down - so it drives straight on out. From the entrance fallback (on the box strip) it pulls out
+            // into the driving lane.
+            _pitOutTo = _parkedAtExit ? _pitOutFrom : PitDrivingLateral();
             _pitOutLength = Mathf.Max(20f, FormationLanes.PullOutLength(Mathf.Abs(_pitOutTo - _pitOutFrom), pitOutLaneAngleDeg, 0f, 0f));
         }
         _spline.lateralOffset = PitBoxPath.Lateral(_pitOutFrom, _pitOutTo, Mathf.Max(0f, myD - _pitOutStartD), _pitOutLength);
@@ -796,19 +805,39 @@ public class SafetyCar : MonoBehaviour
         _stage = CautionStage.Leading;
         ClosingUp = false; // pace car is leaving the surface; the field keeps its rows via FormationDirector.FieldClosingUp
         _despawnTimer = despawnAfterPitSeconds;
+        _sincePitIn = 0f;
 
-        // Park in an "invisible box" one box pitch before the first real box at the pit ENTRANCE
-        // (PitLane.LastBox = highest index = nearest the start of the lane = smallest box distance), and on
-        // the grey box-lane lateral — NOT the pit centerline, which is the driving line the field files down.
-        // Fall back to a short distance in if the boxes aren't configured.
+        // Park at the END of pit road, as a real pace car does: in the box-side lane, its centre parkShortOfPitExitM
+        // short of the pit exit line, past box 0 (nearest the exit) - so on the next caution it drives straight out
+        // of the pit exit. It drives down in that lane: cars coming in for their boxes brake down it ahead of it
+        // (StepPitIn queues it behind them) and cars leaving their boxes pull out across it into the far lane.
+        // With no room past box 0, or a pit road too narrow for two lanes (the driving line is the only line, and a
+        // car parked in it at the exit would block everybody leaving), it parks as it used to: an "invisible box"
+        // one box pitch before the box nearest the pit ENTRANCE (PitLane.LastBox), on the grey box strip.
         float pitLen = _spline.PitLength;
         float target;
+        _parkedAtExit = false;
         if (PitLane.Configured && pitLen > 0f)
         {
-            target = PitLane.BoxDistance(PitLane.LastBox, pitLen) - Mathf.Max(parkGapBeforeFirstBox, PitLane.Spacing);
-            // Set before the lane flip: the rejoin carries the car's current lateral as an easing bias, so it
-            // drifts from the entry onto the box strip over the drive down instead of snapping sideways.
-            _spline.lateralOffset = PitLane.ParkLateral;
+            float width = _spline.track != null ? _spline.track.PitDrivingWidth : 0f;
+            float end = pitLen * _spline.pitExitThreshold;   // where SplineDriver hands a car back to the track
+            if (_spline.track != null && _spline.track.track != null)
+                end = Mathf.Min(end, _spline.track.track.PitExitLineDistance);
+            float centre = end - parkShortOfPitExitM;
+            if (PitLanes.TwoLanes(width, PitLane.ParkLateral)
+                && centre >= PitLane.BoxDistance(0, pitLen) + parkMinPastBox0M)
+            {
+                _parkedAtExit = true;
+                target = _spline.PitParkDistanceFor(centre);
+                // Set before the lane flip: the rejoin carries the car's current lateral as an easing bias, so it
+                // eases from the entry into the lane instead of snapping sideways.
+                _spline.lateralOffset = PitLanes.Lateral(PitLanes.BoxSide, width, PitLane.ParkLateral);
+            }
+            else
+            {
+                target = PitLane.BoxDistance(PitLane.LastBox, pitLen) - Mathf.Max(parkGapBeforeFirstBox, PitLane.Spacing);
+                _spline.lateralOffset = PitLane.ParkLateral;
+            }
         }
         else
             target = Mathf.Min(8f, pitLen > 0f ? pitLen * 0.15f : 8f);
@@ -816,6 +845,28 @@ public class SafetyCar : MonoBehaviour
 
         _spline.usePitLane = true; // SplineDriver hops onto the pit spline at the entry node next step
         OnPitEntry?.Invoke();
+    }
+
+    // Pitted: down pit road to the spot PitIn chose, where SplineDriver pins it (pitParkDistance). Held to cruise
+    // (SplineDriver holds it to the pit limit as well) and queued behind anything in its lane ahead. Hidden once it
+    // has parked, so it never sits invisible halfway down the lane and reappears there for the next caution.
+    void StepPitIn()
+    {
+        float dt = Time.fixedDeltaTime;
+        _sincePitIn += dt;
+        _despawnTimer -= dt;
+        _spline.aiMinDecelMphPerSec = 0f;
+        _spline.aiMaxSpeedMph = cruiseMph;
+        bool parked = _spline.IsOnPit && _spline.pitStopHold;
+        if (_spline.IsOnPit && !parked)
+        {
+            _spline.aiMaxSpeedMph = Mathf.Min(cruiseMph, PitLaneTrafficCap(_spline.CentreDistanceOnPit));
+            if (_spline.aiMaxSpeedMph < _spline.CurrentMph) _spline.aiMinDecelMphPerSec = trafficBrakeMphPerSec;
+        }
+        // No pit lane to park on: hide on the timer, as it always did.
+        bool noLane = _spline.PitLength <= 0f;
+        if (_despawnTimer <= 0f && (parked || noLane || _sincePitIn >= parkHideBackstopSeconds))
+            gameObject.SetActive(false);
     }
 
     void BuildRoofLight()

@@ -5,7 +5,8 @@ using UnityEngine;
 //
 // Box 0 sits nearest the pit EXIT (the pole car's box); each higher index steps back toward the pit ENTRANCE, so
 // the highest index (LastBox) is the box closest to the START of the pit lane. A car's assigned box = its grid /
-// qualifying position (the player uses its reserved slot); the pace car parks in LastBox at the end of the lap.
+// qualifying position (the player uses its reserved slot). The pace car parks past box 0, at the exit end
+// (SafetyCar.PitIn; one box pitch before LastBox only when there is no room there).
 public static class PitLane
 {
     public static bool Configured { get; private set; }
