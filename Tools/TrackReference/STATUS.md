@@ -11,7 +11,6 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 | [Darlington](Darlington/report.md) | wrong shape | 38.2 / 52.4 / 52.5 | committed trace (Assets/TrackTraces) | -4.54% | -0.29% | NAIP |
 | [Indianapolis](Indianapolis/report.md) | wrong shape | 150.3 / 177.1 / 177.6 | raceway ring taken as the centre | +1.16% | +0.00% | NAIP |
 | [IndyRoad](IndyRoad/report.md) | wrong shape | 163.3 / 287.7 / 320.0 | raceway ring taken as the centre | +0.00% | -0.04% | NAIP |
-| [Kansas](Kansas/report.md) | wrong shape | 69.8 / 123.2 / 125.8 | fence ring as the OUTER edge, 8.4 m in | +2.26% | +0.00% | NAIP |
 | [LimeRock](LimeRock/report.md) | wrong shape | 46.7 / 85.5 / 99.0 | raceway ring taken as the centre | +0.02% | +2.00% | NAIP |
 | [MexicoCity](MexicoCity/report.md) | wrong shape | 121.3 / 194.7 / 247.5 | committed trace (Assets/TrackTraces) | +1.02% | +0.15% | none |
 | [Portland](Portland/report.md) | wrong shape | 47.6 / 91.5 / 107.3 | committed trace (Assets/TrackTraces) | -0.18% | -0.15% | NAIP |
@@ -30,6 +29,7 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 | [Daytona](Daytona/report.md) | matches | 1.5 / 2.9 / 3.2 | committed trace (Assets/TrackTraces) | -0.32% | +0.00% | NAIP |
 | [FortWorth](FortWorth/report.md) | matches | 1.6 / 2.6 / 3.5 | committed trace (Assets/TrackTraces) | -1.40% | -3.00% | NAIP |
 | [Gateway](Gateway/report.md) | matches | 3.4 / 5.8 / 6.0 | committed trace (Assets/TrackTraces) | +1.48% | +0.00% | NAIP |
+| [Kansas](Kansas/report.md) | matches | 0.5 / 0.8 / 1.1 | committed trace (Assets/TrackTraces) | +2.58% | +0.00% | NAIP |
 | [Martinsville](Martinsville/report.md) | matches | 1.1 / 2.1 / 2.5 | raceway ring taken as the centre | -3.24% | -0.75% | NAIP |
 | [Richmond](Richmond/report.md) | matches | 1.2 / 2.4 / 3.0 | committed trace (Assets/TrackTraces) | -2.27% | +0.00% | NAIP |
 | [WatkinsGlen](WatkinsGlen/report.md) | matches | 1.9 / 4.4 / 7.0 | raceway ring taken as the centre | -0.20% | +0.00% | NAIP |

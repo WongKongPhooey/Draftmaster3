@@ -1212,6 +1212,11 @@ def write_trace(tid, index, force):
     if not geo or not summ or index >= len(geo):
         sys.exit('run the report first, and pick a candidate index it lists')
     c = summ['candidates'][index]
+    # cache/ is git-ignored, so its geometry can be from an older run than the committed candidates.json (a
+    # different ranking): writing then takes another candidate's line under this one's label.
+    if geo[index].get('kind') != c['kind'] or (len(geo) != len(summ['candidates'])):
+        sys.exit('cache/candidates_geometry.json is from another run than candidates.json; '
+                 're-run the report (--offline is enough) and pick the candidate again')
     if c['selfIntersects']:
         sys.exit('candidate %d crosses itself' % index)
     ll = geo[index]['centreLatLon']

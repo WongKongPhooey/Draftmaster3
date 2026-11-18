@@ -308,8 +308,8 @@ radii and straight lengths that were measured off the real thing — so past **3
 refused and the asset left alone. That is what keeps a poor trace of a road course from replacing a layout
 someone authored corner by corner.
 
-Twenty-one venues have a trace and fourteen of them import: Atlanta (rewritten 2026-11-18 from the
-reference pipeline), Bristol, Bowman Gray, Darlington, Dover, Fort
+Twenty-one venues have a trace and fifteen of them import: Atlanta and Kansas (rewritten 2026-11-18 from
+the reference pipeline), Bristol, Bowman Gray, Darlington, Dover, Fort
 Worth, Gateway, Iowa, Las Vegas, Michigan, New Hampshire, Phoenix, Pocono and Richmond. The rest are
 refused for now. Watkins Glen is skipped by name — it is hand-measured off satellite imagery.
 

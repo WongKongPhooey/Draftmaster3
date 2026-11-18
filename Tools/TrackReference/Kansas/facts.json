@@ -6,7 +6,7 @@
   "lengthMiles": 1.5,
   "surfaceWidthM": 16.76,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 2: raceway ring taken as the centre (ways 37552701); 2.60% from the published lap"
  },
  "wikipedia": {
   "title": "Kansas Speedway",
@@ -73,8 +73,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  39.115931,
-  -94.829865
+  39.115759,
+  -94.830401
  ],
  "osmRadiusM": 1122,
  "osmCounts": {
@@ -85,10 +85,10 @@
   "surface": 0,
   "grandstand": 1,
   "stadium": 3,
-  "building": 60,
-  "parking": 58,
-  "water": 9,
-  "road": 404
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
  },
  "osmPitLanes": [
   {
@@ -105,7 +105,7 @@
   "height": 2552,
   "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-17"
  },
  "trackMap": [
   {

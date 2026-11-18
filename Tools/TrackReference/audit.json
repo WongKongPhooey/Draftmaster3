@@ -46,9 +46,9 @@
     },
     "Kansas": {
       "wrong": "game, and the committed trace",
-      "rebuild": "yes",
+      "rebuild": "done 2026-11-18",
       "from": "#1 (OSM way 37552701, Kansas Speedway, +2.6%) - or #0, the outer fence offset 8.4 m in, which agrees",
-      "why": "Game is a narrow oval (1022 x 345 m) on a 1.5 mi tri-oval about 950 x 460 m; 70 m RMS against the real ring. The committed trace (old best, +0.24%) runs 34% down the pit lane - the importer refused it; replace it with #1."
+      "why": "Game is a narrow oval (1022 x 345 m) on a 1.5 mi tri-oval about 950 x 460 m; 70 m RMS against the real ring. The committed trace (old best, +0.24%) runs 34% down the pit lane - the importer refused it; replace it with #1. Rebuilt 2026-11-18 from the raceway ring (way 37552701; candidate #2 in that run's ranking, --write-trace=2 --start=apex --pit=42240617): imported, package redressed, line retrained; now matches at 0.5 m RMS (p95 0.8, max 1.1), and 0.7 m against the outer-fence ring as an independent check."
     },
     "LimeRock": {
       "wrong": "game",
