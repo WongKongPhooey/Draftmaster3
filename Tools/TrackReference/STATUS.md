@@ -4,7 +4,6 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 
 | Track | Verdict | Built RMS / p95 / max (m) | Best candidate | Its lap vs published | Wikipedia lap vs game | Aerial |
 |---|---|---|---|---|---|---|
-| [Atlanta](Atlanta/report.md) | wrong shape | 46.5 / 70.6 / 73.6 | raceway ring taken as the centre | -2.62% | +0.00% | NAIP |
 | [COTA](COTA/report.md) | wrong shape | 67.8 / 137.7 / 159.2 | raceway ring taken as the centre | +0.28% | +0.47% | NAIP |
 | [Charlotte](Charlotte/report.md) | wrong shape | 42.8 / 67.6 / 70.9 | raceway ring taken as the centre | -2.11% | +0.00% | NAIP |
 | [CharlotteRoval](CharlotteRoval/report.md) | wrong shape | 107.6 / 220.8 / 232.5 | raceway ring taken as the centre | -1.07% | +0.00% | NAIP |
@@ -25,6 +24,7 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 | [Iowa](Iowa/report.md) | close | 4.0 / 6.4 / 8.9 | committed trace (Assets/TrackTraces) | +1.08% | -0.57% | NAIP |
 | [LasVegas](LasVegas/report.md) | close | 7.2 / 12.1 / 13.2 | committed trace (Assets/TrackTraces) | +2.63% | +0.00% | NAIP |
 | [LongPond](LongPond/report.md) | close | 7.4 / 14.3 / 18.3 | committed trace (Assets/TrackTraces) | +0.97% | +0.00% | NAIP |
+| [Atlanta](Atlanta/report.md) | matches | 1.4 / 2.3 / 2.5 | committed trace (Assets/TrackTraces) | -2.64% | +0.00% | NAIP |
 | [BowmanGray](BowmanGray/report.md) | matches | 3.8 / 5.5 / 5.7 | committed trace (Assets/TrackTraces) | +0.14% | +0.00% | NAIP |
 | [Bristol](Bristol/report.md) | matches | 3.3 / 4.7 / 4.9 | committed trace (Assets/TrackTraces) | -0.79% | +0.57% | NAIP |
 | [Daytona](Daytona/report.md) | matches | 1.5 / 2.9 / 3.2 | committed trace (Assets/TrackTraces) | -0.32% | +0.00% | NAIP |

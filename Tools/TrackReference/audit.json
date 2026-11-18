@@ -4,9 +4,9 @@
   "venues": {
     "Atlanta": {
       "wrong": "game, and the committed trace",
-      "rebuild": "yes",
+      "rebuild": "done 2026-11-18",
       "from": "#0 (OSM way 288853230, the oval itself, -2.6%); pit way 288853232",
-      "why": "Game is the generic stadium oval (1035 x 382 m) on a wider quad-oval (about 950 x 510 m); 46.5 m RMS. The committed trace Assets/TrackTraces/Atlanta.json (old best) is not the oval: it runs 15% down Pit Road and through the AMS Small Oval and turns 118 deg against the lap - why the importer refused it. Replace it with #0, do not import the old one."
+      "why": "Game is the generic stadium oval (1035 x 382 m) on a wider quad-oval (about 950 x 510 m); 46.5 m RMS. The committed trace Assets/TrackTraces/Atlanta.json (old best) is not the oval: it runs 15% down Pit Road and through the AMS Small Oval and turns 118 deg against the lap - why the importer refused it. Replace it with #0, do not import the old one. Rebuilt 2026-11-18 from #0 (--write-trace=0 --start=apex --pit=288853232): imported, package redressed, line retrained; now matches at 1.4 m RMS (p95 2.3, max 2.5)."
     },
     "COTA": {
       "wrong": "game (old reference ran down the pit lane)",

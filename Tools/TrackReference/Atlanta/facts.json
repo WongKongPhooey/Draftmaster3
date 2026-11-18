@@ -6,7 +6,7 @@
   "lengthMiles": 1.54,
   "surfaceWidthM": 12.19,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 288853230,288848526); -2.62% from the published lap"
  },
  "wikipedia": {
   "title": "Atlanta Motor Speedway",
@@ -86,8 +86,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  33.383383,
-  -84.318012
+  33.383514,
+  -84.317825
  ],
  "osmRadiusM": 1143,
  "osmCounts": {
@@ -118,7 +118,7 @@
   "height": 1858,
   "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-17"
  },
  "trackMap": [
   {

@@ -2,27 +2,23 @@
  "trackId": "Atlanta",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    288853230,
-    288848526
-   ],
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 288853230,288848526); -2.62% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "EchoPark Speedway 100%"
-   ],
-   "lengthM": 2413.4,
-   "lengthErrPct": -2.62,
+   "names": [],
+   "lengthM": 2412.9,
+   "lengthErrPct": -2.64,
    "selfIntersects": false,
    "counterTurnDeg": 0.3,
    "flags": [],
    "builtFit": {
-    "rmsM": 46.48,
-    "p95M": 70.61,
-    "maxM": 73.64,
-    "scale": 1.0119
+    "rmsM": 1.43,
+    "p95M": 2.32,
+    "maxM": 2.5,
+    "scale": 0.9719
    },
    "index": 0
   },
@@ -53,18 +49,23 @@
     "runs 26% down a pit lane"
    ],
    "builtFit": {
-    "rmsM": 33.21,
-    "p95M": 43.03,
-    "maxM": 44.56,
-    "scale": 0.9906
+    "rmsM": 17.19,
+    "p95M": 34.38,
+    "maxM": 34.58,
+    "scale": 0.95
    },
    "index": 1
   },
   {
-   "label": "committed trace (Assets/TrackTraces)",
-   "kind": "trace",
-   "ways": [],
-   "note": "batch",
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    288853230,
+    918350520,
+    918350519,
+    288853232,
+    288848523
+   ],
    "pitShare": 0.148,
    "otherCircuitShare": 0.035,
    "names": [
@@ -82,10 +83,10 @@
     "turns 118 deg against the lap: not an oval"
    ],
    "builtFit": {
-    "rmsM": 36.93,
-    "p95M": 57.66,
-    "maxM": 86.51,
-    "scale": 0.9946
+    "rmsM": 17.36,
+    "p95M": 31.45,
+    "maxM": 32.93,
+    "scale": 0.9538
    },
    "index": 2
   },
@@ -119,39 +120,39 @@
     "turns 146 deg against the lap: not an oval"
    ],
    "builtFit": {
-    "rmsM": 36.79,
-    "p95M": 56.67,
-    "maxM": 87.14,
-    "scale": 0.9943
+    "rmsM": 17.24,
+    "p95M": 31.24,
+    "maxM": 32.85,
+    "scale": 0.9539
    },
    "index": 3
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 46.48,
-  "p95M": 70.61,
-  "maxM": 73.64,
-  "refToBuiltMaxM": 73.77,
+  "rmsM": 1.43,
+  "p95M": 2.32,
+  "maxM": 2.5,
+  "refToBuiltMaxM": 2.59,
   "worstStretches": [
    {
-    "fromM": 400,
-    "toM": 498,
-    "meanM": 71.3
+    "fromM": 42,
+    "toM": 140,
+    "meanM": 2.4
    },
    {
-    "fromM": 186,
-    "toM": 284,
-    "meanM": 71.3
+    "fromM": 1370,
+    "toM": 1468,
+    "meanM": 2.3
    },
    {
-    "fromM": 286,
-    "toM": 384,
-    "meanM": 65.8
+    "fromM": 142,
+    "toM": 240,
+    "meanM": 2.1
    }
   ],
-  "scale": 1.0119
+  "scale": 0.9719
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }

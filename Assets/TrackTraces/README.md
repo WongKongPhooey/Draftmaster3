@@ -45,11 +45,13 @@ because somebody edited a map.
 
 ## Which venues have one, and which do not
 
-Twenty-one venues have a trace. Thirteen of those import: the rest are refused by the importer itself,
+Twenty-one venues have a trace. Fourteen of those import: the rest are refused by the importer itself,
 because the shape it reads does not close to within 3% of its own lap, and a reading that far out is worse
-than the generated or hand-authored geometry it would replace. Refused today: Atlanta, Kansas, Mexico City,
+than the generated or hand-authored geometry it would replace. Refused today: Kansas, Mexico City,
 Mid-Ohio, Milwaukee, Portland, Rockingham, Sonoma. Watkins Glen is skipped on purpose — it is hand-measured
-off satellite imagery and a trace does not improve on it.
+off satellite imagery and a trace does not improve on it. Atlanta's old trace (refused) ran down pit road and
+through the AMS Small Oval; it was rewritten 2026-11-18 from `track_reference.py` candidate 0 (the oval itself)
+and now imports.
 
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
 Daytona, Talladega, Indianapolis, COTA, Road America, Lime Rock and Watkins Glen — are not a bug in the
