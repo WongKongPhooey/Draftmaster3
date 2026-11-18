@@ -28,9 +28,9 @@
     },
     "Darlington": {
       "wrong": "game",
-      "rebuild": "yes (re-import)",
-      "from": "#0 committed trace (= OSM way 104277971, Darlington Raceway, -4.5%)",
-      "why": "Game is a symmetric oval (817 x 513 m) spilling outside the walls at both ends; the real egg is 843 x 393 m; 38.2 m RMS with the fit's scale pinned at its 0.95 limit. The trace is on the racing surface (drawn toward the inside, hence -4.5%) and README says it imported, yet the export is not that shape: either the package was regenerated afterwards or Tools/TrackExports/Darlington.json is stale. Re-export first; if still off, re-run Import Traced Geometry."
+      "rebuild": "trace rewritten 2026-11-18; Unity import pending",
+      "from": "#0 (OSM way 104277971, the raceway ring, -4.5%); pit = front-stretch run of way 918351834",
+      "why": "Game is a symmetric oval (817 x 513 m) spilling outside the walls at both ends; the real egg is 843 x 393 m; 38.2 m RMS with the fit's scale pinned at its 0.95 limit. The trace is on the racing surface (drawn toward the inside, hence -4.5%) and README says it imported, yet the export is not that shape: either the package was regenerated afterwards or Tools/TrackExports/Darlington.json is stale. Re-export first; if still off, re-run Import Traced Geometry. 2026-11-18: the 4-segment asset is the old importer's one-arc-per-end reading of this same ring (two equal 323 m straights, 173/187 deg arcs) - the import did happen, it just could not describe an egg. Trace rewritten from #0 for the curvature importer (--write-trace=0 --start=34.293796,-79.905565, start/finish an estimate mid front stretch; pitLane trimmed to the way's front-stretch nodes 20-27, since the whole way wraps both turn aprons). Replaying OsmTrackImporter headless: 24 pieces, closes 1.2 m (0.06%), predicted 1.8 m RMS (p95 2.4, max 2.5) = matches; mapped pit road fits (853 m, straight 616 m against the published ~2,025 ft, entry Turn 4, exit Turn 1). Still needs a Unity lane: Import Traced Geometry (Darlington only), redress, re-export, retrain the line."
     },
     "Indianapolis": {
       "wrong": "game",

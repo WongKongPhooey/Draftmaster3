@@ -5,21 +5,19 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "",
+   "note": "track_reference.py candidate 0: the committed raceway ring, OSM way 104277971 (on the racing surface, 6-8 m inside the outer wall all round on NAIP); -4.54% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Darlington Raceway 100%"
-   ],
-   "lengthM": 2104.7,
-   "lengthErrPct": -4.54,
+   "names": [],
+   "lengthM": 2104.2,
+   "lengthErrPct": -4.56,
    "selfIntersects": false,
-   "counterTurnDeg": 0.2,
+   "counterTurnDeg": 0.3,
    "flags": [],
    "builtFit": {
     "rmsM": 38.25,
-    "p95M": 52.35,
-    "maxM": 52.46,
+    "p95M": 52.33,
+    "maxM": 52.4,
     "scale": 0.95
    },
    "index": 0
@@ -56,23 +54,23 @@
  "best": 0,
  "builtVsBest": {
   "rmsM": 38.25,
-  "p95M": 52.35,
-  "maxM": 52.46,
-  "refToBuiltMaxM": 52.46,
+  "p95M": 52.33,
+  "maxM": 52.4,
+  "refToBuiltMaxM": 52.41,
   "worstStretches": [
    {
-    "fromM": 234,
-    "toM": 332,
+    "fromM": 232,
+    "toM": 330,
     "meanM": 52.4
    },
    {
-    "fromM": 134,
-    "toM": 232,
+    "fromM": 132,
+    "toM": 230,
     "meanM": 52.3
    },
    {
-    "fromM": 34,
-    "toM": 132,
+    "fromM": 32,
+    "toM": 130,
     "meanM": 52.2
    }
   ],

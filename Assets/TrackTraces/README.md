@@ -53,6 +53,10 @@ off satellite imagery and a trace does not improve on it. Atlanta's old trace (r
 through the AMS Small Oval; it was rewritten 2026-11-18 from `track_reference.py` candidate 0 (the oval itself)
 and now imports. Kansas's old trace ran 34% down pit road; it was rewritten the same day from the
 raceway ring and now imports.
+Darlington's ring always imported, but the old importer read each end as one arc, so the egg came back as a
+symmetric four-piece oval (38 m RMS off the real track); its trace was rewritten 2026-11-18 from the same OSM ring
+for the curvature importer, with a mapped pit lane cut down to the way's front-stretch run (the way also wraps both
+turn aprons). Re-importing it in Unity is still to do.
 
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
 Daytona, Talladega, Indianapolis, COTA, Road America, Lime Rock and Watkins Glen — are not a bug in the

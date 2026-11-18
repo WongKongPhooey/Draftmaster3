@@ -6,7 +6,7 @@
   "lengthMiles": 1.37,
   "surfaceWidthM": 16.76,
   "hasCommittedTrace": true,
-  "traceFoundBy": ""
+  "traceFoundBy": "track_reference.py candidate 0: the committed raceway ring, OSM way 104277971 (on the racing surface, 6-8 m inside the outer wall all round on NAIP); -4.54% from the published lap"
  },
  "wikipedia": {
   "title": "Darlington Raceway",
@@ -59,8 +59,8 @@
  },
  "lengthCheckPct": -0.29,
  "venueCentre": [
-  34.295341,
-  -79.905615
+  34.29522,
+  -79.905497
  ],
  "osmRadiusM": 1055,
  "osmCounts": {

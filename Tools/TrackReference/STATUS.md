@@ -8,7 +8,7 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 | [Charlotte](Charlotte/report.md) | wrong shape | 42.8 / 67.6 / 71.0 | committed trace (Assets/TrackTraces) | -2.13% | +0.00% | NAIP |
 | [CharlotteRoval](CharlotteRoval/report.md) | wrong shape | 107.6 / 220.8 / 232.5 | raceway ring taken as the centre | -1.07% | +0.00% | NAIP |
 | [Chicago](Chicago/report.md) | wrong shape | 159.2 / 255.1 / 291.5 | raceway ring taken as the centre | -3.55% | -2.73% | NAIP |
-| [Darlington](Darlington/report.md) | wrong shape | 38.2 / 52.4 / 52.5 | committed trace (Assets/TrackTraces) | -4.54% | -0.29% | NAIP |
+| [Darlington](Darlington/report.md) | wrong shape | 38.2 / 52.3 / 52.4 | committed trace (Assets/TrackTraces) | -4.56% | -0.29% | NAIP |
 | [Indianapolis](Indianapolis/report.md) | wrong shape | 150.3 / 177.1 / 177.6 | raceway ring taken as the centre | +1.16% | +0.00% | NAIP |
 | [IndyRoad](IndyRoad/report.md) | wrong shape | 163.3 / 287.7 / 320.0 | raceway ring taken as the centre | +0.00% | -0.04% | NAIP |
 | [LimeRock](LimeRock/report.md) | wrong shape | 46.7 / 85.5 / 99.0 | raceway ring taken as the centre | +0.02% | +2.00% | NAIP |
