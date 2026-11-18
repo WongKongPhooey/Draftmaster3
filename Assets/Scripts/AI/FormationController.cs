@@ -185,6 +185,24 @@ public class FormationController : MonoBehaviour
     [Tooltip("Sideways rate (m/s) of the move down to the inside, and of the passing car's move out round it.")]
     public float cautionYieldSlewPerSec = 2.5f;
 
+    [Header("Round a wreck that blocks the road (caution)")]
+    [Tooltip("Under a caution, a car stopped behind a wreck with no way round on the road drives round it on the grass or across the infield (SplineDriver.allowGrass, out to the nearest wall). The pack planner only ever swerves round the one car ahead, within the road: behind a pile-up across the track the field stopped and never moved again.")]
+    public bool escapeWrecks = true;
+    [Tooltip("Slower than this (mph), with a stopped car in my lane up ahead, I am stuck behind it.")]
+    public float escapeStuckMph = 6f;
+    [Tooltip("Seconds stuck before going round - the planner's own swerve, on the road, gets the first go.")]
+    public float escapeAfterSeconds = 2f;
+    [Tooltip("Daylight (m) kept from each stopped car gone round.")]
+    public float escapeClearM = 1.2f;
+    [Tooltip("Speed (mph) while still getting out from behind a stopped car - a crawl, steering out.")]
+    public float escapeCreepMph = 5f;
+    [Tooltip("Fastest (mph) while going round the wreck, and while still out on the grass afterwards.")]
+    public float escapeMaxMph = 20f;
+    [Tooltip("Sideways rate (m/s) of the move out round the wreck.")]
+    public float escapeSlewPerSec = 3f;
+    [Tooltip("Longest (s) one way round is kept before looking again.")]
+    public float escapeMaxSeconds = 25f;
+
     [Header("Corner caution")]
     [Tooltip("Distance ahead (m) scanned for a turn. Inside this, the car drops the catch-up boost and the weave so it can hold the racing line through the corner.")]
     public float cornerLookahead = 55f;
@@ -230,6 +248,14 @@ public class FormationController : MonoBehaviour
     int _ovalTrack = -1;   // -1 unknown, 0 road course, 1 oval: columnEdgeMarginM applies on ovals only
     const float MaxLineRate = 10f; // m/s; a jump faster than this is a seam (the pit merge), not the line moving
     readonly List<PackCar> _cars = new List<PackCar>();
+    readonly List<WreckEscape.Car> _escapeCars = new List<WreckEscape.Car>();
+    readonly List<PackCar> _movingCars = new List<PackCar>();
+    readonly Dictionary<int, SplineDriver> _stoppedById = new Dictionary<int, SplineDriver>();
+    float _blockedTimer;    // seconds stuck behind a stopped car (escapeWrecks)
+    int _escapeSide;        // +1 / -1 while going round a wreck; 0 not
+    float _escapeTarget;    // lateral (m) to go round it at
+    float _escapeToGo;      // metres still to run to be past it
+    float _escapeTimer;
     float _lateral;     // current applied tacticalLateralOffset (slew-limited)
     float _weaveEnv;    // 0..1 envelope so the weave ramps in gently
     bool _wasPit;
@@ -445,6 +471,7 @@ public class FormationController : MonoBehaviour
         if (_spline == null || _spline.TrackLength <= 0f) return;
         if (!RaceStart.UnderSafetyCar) return;
         bool caution = RaceStart.IsCaution;
+        if (!caution || _spline.usePitLane) { ClearWreckEscape(); _spline.allowGrass = false; }
         // Under a caution, lining up two-wide for the restart: this car has a slot in the restart line-up, which stands in
         // for its grid slot from here on (MySlot), and it runs the formation lap's rules rather than the caution's single
         // file. Single file nose to tail, the cars went green 6 m apart in one lane: inside the racing brain's
@@ -612,6 +639,9 @@ public class FormationController : MonoBehaviour
         int slot = MySlot();
         float column = caution && !doubled ? 0f : FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
 
+        // Round a wreck on the grass (escapeWrecks): the bounds take the grass in while going round and until back on
+        // the road.
+        _spline.allowGrass = caution && escapeWrecks && (_escapeSide != 0 || OutOnTheGrass());
         float boundLo = float.NegativeInfinity, boundHi = float.PositiveInfinity;
         _spline.GetLateralBounds(out boundLo, out boundHi);
 
@@ -763,6 +793,8 @@ public class FormationController : MonoBehaviour
             NoUrgentSwerve = corner || closingUp || caution,
         };
         var cmd = _planner.Step(self, intent, _cars, dt);
+        if (caution && escapeWrecks) StepWreckEscape(self, ref cmd, dt);
+        else ClearWreckEscape();
         Apply(cmd, dt);
 
         // Where I'm heading across the track, for the cars around me — without the merge bias, which is easing out.
@@ -1054,6 +1086,144 @@ public class FormationController : MonoBehaviour
         TrackHi = float.PositiveInfinity,
         Drift = drift,
     };
+
+    // Stuck behind a stopped car with no way round on the road (escapeWrecks): after escapeAfterSeconds, find the way
+    // round the whole pile-up - on the road if there is one, else on the grass - and drive it at a crawl until out from
+    // behind, then at escapeMaxMph until past the last stopped car. The planner's lateral is overridden for that, and its
+    // speed too where it is only braking for the stopped cars being gone round; a moving car in my way still has it
+    // brake.
+    void StepWreckEscape(in PackSelf self, ref PackCommand cmd, float dt)
+    {
+        var es = WreckEscape.Settings.Default;
+        es.ClearM = escapeClearM;
+        es.StoppedMph = pack != null ? pack.StoppedDeadMph : es.StoppedMph;
+        var me = new WreckEscape.Self { Lateral = self.Lateral, HalfWidth = self.HalfWidth, HalfLength = self.HalfLength };
+        // Stopped AI cars by id, to read where their bodies really lie across the road (a wreck is spun and sideways).
+        _stoppedById.Clear();
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d != null && d != _spline && !d.IsOnPit && d.CurrentMph < es.StoppedMph) _stoppedById[d.GetInstanceID()] = d;
+        }
+        _escapeCars.Clear();
+        for (int i = 0; i < _cars.Count; i++)
+        {
+            var c = _cars[i];
+            // Each car where the planner sees it - from where it is to where it is heading - and a stopped one's body
+            // as it really lies too.
+            float lo = c.LaneLo, hi = c.LaneHi;
+            if (!c.IsPaceCar && _stoppedById.TryGetValue(c.Id, out var sd)
+                && sd.BodyLateralExtent(c.HalfLength, c.HalfWidth, out float bodyLo, out float bodyHi))
+            {
+                lo = Mathf.Min(lo, bodyLo);
+                hi = Mathf.Max(hi, bodyHi);
+            }
+            // The safety car is never part of a wreck, but it is in the way like any moving car.
+            _escapeCars.Add(new WreckEscape.Car
+            {
+                Gap = c.Gap, Lateral = 0.5f * (lo + hi), HalfWidth = 0.5f * (hi - lo), HalfLength = c.HalfLength,
+                SpeedMph = c.IsPaceCar ? Mathf.Max(c.SpeedMph, es.StoppedMph + 1f) : c.SpeedMph,
+            });
+        }
+
+        // Done going round but still out on the grass: slowly, until back on the road.
+        if (_escapeSide == 0 && _spline.allowGrass) cmd.CapMph = Mathf.Min(cmd.CapMph, escapeMaxMph);
+
+        if (_escapeSide == 0)
+        {
+            int blocker = self.SpeedMph < escapeStuckMph ? WreckEscape.StoppedBlocker(me, _escapeCars, es) : -1;
+            _blockedTimer = blocker >= 0 ? _blockedTimer + dt : 0f;
+            if (blocker < 0 || _blockedTimer < escapeAfterSeconds) return;
+
+            // The road first; the grass only when the wreck fills it. Limits held from here to past the pile-up, and
+            // measured from the car's centre (the brain's distance is a little ahead of it).
+            float from = -SplineDriver.PathPointAheadOfCentre;
+            float to = _escapeCars[blocker].Gap + es.LookPastM - SplineDriver.PathPointAheadOfCentre;
+            int side = 0;
+            float target = 0f, past = 0f;
+            if (_spline.GetBoundsOver(from, to, false, false, out float lo, out float hi))
+                side = WreckEscape.FindWayRound(me, _escapeCars, blocker, lo, hi, es, out target, out past);
+            if (side == 0 && _spline.GetBoundsOver(from, to, true, true, out lo, out hi))
+                side = WreckEscape.FindWayRound(me, _escapeCars, blocker, lo, hi, es, out target, out past);
+            if (side == 0) return;   // nowhere yet: look again next step
+            _escapeSide = side;
+            _escapeTarget = target;
+            _escapeToGo = past;
+            _escapeTimer = 0f;
+            _blockedTimer = 0f;
+            _spline.allowGrass = true;
+        }
+
+        _escapeTimer += dt;
+        _escapeToGo -= Mathf.Max(0f, self.SpeedMph) / 2.237f * dt;
+        if (_escapeToGo <= 0f || _escapeTimer > escapeMaxSeconds) { ClearWreckEscape(); return; }
+
+        // Across to the spot - unless a moving car (another going round, the safety car) is in, or about to be in, the
+        // lane I would move into: then hold my line and let the brakes do it, as the planner would.
+        _movingCars.Clear();
+        for (int i = 0; i < _cars.Count; i++)
+            if (_cars[i].IsPaceCar || _cars[i].SpeedMph >= es.StoppedMph) _movingCars.Add(_cars[i]);
+        bool laneShut = _planner.LaneBlocked(self, _escapeTarget, _movingCars, PackPlanner.NoCar);
+        // Off the line the car's own lateral is laid on - not off where it is now, which a placed car only reaches as fast
+        // as it rolls (SplineDriver path angle): measured from there, the lag fed back and ran the target out to the wall.
+        cmd.TacticalTarget = laneShut ? self.Tactical : _escapeTarget - _spline.UntacticalLateral;
+        cmd.Slew = Mathf.Max(cmd.Slew, escapeSlewPerSec);
+
+        // What is in my way: stopped cars my box (a little wider) still overlaps, and moving cars in the strip from
+        // here to the spot.
+        float boxLo = self.Lateral - self.HalfWidth - 0.15f, boxHi = self.Lateral + self.HalfWidth + 0.15f;
+        float stripLo = Mathf.Min(self.Lateral, _escapeTarget) - self.HalfWidth, stripHi = Mathf.Max(self.Lateral, _escapeTarget) + self.HalfWidth;
+        float stoppedClear = float.MaxValue;
+        bool movingInWay = false;
+        float followCap = float.MaxValue;
+        for (int i = 0; i < _escapeCars.Count; i++)
+        {
+            var c = _escapeCars[i];
+            if (c.Gap <= 0f) continue;
+            float clear = c.Gap - self.HalfLength - c.HalfLength;
+            if (clear > 30f) continue;
+            float cLo = c.Lateral - c.HalfWidth, cHi = c.Lateral + c.HalfWidth;
+            if (c.SpeedMph < es.StoppedMph)
+            {
+                if (cHi > boxLo && cLo < boxHi) stoppedClear = Mathf.Min(stoppedClear, clear);
+            }
+            else if (cHi > stripLo && cLo < stripHi)
+            {
+                movingInWay = true;
+                // Another car going round the same way, or traffic: never run up its back - its speed, plus a little
+                // for every metre of room past 2.
+                followCap = Mathf.Min(followCap, c.SpeedMph + Mathf.Max(0f, clear - 2f));
+            }
+        }
+        float cap = Mathf.Min(escapeMaxMph, followCap);
+        if (stoppedClear < float.MaxValue)
+        {
+            // Still getting out from behind a stopped car: a crawl, steering out (SplineDriver.grassEscapePathAngleDeg
+            // lets a placed car get across steeply). Never a dead stop - a car that cannot roll cannot steer out, and
+            // would sit there for good; the last tenths are at walking pace.
+            float room = Mathf.Max(0f, stoppedClear - 0.15f);
+            cap = Mathf.Min(cap, Mathf.Max(1f, escapeCreepMph * Mathf.Clamp01(room) + room * 2f));
+        }
+        // Nothing moving in my way: whatever the planner says, up to the escape pace (it is braking for the very cars
+        // being gone round). Something moving in the way, or my lane over shut: its cap stands.
+        cmd.CapMph = movingInWay || laneShut ? Mathf.Min(cmd.CapMph, cap) : cap;
+    }
+
+    void ClearWreckEscape()
+    {
+        _escapeSide = 0;
+        _blockedTimer = 0f;
+        _escapeTimer = 0f;
+    }
+
+    // Back from going round a wreck but still out on the grass: it stays open (and slow) until the car is on the road.
+    bool OutOnTheGrass()
+    {
+        if (!_spline.allowGrass || !_spline.GetBoundsAhead(0f, true, false, out float lo, out float hi)) return false;
+        float lat = _spline.LateralOnTrack;
+        return lat < lo - 0.2f || lat > hi + 0.2f;
+    }
 
     void Apply(PackCommand cmd, float dt)
     {

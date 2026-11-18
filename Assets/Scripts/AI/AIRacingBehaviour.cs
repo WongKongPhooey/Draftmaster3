@@ -175,6 +175,10 @@ public class AIRacingBehaviour : MonoBehaviour
     public bool runOffToAvoid = true;
     [Tooltip("The run-off stays open this long (s) after the avoidance ends, and for as long as the car is still out on it, so it comes back to the road at its own pace.")]
     public float runOffHoldSeconds = 1.5f;
+    [Tooltip("When a wreck fills the whole road (and any paved run-off) there is no gap a car fits through: go round it on the grass or across the infield instead (SplineDriver.grassEscapeMetres, stopped short of walls and the pit lane). Only ever the last resort - a gap on the road always wins. Without it the field stopped behind a big pile-up and sat there.")]
+    public bool grassToAvoid = true;
+    [Tooltip("Fastest (mph) a car drives while it is going round a wreck on the grass.")]
+    public float grassEscapeMaxMph = 30f;
     [Tooltip("A car alongside is a wall: whatever the brain wants (a pass, a defence, back to the line, out of a lapper's way), it never aims closer to a car beside it than alongsideWallGap - and a car already closer holds where it is. Without it a car turned across into the one beside it whenever its plan said to.")]
     public bool alongsideIsWall = true;
     [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing. " +
@@ -372,6 +376,10 @@ public class AIRacingBehaviour : MonoBehaviour
     SplineDriver.CornerPhase _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
     int _startSideStage;   // 0 = not yet on a straight since the green, 1 = on one, 2 = into the first corner
     float _runOffHold;     // seconds the run-off stays open after an avoidance round a stopped car
+    float _grassHold;      // the same for the grass beside the road (grassToAvoid)
+    bool _lastEscapeGrass; // the side EscapeSide last picked is out on the grass
+    bool _escapeGrass;     // the way round the stopped car now being avoided is out on the grass
+    bool _recoveryAroundStopped;   // the stuck recovery under way is round a stopped car, to _passTargetLat
     readonly System.Collections.Generic.List<FieldCar> _fieldCars = new System.Collections.Generic.List<FieldCar>(24);
     float _fieldTarget = float.NaN;
     readonly System.Collections.Generic.List<float> _fieldLanes = new System.Collections.Generic.List<float>(6);
@@ -467,7 +475,15 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.forcedOvalLane = PlayerOvalLane();
         // Racing tactics stay off until the green flag. During PreGrid/Formation, FormationController
         // owns the AI's speed cap and line so the field forms up behind the safety car.
-        if (!RaceStart.IsGreen) { _wasGreen = false; _spline.allowRunOff = false; _runOffHold = 0f; _spline.avoidingStopped = false; return; }
+        if (!RaceStart.IsGreen)
+        {
+            _wasGreen = false; _spline.allowRunOff = false; _runOffHold = 0f; _spline.avoidingStopped = false;
+            // Under a caution FormationController drives the car, and its own way round a wreck on the grass with it.
+            if (!RaceStart.IsCaution) _spline.allowGrass = false;
+            _grassHold = 0f; _escapeGrass = false; _recoveryAroundStopped = false;
+            return;
+        }
+        _lastEscapeGrass = false;
 
         float dt = Time.fixedDeltaTime;
         // This car's own clock since the green (a start or a restart), counted in physics steps so it runs the same
@@ -1087,6 +1103,7 @@ public class AIRacingBehaviour : MonoBehaviour
             {
                 // Held up by a car that has stopped: out round it on the wide side, clear of it (see below).
                 bool stoppedAhead = stallBlocker.CurrentMph < yellowPassBelowMph;
+                _recoveryAroundStopped = stoppedAhead;
                 _recoveryDir = stoppedAhead
                     ? (stallBlocker.LateralOnTrack < 0f ? 1f : -1f)
                     : (stallBlocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f);
@@ -1100,7 +1117,10 @@ public class AIRacingBehaviour : MonoBehaviour
                 SetPassTarget(stoppedAhead, aroundAt, aroundClear);
             }
             else
+            {
                 _recoveryDir = _spline.LateralOnTrack >= 0f ? -1f : 1f;
+                _recoveryAroundStopped = false;
+            }
             _stallTimer = 0f;
         }
         if (_recoveryTimer > 0f)
@@ -1108,7 +1128,9 @@ public class AIRacingBehaviour : MonoBehaviour
             _recoveryTimer -= dt;
             speedCap = float.MaxValue;
             desiredTactical = _recoveryDir * overtakeLineOffset;
-            if (_passAroundStopped)
+            // Round a stopped car for the whole recovery, not only the step it began on (_passAroundStopped is dropped
+            // the next step, when no pass is wanted): out to clear of it - onto the grass if that is the way round.
+            if (_passAroundStopped || _recoveryAroundStopped)
             {
                 float needed = _passTargetLat + _recoveryDir * _passClearance - _spline.UntacticalLateral;
                 if (needed * _recoveryDir > overtakeLineOffset) desiredTactical = needed;
@@ -1140,12 +1162,23 @@ public class AIRacingBehaviour : MonoBehaviour
 
         // The run-off is open while driving round a stopped car, a moment after, and for as long as the car is still out
         // on it - so it drives back onto the road rather than having the road edge snap in under it.
-        bool avoiding = _passAroundStopped && (wantOvertake || _recoveryTimer > 0f);
+        bool avoiding = (_passAroundStopped && (wantOvertake || _recoveryTimer > 0f))
+                        || (_recoveryAroundStopped && _recoveryTimer > 0f);
         if (avoiding) _runOffHold = runOffHoldSeconds;
         else if (_runOffHold > 0f) _runOffHold -= dt;
         bool offRoad = _spline.allowRunOff && _spline.GetRoadBounds(out float roadLo, out float roadHi)
                        && (_spline.LateralOnTrack < roadLo - 0.2f || _spline.LateralOnTrack > roadHi + 0.2f);
         _spline.allowRunOff = runOffToAvoid && !_spline.IsOnPit && (avoiding || _runOffHold > 0f || offRoad);
+
+        // The grass the same way, when the way round is out there: open while going round, a moment after, and for as
+        // long as the car is still out on it - and slowly, the grass has none of the road's grip.
+        if (!avoiding) _escapeGrass = false;
+        bool grassAvoid = avoiding && _escapeGrass;
+        if (grassAvoid) _grassHold = runOffHoldSeconds;
+        else if (_grassHold > 0f) _grassHold -= dt;
+        bool onGrass = _spline.allowGrass && _spline.GetBoundsAhead(0f, true, false, out float paveLo, out float paveHi)
+                       && (_spline.LateralOnTrack < paveLo - 0.2f || _spline.LateralOnTrack > paveHi + 0.2f);
+        _spline.allowGrass = grassToAvoid && !_spline.IsOnPit && (grassAvoid || _grassHold > 0f || onGrass);
 
         // Converge on the desired offset like a driver turning the wheel: accelerate into the move, carry no more
         // than maxLateralSpeed, and slow so as to arrive on the target rather than at full rate. Dead-zone
@@ -1270,6 +1303,7 @@ public class AIRacingBehaviour : MonoBehaviour
         // ...but never past a stopped car we have not yet got out from behind. The train leaves stopped cars to this
         // while the car is steering round one (SplineDriver.avoidingStopped), so it is the only brake for it then.
         speedCap = Mathf.Min(speedCap, stopShortCap);
+        if (_spline.allowGrass) speedCap = Mathf.Min(speedCap, grassEscapeMaxMph);
 
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
@@ -1725,6 +1759,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float gapSide = EscapeSide(obstacleLat, obstacleGap, out float edgeLat, ref edgeClear);
             if (gapSide != 0f) { aroundAt = edgeLat; clearance = edgeClear; return gapSide; }
         }
+        _lastEscapeGrass = false;
         float pick = obstacleLat < 0f ? 1f : -1f;
         return SideOccupied(pick) ? 0f : pick;
     }
@@ -1743,8 +1778,14 @@ public class AIRacingBehaviour : MonoBehaviour
         float myLat = _spline.LateralOnTrack;
         float slowMph = Mathf.Max(yellowPassBelowMph, _spline.CurrentMph * 0.5f);
         float ahead = Mathf.Max(0f, obstacleGap);
+        _lastEscapeGrass = false;
         if (!_spline.GetBoundsAhead(ahead, true, out float lo, out float hi)) return 0f;
         _spline.GetBoundsAhead(ahead, false, out float roadLo, out float roadHi);
+        // The last resort, out on the grass: where a car can stay all the way past the wreck, not only level with it.
+        float grassLo = lo, grassHi = hi;
+        bool grass = grassToAvoid && _spline.GetBoundsOver(Mathf.Max(0f, ahead - 5f), ahead + 15f, true, true, out grassLo, out grassHi);
+        if (!grass) { grassLo = lo; grassHi = hi; }
+        bool bestGrass = false;
         float best = float.PositiveInfinity, pick = 0f;
         var drivers = RaceField.Drivers;
         var obstacles = RaceObstacles.All;
@@ -1788,13 +1829,16 @@ public class AIRacingBehaviour : MonoBehaviour
                 if (!moved) break;
             }
             float to = edge + dir * edgeClear;
-            if (to < lo || to > hi) continue;
+            bool onGrass = to < lo || to > hi;
+            if (onGrass && (to < grassLo || to > grassHi)) continue;
             float cost = Mathf.Abs(to - myLat);
             if (to < roadLo || to > roadHi) cost += 4f;
+            if (onGrass) cost += 100f;   // only when there is no way round on the road or the run-off at all
             if (_passAroundStopped && _commitDir == dir) cost -= 2f;
-            if (cost < best) { best = cost; pick = dir; edgeLat = edge; bestClear = edgeClear; }
+            if (cost < best) { best = cost; pick = dir; edgeLat = edge; bestClear = edgeClear; bestGrass = onGrass; }
         }
         if (pick != 0f) clearance = bestClear;
+        _lastEscapeGrass = pick != 0f && bestGrass;
         return pick;
     }
 
@@ -1876,6 +1920,8 @@ public class AIRacingBehaviour : MonoBehaviour
     void SetPassTarget(bool stoppedCar, float targetLat, float clearance)
     {
         _passAroundStopped = stoppedCar;
+        // Out on the grass if the way round that EscapeSide just found is (the side picked with it).
+        _escapeGrass = stoppedCar && _lastEscapeGrass;
         if (stoppedCar) { _passTargetLat = targetLat; _passClearance = clearance; }
     }
 

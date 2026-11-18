@@ -1015,6 +1015,256 @@ public class FormationLapSimTests
         Assert.IsEmpty(contacts, summary);
     }
 
+    // A pile-up right across the road under a caution: a row of wrecked cars stopped side by side from one edge to the
+    // other, a car's width short of a gap anywhere, with the field coming up behind. The wrecked cars are left turned
+    // across the road and nothing drives them, as a broken-down car is. With escapeWrecks every car gets round it - on
+    // the grass on the infield side, the outside is the wall - and no running car hits another at 5 mph or more
+    // (nudges at a crawl, inching out from behind a stopped car, are reported, not failed). Off (escape = false, a
+    // diagnostic) the field stops behind it and sits there: the bug. 2026-11-18: on 8/8 past in 37 s, max 4.1 m onto
+    // the grass; off 1/8 in 150 s.
+    [TestCase("Daytona", true)]
+    [TestCase("Daytona", false, Explicit = true, Reason = "Diagnostic: the field stuck behind the pile-up with escapeWrecks off")]
+    public void APileUpAcrossTheRoadIsDrivenRoundUnderACaution(string trackId, bool escape)
+    {
+        var r = Run(trackId, 12);
+        Assert.IsTrue(r.wentGreen, Report($"{trackId}: the formation lap never went green", r, 5));
+
+        var trackType = Runtime("TrackBuilder");
+        var splineType = Runtime("SplineDriver");
+        var fcType = Runtime("FormationController");
+        var scType = Runtime("SafetyCar");
+        var directorType = Runtime("FormationDirector");
+        var raceStartType = Runtime("RaceStart");
+        var lineupType = Runtime("CautionLineup");
+        Runtime("GrassEscapeBand").GetMethod("ClearCache").Invoke(null, null);
+        Physics2D.SyncTransforms();
+        var phaseType = raceStartType.GetNestedType("Phase");
+        var currentProp = raceStartType.GetProperty("Current");
+        var cars = _lastCars;
+        var scSpline = cars[0];
+        var sc = scSpline.GetComponent(scType);
+        var director = (Component)directorType.GetProperty("Instance").GetValue(null);
+        Assert.IsNotNull(director);
+        var track = (Component)_package.GetComponentInChildren(trackType, true);
+
+        var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var fcStep = fcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var scStep = scType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var directorStep = directorType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var posProp = splineType.GetProperty("CommandedLocalPos");
+        var headProp = splineType.GetProperty("CommandedHeadingDeg");
+        var onPitProp = splineType.GetProperty("IsOnPit");
+        var distProp = splineType.GetProperty("DistanceOnTrack");
+        var latProp = splineType.GetProperty("LateralOnTrack");
+        var mphProp = splineType.GetProperty("CurrentMph");
+        float lap = (float)splineType.GetProperty("TrackLength").GetValue(scSpline);
+        float dt = Time.fixedDeltaTime;
+        int n = cars.Count;
+
+        for (int i = 1; i < n; i++)
+        {
+            Set(cars[i], "aiMaxSpeedMph", 200f);
+            int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+            Set(cars[i], "tacticalLateralOffset", (slot & 1) == 0 ? -2.2f : 2.2f);
+        }
+        for (int step = 0; step < Mathf.RoundToInt(15f / dt); step++)
+            foreach (var c in cars) if (c != scSpline) splineStep.Invoke(c, null);
+
+        // Running order on the road: the car with the most empty road in front of it leads.
+        var running = new List<int>();
+        for (int i = 1; i < n; i++) if (!(bool)onPitProp.GetValue(cars[i])) running.Add(i);
+        Assert.GreaterOrEqual(running.Count, 8, "too few cars out on the track");
+        int leaderIdx = -1;
+        float best = -1f, leaderD = 0f;
+        foreach (int i in running)
+        {
+            float d = (float)distProp.GetValue(cars[i]);
+            float nearest = float.MaxValue;
+            foreach (int j in running)
+                if (j != i) nearest = Mathf.Min(nearest, Mathf.Repeat((float)distProp.GetValue(cars[j]) - d, lap));
+            if (nearest > best) { best = nearest; leaderIdx = i; leaderD = d; }
+        }
+        running.Sort((a, b) => Mathf.Repeat(leaderD - (float)distProp.GetValue(cars[a]), lap)
+                               .CompareTo(Mathf.Repeat(leaderD - (float)distProp.GetValue(cars[b]), lap)));
+
+        // The wreck, 350 m up the road from the leader on the next straight bit: the leading cars, stopped side by side
+        // from edge to edge, 3 m apart (1 m of daylight - no car fits).
+        float wreckD = Mathf.Repeat(leaderD + 350f, lap);
+        var sample = trackType.GetMethod("SampleAt").Invoke(track, new object[] { wreckD, null });
+        Vector2 sPos = (Vector2)sample.GetType().GetField("position").GetValue(sample);
+        Vector2 sTan = (Vector2)sample.GetType().GetField("tangent").GetValue(sample);
+        float width = (float)sample.GetType().GetField("width").GetValue(sample);
+        Vector2 right = new Vector2(sTan.y, -sTan.x);
+        int wreckCount = Mathf.CeilToInt((width - 2f) / 3f) + 1;
+        var wreck = new HashSet<int>();
+        var wreckLats = new List<float>();
+        for (int k = 0; k < wreckCount; k++)
+        {
+            int i = running[k];
+            wreck.Add(i);
+            float lat = Mathf.Min(-width * 0.5f + 1f + 3f * k, width * 0.5f - 1f);
+            wreckLats.Add(lat);
+            float along = (k % 2) * 1.5f;   // a ragged row, not a parade
+            Vector2 local = sPos + sTan * along + right * lat;
+            var tf = cars[i].transform;
+            Vector3 world = track.transform.TransformPoint(new Vector3(local.x, local.y, 0f));
+            tf.position = new Vector3(world.x, world.y, tf.position.z);
+            Vector2 tWorld = track.transform.TransformVector(new Vector3(sTan.x, sTan.y, 0f));
+            float facing = Mathf.Atan2(tWorld.y, tWorld.x) * Mathf.Rad2Deg + (k % 2 == 0 ? 25f : -35f);
+            float angleOffset = (float)splineType.GetField("angleOffsetDeg").GetValue(cars[i]);
+            bool up = (bool)splineType.GetField("spriteFacesUp").GetValue(cars[i]);
+            tf.rotation = Quaternion.Euler(0f, 0f, facing + angleOffset - (up ? 90f : 0f));
+            splineType.GetMethod("EngageFromCurrentPose").Invoke(cars[i], new object[] { 0f });
+            // Broken down, as AIRetirement leaves a wrecked car: nothing drives it, nothing plans for it.
+            if (cars[i].GetComponent(fcType) is Behaviour wreckFc) wreckFc.enabled = false;
+            Set(cars[i], "aiMaxSpeedMph", 0f);
+            Set(cars[i], "tacticalLateralOffset", 0f);
+        }
+        var field = new List<int>();
+        foreach (int i in running) if (!wreck.Contains(i)) field.Add(i);
+
+        // The caution, as FullCourseCaution.Declare: the safety car out ahead of the wreck, the wrecked cars dropped.
+        scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { Mathf.Repeat(wreckD + 150f, lap) });
+        var caughtList = new List<Transform>();
+        foreach (int i in wreck) caughtList.Add(cars[i].transform);
+        lineupType.GetMethod("Begin", new[] { typeof(IList<Transform>), typeof(IEnumerable<Transform>), typeof(float), typeof(float) })
+            .Invoke(null, new object[] { null, caughtList, 3f, 30f });
+        scType.GetField("PickupLeader").SetValue(sc, cars[field[0]].transform);
+        currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
+        for (int i = 1; i < n; i++)
+        {
+            var fc = cars[i].GetComponent(fcType);
+            if (fc != null) Set(fc, "escapeWrecks", escape);
+        }
+
+        // How far each car of the field has to go to be past the wreck.
+        var toGo = new float[n];
+        var prevD = new float[n];
+        for (int i = 0; i < n; i++) prevD[i] = (float)distProp.GetValue(cars[i]);
+        foreach (int i in field) toGo[i] = Mathf.Repeat(wreckD - prevD[i], lap) + 12f;
+
+        var pos = new Vector2[n];
+        var fwd = new Vector2[n];
+        var touching = new HashSet<long>();
+        var contacts = new List<string>();
+        var wreckTouches = new List<string>();
+        var hardContacts = new List<string>();
+        var passedAt = new Dictionary<int, float>();
+        float minEdge = float.MaxValue, maxOut = 0f;
+        float t = 0f;
+        try
+        {
+            int steps = Mathf.RoundToInt(150f / dt);
+            for (int step = 0; step < steps && passedAt.Count < field.Count; step++)
+            {
+                t = (step + 1) * dt;
+                for (int i = 1; i < n; i++)
+                {
+                    if (wreck.Contains(i)) continue;
+                    var fc = cars[i].GetComponent(fcType);
+                    if (fc != null) fcStep.Invoke(fc, null);
+                }
+                scStep.Invoke(sc, null);
+                directorStep.Invoke(director, null);
+                foreach (int i in wreck) Set(cars[i], "aiMaxSpeedMph", 0f);
+                foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);
+
+                for (int i = 0; i < n; i++)
+                {
+                    float d = (float)distProp.GetValue(cars[i]);
+                    bool onPit = (bool)onPitProp.GetValue(cars[i]);
+                    float delta = Mathf.Repeat(d - prevD[i] + lap * 0.5f, lap) - lap * 0.5f;
+                    if (!onPit && delta > 0f && toGo[i] > 0f)
+                    {
+                        toGo[i] -= delta;
+                        if (toGo[i] <= 0f && field.Contains(i)) passedAt[i] = t;
+                    }
+                    prevD[i] = d;
+                    pos[i] = (Vector2)posProp.GetValue(cars[i]);
+                    float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
+                    fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
+                    if (field.Contains(i) && !onPit)
+                    {
+                        float lat = (float)latProp.GetValue(cars[i]);
+                        maxOut = Mathf.Max(maxOut, Mathf.Abs(lat) - width * 0.5f);
+                    }
+                }
+
+                for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (i == 0 && !scSpline.gameObject.activeSelf) continue;
+                    if (wreck.Contains(i) && wreck.Contains(j)) continue;
+                    if ((pos[i] - pos[j]).sqrMagnitude > 64f) continue;
+                    long key = (long)i * 1000 + j;
+                    if (Penetration(pos[i], fwd[i], pos[j], fwd[j]) <= 0f) { touching.Remove(key); continue; }
+                    if (!touching.Add(key)) continue;
+                    string what = $"t{t:0.0} {cars[i].name} / {cars[j].name} at {(float)distProp.GetValue(cars[i]):0} m " +
+                                  $"({(float)mphProp.GetValue(cars[i]):0} / {(float)mphProp.GetValue(cars[j]):0} mph)";
+                    if (wreck.Contains(i) || wreck.Contains(j)) wreckTouches.Add(what);
+                    else
+                    {
+                        contacts.Add(what);
+                        // A nudge at a crawl, inching out from behind a stopped car, is not a crash; anything quicker is.
+                        if (Mathf.Max((float)mphProp.GetValue(cars[i]), (float)mphProp.GetValue(cars[j])) >= 5f)
+                        {
+                            string State(int k)
+                            {
+                                var fc = cars[k].GetComponent(fcType);
+                                object F(string f) => fcType.GetField(f, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fc);
+                                return $"{cars[k].name} centre {(float)splineType.GetProperty("CentreDistanceOnTrack").GetValue(cars[k]):0.0} " +
+                                       $"lat {(float)latProp.GetValue(cars[k]):0.0} head {(float)headProp.GetValue(cars[k]):0} " +
+                                       $"esc {F("_escapeSide")} tgt {F("_escapeTarget"):0.0} togo {F("_escapeToGo"):0.0} " +
+                                       $"cap {splineType.GetField("aiMaxSpeedMph").GetValue(cars[k]):0.0} grass {splineType.GetField("allowGrass").GetValue(cars[k])}";
+                            }
+                            hardContacts.Add(what + " [" + State(i) + " | " + State(j) + "]");
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            lineupType.GetMethod("End").Invoke(null, null);
+        }
+
+        var stuck = new List<string>();
+        foreach (int i in field)
+            if (!passedAt.ContainsKey(i))
+                stuck.Add($"{cars[i].name} {toGo[i]:0} m short at {(float)mphProp.GetValue(cars[i]):0} mph, lat {(float)latProp.GetValue(cars[i]):0.0}");
+        var times = new List<string>();
+        foreach (var kv in passedAt) times.Add($"{cars[kv.Key].name} t{kv.Value:0}");
+        var centreProp = splineType.GetProperty("CentreDistanceOnTrack");
+        var where = new List<string>();
+        foreach (int i in wreck)
+            where.Add($"{cars[i].name} centre {(float)centreProp.GetValue(cars[i]):0.0} lat {(float)latProp.GetValue(cars[i]):0.0} " +
+                      $"drawn {(Vector2)posProp.GetValue(cars[i])}");
+        foreach (int i in field)
+        {
+            if (passedAt.ContainsKey(i)) continue;
+            var fc = cars[i].GetComponent(fcType);
+            object F(string f) => fcType.GetField(f, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fc);
+            where.Add($"{cars[i].name} centre {(float)centreProp.GetValue(cars[i]):0.0} lat {(float)latProp.GetValue(cars[i]):0.0} " +
+                      $"drawn {(Vector2)posProp.GetValue(cars[i])} escapeSide {F("_escapeSide")} blocked {F("_blockedTimer")} " +
+                      $"grass {splineType.GetField("allowGrass").GetValue(cars[i])} cap {splineType.GetField("aiMaxSpeedMph").GetValue(cars[i])}");
+        }
+        times.Add("\n  where: " + string.Join("\n    ", where));
+        string summary = $"[PileUpSim] {trackId} escape={escape}: {wreckCount} cars across {width:0.0} m at {wreckD:0} m " +
+                         $"(lats {string.Join(", ", wreckLats.ConvertAll(l => l.ToString("0.0")))}); " +
+                         $"{passedAt.Count}/{field.Count} past in {t:0} s, furthest out {maxOut:0.0} m past the edge; " +
+                         $"{contacts.Count} contacts between running cars ({hardContacts.Count} at 5 mph+), {wreckTouches.Count} with the wreck\n  passed: " +
+                         string.Join(", ", times) + "\n  stuck: " + string.Join("; ", stuck) +
+                         "\n  contacts: " + string.Join("\n    ", contacts) + "\n  wreck touches: " + string.Join("\n    ", wreckTouches);
+        Debug.Log(summary);
+        if (!escape)
+        {
+            Assert.Less(passedAt.Count, field.Count, "without escapeWrecks the field was expected to stick. " + summary);
+            return;
+        }
+        Assert.AreEqual(field.Count, passedAt.Count, "every car should get round the wreck. " + summary);
+        Assert.IsEmpty(hardContacts, "no running car should hit another at 5 mph or more. " + summary);
+    }
+
     [TestCase("WatkinsGlen")]
     [TestCase("Daytona")]
     public void TheFieldStaysCloseBehindAPlayerOnPole(string trackId)

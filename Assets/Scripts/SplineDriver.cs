@@ -92,6 +92,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float runOffEscapeMetres = 8f;
     // Set each step by AIRacingBehaviour while it is driving round a stopped car: the bounds take in the run-off.
     [System.NonSerialized] public bool allowRunOff;
+    [Tooltip("How far (m) past the road edge a car may go onto the grass or the infield to get round a wreck that blocks the whole road - the last resort, once there is no way round on the road or the paved run-off. Stopped short of any wall, building or the pit lane on the way (GrassEscapeBand). Only while AIRacingBehaviour or FormationController sets allowGrass.")]
+    public float grassEscapeMetres = 15f;
+    [Tooltip("Steepest angle (deg) to the road a placed (kinematic) car may travel at while it is getting round a wreck on the grass (allowGrass) - in place of maxPathAngleDeg. A car queued nose to tail behind a pile-up has a metre or two to get out from behind it: at 30 degrees it could never get across, and sat there.")]
+    [Range(0f, 80f)] public float grassEscapePathAngleDeg = 75f;
+    // Set by AIRacingBehaviour (green) or FormationController (caution) while the car is getting round a wreck that
+    // fills the road: the bounds take in the grass / infield beside the road, out to the nearest wall (GrassEscapeBand).
+    [System.NonSerialized] public bool allowGrass;
     [Tooltip("Per-pass relaxation factor. 0 = no movement, 1 = full averaging. ~0.3 is stable.")]
     [Range(0f, 1f)]
     public float smoothingRelaxation = 0.3f;
@@ -668,6 +675,34 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
         BoundsAt(_distance + aheadMetres, out lo, out hi, runOff);
         return true;
+    }
+
+    // As above, with or without the grass / infield a car may go onto to get round a wreck filling the road.
+    public bool GetBoundsAhead(float aheadMetres, bool runOff, bool grass, out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
+        BoundsAt(_distance + aheadMetres, out lo, out hi, runOff, grass);
+        return true;
+    }
+
+    // The tightest bounds (the most room on both sides that holds) from fromAhead to toAhead metres up the road, every
+    // 4 m: whether a car can stay out at a lateral the whole way past a wreck, not just level with it.
+    public bool GetBoundsOver(float fromAhead, float toAhead, bool runOff, bool grass, out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
+        if (toAhead < fromAhead) { float t = toAhead; toAhead = fromAhead; fromAhead = t; }
+        for (float a = fromAhead; ; a = Mathf.Min(a + 4f, toAhead))
+        {
+            BoundsAt(_distance + a, out float l, out float h, runOff, grass);
+            lo = Mathf.Max(lo, l);
+            hi = Mathf.Min(hi, h);
+            if (a >= toAhead) break;
+        }
+        return lo <= hi;
     }
 
     // The bounds here without the run-off (allowRunOff), so a car out on it can tell when it is back on the road.
@@ -2008,9 +2043,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return lo;
     }
 
-    void BoundsAt(float distance, out float lo, out float hi) => BoundsAt(distance, out lo, out hi, allowRunOff);
+    void BoundsAt(float distance, out float lo, out float hi) => BoundsAt(distance, out lo, out hi, allowRunOff, allowGrass);
 
-    void BoundsAt(float distance, out float lo, out float hi, bool runOff)
+    void BoundsAt(float distance, out float lo, out float hi, bool runOff) => BoundsAt(distance, out lo, out hi, runOff, false);
+
+    void BoundsAt(float distance, out float lo, out float hi, bool runOff, bool grass)
     {
         lo = -100f; hi = 100f;
         if (_leftBoundProfile == null || _rightBoundProfile == null || _mainSamples == null) return;
@@ -2034,6 +2071,66 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             lo = Mathf.Min(lo, Mathf.Lerp(wideLo[idxLo], wideLo[idxHi], t));
             hi = Mathf.Max(hi, Mathf.Lerp(wideHi[idxLo], wideHi[idxHi], t));
         }
+        if (grass)
+        {
+            var band = GrassBand();
+            if (band != null && band.Lo.Length == n)
+            {
+                lo = Mathf.Min(lo, Mathf.Lerp(band.Lo[idxLo], band.Lo[idxHi], t));
+                hi = Mathf.Max(hi, Mathf.Lerp(band.Hi[idxLo], band.Hi[idxHi], t));
+            }
+        }
+    }
+
+    // The grass / infield beside the road a car may use to get round a wreck (allowGrass), per main sample: worked out
+    // from the scenery the first time anybody needs it, then shared by every car on the track.
+    GrassEscapeBand _grassBand;
+    GrassEscapeBand GrassBand()
+    {
+        if (_grassBand != null && _grassBand.Matches(track, _mainSamples, grassEscapeMetres)) return _grassBand;
+        _grassBand = GrassEscapeBand.For(track, _mainSamples, grassEscapeMetres);
+        return _grassBand;
+    }
+
+    // Across the road (m, laterals from the centreline) where this car's body really is: its four corners, from the
+    // transform, against the road at its centre. A car spun or sideways in a wreck covers far more of the road than
+    // a car-width round LateralOnTrack (the path point, 2.4 m up its nose) - going round one by that missed.
+    public bool BodyLateralExtent(float halfLength, float halfWidth, out float lo, out float hi)
+    {
+        lo = hi = LateralOnTrack;
+        if (_onPit || track == null || _mainSamples == null || _mainSamples.Count < 2) return false;
+        var s = track.SampleAt(CentreDistanceOnTrack, _mainSamples);
+        var tf = track.transform;
+        Vector2 centre = tf.InverseTransformPoint(transform.position);
+        float facingDeg = transform.eulerAngles.z - angleOffsetDeg + (spriteFacesUp ? 90f : 0f);
+        Vector2 fwdWorld = new Vector2(Mathf.Cos(facingDeg * Mathf.Deg2Rad), Mathf.Sin(facingDeg * Mathf.Deg2Rad));
+        Vector2 fwd = ((Vector2)tf.InverseTransformDirection(new Vector3(fwdWorld.x, fwdWorld.y, 0f))).normalized;
+        Vector2 side = new Vector2(-fwd.y, fwd.x);
+        Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+        lo = float.MaxValue;
+        hi = float.MinValue;
+        for (int a = -1; a <= 1; a += 2)
+        for (int b = -1; b <= 1; b += 2)
+        {
+            float lat = Vector2.Dot(centre + fwd * (a * halfLength) + side * (b * halfWidth) - s.position, right);
+            lo = Mathf.Min(lo, lat);
+            hi = Mathf.Max(hi, lat);
+        }
+        return true;
+    }
+
+    // Where the road's own edge is (m from the centreline, no RoadEdgeMargin) - so a car can tell it is out on the
+    // grass, not merely wide of the bounds the AI keeps to.
+    public bool GetRoadEdges(out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || track == null || _mainSamples == null || _mainSamples.Count < 2) return false;
+        float w = track.SampleAt(_distance, _mainSamples).width;
+        if (w <= 0f) return false;
+        lo = -0.5f * w;
+        hi = 0.5f * w;
+        return true;
     }
 
     float LateralAt(float distance)
@@ -3270,7 +3367,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // road and the pit lane, whose laterals are measured from different centrelines.
         if (!externalMotionController && maxPathAngleDeg > 0f && _hasPrevLateral && !_onPit && !_prevPlacedOnPit)
         {
-            float maxStep = Mathf.Abs(speed) * Time.fixedDeltaTime * Mathf.Tan(maxPathAngleDeg * Mathf.Deg2Rad);
+            float pathAngle = allowGrass ? Mathf.Max(maxPathAngleDeg, grassEscapePathAngleDeg) : maxPathAngleDeg;
+            float maxStep = Mathf.Abs(speed) * Time.fixedDeltaTime * Mathf.Tan(pathAngle * Mathf.Deg2Rad);
             totalLateral = _prevLateral + Mathf.Clamp(totalLateral - _prevLateral, -maxStep, maxStep);
         }
         _prevPlacedOnPit = _onPit;
