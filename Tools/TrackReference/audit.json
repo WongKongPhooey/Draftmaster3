@@ -16,9 +16,9 @@
     },
     "Charlotte": {
       "wrong": "game",
-      "rebuild": "yes",
-      "from": "#0 (Charlotte Motor Speedway oval ways, -2.1%)",
-      "why": "Game is a narrow generic oval (1021 x 351 m) on a wide 1.5 mi quad-oval; 42.8 m RMS. The reference was right (the same ring as before; OSM draws it a little inside the groove, which the importer's rescale to the published lap absorbs). The Roval-chicane chains now rank below it."
+      "rebuild": "trace written 2026-11-18; Unity import pending",
+      "from": "#0 (Charlotte Motor Speedway oval ways, -2.1%), now Assets/TrackTraces/Charlotte.json (--start=apex); pit ways 116034339,401660631,1052107105,401660628 (668 m, the whole front-stretch pit road)",
+      "why": "Game is a narrow generic oval (1021 x 351 m) on a wide 1.5 mi quad-oval; 42.8 m RMS. The reference was right (the same ring as before; OSM draws it a little inside the groove, which the importer's rescale to the published lap absorbs). The Roval-chicane chains now rank below it. Rebuilt 2026-11-18 as far as a lane without the Editor can: the trace imports headlessly (TracedOvalImportTests, the importer's own Core path) closing to 3 m (0.13% of the lap, limit 3%) in 46 constant-curvature pieces, and that lap lies 0.6-1.0 m RMS off the trace - 'matches' once imported; the mapped pit lane fits as an 820 m pit road (r160 arcs, 601 m straight). The same reading predicts Daytona's real import to 0.1 m and its pit road exactly. The stale trained line (fitted to the generic oval, same lap length so it would have been accepted) is deleted. Still to do in Unity: Import Traced Geometry (selected asset) on Charlotte only, Export Geometry For Paddock Layout (Selected Track), re-run this report, redress walls/ground/stands, retrain the line, run the Charlotte track tests and a lap sim."
     },
     "CharlotteRoval": {
       "wrong": "game (old reference was an oval-and-Roval chain)",

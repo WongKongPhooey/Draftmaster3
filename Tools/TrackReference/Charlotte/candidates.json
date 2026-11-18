@@ -2,36 +2,23 @@
  "trackId": "Charlotte",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    402168711,
-    116107372,
-    402168711,
-    116107359,
-    402168711,
-    396483278,
-    116034341,
-    402168709,
-    401660627,
-    1052107104
-   ],
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 402168711,116107372,402168711,116107359,402168711,396483278,116034341,402168709,401660627,1052107104); -2.11% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Charlotte Motor Speedway 95%",
-    "Charlotte Motor Speedway;1/4 Mile track 5%"
-   ],
-   "lengthM": 2363.0,
-   "lengthErrPct": -2.11,
+   "names": [],
+   "lengthM": 2362.5,
+   "lengthErrPct": -2.13,
    "selfIntersects": false,
-   "counterTurnDeg": 3.3,
+   "counterTurnDeg": 3.2,
    "flags": [],
    "builtFit": {
-    "rmsM": 42.79,
-    "p95M": 67.6,
-    "maxM": 70.94,
-    "scale": 1.0165
+    "rmsM": 42.8,
+    "p95M": 67.61,
+    "maxM": 70.96,
+    "scale": 1.0163
    },
    "index": 0
   },
@@ -71,8 +58,8 @@
     "turns 157 deg against the lap: not an oval"
    ],
    "builtFit": {
-    "rmsM": 39.6,
-    "p95M": 66.32,
+    "rmsM": 39.61,
+    "p95M": 66.31,
     "maxM": 72.52,
     "scale": 1.0089
    },
@@ -113,15 +100,15 @@
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 42.79,
-  "p95M": 67.6,
-  "maxM": 70.94,
+  "rmsM": 42.8,
+  "p95M": 67.61,
+  "maxM": 70.96,
   "refToBuiltMaxM": 70.97,
   "worstStretches": [
    {
     "fromM": 396,
     "toM": 494,
-    "meanM": 68.7
+    "meanM": 68.8
    },
    {
     "fromM": 206,
@@ -131,10 +118,10 @@
    {
     "fromM": 496,
     "toM": 594,
-    "meanM": 53.1
+    "meanM": 53.2
    }
   ],
-  "scale": 1.0165
+  "scale": 1.0163
  },
  "verdict": "wrong shape",
  "notes": []

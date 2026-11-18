@@ -30,7 +30,7 @@ Ranked: a lap that does not cross itself, then one with nothing against it (no p
 
 | # | What | Lap | vs published | Against it | Turns against | Runs on | Built line fits within (RMS / p95 / max) | OSM ways |
 |---|---|---|---|---|---|---|---|---|
-| 0 (best) | raceway ring taken as the centre | 2363 m | -2.11% | - | 3 deg | Charlotte Motor Speedway 95%, Charlotte Motor Speedway;1/4 Mile track 5% | 42.8 / 67.6 / 70.9 m (scale x1.016) | 402168711,116107372,402168711,116107359,402168711,396483278,116034341,402168709... |
+| 0 (best) | committed trace (Assets/TrackTraces) | 2362 m | -2.13% | - | 3 deg | - | 42.8 / 67.6 / 71.0 m (scale x1.016) |  |
 | 1 | raceway ring taken as the centre | 2420 m | +0.27% | 13% on ways named for another circuit; turns 157 deg against the lap: not an oval | 157 deg | Charlotte Motor Speedway 81%, Charlotte Motor Speedway Roval Frontstretch Chicane 7%, Charlotte Motor Speedway Roval Backstretch Chicane 6%, Charlotte Motor Speedway;1/4 Mile track 5% | 39.6 / 66.3 / 72.5 m (scale x1.009) | 116107359,402168711,116107372,402168711,1052107104,401660627,402168709,116034341... |
 | 2 | raceway ring taken as the centre | 2617 m | +8.42% | 100% on ways named for another circuit; turns 510 deg against the lap: not an oval | 510 deg | Ten Tenths Motor Club 100% | 74.2 / 123.1 / 147.7 m (scale x0.950) | 827346006,835498378,827346004,1526164993,827346004,1265117379 |
 
@@ -38,13 +38,13 @@ Mapped pit lanes: way 116034339 Pit Lane (282 m), way 923003592 Charlotte Motor 
 
 ## How far the game is from the best candidate
 
-Fitted by rotation, translation and uniform scale (x1.0165). RMS **42.8 m**, 95% within 67.6 m, worst point 70.9 m; worst gap from the candidate back to the game 71.0 m.
+Fitted by rotation, translation and uniform scale (x1.0163). RMS **42.8 m**, 95% within 67.6 m, worst point 71.0 m; worst gap from the candidate back to the game 71.0 m.
 
 Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
-- 396-494 m: 68.7 m
+- 396-494 m: 68.8 m
 - 206-304 m: 67.8 m
-- 496-594 m: 53.1 m
+- 496-594 m: 53.2 m
 
 ## Files
 

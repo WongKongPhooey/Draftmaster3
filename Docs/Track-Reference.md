@@ -94,6 +94,11 @@ rebuild and from which candidate - and `STATUS.md` prints it under *Audit*, so i
    with the way ids from the report - see `Docs/Tracks.md` § Tracing from the wall.
 3. **Import** in Unity: `Draftmaster > Tracks > Import Traced Geometry For Every Trace`. The importer still
    refuses a shape that does not close within 3% of its own lap.
+   Without the Editor (an overnight lane), add a `[TestCase("<id>")]` to `Assets/Tests/Editor/TracedOvalImportTests.cs`
+   and run `dotnet test Tools/HeadlessTests`: it reads the trace through the importer's own Core path and checks
+   the closure, that the built lap lies within 4 m RMS of the trace, and that a mapped pit lane fits as pit road -
+   so the import is known to land before anyone opens Unity. To import one venue without re-importing every
+   trace (Daytona, Texas...), select its asset and use `Import Traced Geometry (selected asset)`.
 4. **Re-export and re-measure**: `Draftmaster > Tracks > Export Geometry For Paddock Layout (Selected Track)`,
    then run the report again. The verdict should now be `matches`.
 5. **Retrain the racing line** (a re-import keeps the old one if the lap length did not change - see
@@ -142,6 +147,7 @@ can be saved but the picture will not come back with it - re-run the menu item. 
 | `Tools/TrackReference/<id>/` | Per venue: `report.md`, `facts.json`, `candidates.json`; `cache/` (ignored). |
 | `Tools/TrackReference/STATUS.md` | Every venue's verdict, worst first, then the audit. |
 | `Tools/TrackReference/audit.json` | Per venue, by hand: which side is wrong, rebuild or not, from which candidate. |
+| `Assets/Tests/Editor/TracedOvalImportTests.cs` | A curvature trace read as the importer reads it, headless: closes, lies on the trace, pit lane fits. |
 | `Assets/Scripts/Tracks/Core/TrackReferenceAlignment.cs` | Alignment corners -> sprite placement. Headless-tested (`TrackReferenceAlignmentTests`). |
 | `Assets/Editor/TrackReferenceOverlay.cs` | The `Draftmaster > Tracks > Reference` menu. |
 | `.claude/skills/track-reference/SKILL.md` | How Claude should use all this when asked to make a track accurate. |

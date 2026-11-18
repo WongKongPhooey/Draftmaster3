@@ -82,6 +82,14 @@ offset lands on the outside wall in both turns. The centreline is 787 m against 
 importer scales it up to the published lap as it does every trace. Pit road is the front-stretch run of
 mapped way 402168723 (the real one wraps the whole infield; the game's pit road is one straight).
 
+### From the track-reference report (Charlotte)
+
+`Tools/track_reference.py Charlotte --write-trace=0 --start=apex --pit=116034339,401660631,1052107105,401660628`
+(2026-11-18): OSM's raceway ring for the quad-oval itself (candidate 0, 2,362 m against a published 2,414 m - mapped
+a little inside the groove, which the rescale absorbs), resampled and smoothed, starting at the front-stretch apex.
+Its pit lane is four mapped ways joined north to south, 668 m. Checked without the Editor by
+`TracedOvalImportTests`: closes to 3 m, lies ~1 m RMS off the trace once built, pit road fits at 820 m.
+
 ## What a trace cannot tell you
 
 **Banking** is not recorded in OSM at all, and **width** almost never is for raceways. Both still come from

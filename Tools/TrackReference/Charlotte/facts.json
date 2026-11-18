@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 1.5,
   "surfaceWidthM": 18.29,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 402168711,116107372,402168711,116107359,402168711,396483278,116034341,402168709,401660627,1052107104); -2.11% from the published lap"
  },
  "wikipedia": {
   "title": "Charlotte Motor Speedway",
@@ -110,8 +110,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  35.3525,
-  -80.6825
+  35.351678,
+  -80.682951
  ],
  "osmRadiusM": 1122,
  "osmCounts": {

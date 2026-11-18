@@ -1404,6 +1404,7 @@ def write_status(results):
             '%+.2f%%' % f['lengthCheckPct'] if f['lengthCheckPct'] is not None else '-',
             'NAIP' if f['aerial'] else 'none'))
     L.append('')
+    L += audit_section()
     with open(os.path.join(OUT, 'STATUS.md'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(L))
     print('wrote', os.path.join(OUT, 'STATUS.md'))
