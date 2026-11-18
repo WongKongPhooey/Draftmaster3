@@ -334,5 +334,7 @@
   "scale": 0.95
  },
  "verdict": "wrong shape",
- "notes": []
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
 }

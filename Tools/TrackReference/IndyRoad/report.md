@@ -65,5 +65,6 @@ Furthest-out stretches (mean deviation over 100 m, in metres along the game spli
 ## Next steps
 
 - Use a candidate: `python -I Tools/track_reference.py IndyRoad --write-trace=<#> [--start=apex|lat,lon] [--pit=<wayId>]`, then Unity `Draftmaster > Tracks > Import Traced Geometry For Every Trace`, re-export the geometry, re-run this report, retrain the racing line.
+- Note: buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them.
 
 OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0.
