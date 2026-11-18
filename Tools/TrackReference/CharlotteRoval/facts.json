@@ -115,17 +115,17 @@
  ],
  "osmRadiusM": 1544,
  "osmCounts": {
-  "raceway": 46,
+  "raceway": 45,
   "pit": 5,
   "wall": 10,
   "fence": 1,
   "surface": 1,
   "grandstand": 7,
   "stadium": 1,
-  "building": 55,
-  "parking": 13,
-  "water": 8,
-  "road": 671
+  "building": 293,
+  "parking": 64,
+  "water": 22,
+  "road": 712
  },
  "osmPitLanes": [
   {
@@ -158,11 +158,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 1755,
-  "height": 2494,
-  "groundMetresPerPixel": 0.6002,
+  "width": 2074,
+  "height": 3069,
+  "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": null,
  "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"

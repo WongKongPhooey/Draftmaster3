@@ -6,9 +6,16 @@
    "kind": "trace",
    "ways": [],
    "note": "",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Darlington Raceway 100%"
+   ],
    "lengthM": 2104.7,
    "lengthErrPct": -4.54,
    "selfIntersects": false,
+   "counterTurnDeg": 0.2,
+   "flags": [],
    "builtFit": {
     "rmsM": 38.25,
     "p95M": 52.35,
@@ -21,36 +28,29 @@
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
-    104277971
-   ],
-   "lengthM": 2104.7,
-   "lengthErrPct": -4.54,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 38.25,
-    "p95M": 52.35,
-    "maxM": 52.46,
-    "scale": 0.95
-   },
-   "index": 1
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
     104277971,
     918351834
+   ],
+   "pitShare": 0.734,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pit Road 73%",
+    "Darlington Raceway 27%"
    ],
    "lengthM": 1977.6,
    "lengthErrPct": -10.3,
    "selfIntersects": false,
+   "counterTurnDeg": 0.2,
+   "flags": [
+    "runs 73% down a pit lane"
+   ],
    "builtFit": {
     "rmsM": 49.22,
     "p95M": 69.94,
     "maxM": 71.57,
     "scale": 0.95
    },
-   "index": 2
+   "index": 1
   }
  ],
  "best": 0,

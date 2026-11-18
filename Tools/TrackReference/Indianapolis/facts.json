@@ -147,7 +147,7 @@
   "building": 3880,
   "parking": 101,
   "water": 8,
-  "road": 790
+  "road": 800
  },
  "osmPitLanes": [
   {
@@ -181,7 +181,12 @@
    "lengthM": 300.2
   }
  ],
- "wallGapMeasured": null,
+ "wallGapMeasured": {
+  "medianM": 1.5,
+  "p10M": 1.5,
+  "p90M": 1.5,
+  "note": "gap between the two longest wall rings (outer wall to pit wall / inside wall)"
+ },
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
@@ -189,7 +194,7 @@
   "height": 3982,
   "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": null,
  "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"

@@ -7,9 +7,16 @@
    "ways": [
     123830268
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Lucas Oil Raceway 100%"
+   ],
    "lengthM": 1060.3,
    "lengthErrPct": -4.52,
    "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [],
    "builtFit": {
     "rmsM": 24.53,
     "p95M": 30.89,
@@ -45,5 +52,7 @@
   "scale": 0.9947
  },
  "verdict": "off",
- "notes": []
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
 }

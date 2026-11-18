@@ -6,7 +6,165 @@
    "kind": "raceway",
    "ways": [
     116107359,
+    402168714,
+    402168718,
+    402168714,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    676112675,
+    116034341,
+    396483278,
+    918050113,
+    396483278,
+    402168711
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 48%",
+    "Charlotte Motor Speedway Roval 29%",
+    "Charlotte Motor Speedway Roval 2024 11%",
+    "Charlotte Motor Speedway Roval Frontstretch Chicane 5%"
+   ],
+   "lengthM": 3693.8,
+   "lengthErrPct": -1.07,
+   "selfIntersects": false,
+   "counterTurnDeg": 495.8,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 107.56,
+    "p95M": 220.84,
+    "maxM": 232.48,
+    "scale": 0.95
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116107359,
     585912895,
+    116107359,
+    402168714,
+    402168718,
+    402168714,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    676112675,
+    116034341,
+    396483278,
+    402168711
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 52%",
+    "Charlotte Motor Speedway Roval 35%",
+    "Charlotte Motor Speedway Roval 2024 5%",
+    "Charlotte Motor Speedway Roval Frontstretch Chicane 5%"
+   ],
+   "lengthM": 3644.7,
+   "lengthErrPct": -2.38,
+   "selfIntersects": false,
+   "counterTurnDeg": 412.9,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 108.29,
+    "p95M": 221.56,
+    "maxM": 232.72,
+    "scale": 0.95
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116107359,
+    585912895,
+    116107359,
+    402168714,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    396483278,
+    402168711
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 52%",
+    "Charlotte Motor Speedway Roval 40%",
+    "Charlotte Motor Speedway Roval 2024 5%",
+    "Charlotte Motor Speedway;1/4 Mile track 3%"
+   ],
+   "lengthM": 3895.8,
+   "lengthErrPct": 4.34,
+   "selfIntersects": false,
+   "counterTurnDeg": 549.2,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 107.78,
+    "p95M": 221.34,
+    "maxM": 232.69,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116107359,
+    402168714,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    396483278,
+    918050113,
+    396483278,
+    402168711
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 48%",
+    "Charlotte Motor Speedway Roval 34%",
+    "Charlotte Motor Speedway Roval 2024 10%",
+    "Charlotte Motor Speedway Roval Backstretch Chicane 4%"
+   ],
+   "lengthM": 3944.9,
+   "lengthErrPct": 5.66,
+   "selfIntersects": false,
+   "counterTurnDeg": 632.1,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 107.03,
+    "p95M": 220.69,
+    "maxM": 232.44,
+    "scale": 0.95
+   },
+   "index": 3
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
     116107359,
     402168714,
     402168718,
@@ -20,39 +178,49 @@
     396483278,
     402168711
    ],
-   "lengthM": 3614.6,
-   "lengthErrPct": -3.19,
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 51%",
+    "Charlotte Motor Speedway Roval 28%",
+    "Charlotte Motor Speedway Roval 2024 18%",
+    "Charlotte Motor Speedway;1/4 Mile track 3%"
+   ],
+   "lengthM": 3952.2,
+   "lengthErrPct": 5.85,
    "selfIntersects": false,
+   "counterTurnDeg": 551.1,
+   "flags": [],
    "builtFit": {
-    "rmsM": 107.78,
-    "p95M": 221.34,
-    "maxM": 232.68,
+    "rmsM": 106.72,
+    "p95M": 221.98,
+    "maxM": 230.43,
     "scale": 0.95
    },
-   "index": 0
+   "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 107.78,
-  "p95M": 221.34,
-  "maxM": 232.68,
-  "refToBuiltMaxM": 237.3,
+  "rmsM": 107.56,
+  "p95M": 220.84,
+  "maxM": 232.48,
+  "refToBuiltMaxM": 235.86,
   "worstStretches": [
    {
-    "fromM": 2947,
-    "toM": 3045,
-    "meanM": 230.5
+    "fromM": 2945,
+    "toM": 3043,
+    "meanM": 230.3
    },
    {
     "fromM": 734,
     "toM": 832,
-    "meanM": 221.2
+    "meanM": 220.7
    },
    {
-    "fromM": 3047,
-    "toM": 3145,
-    "meanM": 205.7
+    "fromM": 3045,
+    "toM": 3143,
+    "meanM": 205.8
    }
   ],
   "scale": 0.95

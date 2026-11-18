@@ -88,10 +88,10 @@
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
   "width": 2224,
-  "height": 1669,
+  "height": 1711,
   "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": [
   {

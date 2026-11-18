@@ -6,9 +6,16 @@
    "kind": "trace",
    "ways": [],
    "note": "batch",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Autódromo Hermanos Rodríguez 94%"
+   ],
    "lengthM": 4340.6,
    "lengthErrPct": 1.02,
    "selfIntersects": false,
+   "counterTurnDeg": 587.5,
+   "flags": [],
    "builtFit": {
     "rmsM": 121.32,
     "p95M": 194.66,
@@ -21,8 +28,18 @@
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
-    772754605,
-    638491478,
+    1128592396,
+    605367312,
+    1128592396,
+    772755824,
+    823823141,
+    823823139,
+    823823140,
+    823823139,
+    605367312,
+    772755822,
+    772755821,
+    772754606,
     772754605,
     638491478,
     772754605,
@@ -32,22 +49,108 @@
     772754608,
     772754607,
     772754608,
-    1128592396,
-    605367312,
-    772755822,
-    772755821,
-    772754606
+    1128592397
    ],
-   "lengthM": 4238.1,
-   "lengthErrPct": -1.37,
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Autódromo Hermanos Rodríguez 83%"
+   ],
+   "lengthM": 4300.0,
+   "lengthErrPct": 0.07,
    "selfIntersects": false,
+   "counterTurnDeg": 643.9,
+   "flags": [],
    "builtFit": {
-    "rmsM": 122.45,
-    "p95M": 204.82,
-    "maxM": 256.6,
+    "rmsM": 123.52,
+    "p95M": 241.95,
+    "maxM": 289.55,
     "scale": 0.95
    },
    "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    1128592396,
+    772754608,
+    772754607,
+    772754608,
+    772754604,
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754606,
+    772755821,
+    772755822,
+    605367312
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Autódromo Hermanos Rodríguez 89%"
+   ],
+   "lengthM": 4253.0,
+   "lengthErrPct": -1.02,
+   "selfIntersects": false,
+   "counterTurnDeg": 407.1,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 121.79,
+    "p95M": 204.27,
+    "maxM": 255.95,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    1128592396,
+    772754608,
+    772754607,
+    772754608,
+    772754604,
+    772754605,
+    772754604,
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754606,
+    772755821,
+    772755822,
+    605367312,
+    823823139,
+    823823140,
+    823823139,
+    823823141,
+    772755824,
+    1128592396,
+    605367312
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Autódromo Hermanos Rodríguez 87%"
+   ],
+   "lengthM": 4666.5,
+   "lengthErrPct": 8.6,
+   "selfIntersects": false,
+   "counterTurnDeg": 647.5,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 121.04,
+    "p95M": 218.24,
+    "maxM": 268.4,
+    "scale": 0.95
+   },
+   "index": 3
   },
   {
    "label": "raceway ring taken as the centre",
@@ -74,53 +177,26 @@
     605367312,
     772755822
    ],
+   "pitShare": 0.188,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Autódromo Hermanos Rodríguez 74%",
+    "Pit Lane 19%"
+   ],
    "lengthM": 4226.5,
    "lengthErrPct": -1.64,
    "selfIntersects": false,
+   "counterTurnDeg": 365.8,
+   "flags": [
+    "runs 19% down a pit lane"
+   ],
    "builtFit": {
     "rmsM": 123.28,
     "p95M": 199.51,
     "maxM": 251.11,
     "scale": 0.95
    },
-   "index": 2
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    605367312,
-    823823139,
-    823823141,
-    772755824,
-    1128592396,
-    605367312,
-    1128592396,
-    772754608,
-    772754607,
-    772754608,
-    772754604,
-    772754605,
-    772754604,
-    772754605,
-    638491478,
-    772754605,
-    638491478,
-    772754605,
-    772754606,
-    772755821,
-    772755822
-   ],
-   "lengthM": 4668.3,
-   "lengthErrPct": 8.64,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 121.08,
-    "p95M": 218.88,
-    "maxM": 269.06,
-    "scale": 0.95
-   },
-   "index": 3
+   "index": 4
   }
  ],
  "best": 0,
@@ -149,7 +225,5 @@
   "scale": 0.95
  },
  "verdict": "wrong shape",
- "notes": [
-  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
- ]
+ "notes": []
 }

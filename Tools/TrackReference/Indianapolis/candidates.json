@@ -16,9 +16,19 @@
     51308226,
     588780333
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Indianapolis Motor Speedway - Backstretch 24%",
+    "Indianapolis Motor Speedway - Main Straight 17%",
+    "Indianapolis Motor Speedway - Turn 1 11%",
+    "Indianapolis Motor Speedway - Turn 4 11%"
+   ],
    "lengthM": 4069.9,
    "lengthErrPct": 1.16,
    "selfIntersects": false,
+   "counterTurnDeg": 1.4,
+   "flags": [],
    "builtFit": {
     "rmsM": 150.27,
     "p95M": 177.08,
@@ -55,6 +65,8 @@
    "lengthM": 4075.1,
    "lengthErrPct": 1.29,
    "selfIntersects": false,
+   "counterTurnDeg": 1.5,
+   "flags": [],
    "builtFit": {
     "rmsM": 150.56,
     "p95M": 177.07,
@@ -64,30 +76,76 @@
    "index": 1
   },
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
+   "label": "wall ring as the OUTER edge, 7.6 m in",
+   "kind": "wall-outer",
    "ways": [
-    588780332,
-    317832611,
-    588780277,
-    317832611,
-    1502457322,
-    588780264,
-    588780328,
-    588780327,
-    588780337,
-    588780335
+    122651187,
+    588795271,
+    588795275,
+    589332672,
+    589332674,
+    589285814,
+    589280293,
+    589280296,
+    589280298,
+    589280299,
+    589280300,
+    589280302,
+    589308990,
+    589308988,
+    589308989,
+    589308988,
+    589308991,
+    589308992
    ],
-   "lengthM": 3965.7,
-   "lengthErrPct": -1.43,
+   "lengthM": 4076.2,
+   "lengthErrPct": 1.31,
    "selfIntersects": false,
+   "counterTurnDeg": 1.7,
+   "flags": [],
    "builtFit": {
-    "rmsM": 146.55,
-    "p95M": 176.75,
-    "maxM": 176.85,
-    "scale": 1.0199
+    "rmsM": 150.6,
+    "p95M": 176.92,
+    "maxM": 177.26,
+    "scale": 1.043
    },
    "index": 2
+  },
+  {
+   "label": "wall ring as the OUTER edge, 7.6 m in",
+   "kind": "wall-outer",
+   "ways": [
+    589280293,
+    589285814,
+    589332674,
+    589332672,
+    588795275,
+    588795271,
+    122651187,
+    589308992,
+    589308991,
+    589308988,
+    589308989,
+    589308988,
+    589308990,
+    589280302,
+    589280300,
+    589280299,
+    589280298,
+    589280296
+   ],
+   "lengthM": 4076.2,
+   "lengthErrPct": 1.31,
+   "selfIntersects": false,
+   "counterTurnDeg": 1.8,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 150.6,
+    "p95M": 176.99,
+    "maxM": 177.26,
+    "scale": 1.043
+   },
+   "index": 3
   },
   {
    "label": "wall ring as the INSIDE edge, 7.6 m out",
@@ -117,45 +175,125 @@
    "lengthM": 4170.8,
    "lengthErrPct": 3.66,
    "selfIntersects": false,
+   "counterTurnDeg": 1.5,
+   "flags": [],
    "builtFit": {
     "rmsM": 158.78,
     "p95M": 191.24,
     "maxM": 191.43,
     "scale": 1.05
    },
-   "index": 3
+   "index": 4
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 7.6 m out",
+   "kind": "wall-inner",
+   "ways": [
+    122651187,
+    588795271,
+    588795275,
+    589332672,
+    589332674,
+    589285814,
+    589280293,
+    589280296,
+    589280298,
+    589280299,
+    589280300,
+    589280302,
+    589308990,
+    589308988,
+    589308989,
+    589308988,
+    589308991,
+    589308992
+   ],
+   "lengthM": 4172.0,
+   "lengthErrPct": 3.69,
+   "selfIntersects": false,
+   "counterTurnDeg": 1.7,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 158.81,
+    "p95M": 190.96,
+    "maxM": 191.29,
+    "scale": 1.05
+   },
+   "index": 5
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 7.6 m out",
+   "kind": "wall-inner",
+   "ways": [
+    589280293,
+    589285814,
+    589332674,
+    589332672,
+    588795275,
+    588795271,
+    122651187,
+    589308992,
+    589308991,
+    589308988,
+    589308989,
+    589308988,
+    589308990,
+    589280302,
+    589280300,
+    589280299,
+    589280298,
+    589280296
+   ],
+   "lengthM": 4172.0,
+   "lengthErrPct": 3.69,
+   "selfIntersects": false,
+   "counterTurnDeg": 1.8,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 158.81,
+    "p95M": 191.22,
+    "maxM": 191.3,
+    "scale": 1.05
+   },
+   "index": 6
   },
   {
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
-    588780271,
-    588780336,
-    588780271,
-    317832622,
-    588780329,
-    588780264,
-    1502457322,
-    588780283,
-    588780268,
-    588780370,
-    588780290,
-    1213055864,
+    588780332,
+    317832611,
     588780277,
-    1213055864,
-    297115178,
-    1213055865
+    317832611,
+    1502457322,
+    588780264,
+    588780328,
+    588780327,
+    588780337,
+    588780335
    ],
-   "lengthM": 4177.1,
-   "lengthErrPct": 3.82,
+   "pitShare": 0.836,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "IMS Oval - Warmup Lane/Pit Entry 30%",
+    "IMS Oval - Pit Exit & Warmup Lane 21%",
+    "IMS Pit Lane 17%",
+    "Indianapolis Motor Speedway - Backstretch 15%"
+   ],
+   "lengthM": 3965.7,
+   "lengthErrPct": -1.43,
    "selfIntersects": false,
+   "counterTurnDeg": 4.2,
+   "flags": [
+    "runs 84% down a pit lane"
+   ],
    "builtFit": {
-    "rmsM": 83.41,
-    "p95M": 154.93,
-    "maxM": 167.79,
-    "scale": 0.95
+    "rmsM": 146.55,
+    "p95M": 176.75,
+    "maxM": 176.85,
+    "scale": 1.0199
    },
-   "index": 4
+   "index": 7
   }
  ],
  "best": 0,

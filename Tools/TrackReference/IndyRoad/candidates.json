@@ -5,27 +5,153 @@
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
-    588780332,
-    317832611,
+    588780271,
+    588780349,
+    588780351,
+    588780375,
+    588780370,
+    588780290,
+    1213055864,
     588780277,
-    317832611,
-    1502457322,
-    588780264,
-    588780328,
-    588780327,
-    588780337,
-    588780335
+    1213055864,
+    297115178,
+    588780307,
+    992135043,
+    588780271,
+    588780310,
+    588780271,
+    588780336
    ],
-   "lengthM": 3965.7,
-   "lengthErrPct": 0.99,
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "IMS Road Course 64%",
+    "Indianapolis Motor Speedway - Main Straight 12%",
+    "IMS Road Course - Alternate Corner 1 Entry 5%",
+    "IMS Road Course - Alternate Corners 12 & 12A 5%"
+   ],
+   "lengthM": 3926.8,
+   "lengthErrPct": 0.0,
    "selfIntersects": false,
+   "counterTurnDeg": 436.6,
+   "flags": [],
    "builtFit": {
-    "rmsM": 135.83,
-    "p95M": 235.67,
-    "maxM": 259.46,
+    "rmsM": 163.28,
+    "p95M": 287.71,
+    "maxM": 320.0,
     "scale": 0.95
    },
    "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780271,
+    992135043,
+    588780307,
+    297115178,
+    1213055864,
+    588780277,
+    1213055864,
+    588780290,
+    1213055864,
+    1213055866
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "IMS Road Course 93%",
+    "IMS Road Course - Hulman Straight 4%",
+    "IMS Road Course - Corner 6 2%",
+    "IMS Road Course - Corner 5 1%"
+   ],
+   "lengthM": 3909.7,
+   "lengthErrPct": -0.44,
+   "selfIntersects": false,
+   "counterTurnDeg": 412.1,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 164.0,
+    "p95M": 288.87,
+    "maxM": 320.92,
+    "scale": 0.95
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780271,
+    588780349,
+    588780351,
+    588780375,
+    588780370,
+    588780290,
+    1213055864,
+    588780277,
+    1213055864,
+    297115178,
+    1213055865,
+    588780271,
+    588780310
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "IMS Road Course 77%",
+    "Indianapolis Motor Speedway - Main Straight 11%",
+    "IMS Road Course - Alternate Corner 1 Entry 5%",
+    "IMS Grand Prix Circuit 3%"
+   ],
+   "lengthM": 4117.6,
+   "lengthErrPct": 4.86,
+   "selfIntersects": false,
+   "counterTurnDeg": 511.0,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 161.3,
+    "p95M": 289.75,
+    "maxM": 323.68,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    588780271,
+    588780336,
+    588780271,
+    1213055865,
+    297115178,
+    1213055864,
+    588780277,
+    1213055864,
+    588780290,
+    1213055864,
+    1213055866
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "IMS Road Course 96%",
+    "IMS Road Course - Alternate Corners 12 & 12A 4%"
+   ],
+   "lengthM": 4239.1,
+   "lengthErrPct": 7.95,
+   "selfIntersects": false,
+   "counterTurnDeg": 606.9,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 160.77,
+    "p95M": 290.07,
+    "maxM": 324.0,
+    "scale": 0.95
+   },
+   "index": 3
   },
   {
    "label": "raceway ring taken as the centre",
@@ -42,16 +168,28 @@
     51308226,
     588780333
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Indianapolis Motor Speedway - Backstretch 24%",
+    "Indianapolis Motor Speedway - Main Straight 17%",
+    "Indianapolis Motor Speedway - Turn 1 11%",
+    "Indianapolis Motor Speedway - Turn 4 11%"
+   ],
    "lengthM": 4069.9,
    "lengthErrPct": 3.64,
    "selfIntersects": false,
+   "counterTurnDeg": 1.4,
+   "flags": [
+    "turns only 1 deg against the lap: an oval, not a road course"
+   ],
    "builtFit": {
     "rmsM": 140.69,
     "p95M": 244.0,
     "maxM": 277.31,
     "scale": 0.9717
    },
-   "index": 1
+   "index": 4
   },
   {
    "label": "wall ring as the OUTER edge, 7.5 m in",
@@ -81,17 +219,59 @@
    "lengthM": 4075.8,
    "lengthErrPct": 3.79,
    "selfIntersects": false,
+   "counterTurnDeg": 1.5,
+   "flags": [
+    "turns only 2 deg against the lap: an oval, not a road course"
+   ],
    "builtFit": {
     "rmsM": 140.78,
     "p95M": 245.97,
     "maxM": 280.91,
     "scale": 0.9705
    },
-   "index": 2
+   "index": 5
   },
   {
-   "label": "wall ring as the INSIDE edge, 7.5 m out",
-   "kind": "wall-inner",
+   "label": "wall ring as the OUTER edge, 7.5 m in",
+   "kind": "wall-outer",
+   "ways": [
+    122651187,
+    588795271,
+    588795275,
+    589332672,
+    589332674,
+    589285814,
+    589280293,
+    589280296,
+    589280298,
+    589280299,
+    589280300,
+    589280302,
+    589308990,
+    589308988,
+    589308989,
+    589308988,
+    589308991,
+    589308992
+   ],
+   "lengthM": 4077.0,
+   "lengthErrPct": 3.83,
+   "selfIntersects": false,
+   "counterTurnDeg": 1.7,
+   "flags": [
+    "turns only 2 deg against the lap: an oval, not a road course"
+   ],
+   "builtFit": {
+    "rmsM": 140.82,
+    "p95M": 245.98,
+    "maxM": 280.78,
+    "scale": 0.9705
+   },
+   "index": 6
+  },
+  {
+   "label": "wall ring as the OUTER edge, 7.5 m in",
+   "kind": "wall-outer",
    "ways": [
     589280293,
     589285814,
@@ -110,81 +290,49 @@
     589280300,
     589280299,
     589280298,
-    589280296,
-    589280293,
-    589285817
+    589280296
    ],
-   "lengthM": 4170.1,
-   "lengthErrPct": 6.2,
+   "lengthM": 4077.0,
+   "lengthErrPct": 3.83,
    "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 142.32,
-    "p95M": 249.87,
-    "maxM": 282.67,
-    "scale": 1.0097
-   },
-   "index": 3
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    588780271,
-    588780336,
-    588780271,
-    317832622,
-    588780329,
-    588780264,
-    1502457322,
-    588780283,
-    588780268,
-    588780370,
-    588780290,
-    1213055864,
-    588780277,
-    1213055864,
-    297115178,
-    1213055865
+   "counterTurnDeg": 1.8,
+   "flags": [
+    "turns only 2 deg against the lap: an oval, not a road course"
    ],
-   "lengthM": 4177.1,
-   "lengthErrPct": 6.37,
-   "selfIntersects": false,
    "builtFit": {
-    "rmsM": 167.16,
-    "p95M": 295.65,
-    "maxM": 331.35,
-    "scale": 0.95
+    "rmsM": 140.82,
+    "p95M": 246.62,
+    "maxM": 282.6,
+    "scale": 0.9699
    },
-   "index": 4
+   "index": 7
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 135.83,
-  "p95M": 235.67,
-  "maxM": 259.46,
-  "refToBuiltMaxM": 253.4,
+  "rmsM": 163.28,
+  "p95M": 287.71,
+  "maxM": 320.0,
+  "refToBuiltMaxM": 377.9,
   "worstStretches": [
    {
-    "fromM": 176,
-    "toM": 274,
-    "meanM": 252.6
+    "fromM": 3665,
+    "toM": 3763,
+    "meanM": 312.2
    },
    {
-    "fromM": 960,
-    "toM": 1058,
-    "meanM": 246.7
+    "fromM": 3565,
+    "toM": 3663,
+    "meanM": 291.4
    },
    {
-    "fromM": 1218,
-    "toM": 1316,
-    "meanM": 216.5
+    "fromM": 3765,
+    "toM": 3863,
+    "meanM": 275.1
    }
   ],
   "scale": 0.95
  },
  "verdict": "wrong shape",
- "notes": [
-  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
- ]
+ "notes": []
 }
