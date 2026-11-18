@@ -179,8 +179,16 @@ def resample(pts, n):
     return N.column_stack([N.interp(s, cum, Q[:, 0]), N.interp(s, cum, Q[:, 1])])
 
 
+SCALE_LIMIT = 0.05
+
+
 def umeyama(A, B, scale=True):
-    """s, R, t minimising |s R A + t - B|^2 over a proper rotation (no mirror image)."""
+    """s, R, t minimising |s R A + t - B|^2 over a proper rotation (no mirror image).
+
+    The scale is held within SCALE_LIMIT of 1: both laps are tied to the published length (the game's is
+    rescaled to it, a candidate is only kept within 12-15% of it), so a bigger answer is the fit shrinking a
+    wrong shape onto the middle of the right one to cut its distances, which flatters it. The rotation does
+    not depend on the scale, so clamping it and re-solving the translation stays optimal."""
     N = np()
     ma, mb = A.mean(0), B.mean(0)
     Ac, Bc = A - ma, B - mb
@@ -188,6 +196,7 @@ def umeyama(A, B, scale=True):
     D = N.diag([1.0, N.sign(N.linalg.det(U @ Vt)) or 1.0])
     R = U @ D @ Vt
     s = float(N.trace(N.diag(S) @ D) / ((Ac ** 2).sum() / len(A))) if scale else 1.0
+    s = min(1 + SCALE_LIMIT, max(1 - SCALE_LIMIT, s))
     return s, R, mb - s * R @ ma
 
 
@@ -305,9 +314,11 @@ def split_top(body):
 
 
 def infobox(text):
-    i = text.lower().find('{{infobox')
-    if i < 0:
+    # Usually {{Infobox motorsport venue, but some articles call the template directly ({{Motorsport venue).
+    m = re.search(r'\{\{\s*(?:infobox[^|}]*|[^|{}]*(?:venue|racetrack|race track|circuit))\s*\|', text, re.I)
+    if not m:
         return {}
+    i = m.start()
     depth, j = 0, i
     while j < len(text):
         if text[j:j + 2] == '{{':
@@ -465,8 +476,10 @@ def classify(e):
         return 'fence' if b == 'fence' else 'wall'
     if 'area:highway' in t:
         return 'surface'
-    if t.get('building') == 'grandstand' or t.get('leisure') == 'stadium':
+    if t.get('building') == 'grandstand':
         return 'grandstand'
+    if t.get('leisure') == 'stadium':
+        return 'stadium'                     # the whole venue's outline at most tracks: drawn, not filled
     if 'building' in t:
         return 'building'
     if t.get('amenity') == 'parking':
@@ -628,7 +641,7 @@ def render(tid, cache, frame, osm_by_kind, cands, best, fit, aerial, built_moved
 
     styles = [('parking', (90, 90, 90, 140), (90, 90, 90, 50)), ('water', (60, 120, 255, 200), (60, 120, 255, 80)),
               ('road', (230, 230, 230, 110), None), ('building', (200, 200, 200, 170), None),
-              ('grandstand', (255, 0, 220, 230), (255, 0, 220, 70)), ('surface', (255, 150, 0, 200), None),
+              ('stadium', (255, 0, 220, 120), None), ('grandstand', (255, 0, 220, 230), (255, 0, 220, 70)), ('surface', (255, 150, 0, 200), None),
               ('fence', (255, 120, 120, 150), None), ('wall', (255, 30, 30, 255), None),
               ('pit', (0, 230, 255, 255), None), ('raceway', (255, 230, 0, 255), None)]
     for kind, col, fill in styles:
@@ -713,6 +726,9 @@ def build(tid, refresh=False, offline=False, batch=False):
     trace = load_json(os.path.join(TRACES, tid + '.json'))
     log = []
 
+    if offline and not os.path.exists(os.path.join(cache, 'osm.json')):
+        return {'trackId': tid, 'error': 'not fetched yet (no cache/osm.json); run without --offline'}
+
     # Facts.
     wpath = os.path.join(cache, 'wiki.json')
     wiki = None if refresh else load_json(wpath)
@@ -729,15 +745,14 @@ def build(tid, refresh=False, offline=False, batch=False):
     elif wiki.get('coordinates'):
         centre = tuple(wiki['coordinates'])
     else:
-        centre = next(((v[1], v[2]) for v in ft.VENUES if v[0] == tid), None)
+        same = {'CharlotteRoval': 'Charlotte', 'IndyRoad': 'Indianapolis'}.get(tid, tid)   # same venue
+        centre = next(((v[1], v[2]) for v in ft.VENUES if v[0] == same), None)
     if not centre:
         return {'trackId': tid, 'error': 'no coordinates for the venue'}
     radius = int(min(2200, max(900, published_m * 0.32 + 350)))
 
     # OSM.
     opath = os.path.join(cache, 'osm.json')
-    if offline and not os.path.exists(opath):
-        return {'trackId': tid, 'error': 'not fetched yet (no cache/osm.json); run without --offline'}
     osm = None if refresh else load_json(opath)
     if osm is None and not offline:
         osm = overpass(osm_query(centre[0], centre[1], radius, OSM_TRACK))
@@ -757,7 +772,7 @@ def build(tid, refresh=False, offline=False, batch=False):
             save_json(opath, osm)
     if osm and osm.get('contextMissing'):
         log.append('buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them')
-    by_kind = {k: [] for k in ('raceway', 'pit', 'wall', 'fence', 'surface', 'grandstand', 'building',
+    by_kind = {k: [] for k in ('raceway', 'pit', 'wall', 'fence', 'surface', 'grandstand', 'stadium', 'building',
                                'parking', 'water', 'road')}
     for e in (osm or {}).get('elements', []):
         if e.get('type') == 'way' and e.get('geometry'):

@@ -1,0 +1,121 @@
+{
+ "trackId": "Bristol",
+ "displayName": "Bristol Motor Speedway",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.53,
+  "surfaceWidthM": 12.19,
+  "hasCommittedTrace": true,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Bristol Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Bristol_Motor_Speedway",
+  "coordinates": [
+   36.5156,
+   -82.2569
+  ],
+  "location": "151 Speedway Boulevard, Bristol, Tennessee",
+  "opened": "1961",
+  "capacity": "146,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Bristol Motor Speedway 2024.svg",
+    "caption": "Oval (1961–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1961–present)",
+   "surface": "Concrete",
+   "length_mi": "0.533",
+   "length_km": "0.858",
+   "turns": "4",
+   "banking": "Turns: 24–28°; Straights: 4–8°",
+   "record_time": "0:14.945",
+   "record_driver": "Kyle Larson",
+   "record_year": "2018",
+   "record_class": "NASCAR Cup",
+   "miles": 0.533,
+   "index": 1
+  },
+  {
+   "layout": "Temporary Dirt Oval (2020–2023)",
+   "surface": "Clay",
+   "length_km": "0.858",
+   "length_mi": "0.533",
+   "turns": "4",
+   "banking": "Turns: 16–19°; Straights: 9°",
+   "record_time": "0:19.003",
+   "record_driver": "Stewart Friesen",
+   "record_year": "2021",
+   "record_class": "NASCAR Truck",
+   "miles": 0.533,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1961–present)",
+  "surface": "Concrete",
+  "length_mi": "0.533",
+  "length_km": "0.858",
+  "turns": "4",
+  "banking": "Turns: 24–28°; Straights: 4–8°",
+  "record_time": "0:14.945",
+  "record_driver": "Kyle Larson",
+  "record_year": "2018",
+  "record_class": "NASCAR Cup",
+  "miles": 0.533,
+  "index": 1
+ },
+ "lengthCheckPct": 0.57,
+ "venueCentre": [
+  36.515636,
+  -82.256972
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 7,
+  "pit": 1,
+  "wall": 0,
+  "fence": 0,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 2,
+  "building": 11,
+  "parking": 7,
+  "water": 0,
+  "road": 217
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 378531040,
+   "name": "Pit Road",
+   "lengthM": 750.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 744,
+  "height": 810,
+  "groundMetresPerPixel": 1.0005,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Bristol Motor Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Bristol_Motor_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Oval (1961–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

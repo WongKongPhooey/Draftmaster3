@@ -1,0 +1,67 @@
+{
+ "trackId": "Martinsville",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    402168721,
+    448515178,
+    448515177
+   ],
+   "lengthM": 825.3,
+   "lengthErrPct": -3.24,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.06,
+    "p95M": 2.11,
+    "maxM": 2.51,
+    "scale": 0.9715
+   },
+   "index": 0
+  },
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "inside edge (ways 448514914,-1,448514913, joined) offset 7.50 m outward to the centre of a 15.0 m racing surface; checked against USGS NAIP imagery",
+   "lengthM": 787.6,
+   "lengthErrPct": -7.66,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 2.38,
+    "p95M": 3.71,
+    "maxM": 4.1,
+    "scale": 0.95
+   },
+   "index": 1
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 1.06,
+  "p95M": 2.11,
+  "maxM": 2.51,
+  "refToBuiltMaxM": 2.51,
+  "worstStretches": [
+   {
+    "fromM": 72,
+    "toM": 170,
+    "meanM": 2.0
+   },
+   {
+    "fromM": 767,
+    "toM": 865,
+    "meanM": 1.1
+   },
+   {
+    "fromM": 206,
+    "toM": 304,
+    "meanM": 1.1
+   }
+  ],
+  "scale": 0.9715
+ },
+ "verdict": "matches",
+ "notes": []
+}

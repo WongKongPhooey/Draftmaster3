@@ -1,0 +1,222 @@
+{
+ "trackId": "LimeRock",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189364,
+    293189369,
+    293189360,
+    293189359,
+    17179697,
+    293189371,
+    293189372,
+    293189368,
+    293189363,
+    341048663,
+    293189385,
+    293189362,
+    293189389
+   ],
+   "lengthM": 2414.4,
+   "lengthErrPct": 0.02,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 46.72,
+    "p95M": 85.54,
+    "maxM": 99.02,
+    "scale": 0.95
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189363,
+    432403007,
+    293189385,
+    293189362,
+    293189389,
+    293189364,
+    293189369,
+    293189360,
+    293189359,
+    17179697,
+    293189371,
+    293189372,
+    293189368
+   ],
+   "lengthM": 2407.9,
+   "lengthErrPct": -0.25,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 47.62,
+    "p95M": 86.85,
+    "maxM": 95.44,
+    "scale": 0.95
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189369,
+    35341695,
+    355462939,
+    35341695,
+    293189369,
+    293189360,
+    293189359,
+    17179697,
+    293189371,
+    293189372,
+    293189368,
+    293189363,
+    341048663,
+    293189385,
+    293189362,
+    293189389,
+    293189364
+   ],
+   "lengthM": 2425.5,
+   "lengthErrPct": 0.48,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 49.18,
+    "p95M": 86.56,
+    "maxM": 97.39,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189369,
+    35341695,
+    355462939,
+    35341695,
+    293189369,
+    293189364,
+    293189389,
+    293189362,
+    293189374,
+    293189362,
+    293189385,
+    341048663,
+    293189363,
+    293189368,
+    293189372,
+    293189371,
+    17179697,
+    293189359,
+    293189360
+   ],
+   "lengthM": 2385.8,
+   "lengthErrPct": -1.17,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 49.08,
+    "p95M": 87.78,
+    "maxM": 96.98,
+    "scale": 0.95
+   },
+   "index": 3
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189360,
+    293189369,
+    293189364,
+    293189389,
+    293189362,
+    293189374,
+    293189362,
+    293189385,
+    341048663,
+    293189363,
+    293189368,
+    293189372,
+    293189371,
+    17179697,
+    293189359
+   ],
+   "lengthM": 2374.7,
+   "lengthErrPct": -1.63,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 46.55,
+    "p95M": 85.99,
+    "maxM": 98.07,
+    "scale": 0.95
+   },
+   "index": 4
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    293189385,
+    432403007,
+    293189363,
+    293189368,
+    293189372,
+    293189371,
+    17179697,
+    293189359,
+    293189360,
+    293189369,
+    293189364,
+    293189389,
+    293189362,
+    293189374,
+    293189362
+   ],
+   "lengthM": 2368.2,
+   "lengthErrPct": -1.9,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 47.42,
+    "p95M": 86.97,
+    "maxM": 95.3,
+    "scale": 0.95
+   },
+   "index": 5
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 46.72,
+  "p95M": 85.54,
+  "maxM": 99.02,
+  "refToBuiltMaxM": 108.88,
+  "worstStretches": [
+   {
+    "fromM": 846,
+    "toM": 944,
+    "meanM": 87.5
+   },
+   {
+    "fromM": 450,
+    "toM": 548,
+    "meanM": 83.8
+   },
+   {
+    "fromM": 746,
+    "toM": 844,
+    "meanM": 79.8
+   }
+  ],
+  "scale": 0.95
+ },
+ "verdict": "wrong shape",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
+}

@@ -1,0 +1,139 @@
+{
+ "trackId": "FortWorth",
+ "displayName": "Texas Motor Speedway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.5,
+  "surfaceWidthM": 15.5,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Texas Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Texas_Motor_Speedway",
+  "coordinates": [
+   33.0375,
+   -97.2847
+  ],
+  "location": "3545 Lone Star Circle, Fort Worth, Texas, United States",
+  "opened": "",
+  "capacity": "75,000",
+  "matchedLayout": 2,
+  "trackMaps": [
+   {
+    "file": "Texas Motor Speedway 2024.svg",
+    "caption": "Quad-oval (1997–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (2017–present)",
+   "surface": "Asphalt",
+   "length_mi": "1.440 / 1.500",
+   "length_km": "2.317 / 2.414",
+   "turns": "4",
+   "banking": "Turns 1 and 2: 20°; Turns 3 and 4: 24°; Frontstretch and backstretch: 5°",
+   "record_time": "0:23.0816",
+   "record_driver": "Tony Kanaan",
+   "record_year": "2017",
+   "record_class": "ICS",
+   "miles": 1.44,
+   "index": 1
+  },
+  {
+   "layout": "Oval (1996–2016)",
+   "surface": "Asphalt",
+   "length_mi": "1.455 / 1.500",
+   "length_km": "2.342 / 2.414",
+   "turns": "4",
+   "banking": "Turns 1 and 2: 24°; Turns 3 and 4: 24°; Frontstretch and backstretch: 5°",
+   "record_time": "0:22.972",
+   "record_driver": "Tony Stewart",
+   "record_year": "1998",
+   "record_class": "IRL",
+   "miles": 1.455,
+   "index": 2
+  },
+  {
+   "layout": "Road Course with Chicane (2000–present)",
+   "surface": "Asphalt",
+   "length_mi": "2.324",
+   "length_km": "3.740",
+   "turns": "10",
+   "record_time": "1:12.912",
+   "record_driver": "Allan McNish",
+   "record_year": "2000",
+   "record_class": "LMP900",
+   "miles": 2.324,
+   "index": 3
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1996–2016)",
+  "surface": "Asphalt",
+  "length_mi": "1.455 / 1.500",
+  "length_km": "2.342 / 2.414",
+  "turns": "4",
+  "banking": "Turns 1 and 2: 24°; Turns 3 and 4: 24°; Frontstretch and backstretch: 5°",
+  "record_time": "0:22.972",
+  "record_driver": "Tony Stewart",
+  "record_year": "1998",
+  "record_class": "IRL",
+  "miles": 1.455,
+  "index": 2
+ },
+ "lengthCheckPct": -3.0,
+ "venueCentre": [
+  33.037155,
+  -97.28146
+ ],
+ "osmRadiusM": 1122,
+ "osmCounts": {
+  "raceway": 25,
+  "pit": 2,
+  "wall": 0,
+  "fence": 2,
+  "surface": 0,
+  "grandstand": 3,
+  "stadium": 2,
+  "building": 40,
+  "parking": 7,
+  "water": 1,
+  "road": 319
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 1448242327,
+   "name": "Pit Stop",
+   "lengthM": 1368.7
+  },
+  {
+   "wayId": 104503569,
+   "name": "Pit Road",
+   "lengthM": 380.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1822,
+  "height": 2352,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Texas Motor Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Texas_Motor_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Quad-oval (1997–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

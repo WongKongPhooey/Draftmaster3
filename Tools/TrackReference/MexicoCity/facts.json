@@ -1,0 +1,263 @@
+{
+ "trackId": "MexicoCity",
+ "displayName": "Autodromo Hermanos Rodriguez",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.67,
+  "surfaceWidthM": 15,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Autódromo Hermanos Rodríguez",
+  "url": "https://en.wikipedia.org/wiki/Aut%C3%B3dromo_Hermanos_Rodr%C3%ADguez",
+  "coordinates": [
+   19.40611111111111,
+   -99.0925
+  ],
+  "location": "Mexico City, Mexico",
+  "opened": "",
+  "capacity": "110,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Autódromo Hermanos Rodríguez 2015.svg",
+    "caption": ""
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Circuit (2015–present)",
+   "surface": "Asphalt",
+   "length_km": "4.304",
+   "length_mi": "2.674",
+   "turns": "17",
+   "record_time": "1:17.774",
+   "record_driver": "Valtteri Bottas",
+   "record_year": "2021",
+   "record_class": "F1",
+   "miles": 2.674,
+   "index": 1
+  },
+  {
+   "layout": "Formula E Circuit (2020–2022, 2026)",
+   "surface": "Asphalt",
+   "length_km": "2.606",
+   "length_mi": "1.619",
+   "turns": "16",
+   "record_time": "1:07.474",
+   "record_driver": "Jake Dennis",
+   "record_year": "2026",
+   "record_class": "F-E",
+   "miles": 1.619,
+   "index": 2
+  },
+  {
+   "layout": "National Circuit (2015–present)",
+   "surface": "Asphalt",
+   "length_km": "3.909",
+   "length_mi": "2.429",
+   "turns": "15",
+   "record_time": "1:33.010",
+   "record_driver": "Axel Matus",
+   "record_year": "2016",
+   "record_class": "F4",
+   "miles": 2.429,
+   "index": 3
+  },
+  {
+   "layout": "Oval Circuit (1962–present)",
+   "surface": "Asphalt",
+   "length_km": "1.609",
+   "length_mi": "1.000",
+   "turns": "4",
+   "banking": "",
+   "record_time": "0:32.081",
+   "record_driver": "Antonio Pérez",
+   "record_year": "2015",
+   "record_class": "Stock car racing",
+   "miles": 1.0,
+   "index": 4
+  },
+  {
+   "layout": "Formula E Circuit (2023–2025)",
+   "surface": "Asphalt",
+   "length_km": "2.628",
+   "length_mi": "1.633",
+   "turns": "19",
+   "record_time": "1:12.547",
+   "record_driver": "Sébastien Buemi",
+   "record_year": "2025",
+   "record_class": "F-E",
+   "miles": 1.633,
+   "index": 5
+  },
+  {
+   "layout": "Formula E Circuit (2017–2019)",
+   "surface": "Asphalt",
+   "length_km": "2.093",
+   "length_mi": "1.300",
+   "turns": "17",
+   "record_time": "1:01.112",
+   "record_driver": "Pascal Wehrlein",
+   "record_year": "2019",
+   "record_class": "F-E",
+   "miles": 1.3,
+   "index": 6
+  },
+  {
+   "layout": "Original Formula E Circuit (2016)",
+   "surface": "Asphalt",
+   "length_km": "2.091",
+   "length_mi": "1.299",
+   "turns": "18",
+   "record_time": "1:04.569",
+   "record_driver": "Nico Prost",
+   "record_year": "2016",
+   "record_class": "F-E",
+   "miles": 1.299,
+   "index": 7
+  },
+  {
+   "layout": "Grand Prix Circuit (1986–2014)",
+   "surface": "Asphalt",
+   "length_km": "4.421",
+   "length_mi": "2.747",
+   "turns": "14",
+   "record_time": "1:16.788",
+   "record_driver": "Nigel Mansell",
+   "record_year": "1991",
+   "record_class": "F1",
+   "miles": 2.747,
+   "index": 8
+  },
+  {
+   "layout": "NASCAR Circuit (2007–2014)",
+   "surface": "Asphalt",
+   "length_km": "4.053",
+   "length_mi": "2.518",
+   "turns": "16",
+   "record_time": "1:20.521",
+   "record_driver": "Alex Gurney",
+   "record_year": "2008",
+   "record_class": "DP",
+   "miles": 2.518,
+   "index": 9
+  },
+  {
+   "layout": "Champ Car Grand Prix Circuit (2006–2007)",
+   "surface": "Asphalt",
+   "length_km": "4.463",
+   "length_mi": "2.774",
+   "turns": "17",
+   "record_time": "1:24.713",
+   "record_driver": "Robert Doornbos",
+   "record_year": "2007",
+   "record_class": "Champ Car",
+   "miles": 2.774,
+   "index": 10
+  },
+  {
+   "layout": "NASCAR Circuit (2005–2006)",
+   "surface": "Asphalt",
+   "length_km": "4.052",
+   "length_mi": "2.517",
+   "turns": "16",
+   "record_time": "1:22.931",
+   "record_driver": "Scott Pruett",
+   "record_year": "2006",
+   "record_class": "DP",
+   "miles": 2.517,
+   "index": 11
+  },
+  {
+   "layout": "CART/Champ Car Grand Prix Circuit (2002–2005)",
+   "surface": "Asphalt",
+   "length_km": "4.484",
+   "length_mi": "2.786",
+   "turns": "17",
+   "record_time": "1:27.248",
+   "record_driver": "Shinji Nakano",
+   "record_year": "2002",
+   "record_class": "CART",
+   "miles": 2.786,
+   "index": 12
+  },
+  {
+   "layout": "Original Grand Prix Circuit (1959–1985)",
+   "surface": "Asphalt",
+   "length_km": "5.000",
+   "length_mi": "3.107",
+   "turns": "14",
+   "record_time": "1:43.050",
+   "record_driver": "Jacky Ickx",
+   "record_year": "1969",
+   "record_class": "F1",
+   "miles": 3.107,
+   "index": 13
+  },
+  {
+   "layout": "Original Short Circuit (1959–1985)",
+   "surface": "Asphalt",
+   "length_km": "3.991",
+   "length_mi": "2.480",
+   "turns": "10",
+   "record_time": "1:17.631",
+   "record_driver": "Norm Hunter",
+   "record_year": "1982",
+   "record_class": "Formula Atlantic",
+   "miles": 2.48,
+   "index": 14
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Circuit (2015–present)",
+  "surface": "Asphalt",
+  "length_km": "4.304",
+  "length_mi": "2.674",
+  "turns": "17",
+  "record_time": "1:17.774",
+  "record_driver": "Valtteri Bottas",
+  "record_year": "2021",
+  "record_class": "F1",
+  "miles": 2.674,
+  "index": 1
+ },
+ "lengthCheckPct": 0.15,
+ "venueCentre": [
+  19.402686,
+  -99.089986
+ ],
+ "osmRadiusM": 1725,
+ "osmCounts": {
+  "raceway": 33,
+  "pit": 2,
+  "wall": 163,
+  "fence": 104,
+  "surface": 13,
+  "grandstand": 27,
+  "stadium": 4,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 638504647,
+   "name": "Pit Lane",
+   "lengthM": 583.3
+  },
+  {
+   "wayId": 772763791,
+   "name": "Pit Lane",
+   "lengthM": 211.9
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": null,
+ "trackMap": null,
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

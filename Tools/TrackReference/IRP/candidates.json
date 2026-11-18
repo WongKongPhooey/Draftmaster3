@@ -1,0 +1,49 @@
+{
+ "trackId": "IRP",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    123830268
+   ],
+   "lengthM": 1060.3,
+   "lengthErrPct": -4.52,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 24.53,
+    "p95M": 30.89,
+    "maxM": 31.21,
+    "scale": 0.9947
+   },
+   "index": 0
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 24.53,
+  "p95M": 30.89,
+  "maxM": 31.21,
+  "refToBuiltMaxM": 31.21,
+  "worstStretches": [
+   {
+    "fromM": 674,
+    "toM": 772,
+    "meanM": 30.9
+   },
+   {
+    "fromM": 52,
+    "toM": 150,
+    "meanM": 30.8
+   },
+   {
+    "fromM": 152,
+    "toM": 250,
+    "meanM": 30.7
+   }
+  ],
+  "scale": 0.9947
+ },
+ "verdict": "off",
+ "notes": []
+}

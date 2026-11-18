@@ -1,0 +1,110 @@
+{
+ "trackId": "LimeRock",
+ "displayName": "Lime Rock Park",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 1.5,
+  "surfaceWidthM": 11,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Lime Rock Park",
+  "url": "https://en.wikipedia.org/wiki/Lime_Rock_Park",
+  "coordinates": [
+   41.92768888888889,
+   -73.38359722222224
+  ],
+  "location": "Lakeville, Connecticut, United States",
+  "opened": "",
+  "capacity": "",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Lime Rock Park.svg",
+    "caption": "Grand Prix Circuit (1957–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Circuit (1957–present)",
+   "surface": "Asphalt",
+   "length_km": "2.462",
+   "length_mi": "1.530",
+   "turns": "7",
+   "record_time": "0:45.105",
+   "record_driver": "Juan Manuel Fangio II",
+   "record_year": "1993",
+   "record_class": "IMSA GTP",
+   "miles": 1.53,
+   "index": 1
+  },
+  {
+   "layout": "",
+   "miles": null,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Circuit (1957–present)",
+  "surface": "Asphalt",
+  "length_km": "2.462",
+  "length_mi": "1.530",
+  "turns": "7",
+  "record_time": "0:45.105",
+  "record_driver": "Juan Manuel Fangio II",
+  "record_year": "1993",
+  "record_class": "IMSA GTP",
+  "miles": 1.53,
+  "index": 1
+ },
+ "lengthCheckPct": 2.0,
+ "venueCentre": [
+  41.927689,
+  -73.383597
+ ],
+ "osmRadiusM": 1122,
+ "osmCounts": {
+  "raceway": 27,
+  "pit": 1,
+  "wall": 2,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 0,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 35341695,
+   "name": "Pit Lane",
+   "lengthM": 421.1
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2334,
+  "height": 1991,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Lime Rock Park.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Lime_Rock_Park.svg",
+   "licence": "Public domain",
+   "artist": "Will Pittenger",
+   "caption": "Grand Prix Circuit (1957–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

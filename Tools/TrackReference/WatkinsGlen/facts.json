@@ -1,0 +1,226 @@
+{
+ "trackId": "WatkinsGlen",
+ "displayName": "Watkins Glen International",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.45,
+  "surfaceWidthM": 14,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Watkins Glen International",
+  "url": "https://en.wikipedia.org/wiki/Watkins_Glen_International",
+  "coordinates": [
+   42.337,
+   -76.927
+  ],
+  "location": "Watkins Glen, New York, United States",
+  "opened": "1956 (as a permanent circuit)",
+  "capacity": "38,900",
+  "matchedLayout": 2,
+  "trackMaps": [
+   {
+    "file": "Watkins Glen International Short Circuit 2024.svg",
+    "caption": "Short Circuit (1992–present)"
+   },
+   {
+    "file": "Watkins Glen International Long Circuit 2024.svg",
+    "caption": "Grand Prix Circuit (1992–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Circuit (with Inner Loop Chicane) (1992–present)",
+   "surface": "Asphalt and concrete",
+   "length_km": "5.552",
+   "length_mi": "3.450",
+   "turns": "11",
+   "record_time": "1:23.9166",
+   "record_driver": "Sébastien Bourdais",
+   "record_year": "2017",
+   "record_class": "IndyCar",
+   "miles": 3.45,
+   "index": 1
+  },
+  {
+   "layout": "Short Circuit (with Inner Loop Chicane) (1992–present)",
+   "surface": "Asphalt",
+   "length_km": "3.943",
+   "length_mi": "2.450",
+   "turns": "7",
+   "record_time": "0:59.920",
+   "record_driver": "Davy Jones",
+   "record_year": "1992",
+   "record_class": "IMSA GTP",
+   "miles": 2.45,
+   "index": 2
+  },
+  {
+   "layout": "Short Circuit (with Esses Chicane) (1979–1991)",
+   "surface": "Asphalt",
+   "length_km": "3.907",
+   "length_mi": "2.428",
+   "turns": "8",
+   "record_time": "0:59.920",
+   "record_driver": "Davy Jones",
+   "record_year": "1991",
+   "record_class": "IMSA GTP",
+   "miles": 2.428,
+   "index": 3
+  },
+  {
+   "layout": "Grand Prix Circuit (1971–1974, 1986–1991)",
+   "surface": "Asphalt",
+   "length_km": "5.435",
+   "length_mi": "3.377",
+   "turns": "11",
+   "record_time": "1:35.600",
+   "record_driver": "Chip Robinson",
+   "record_year": "1990",
+   "record_class": "IMSA GTP",
+   "miles": 3.377,
+   "index": 4
+  },
+  {
+   "layout": "Grand Prix Circuit (with Esses Chicane) (1975–1985)",
+   "surface": "Asphalt",
+   "length_km": "5.435",
+   "length_mi": "3.377",
+   "turns": "11",
+   "record_time": "1:34.068",
+   "record_driver": "Alan Jones",
+   "record_year": "1980",
+   "record_class": "F1",
+   "miles": 3.377,
+   "index": 5
+  },
+  {
+   "layout": "Sports Car Circuit (1971)",
+   "surface": "Asphalt",
+   "length_km": "3.911",
+   "length_mi": "2.430",
+   "turns": "7",
+   "record_time": "1:06.083",
+   "record_driver": "Denny Hulme",
+   "record_year": "1971",
+   "record_class": "Can-Am",
+   "miles": 2.43,
+   "index": 6
+  },
+  {
+   "layout": "Original Grand Prix Circuit (1956–1970)",
+   "surface": "Asphalt",
+   "length_km": "3.782",
+   "length_mi": "2.350",
+   "turns": "8",
+   "record_time": "1:02.600",
+   "record_driver": "Denny Hulme",
+   "record_year": "1969",
+   "record_class": "Can-Am",
+   "miles": 2.35,
+   "index": 7
+  },
+  {
+   "layout": "Second Public Road Course (1953–1955)",
+   "surface": "Asphalt, cobbles, concrete, wood, dirt, steel",
+   "length_km": "7.403",
+   "length_mi": "4.600",
+   "turns": "",
+   "record_time": "3:10.800",
+   "record_driver": "Bill Spear",
+   "record_year": "1954",
+   "record_class": "Sports car",
+   "miles": 4.6,
+   "index": 8
+  },
+  {
+   "layout": "Original Public Road Course (1948–1952)",
+   "surface": "Asphalt, cobbles, concrete, wood, dirt, steel",
+   "length_km": "10.622",
+   "length_mi": "6.600",
+   "turns": "28 (approximately)",
+   "record_time": "5:13.500",
+   "record_driver": "Phil Walters",
+   "record_year": "1950",
+   "record_class": "FL",
+   "miles": 6.6,
+   "index": 9
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Short Circuit (with Inner Loop Chicane) (1992–present)",
+  "surface": "Asphalt",
+  "length_km": "3.943",
+  "length_mi": "2.450",
+  "turns": "7",
+  "record_time": "0:59.920",
+  "record_driver": "Davy Jones",
+  "record_year": "1992",
+  "record_class": "IMSA GTP",
+  "miles": 2.45,
+  "index": 2
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  42.337,
+  -76.927
+ ],
+ "osmRadiusM": 1611,
+ "osmCounts": {
+  "raceway": 21,
+  "pit": 2,
+  "wall": 16,
+  "fence": 36,
+  "surface": 3,
+  "grandstand": 11,
+  "stadium": 0,
+  "building": 112,
+  "parking": 19,
+  "water": 3,
+  "road": 225
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 20164027,
+   "name": "Pit Lane",
+   "lengthM": 634.1
+  },
+  {
+   "wayId": 50289311,
+   "name": "Pit Lane",
+   "lengthM": 119.7
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2037,
+  "height": 3451,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Watkins Glen International Short Circuit 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Watkins_Glen_International_Short_Circuit_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Short Circuit (1992–present)",
+   "saved": "trackmap.png"
+  },
+  {
+   "file": "Watkins Glen International Long Circuit 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Watkins_Glen_International_Long_Circuit_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Grand Prix Circuit (1992–present)",
+   "saved": "trackmap2.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

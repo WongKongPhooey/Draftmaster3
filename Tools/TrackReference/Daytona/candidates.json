@@ -1,0 +1,124 @@
+{
+ "trackId": "Daytona",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "outer wall (closed barrier=wall way 407709771) offset 5.50 m inward to the centre of a 11.0 m racing surface; checked against USGS NAIP imagery",
+   "lengthM": 4010.6,
+   "lengthErrPct": -0.32,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.53,
+    "p95M": 2.86,
+    "maxM": 3.23,
+    "scale": 0.9955
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    198466856,
+    352070316,
+    11371365,
+    352067004
+   ],
+   "lengthM": 4013.9,
+   "lengthErrPct": -0.24,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 2.73,
+    "p95M": 4.32,
+    "maxM": 5.23,
+    "scale": 0.995
+   },
+   "index": 1
+  },
+  {
+   "label": "wall ring as the OUTER edge, 5.5 m in",
+   "kind": "wall-outer",
+   "ways": [
+    407709771
+   ],
+   "lengthM": 4010.6,
+   "lengthErrPct": -0.32,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.53,
+    "p95M": 2.87,
+    "maxM": 3.23,
+    "scale": 0.9955
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    352070316,
+    352067003,
+    198465568,
+    11371365,
+    352067004,
+    198466856
+   ],
+   "lengthM": 3990.0,
+   "lengthErrPct": -0.83,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 17.64,
+    "p95M": 49.01,
+    "maxM": 57.33,
+    "scale": 0.985
+   },
+   "index": 3
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 5.5 m out",
+   "kind": "wall-inner",
+   "ways": [
+    407709771
+   ],
+   "lengthM": 4079.7,
+   "lengthErrPct": 1.4,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 2.26,
+    "p95M": 3.89,
+    "maxM": 4.33,
+    "scale": 1.0149
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 1.53,
+  "p95M": 2.86,
+  "maxM": 3.23,
+  "refToBuiltMaxM": 3.23,
+  "worstStretches": [
+   {
+    "fromM": 1949,
+    "toM": 2047,
+    "meanM": 3.2
+   },
+   {
+    "fromM": 14,
+    "toM": 112,
+    "meanM": 2.9
+   },
+   {
+    "fromM": 2049,
+    "toM": 2147,
+    "meanM": 2.5
+   }
+  ],
+  "scale": 0.9955
+ },
+ "verdict": "matches",
+ "notes": []
+}

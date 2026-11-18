@@ -1,0 +1,155 @@
+{
+ "trackId": "LasVegas",
+ "displayName": "Las Vegas Motor Speedway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.5,
+  "surfaceWidthM": 18.29,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Las Vegas Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Las_Vegas_Motor_Speedway",
+  "coordinates": [
+   36.27134,
+   -115.01112
+  ],
+  "location": "7000 North Las Vegas Boulevard; Las Vegas, Nevada, United States",
+  "opened": "(track complex)",
+  "capacity": "80,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Las Vegas Motor Speedway 2024.svg",
+    "caption": "Tri-Oval (1996–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Tri-Oval (1996–present)",
+   "surface": "Asphalt",
+   "length_mi": "1.500",
+   "length_km": "2.414",
+   "banking": "Turns: 20°; Frontstretch: 9° ; Backstretch: 9°",
+   "record_time": "0:24.636 (219.192 mph)",
+   "record_driver": "Richie Hearn",
+   "record_year": "1996",
+   "record_class": "IRL",
+   "miles": 1.5,
+   "index": 1
+  },
+  {
+   "layout": "The Bullring Oval (1985–present)",
+   "length_mi": "0.375",
+   "length_km": "0.604",
+   "miles": 0.375,
+   "index": 2
+  },
+  {
+   "layout": "Long Road Course (1996–present)",
+   "length_mi": "2.499",
+   "length_km": "4.022",
+   "record_time": "1:32.873",
+   "record_driver": "Miguel Molina",
+   "record_year": "2019",
+   "record_class": "GT3",
+   "miles": 2.499,
+   "index": 3
+  },
+  {
+   "layout": "Medium Road Course (1996–present)",
+   "length_mi": "2.15",
+   "length_km": "3.460",
+   "record_time": "1:08.273",
+   "record_driver": "Allan McNish",
+   "record_year": "2000",
+   "record_class": "LMP900",
+   "miles": 2.15,
+   "index": 4
+  },
+  {
+   "layout": "Short Road Course (1996–present)",
+   "length_mi": "1.938",
+   "length_km": "3.119",
+   "record_time": "1:06.019",
+   "record_driver": "Butch Leitzinger",
+   "record_year": "1997",
+   "record_class": "WSC",
+   "miles": 1.938,
+   "index": 5
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Tri-Oval (1996–present)",
+  "surface": "Asphalt",
+  "length_mi": "1.500",
+  "length_km": "2.414",
+  "banking": "Turns: 20°; Frontstretch: 9° ; Backstretch: 9°",
+  "record_time": "0:24.636 (219.192 mph)",
+  "record_driver": "Richie Hearn",
+  "record_year": "1996",
+  "record_class": "IRL",
+  "miles": 1.5,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  36.272257,
+  -115.010401
+ ],
+ "osmRadiusM": 1122,
+ "osmCounts": {
+  "raceway": 22,
+  "pit": 3,
+  "wall": 13,
+  "fence": 59,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 0,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 1548033197,
+   "name": "Pit Road",
+   "lengthM": 416.9
+  },
+  {
+   "wayId": 27545409,
+   "name": "Pit Road",
+   "lengthM": 368.0
+  },
+  {
+   "wayId": 1548033198,
+   "name": "Pit Road",
+   "lengthM": 138.7
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2227,
+  "height": 2139,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Las Vegas Motor Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Las_Vegas_Motor_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Tri-Oval (1996–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

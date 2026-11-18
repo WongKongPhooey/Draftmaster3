@@ -1,0 +1,99 @@
+{
+ "trackId": "BowmanGray",
+ "displayName": "Bowman Gray Stadium",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.25,
+  "surfaceWidthM": 12.19,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Bowman Gray Stadium",
+  "url": "https://en.wikipedia.org/wiki/Bowman_Gray_Stadium",
+  "coordinates": [
+   36.08277777777778,
+   -80.22222222222223
+  ],
+  "location": "1250 South Martin Luther King Drive; Winston-Salem, North Carolina",
+  "opened": "1938",
+  "capacity": "17,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Bowman Gray Stadium 2024.svg",
+    "caption": "Auto racing oval (1939–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1937–present)",
+   "surface": "Asphalt",
+   "length_km": "0.402",
+   "length_mi": "0.250",
+   "turns": "4",
+   "record_time": "0:14.161",
+   "record_driver": "Chase Elliott",
+   "record_year": "2025",
+   "record_class": "NASCAR Cup",
+   "miles": 0.25,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1937–present)",
+  "surface": "Asphalt",
+  "length_km": "0.402",
+  "length_mi": "0.250",
+  "turns": "4",
+  "record_time": "0:14.161",
+  "record_driver": "Chase Elliott",
+  "record_year": "2025",
+  "record_class": "NASCAR Cup",
+  "miles": 0.25,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  36.08272,
+  -80.222056
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 3,
+  "pit": 0,
+  "wall": 39,
+  "fence": 6,
+  "surface": 0,
+  "grandstand": 1,
+  "stadium": 1,
+  "building": 413,
+  "parking": 11,
+  "water": 6,
+  "road": 282
+ },
+ "osmPitLanes": [],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1666,
+  "height": 1332,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Bowman Gray Stadium 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Bowman_Gray_Stadium_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Auto racing oval (1939–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}
