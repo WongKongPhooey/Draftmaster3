@@ -151,10 +151,13 @@ public class VehicleCollision : MonoBehaviour
         // Track world velocity from the kinematic body's position delta (used for impact-speed damage).
         float dt = Time.fixedDeltaTime;
         Vector2 nowPos = transform.position;
+        Vector2 lastPlaced = _prevPos;
         _vel = dt > 0f ? (nowPos - _prevPos) / dt : Vector2.zero;
         _prevPos = nowPos;
 
         var filter = new ContactFilter2D { useLayerMask = true, layerMask = collisionMask, useTriggers = false };
+        _filter = filter;
+        _jumped = Jumped(nowPos, lastPlaced);
         StopCrossing(filter);
         int count = _box.Overlap(filter, _hits);
 
@@ -321,10 +324,39 @@ public class VehicleCollision : MonoBehaviour
              "driven, so where it was says nothing about which side of a wall it belongs on.")]
     public float wallSideJumpLimit = 8f;
 
+    ContactFilter2D _filter;
+    bool _jumped;
+    readonly Collider2D[] _pointHits = new Collider2D[8];
+
+    // A car's centre still inside a wall (an overlap the push couldn't clear this step) is not somewhere it is safe
+    // to measure from: a line from inside a collider doesn't hit it on the way out (queriesStartInColliders is off),
+    // so the next step's crossing test would miss the car carrying on out of the back. Keep the last clear spot.
     void NoteSafePosition()
     {
-        _safePos = transform.position;
+        Vector2 pos = transform.position;
+        if (_hasSafePos && !_jumped && CentreInScenery(pos)) return;
+        _safePos = pos;
         _hasSafePos = true;
+    }
+
+    bool CentreInScenery(Vector2 p)
+    {
+        int n = Physics2D.OverlapPoint(p, _filter, _pointHits);
+        for (int i = 0; i < n; i++)
+            if (IsScenery(_pointHits[i])) return true;
+        return false;
+    }
+
+    // Moved there, not driven there: a re-seed, a tow, a car parked in its box. Then where it was says nothing about
+    // which side of a wall it belongs on. Judged against BOTH where this pass left the car (a free car drives on
+    // from there) and where its controller put it last step (a car placed on the spline is put on its path again
+    // whatever we did to it, so a placed car held at a wall its path runs behind is a long way from the wall face
+    // but only a step from where it was placed last). Only a car far from both was moved.
+    bool Jumped(Vector2 pos, Vector2 lastPlaced)
+    {
+        if (!_hasSafePos) return true;
+        float limit2 = wallSideJumpLimit * wallSideJumpLimit;
+        return (pos - _safePos).sqrMagnitude > limit2 && (pos - lastPlaced).sqrMagnitude > limit2;
     }
 
     // Walls are thin (TrackEnvironmentBuilder: 1 m), and Unity's overlap answer pushes a car out by the shortest
@@ -335,9 +367,7 @@ public class VehicleCollision : MonoBehaviour
     // the face nearest where it was last step, far enough for every corner of the box to clear it.
     Vector2 SameSidePush(Collider2D wall, Vector2 push)
     {
-        if (!_hasSafePos) return push;
-        Vector2 pos = transform.position;
-        if ((pos - _safePos).sqrMagnitude > wallSideJumpLimit * wallSideJumpLimit) return push;
+        if (!_hasSafePos || _jumped) return push;
         Vector2 surface = wall.ClosestPoint(_safePos);
         Vector2 side = _safePos - surface;
         if (side.sqrMagnitude < 1e-6f) return push;  // it was inside the wall last step: no side to go back to
@@ -372,17 +402,16 @@ public class VehicleCollision : MonoBehaviour
         return c.GetComponent<ICollisionResponder>() == null;
     }
 
-    readonly RaycastHit2D[] _crossHits = new RaycastHit2D[8];
+    readonly RaycastHit2D[] _crossHits = new RaycastHit2D[16];
 
     // The backstop. However a car got there in one step (shoved by a pile-up, a spike in a frame), its centre never
     // goes through a wall: if the path from where it was last step to where it is now crosses solid scenery, it is
     // put back in front of the face it crossed, every corner clear, and its speed into the wall taken away.
     void StopCrossing(ContactFilter2D filter)
     {
-        if (!_hasSafePos) return;
+        if (!_hasSafePos || _jumped) return;
         Vector2 pos = transform.position;
-        float moved = (pos - _safePos).magnitude;
-        if (moved < 1e-4f || moved > wallSideJumpLimit) return;
+        if ((pos - _safePos).sqrMagnitude < 1e-8f) return;
         int n = Physics2D.Linecast(_safePos, pos, filter, _crossHits);
         for (int i = 0; i < n; i++)
         {

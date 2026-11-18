@@ -203,6 +203,44 @@ public class WallPassThroughTests
     }
 
     [Test]
+    public void ACarPlacedOnAPathBehindTheWallIsStoppedAtIt()
+    {
+        // A kinematic car (SplineDriver owns the transform: caution engage, takeover, pit-in) is put back on its path
+        // every step whatever the wall did to it. Its path here is a merge arc that swings 8 m out past the wall and
+        // back - the "large arc off the track" - and the car must ride the wall face instead of driving out round it,
+        // then pick its path up again once it is back on the track side.
+        var go = new GameObject("Placed");
+        _made.Add(go);
+        var spline = go.AddComponent(Runtime("SplineDriver"));
+        Set(spline, "vehicleInfo", Resources.Load("Vehicles/Cup24"));
+        var vcType = Runtime("VehicleCollision");
+        go.transform.position = new Vector3(0f, 3f, 0f);
+        var vc = go.AddComponent(vcType);
+        Call(vc, "Awake");
+        Call(vc, "OnEnable");
+        var vcStep = vcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        // y along the arc: 3 m off the wall face, out to 14 (8 m behind its back), and in again, 1.6 m a step (80 m/s).
+        float PathY(float x) => 3f + 11f * Mathf.Sin(Mathf.PI * Mathf.Clamp01(x / 160f));
+        float worst = float.MinValue;
+        Vector2 last = Vector2.zero;
+        for (int s = 0; s <= 120; s++)
+        {
+            float x = s * 1.6f;
+            float y = PathY(x), dy = PathY(x + 0.5f) - y;
+            go.transform.SetPositionAndRotation(new Vector3(x, y, 0f),
+                Quaternion.Euler(0f, 0f, Mathf.Atan2(dy, 0.5f) * Mathf.Rad2Deg));
+            Physics2D.SyncTransforms();
+            vcStep.Invoke(vc, null);
+            Physics2D.SyncTransforms();
+            last = go.transform.position;
+            worst = Mathf.Max(worst, last.y);
+        }
+        Assert.Less(worst, WallFace, $"A placed car got {worst - WallFace:0.00} m past the wall face.");
+        Assert.AreEqual(PathY(120 * 1.6f), last.y, 0.01f, "The car didn't pick its path up again once it was clear of the wall.");
+    }
+
+    [Test]
     public void AGlancingTouchOnTheWallIsUnchanged()
     {
         // The everyday case must come out exactly as it did before the wall was made one-sided: a car brushing the

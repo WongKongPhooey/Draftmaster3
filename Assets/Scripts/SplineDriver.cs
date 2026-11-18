@@ -13,7 +13,18 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
 
+    // A wall (VehicleCollision only calls this for static scenery). The car is put where the wall leaves it, now:
+    // the offsets below only bend the path it is placed on from next step, they never moved the car itself, so a
+    // placed car whose path ran behind a wall (a merge arc from a takeover, a caution engage, a pit-road join) drove
+    // straight through it and on round outside the track. Placed again on its path next step, it is stopped at the
+    // wall again until the path comes back in front of it.
     public void ApplyContact(Vector2 worldMtv, Vector2 contactPoint, float severity)
+    {
+        transform.position += new Vector3(worldMtv.x, worldMtv.y, 0f);
+        NudgeOffsets(worldMtv, severity);
+    }
+
+    void NudgeOffsets(Vector2 worldMtv, float severity)
     {
         // Spline cars stay glued to the path; the lever arm can't spin them freely. contactPoint is ignored here.
         // Persist the push as offsets along BOTH spline axes (transform is rebuilt from the spline each frame).
@@ -30,11 +41,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _currentMph *= Mathf.Clamp01(1f - severity * headOn * contactSpeedScrub);
     }
 
-    // Spline cars are glued to the path, so momentum transfer doesn't apply — just separate and scrub speed
-    // the same way a barrier contact does. (During racing the AI run the dynamic model, which gets the full
+    // Spline cars are glued to the path, so momentum transfer doesn't apply — just separate (through the path
+    // offsets, as before: two placed cars sort themselves out over a step or two) and scrub speed the same way a
+    // barrier contact does. (During racing the AI run the dynamic model, which gets the full
     // 2-body impulse via PlayerVehicleController.ApplyCarImpact instead.)
     public void ApplyCarImpact(Vector2 worldMtv, Vector2 contactPoint, Vector2 worldDeltaV, float severity)
-        => ApplyContact(worldMtv, contactPoint, severity);
+        => NudgeOffsets(worldMtv, severity);
 
     // Glued to the path: a hit never turns it.
     public float YawInertia => float.PositiveInfinity;
