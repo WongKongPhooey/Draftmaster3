@@ -1,0 +1,195 @@
+{
+ "trackId": "IndyRoad",
+ "displayName": "Indianapolis Motor Speedway Road Course",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.44,
+  "surfaceWidthM": 15,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Indianapolis Motor Speedway",
+  "url": "https://en.wikipedia.org/wiki/Indianapolis_Motor_Speedway",
+  "coordinates": [
+   39.79833333333333,
+   -86.23277777777778
+  ],
+  "location": "Speedway, Indiana",
+  "opened": "",
+  "capacity": "257,325 (permanent seats) – 400,000 grand total",
+  "matchedLayout": 2,
+  "trackMaps": [],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Rectangular Oval Track (1909–present) class=skin-invert|180px",
+   "surface": "Asphalt and brick (start-finish line)",
+   "length_km": "4.023",
+   "length_mi": "2.500",
+   "turns": "4",
+   "banking": "Turns: 9.2°; Straights: 0°",
+   "record_time": "0:38.119",
+   "record_driver": "Eddie Cheever",
+   "record_year": "1996",
+   "record_class": "IndyCar",
+   "miles": 2.5,
+   "index": 1
+  },
+  {
+   "layout": "Grand Prix Road Course (2014–present) class=skin-invert|180px",
+   "surface": "Asphalt and brick (start-finish line)",
+   "length_km": "3.925",
+   "length_mi": "2.439",
+   "turns": "14",
+   "record_time": "1:09.3888",
+   "record_driver": "Josef Newgarden",
+   "record_year": "2017",
+   "record_class": "IndyCar",
+   "miles": 2.439,
+   "index": 2
+  },
+  {
+   "layout": "Modified Motorcycle Course (2014–present) class=skin-invert|180px",
+   "surface": "Asphalt and brick",
+   "length_km": "4.170",
+   "length_mi": "2.591",
+   "turns": "16",
+   "record_time": "1:32.625",
+   "record_driver": "Marc Márquez",
+   "record_year": "2015",
+   "record_class": "MotoGP",
+   "miles": 2.591,
+   "index": 3
+  },
+  {
+   "layout": "SCCA Runoffs Road Course (2014–present)",
+   "surface": "Asphalt and brick (start-finish line)",
+   "length_km": "4.166",
+   "length_mi": "2.589",
+   "turns": "15",
+   "record_time": "1:30.650",
+   "record_driver": "James French",
+   "record_year": "2021",
+   "record_class": "Formula Atlantic",
+   "miles": 2.589,
+   "index": 4
+  },
+  {
+   "layout": "Original Motorcycle Course (2008–2013)",
+   "surface": "Asphalt and brick",
+   "length_km": "4.218",
+   "length_mi": "2.621",
+   "turns": "16",
+   "record_time": "1:39.044",
+   "record_driver": "Marc Márquez",
+   "record_year": "2013",
+   "record_class": "MotoGP",
+   "miles": 2.621,
+   "index": 5
+  },
+  {
+   "layout": "Grand Prix Road Course (2008–2013)",
+   "surface": "Asphalt and brick (start-finish line)",
+   "length_km": "4.078",
+   "length_mi": "2.534",
+   "turns": "13",
+   "record_time": "1:22.191",
+   "record_driver": "Scott Pruett",
+   "record_year": "2013",
+   "record_class": "DP",
+   "miles": 2.534,
+   "index": 6
+  },
+  {
+   "layout": "Grand Prix Road Course (2000–2007)",
+   "surface": "Asphalt and brick (start-finish line)",
+   "length_km": "4.192",
+   "length_mi": "2.605",
+   "turns": "13",
+   "record_time": "1:10.399",
+   "record_driver": "Rubens Barrichello",
+   "record_year": "2004",
+   "record_class": "F1",
+   "miles": 2.605,
+   "index": 7
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Road Course (2014–present) class=skin-invert|180px",
+  "surface": "Asphalt and brick (start-finish line)",
+  "length_km": "3.925",
+  "length_mi": "2.439",
+  "turns": "14",
+  "record_time": "1:09.3888",
+  "record_driver": "Josef Newgarden",
+  "record_year": "2017",
+  "record_class": "IndyCar",
+  "miles": 2.439,
+  "index": 2
+ },
+ "lengthCheckPct": -0.04,
+ "venueCentre": [
+  39.798333,
+  -86.232778
+ ],
+ "osmRadiusM": 1606,
+ "osmCounts": {
+  "raceway": 28,
+  "pit": 14,
+  "wall": 92,
+  "fence": 109,
+  "surface": 0,
+  "grandstand": 25,
+  "stadium": 0,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 317832611,
+   "name": "IMS Oval - Warmup Lane/Pit Entry",
+   "lengthM": 1196.7
+  },
+  {
+   "wayId": 588780337,
+   "name": "IMS Oval - Pit Exit & Warmup Lane",
+   "lengthM": 617.1
+  },
+  {
+   "wayId": 1176980820,
+   "name": "IMS Pit Lane",
+   "lengthM": 376.5
+  },
+  {
+   "wayId": 588780329,
+   "name": "IMS Formula One Pit Lane",
+   "lengthM": 370.9
+  },
+  {
+   "wayId": 588780327,
+   "name": "IMS Oval - Warmup Lane & Pit Exit",
+   "lengthM": 351.0
+  },
+  {
+   "wayId": 588780264,
+   "name": "IMS Pit Lane",
+   "lengthM": 300.2
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2655,
+  "height": 3397,
+  "groundMetresPerPixel": 0.6001,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": null,
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

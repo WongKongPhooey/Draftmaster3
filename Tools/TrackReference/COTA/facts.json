@@ -1,0 +1,139 @@
+{
+ "trackId": "COTA",
+ "displayName": "Circuit of the Americas",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 3.41,
+  "surfaceWidthM": 15,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Circuit of the Americas",
+  "url": "https://en.wikipedia.org/wiki/Circuit_of_the_Americas",
+  "coordinates": [
+   30.13277777777778,
+   -97.64111111111112
+  ],
+  "location": "Austin, Texas, United States",
+  "opened": "2012",
+  "capacity": "120,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Austin circuit.svg",
+    "caption": "Grand Prix Circuit (2012–present)"
+   },
+   {
+    "file": "COTA NASCAR Layout.png",
+    "caption": "NASCAR Circuit (2025–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Circuit (2012–present)",
+   "length_km": "5.513",
+   "length_mi": "3.426",
+   "turns": "20",
+   "record_time": "1:36.169",
+   "record_driver": "Charles Leclerc",
+   "record_year": "2019",
+   "record_class": "F1",
+   "miles": 3.426,
+   "index": 1
+  },
+  {
+   "layout": "NASCAR Circuit (2025–present)",
+   "length_km": "3.862",
+   "length_mi": "2.400",
+   "turns": "17",
+   "record_time": "1:29.216",
+   "record_driver": "Wyatt Brichacek",
+   "record_year": "2026",
+   "record_class": "LMP3",
+   "miles": 2.4,
+   "index": 2
+  },
+  {
+   "layout": "National Circuit (2012–present)",
+   "length_km": "3.702",
+   "length_mi": "2.300",
+   "turns": "19",
+   "record_time": "1:33.284",
+   "record_driver": "Johnny O'Connell",
+   "record_year": "2013",
+   "record_class": "PWC GT",
+   "miles": 2.3,
+   "index": 3
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Circuit (2012–present)",
+  "length_km": "5.513",
+  "length_mi": "3.426",
+  "turns": "20",
+  "record_time": "1:36.169",
+  "record_driver": "Charles Leclerc",
+  "record_year": "2019",
+  "record_class": "F1",
+  "miles": 3.426,
+  "index": 1
+ },
+ "lengthCheckPct": 0.47,
+ "venueCentre": [
+  30.132778,
+  -97.641111
+ ],
+ "osmRadiusM": 2106,
+ "osmCounts": {
+  "raceway": 39,
+  "pit": 1,
+  "wall": 62,
+  "fence": 19,
+  "surface": 10,
+  "grandstand": 9,
+  "stadium": 0,
+  "building": 850,
+  "parking": 29,
+  "water": 41,
+  "road": 535
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 514836373,
+   "name": "Pit Lane",
+   "lengthM": 947.6
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 3878,
+  "height": 2578,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Austin circuit.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Austin_circuit.svg",
+   "licence": "CC BY-SA 2.0",
+   "artist": "Gustavo Girardelli; Own work; This W3C-unspecified vector image was created with Inkscape .",
+   "caption": "Grand Prix Circuit (2012–present)",
+   "saved": "trackmap.png"
+  },
+  {
+   "file": "COTA NASCAR Layout.png",
+   "source": "https://commons.wikimedia.org/wiki/File:COTA_NASCAR_Layout.png",
+   "licence": "CC BY-SA 4.0",
+   "artist": "WL2392",
+   "caption": "NASCAR Circuit (2025–present)",
+   "saved": "trackmap2.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

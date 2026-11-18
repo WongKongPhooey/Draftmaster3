@@ -1,0 +1,62 @@
+{
+ "trackId": "CharlotteRoval",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116107359,
+    585912895,
+    116107359,
+    402168714,
+    402168718,
+    402168714,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    396483278,
+    402168711
+   ],
+   "lengthM": 3614.6,
+   "lengthErrPct": -3.19,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 107.78,
+    "p95M": 221.34,
+    "maxM": 232.68,
+    "scale": 0.95
+   },
+   "index": 0
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 107.78,
+  "p95M": 221.34,
+  "maxM": 232.68,
+  "refToBuiltMaxM": 237.3,
+  "worstStretches": [
+   {
+    "fromM": 2947,
+    "toM": 3045,
+    "meanM": 230.5
+   },
+   {
+    "fromM": 734,
+    "toM": 832,
+    "meanM": 221.2
+   },
+   {
+    "fromM": 3047,
+    "toM": 3145,
+    "meanM": 205.7
+   }
+  ],
+  "scale": 0.95
+ },
+ "verdict": "wrong shape",
+ "notes": []
+}

@@ -1,0 +1,121 @@
+{
+ "trackId": "Kansas",
+ "displayName": "Kansas Speedway",
+ "type": "Speedway",
+ "game": {
+  "lengthMiles": 1.5,
+  "surfaceWidthM": 16.76,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Kansas Speedway",
+  "url": "https://en.wikipedia.org/wiki/Kansas_Speedway",
+  "coordinates": [
+   39.11578888888889,
+   -94.83106111111111
+  ],
+  "location": "400 Speedway Boulevard, Kansas City, Kansas, United States, 66111",
+  "opened": "",
+  "capacity": "48,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Kansas Speedway 2024.svg",
+    "caption": "Tri-oval (2001–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Tri-oval (2001–present)",
+   "surface": "Asphalt",
+   "length_km": "2.414",
+   "length_mi": "1.500",
+   "turns": "4",
+   "banking": "Turns: 17-20°; Frontstretch: 10°; Backstretch: 5°",
+   "record_time": "0:24.8742",
+   "record_driver": "Tomas Scheckter",
+   "record_year": "2002",
+   "record_class": "IndyCar",
+   "miles": 1.5,
+   "index": 1
+  },
+  {
+   "layout": "Road course (2012–present)",
+   "surface": "Asphalt",
+   "length_km": "3.814",
+   "length_mi": "2.370",
+   "turns": "9",
+   "banking": "",
+   "record_time": "1:09.745",
+   "record_driver": "Scott Pruett",
+   "record_year": "2013",
+   "record_class": "DP",
+   "miles": 2.37,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Tri-oval (2001–present)",
+  "surface": "Asphalt",
+  "length_km": "2.414",
+  "length_mi": "1.500",
+  "turns": "4",
+  "banking": "Turns: 17-20°; Frontstretch: 10°; Backstretch: 5°",
+  "record_time": "0:24.8742",
+  "record_driver": "Tomas Scheckter",
+  "record_year": "2002",
+  "record_class": "IndyCar",
+  "miles": 1.5,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  39.115931,
+  -94.829865
+ ],
+ "osmRadiusM": 1122,
+ "osmCounts": {
+  "raceway": 3,
+  "pit": 1,
+  "wall": 4,
+  "fence": 50,
+  "surface": 0,
+  "grandstand": 1,
+  "stadium": 3,
+  "building": 0,
+  "parking": 0,
+  "water": 0,
+  "road": 0
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 42240617,
+   "name": "Pit Lane",
+   "lengthM": 813.5
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1899,
+  "height": 2552,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Kansas Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Kansas_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Tri-oval (2001–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

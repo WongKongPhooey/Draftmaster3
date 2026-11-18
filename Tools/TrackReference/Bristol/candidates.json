@@ -1,0 +1,133 @@
+{
+ "trackId": "Bristol",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "",
+   "lengthM": 846.2,
+   "lengthErrPct": -0.79,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.33,
+    "p95M": 4.73,
+    "maxM": 4.87,
+    "scale": 0.9773
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116606212
+   ],
+   "lengthM": 846.2,
+   "lengthErrPct": -0.79,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.33,
+    "p95M": 4.73,
+    "maxM": 4.87,
+    "scale": 0.9773
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116606212,
+    852971861,
+    378531039,
+    852971861,
+    378531040,
+    852971860,
+    852971859,
+    852971860
+   ],
+   "lengthM": 804.7,
+   "lengthErrPct": -5.66,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 8.95,
+    "p95M": 13.49,
+    "maxM": 13.64,
+    "scale": 0.95
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    116606212,
+    852971859,
+    378531040,
+    378531039
+   ],
+   "lengthM": 801.8,
+   "lengthErrPct": -6.0,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 8.41,
+    "p95M": 12.26,
+    "maxM": 12.4,
+    "scale": 0.95
+   },
+   "index": 3
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    378531040,
+    852971861,
+    378531040,
+    378531039,
+    378531040,
+    852971859,
+    378531040,
+    852971860
+   ],
+   "lengthM": 752.7,
+   "lengthErrPct": -11.75,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 16.84,
+    "p95M": 23.38,
+    "maxM": 23.52,
+    "scale": 0.95
+   },
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 3.33,
+  "p95M": 4.73,
+  "maxM": 4.87,
+  "refToBuiltMaxM": 4.87,
+  "worstStretches": [
+   {
+    "fromM": 36,
+    "toM": 134,
+    "meanM": 4.6
+   },
+   {
+    "fromM": 412,
+    "toM": 511,
+    "meanM": 4.2
+   },
+   {
+    "fromM": 248,
+    "toM": 346,
+    "meanM": 4.1
+   }
+  ],
+  "scale": 0.9773
+ },
+ "verdict": "matches",
+ "notes": []
+}

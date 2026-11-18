@@ -1,0 +1,104 @@
+{
+ "trackId": "FortWorth",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 2380.1,
+   "lengthErrPct": -1.4,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.56,
+    "p95M": 2.63,
+    "maxM": 3.52,
+    "scale": 1.0095
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    261968502,
+    489172989,
+    161240449,
+    161240467,
+    489172989,
+    261968504,
+    104503520,
+    261968503,
+    161240450,
+    161240461,
+    261968503,
+    489172062,
+    261968505
+   ],
+   "lengthM": 2380.0,
+   "lengthErrPct": -1.41,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.55,
+    "p95M": 2.6,
+    "maxM": 3.52,
+    "scale": 1.0095
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    104503520,
+    161240450,
+    161240461,
+    489172062,
+    261968505,
+    261968502,
+    489172989,
+    161240449,
+    161240467,
+    489172989,
+    261968504
+   ],
+   "lengthM": 2358.2,
+   "lengthErrPct": -2.31,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 17.75,
+    "p95M": 35.5,
+    "maxM": 35.9,
+    "scale": 0.9822
+   },
+   "index": 2
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 1.56,
+  "p95M": 2.63,
+  "maxM": 3.52,
+  "refToBuiltMaxM": 3.65,
+  "worstStretches": [
+   {
+    "fromM": 1564,
+    "toM": 1662,
+    "meanM": 3.0
+   },
+   {
+    "fromM": 1870,
+    "toM": 1968,
+    "meanM": 2.7
+   },
+   {
+    "fromM": 982,
+    "toM": 1080,
+    "meanM": 2.1
+   }
+  ],
+  "scale": 1.0095
+ },
+ "verdict": "matches",
+ "notes": []
+}

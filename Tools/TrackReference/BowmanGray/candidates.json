@@ -1,0 +1,99 @@
+{
+ "trackId": "BowmanGray",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 402.9,
+   "lengthErrPct": 0.14,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.81,
+    "p95M": 5.48,
+    "maxM": 5.71,
+    "scale": 0.9774
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    914237156
+   ],
+   "lengthM": 402.9,
+   "lengthErrPct": 0.14,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 3.81,
+    "p95M": 5.48,
+    "maxM": 5.71,
+    "scale": 0.9774
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    298238713
+   ],
+   "lengthM": 426.8,
+   "lengthErrPct": 6.08,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.33,
+    "p95M": 2.07,
+    "maxM": 2.18,
+    "scale": 1.05
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    298355406
+   ],
+   "lengthM": 427.7,
+   "lengthErrPct": 6.3,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 5.57,
+    "p95M": 7.32,
+    "maxM": 7.79,
+    "scale": 1.0192
+   },
+   "index": 3
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 3.81,
+  "p95M": 5.48,
+  "maxM": 5.71,
+  "refToBuiltMaxM": 5.71,
+  "worstStretches": [
+   {
+    "fromM": 384,
+    "toM": 484,
+    "meanM": 4.1
+   },
+   {
+    "fromM": 192,
+    "toM": 292,
+    "meanM": 4.1
+   },
+   {
+    "fromM": 82,
+    "toM": 182,
+    "meanM": 2.9
+   }
+  ],
+  "scale": 0.9774
+ },
+ "verdict": "matches",
+ "notes": []
+}

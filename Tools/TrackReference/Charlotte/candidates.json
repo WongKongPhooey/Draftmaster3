@@ -1,0 +1,80 @@
+{
+ "trackId": "Charlotte",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    402168711,
+    116107372,
+    402168711,
+    116107359,
+    402168711,
+    396483278,
+    116034341,
+    402168709,
+    401660627,
+    1052107104
+   ],
+   "lengthM": 2363.0,
+   "lengthErrPct": -2.11,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 42.79,
+    "p95M": 67.6,
+    "maxM": 70.94,
+    "scale": 1.0165
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    827346006,
+    835498378,
+    827346004,
+    1526164993,
+    827346004,
+    1265117379
+   ],
+   "lengthM": 2617.2,
+   "lengthErrPct": 8.42,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 74.25,
+    "p95M": 123.09,
+    "maxM": 147.68,
+    "scale": 0.95
+   },
+   "index": 1
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 42.79,
+  "p95M": 67.6,
+  "maxM": 70.94,
+  "refToBuiltMaxM": 70.97,
+  "worstStretches": [
+   {
+    "fromM": 396,
+    "toM": 494,
+    "meanM": 68.7
+   },
+   {
+    "fromM": 206,
+    "toM": 304,
+    "meanM": 67.8
+   },
+   {
+    "fromM": 496,
+    "toM": 594,
+    "meanM": 53.1
+   }
+  ],
+  "scale": 1.0165
+ },
+ "verdict": "wrong shape",
+ "notes": []
+}

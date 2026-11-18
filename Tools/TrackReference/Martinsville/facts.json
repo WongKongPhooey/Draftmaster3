@@ -1,0 +1,107 @@
+{
+ "trackId": "Martinsville",
+ "displayName": "Martinsville Speedway",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.53,
+  "surfaceWidthM": 12.19,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "inside edge (ways 448514914,-1,448514913, joined) offset 7.50 m outward to the centre of a 15.0 m racing surface; checked against USGS NAIP imagery"
+ },
+ "wikipedia": {
+  "title": "Martinsville Speedway",
+  "url": "https://en.wikipedia.org/wiki/Martinsville_Speedway",
+  "coordinates": [
+   36.63388888888889,
+   -79.85111111111111
+  ],
+  "location": "4201 Greensboro Road; Ridgeway, Virginia; 24148",
+  "opened": "",
+  "capacity": "Exact figure unknown; less than 44,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Martinsville Speedway 2024.svg",
+    "caption": ""
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Oval (1947–present)",
+   "surface": "Asphalt (straights and higher lanes of turns); Concrete (lower lanes of turns)",
+   "banking": "Turns: 12°; Straights: 0°",
+   "length_km": "0.847",
+   "length_mi": "0.526",
+   "turns": "4",
+   "record_time": "0:18.845",
+   "record_driver": "Ross Chastain",
+   "record_year": "2022",
+   "record_class": "NASCAR Cup",
+   "miles": 0.526,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Oval (1947–present)",
+  "surface": "Asphalt (straights and higher lanes of turns); Concrete (lower lanes of turns)",
+  "banking": "Turns: 12°; Straights: 0°",
+  "length_km": "0.847",
+  "length_mi": "0.526",
+  "turns": "4",
+  "record_time": "0:18.845",
+  "record_driver": "Ross Chastain",
+  "record_year": "2022",
+  "record_class": "NASCAR Cup",
+  "miles": 0.526,
+  "index": 1
+ },
+ "lengthCheckPct": -0.75,
+ "venueCentre": [
+  36.634082,
+  -79.851671
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 3,
+  "pit": 1,
+  "wall": 2,
+  "fence": 27,
+  "surface": 0,
+  "grandstand": 7,
+  "stadium": 1,
+  "building": 80,
+  "parking": 44,
+  "water": 0,
+  "road": 216
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 402168723,
+   "name": "Pit Road",
+   "lengthM": 618.0
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1169,
+  "height": 1388,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Martinsville Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Martinsville_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

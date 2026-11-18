@@ -1,0 +1,231 @@
+{
+ "trackId": "Daytona",
+ "displayName": "Daytona International Speedway",
+ "type": "Superspeedway",
+ "game": {
+  "lengthMiles": 2.5,
+  "surfaceWidthM": 11,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "outer wall (closed barrier=wall way 407709771) offset 5.50 m inward to the centre of a 11.0 m racing surface; checked against USGS NAIP imagery"
+ },
+ "wikipedia": {
+  "title": "Daytona International Speedway",
+  "url": "https://en.wikipedia.org/wiki/Daytona_International_Speedway",
+  "coordinates": [
+   29.185555555555556,
+   -81.06944444444444
+  ],
+  "location": "1801 West International Speedway Blvd,; Daytona Beach, Florida, United States 32114",
+  "opened": "1959",
+  "capacity": "101,500–167,785 (w/ infield, depending on configuration) 123,500 (grandstand capacity)",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Daytona International Speedway 2024.svg",
+    "caption": "Tri-Oval (1959–present)"
+   },
+   {
+    "file": "Daytona International Speedway Road Course 2024.svg",
+    "caption": "Sports Car Course (1985–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "NASCAR Tri-Oval (1959–present)",
+   "surface": "Asphalt",
+   "length_km": "4.023",
+   "length_mi": "2.500",
+   "turns": "4",
+   "banking": "Turns: 31°; Tri-oval: 18°; Back straightaway: 3°",
+   "record_time": "0:43.682",
+   "record_driver": "Erik Jones",
+   "record_year": "2020",
+   "record_class": "NASCAR Cup",
+   "miles": 2.5,
+   "index": 1
+  },
+  {
+   "layout": "Sports Car Course (1985–present)",
+   "surface": "Asphalt",
+   "length_km": "5.729",
+   "length_mi": "3.560",
+   "turns": "12",
+   "banking": "Oval turns: 31°; Tri-Oval: 18°; Back straightaway: 3°; Infield: 0° (flat)",
+   "record_time": "1:33.724",
+   "record_driver": "Alex Palou",
+   "record_year": "2022",
+   "record_class": "DPi",
+   "miles": 3.56,
+   "index": 2
+  },
+  {
+   "layout": "Long Motorcycle Course (2005–present)",
+   "surface": "Asphalt",
+   "length_km": "5.649",
+   "length_mi": "3.510",
+   "turns": "12",
+   "banking": "Oval turns: 31°; Tri-Oval: 18°; Back straightaway: 3°; Infield: 0° (flat)",
+   "record_time": "1:47.879",
+   "record_driver": "Josh Herrin",
+   "record_year": "2025",
+   "record_class": "SSP",
+   "miles": 3.51,
+   "index": 3
+  },
+  {
+   "layout": "Short Motorcycle Course (2008–present)",
+   "surface": "Asphalt",
+   "length_km": "4.667",
+   "length_mi": "2.900",
+   "turns": "12",
+   "banking": "Oval turns: 31°; Tri-Oval: 18°; Back straightaway: 3°; Infield: 0° (flat)",
+   "record_time": "1:36.266",
+   "record_driver": "Mat Mladin",
+   "record_year": "2008",
+   "record_class": "SBK",
+   "miles": 2.9,
+   "index": 4
+  },
+  {
+   "layout": "NASCAR Road Course (2020–2021)",
+   "surface": "Asphalt",
+   "length_km": "5.745",
+   "length_mi": "3.570",
+   "turns": "14",
+   "banking": "Oval turns: 31°; Tri-Oval: 18°; Back straightaway: 3°; Infield: 0° (flat)",
+   "record_time": "1:55.677",
+   "record_driver": "Chase Elliott",
+   "record_year": "2021",
+   "record_class": "NASCAR Cup",
+   "miles": 3.57,
+   "index": 5
+  },
+  {
+   "layout": "Sports Car Course (1984)",
+   "surface": "Asphalt",
+   "length_km": "6.228",
+   "length_mi": "3.869",
+   "record_time": "1:45.209",
+   "record_driver": "Derek Bell",
+   "record_year": "1984",
+   "record_class": "IMSA GTP",
+   "miles": 3.869,
+   "index": 6
+  },
+  {
+   "layout": "Sports Car Course (1975–1983)",
+   "surface": "Asphalt",
+   "length_km": "6.180",
+   "length_mi": "3.840",
+   "record_time": "1:45.360",
+   "record_driver": "Danny Ongais",
+   "record_year": "1982",
+   "record_class": "IMSA GTP",
+   "miles": 3.84,
+   "index": 7
+  },
+  {
+   "layout": "Sports Car Course (1959–1974)",
+   "surface": "Asphalt",
+   "length_km": "6.132",
+   "length_mi": "3.810",
+   "turns": "7",
+   "record_time": "1:41.250",
+   "record_driver": "Mark Donohue",
+   "record_year": "1971",
+   "record_class": "Group 5",
+   "miles": 3.81,
+   "index": 8
+  },
+  {
+   "layout": "Dirt Flat Track",
+   "surface": "Dirt",
+   "length_km": "0.40",
+   "length_mi": "0.25",
+   "turns": "4",
+   "miles": 0.25,
+   "index": 9
+  }
+ ],
+ "matchedLayout": {
+  "layout": "NASCAR Tri-Oval (1959–present)",
+  "surface": "Asphalt",
+  "length_km": "4.023",
+  "length_mi": "2.500",
+  "turns": "4",
+  "banking": "Turns: 31°; Tri-oval: 18°; Back straightaway: 3°",
+  "record_time": "0:43.682",
+  "record_driver": "Erik Jones",
+  "record_year": "2020",
+  "record_class": "NASCAR Cup",
+  "miles": 2.5,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  29.18528,
+  -81.06903
+ ],
+ "osmRadiusM": 1637,
+ "osmCounts": {
+  "raceway": 23,
+  "pit": 3,
+  "wall": 44,
+  "fence": 50,
+  "surface": 0,
+  "grandstand": 1,
+  "stadium": 2,
+  "building": 398,
+  "parking": 59,
+  "water": 48,
+  "road": 1439
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 352067003,
+   "name": "Pit Lane",
+   "lengthM": 587.3
+  },
+  {
+   "wayId": 198465570,
+   "name": "Road Course Pit Lane",
+   "lengthM": 546.8
+  },
+  {
+   "wayId": 198465568,
+   "name": "Pit Lane",
+   "lengthM": 31.5
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2841,
+  "height": 3229,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-17"
+ },
+ "trackMap": [
+  {
+   "file": "Daytona International Speedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Daytona_International_Speedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Tri-Oval (1959–present)",
+   "saved": "trackmap.png"
+  },
+  {
+   "file": "Daytona International Speedway Road Course 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Daytona_International_Speedway_Road_Course_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Sports Car Course (1985–present)",
+   "saved": "trackmap2.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}
