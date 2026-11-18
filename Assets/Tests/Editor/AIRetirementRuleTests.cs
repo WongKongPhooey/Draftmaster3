@@ -17,6 +17,42 @@ public class AIRetirementRuleTests
     }
 
     [Test]
+    public void ACarInsideTheFrameIsInShot()
+    {
+        // 16:9 frame, 30 m half-height: corners ~60 m from centre.
+        Assert.IsFalse(AIRetirementRule.OutOfShot(new Vector2(10f, 5f), 3f, Vector2.zero, 30f, 16f / 9f, 10f));
+        Assert.IsFalse(AIRetirementRule.OutOfShot(new Vector2(50f, 0f), 3f, Vector2.zero, 30f, 16f / 9f, 10f));
+    }
+
+    [Test]
+    public void ACarPastTheFramesCornersAndMarginIsOutOfShot()
+    {
+        float reach = Mathf.Sqrt(30f * 30f + (30f * 16f / 9f) * (30f * 16f / 9f)) + 3f + 10f;
+        var centre = new Vector2(100f, -40f);
+        Assert.IsFalse(AIRetirementRule.OutOfShot(centre + Vector2.up * (reach - 0.5f), 3f, centre, 30f, 16f / 9f, 10f));
+        Assert.IsTrue(AIRetirementRule.OutOfShot(centre + Vector2.up * (reach + 0.5f), 3f, centre, 30f, 16f / 9f, 10f));
+        // Whichever way the view is rolled: the corner circle covers every direction alike.
+        Assert.IsTrue(AIRetirementRule.OutOfShot(centre + new Vector2(-1f, 1f).normalized * (reach + 0.5f), 3f,
+                                                 centre, 30f, 16f / 9f, 10f));
+    }
+
+    [Test]
+    public void ARetiringCarMovesOnlyOnceNeitherItNorItsSpotIsInShot()
+    {
+        Assert.IsTrue(AIRetirementRule.MoveOutOfSight(false, false, 0f, 90f));
+        Assert.IsFalse(AIRetirementRule.MoveOutOfSight(true, false, 10f, 90f));
+        Assert.IsFalse(AIRetirementRule.MoveOutOfSight(false, true, 10f, 90f));
+        Assert.IsFalse(AIRetirementRule.MoveOutOfSight(true, true, 89f, 90f));
+    }
+
+    [Test]
+    public void AViewThatNeverLooksAwayOnlyHoldsTheCarSoLong()
+    {
+        Assert.IsTrue(AIRetirementRule.MoveOutOfSight(true, true, 90f, 90f));
+        Assert.IsFalse(AIRetirementRule.MoveOutOfSight(true, true, 10000f, 0f));   // 0 = wait for ever
+    }
+
+    [Test]
     public void AZeroThresholdMeansCarsNeverBreakDown()
     {
         Assert.IsFalse(AIRetirementRule.BrokenDown(1f, 0f));

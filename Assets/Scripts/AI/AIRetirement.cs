@@ -10,6 +10,12 @@ using UnityEngine;
 // retired: lifted off the circuit and parked on the far side of the infield wall, with room checked for it there.
 // Where a stretch has no infield wall it is parked well out in the infield instead, clear of every part of the road.
 //
+// The move is never seen. Once the car is due to go its spot is picked and held for it, but the car stays where it
+// stopped (still on the circuit, still raising its yellow) until neither it nor the spot is inside any camera's
+// frame, and only then jumps. A fixed view that never looks away (a grandstand seat, a camera following this very
+// car) gets forceMoveAfterSeconds before the car goes anyway, so it cannot hold a caution out for ever. A stuck car
+// that gets going again while it waits is back in the race.
+//
 // A retired car is out of the race. Its brain, inputs and collision response are switched off, it is pinned where
 // it was put (ParkedCarPin), and CautionWatch skips it — a stopped car behind the wall is not an incident, so it
 // stops raising local yellows and no longer holds a full-course caution out. RaceDirector stops waiting for it at
@@ -57,7 +63,18 @@ public class AIRetirement : MonoBehaviour
     public float alongStepMetres = 12f;
     public float alongMaxMetres = 240f;
 
+    [Header("Out of shot")]
+    [Tooltip("Extra clearance (m) beyond a camera's frame that both the car and its parking spot need before the " +
+             "car is moved: covers the camera's travel between this physics step and the next render.")]
+    public float outOfShotMargin = 10f;
+    [Tooltip("Seconds a car due to retire waits on the circuit for the camera to look away before it is moved " +
+             "anyway. A fixed view (a grandstand seat, the camera following this car) would otherwise keep it " +
+             "there, and its caution out, for ever. 0 = wait for ever.")]
+    public float forceMoveAfterSeconds = 90f;
+
     static readonly HashSet<Transform> _retired = new();
+    static readonly HashSet<Transform> _retiring = new();
+    static Camera[] _cameras;
     static readonly List<Vector2> _takenSpots = new();
     static TrackBuilder _samplesFor;
     static List<TrackBuilder.Sample> _samples;
@@ -66,6 +83,9 @@ public class AIRetirement : MonoBehaviour
 
     // Whether this car has retired from the race.
     public static bool IsRetired(Transform car) => car != null && _retired.Contains(car);
+    // Retired, or due to and only waiting for the camera to look away before it is moved off the circuit. Either
+    // way it will not finish. A waiting car is still on the road, so CautionWatch reads IsRetired, not this.
+    public static bool IsOutOfRace(Transform car) => car != null && (_retired.Contains(car) || _retiring.Contains(car));
 
     public bool BrokenDown { get; private set; }
     public bool Retired { get; private set; }
@@ -76,11 +96,21 @@ public class AIRetirement : MonoBehaviour
     VehicleDamage _bodywork;
     float _stoppedSince = -1f;
 
+    // Due to retire, waiting out of shot (see the header): where it will go, and since when.
+    bool _waiting;
+    Vector2 _waitSpot;
+    float _waitHeading;
+    bool _waitBehindWall;
+    float _waitingSince;
+    int _layerMask;     // layers the car is drawn on; a camera that culls them all cannot see it
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
         _retired.Clear();
+        _retiring.Clear();
         _takenSpots.Clear();
+        _cameras = null;
         _samplesFor = null;
         _samples = null;
         _centres = null;
@@ -94,7 +124,11 @@ public class AIRetirement : MonoBehaviour
         _car = GetComponent<PlayerVehicleController>();
     }
 
-    void OnDestroy() => _retired.Remove(transform);
+    void OnDestroy()
+    {
+        _retired.Remove(transform);
+        _retiring.Remove(transform);
+    }
 
     void FixedUpdate()
     {
@@ -105,6 +139,8 @@ public class AIRetirement : MonoBehaviour
         // car does not start driving again because the flag fell or a caution came out.
         if (BrokenDown && _input != null && _input.enabled && _car.externalInput)
             _car.SetInput(_input.LastSteer, 0f, breakdownBrake);
+
+        if (_waiting) { TickWaiting(); return; }
 
         if (!InPlay()) { _stoppedSince = -1f; return; }
 
@@ -120,7 +156,7 @@ public class AIRetirement : MonoBehaviour
         if (!StoppedOnCircuit()) { _stoppedSince = -1f; return; }
         if (_stoppedSince < 0f) _stoppedSince = now;
         if (AIRetirementRule.Retire(now - _stoppedSince, BrokenDown, brokenRetireSeconds, stuckRetireSeconds)
-            && !Retire())
+            && !BeginRetire())
             _stoppedSince = now;   // nowhere to put it: wait out the timer again before the next search
     }
 
@@ -172,9 +208,10 @@ public class AIRetirement : MonoBehaviour
         Debug.Log($"[AIRetire] {name} broke down (damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
     }
 
-    // Out of the race: off the circuit, over the infield wall, switched off and pinned there.
+    // Due out of the race: pick and hold a spot over the infield wall, then wait for the camera to look away
+    // before moving there (TickWaiting) — straight away, most of the time, as nobody is looking.
     // Returns false, leaving the car racing (and flagged), when there is nowhere off the road to put it.
-    bool Retire()
+    bool BeginRetire()
     {
         // Room checked first. Should nothing pass (a scene where something solid covers the whole infield), the
         // spot only has to be clear of the road. And if not even that, the car stays where it is, still in the race
@@ -186,9 +223,95 @@ public class AIRetirement : MonoBehaviour
             return false;
         }
 
+        _takenSpots.Add(spot);   // held while it waits, so no other car is parked on it
+        _retiring.Add(transform);
+        _waiting = true;
+        _waitSpot = spot;
+        _waitHeading = headingDeg;
+        _waitBehindWall = behindWall;
+        _waitingSince = Time.fixedTime;
+        TickWaiting();
+        if (_waiting)
+            Debug.Log($"[AIRetire] {name} retiring ({(BrokenDown ? "broken down" : "stuck")}) — in shot, " +
+                      "moves once the camera looks away");
+        return true;
+    }
+
+    // Waiting to be moved: go the moment neither the car nor its spot is on screen.
+    void TickWaiting()
+    {
+        // Taken over by the player (a team switch into it): theirs to get going again, not ours to tidy away. And a
+        // car that was only stuck, and has got going again or been taken over by a caution's queue (which drives it
+        // kinematically, input off), is back in the race.
+        if (PlayerVehicleController.IsHuman(_car) || IsTrackedAsPlayer()
+            || (!BrokenDown && (_car.SpeedMph > stoppedBelowMph || _input == null || !_input.enabled)))
+        {
+            _waiting = false;
+            _retiring.Remove(transform);
+            _takenSpots.Remove(_waitSpot);
+            _stoppedSince = -1f;
+            return;
+        }
+
+        float radius = CarSize().magnitude * 0.5f;
+        bool carSeen = InShot(transform.position, radius);
+        bool spotSeen = InShot(new Vector3(_waitSpot.x, _waitSpot.y, transform.position.z), radius);
+        if (!AIRetirementRule.MoveOutOfSight(carSeen, spotSeen, Time.fixedTime - _waitingSince, forceMoveAfterSeconds))
+            return;
+
+        _waiting = false;
+        _retiring.Remove(transform);
+        Retire(_waitSpot, _waitHeading, _waitBehindWall, carSeen || spotSeen);
+    }
+
+    // Whether any camera drawing to the screen has this circle in its frame. No camera (a headless sim): nobody.
+    bool InShot(Vector3 point, float radius)
+    {
+        int count = Camera.allCamerasCount;
+        if (count == 0) return false;
+        if (_cameras == null || _cameras.Length < count) _cameras = new Camera[count];
+        count = Camera.GetAllCameras(_cameras);
+        if (_layerMask == 0) _layerMask = DrawnLayers();
+
+        for (int i = 0; i < count; i++)
+        {
+            var cam = _cameras[i];
+            if (cam == null || cam.targetTexture != null || cam.cameraType != CameraType.Game) continue;
+            if ((cam.cullingMask & _layerMask) == 0) continue;   // a UI-only camera
+            Vector3 at = cam.transform.position;
+            if (!AIRetirementRule.OutOfShot(point, radius, at, HalfHeight(cam, Mathf.Abs(point.z - at.z)),
+                                            cam.aspect, outOfShotMargin))
+                return true;
+        }
+        return false;
+    }
+
+    // Half the frame's height (m) as it is drawn, `depth` metres in front of the camera. The race camera's
+    // orthographic size is opened out only while it renders — the swing's view-ahead (DrivingCameraFeel.ViewZoom)
+    // and an upright phone's (DriveOrientationController) — so both are put back on here.
+    static float HalfHeight(Camera cam, float depth)
+    {
+        if (!cam.orthographic)
+            return depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float size = cam.orthographicSize;
+        var feel = cam.GetComponent<DrivingCameraFeel>();
+        if (feel != null && feel.isActiveAndEnabled) size *= Mathf.Max(1f, feel.ViewZoom);
+        size *= Draftmaster.Controls.DriveOrientation.PortraitZoom(cam.pixelWidth, cam.pixelHeight);
+        return size;
+    }
+
+    int DrawnLayers()
+    {
+        int mask = 1 << gameObject.layer;
+        foreach (var r in GetComponentsInChildren<Renderer>(true)) mask |= 1 << r.gameObject.layer;
+        return mask;
+    }
+
+    // Out of the race: off the circuit, over the infield wall, switched off and pinned there.
+    void Retire(Vector2 spot, float headingDeg, bool behindWall, bool forced)
+    {
         Retired = true;
         _retired.Add(transform);
-        _takenSpots.Add(spot);
 
         // Everything that would drive, steer or react to contact goes off first; a live controller would spend the
         // frame fighting the move.
@@ -224,8 +347,8 @@ public class AIRetirement : MonoBehaviour
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(transform);
 
         Debug.Log($"[AIRetire] {name} retired ({(BrokenDown ? "broken down" : "stuck")}) — " +
-                  (behindWall ? "parked behind the infield wall" : "parked in the infield, no wall"));
-        return true;
+                  (behindWall ? "parked behind the infield wall" : "parked in the infield, no wall") +
+                  (forced ? $" (still in shot after {forceMoveAfterSeconds:0} s; moved anyway)" : ""));
     }
 
     // A spot on the infield side of the track near where the car stopped: just over the infield wall if there is

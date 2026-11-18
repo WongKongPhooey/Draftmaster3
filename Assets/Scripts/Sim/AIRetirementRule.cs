@@ -64,6 +64,29 @@ namespace Draftmaster.Sim
             return true;
         }
 
+        // Whether a circle of `radius` metres at `point` is wholly outside a camera frame centred on `viewCentre`,
+        // `halfHeight` metres from centre to top edge and `aspect` (width over height) wide, with `margin` metres to
+        // spare. Tested against the circle through the frame's corners, so it holds whichever way the view is rolled
+        // (the swing camera turns the picture with the car).
+        public static bool OutOfShot(Vector2 point, float radius, Vector2 viewCentre, float halfHeight, float aspect,
+                                     float margin)
+        {
+            float h = Mathf.Max(0f, halfHeight);
+            float w = h * Mathf.Max(0.01f, aspect);
+            float reach = Mathf.Sqrt(h * h + w * w) + Mathf.Max(0f, radius) + Mathf.Max(0f, margin);
+            return (point - viewCentre).sqrMagnitude > reach * reach;
+        }
+
+        // Whether a car waiting out of sight to be moved to its parking spot should be moved now: as soon as
+        // nobody can see it go or arrive, or — so a car stopped in a fixed view (a grandstand seat, a camera
+        // following it) cannot hold a caution out for ever — once it has waited `forceAfter` seconds
+        // (0 or less = wait for ever).
+        public static bool MoveOutOfSight(bool carInShot, bool spotInShot, float waited, float forceAfter)
+        {
+            if (!carInShot && !spotInShot) return true;
+            return forceAfter > 0f && waited >= forceAfter;
+        }
+
         // Index of the centreline sample nearest `point`; -1 for an empty list.
         public static int NearestIndex(Vector2 point, IReadOnlyList<Vector2> centres)
         {
