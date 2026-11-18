@@ -1,0 +1,221 @@
+{
+ "trackId": "Sonoma",
+ "displayName": "Sonoma Raceway",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 2.52,
+  "surfaceWidthM": 12,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Sonoma Raceway",
+  "url": "https://en.wikipedia.org/wiki/Sonoma_Raceway",
+  "coordinates": [
+   38.16083333333333,
+   -122.455
+  ],
+  "location": "29355 Arnold Drive; Sonoma, California, United States; 95476",
+  "opened": "1969 (dragstrip); 1969 (road course)",
+  "capacity": "44,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Sonoma Raceway 2024.svg",
+    "caption": "Grand Prix Layout (2001–present)"
+   },
+   {
+    "file": "Sonoma Raceway NASCAR Circuit 2024.svg",
+    "caption": "Club Layout (2001–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Long Circuit (2002–present)",
+   "surface": "Asphalt",
+   "length_km": "4.056",
+   "length_mi": "2.520",
+   "turns": "12",
+   "record_time": "1:22.041",
+   "record_driver": "Marco Werner",
+   "record_year": "2005",
+   "record_class": "LMP1",
+   "miles": 2.52,
+   "index": 1
+  },
+  {
+   "layout": "IndyCar Circuit (2012–present)",
+   "surface": "Asphalt",
+   "length_km": "3.838",
+   "length_mi": "2.385",
+   "turns": "12",
+   "record_time": "1:18.3576",
+   "record_driver": "Simon Pagenaud",
+   "record_year": "2017",
+   "record_class": "IndyCar",
+   "miles": 2.385,
+   "index": 2
+  },
+  {
+   "layout": "WTCC Circuit (2012–present)",
+   "surface": "Asphalt",
+   "length_km": "4.032",
+   "length_mi": "2.505",
+   "turns": "12",
+   "record_time": "1:27.691",
+   "record_driver": "Daniël de Jong",
+   "record_year": "2012",
+   "record_class": "Auto GP",
+   "miles": 2.505,
+   "index": 3
+  },
+  {
+   "layout": "Club Circuit (2001–present)",
+   "surface": "Asphalt",
+   "length_km": "3.203",
+   "length_mi": "1.990",
+   "turns": "12",
+   "record_time": "1:13.629",
+   "record_driver": "Kyle Larson",
+   "record_year": "2024",
+   "record_class": "NASCAR",
+   "miles": 1.99,
+   "index": 4
+  },
+  {
+   "layout": "Alternative Motorcycle Circuit (2008–present)",
+   "surface": "Asphalt",
+   "length_km": "3.701",
+   "length_mi": "2.300",
+   "turns": "12",
+   "record_time": "1:35.067",
+   "record_driver": "Cameron Beaubier",
+   "record_year": "2018",
+   "record_class": "SBK",
+   "miles": 2.3,
+   "index": 5
+  },
+  {
+   "layout": "IndyCar Circuit (2008–2011)",
+   "surface": "Asphalt",
+   "length_km": "3.706",
+   "length_mi": "2.303",
+   "turns": "12",
+   "record_time": "1:18.6320",
+   "record_driver": "Hélio Castroneves",
+   "record_year": "2008",
+   "record_class": "IndyCar",
+   "miles": 2.303,
+   "index": 6
+  },
+  {
+   "layout": "IndyCar Circuit (2005–2007)",
+   "surface": "Asphalt",
+   "length_km": "3.838",
+   "length_mi": "2.385",
+   "turns": "12",
+   "record_time": "1:17.5524",
+   "record_driver": "Tony Kanaan",
+   "record_year": "2007",
+   "record_class": "IndyCar",
+   "miles": 2.385,
+   "index": 7
+  },
+  {
+   "layout": "Long Circuit (1998–2001)",
+   "surface": "Asphalt",
+   "length_km": "4.056",
+   "length_mi": "2.520",
+   "turns": "12",
+   "record_time": "1:22.863",
+   "record_driver": "Allan McNish",
+   "record_year": "2000",
+   "record_class": "LMP900",
+   "miles": 2.52,
+   "index": 8
+  },
+  {
+   "layout": "Original Long Circuit (1968–1997)",
+   "surface": "Asphalt",
+   "length_km": "4.060",
+   "length_mi": "2.523",
+   "turns": "12",
+   "record_time": "1:25.057",
+   "record_driver": "Geoff Brabham",
+   "record_year": "1990",
+   "record_class": "IMSA GTP",
+   "miles": 2.523,
+   "index": 9
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Long Circuit (2002–present)",
+  "surface": "Asphalt",
+  "length_km": "4.056",
+  "length_mi": "2.520",
+  "turns": "12",
+  "record_time": "1:22.041",
+  "record_driver": "Marco Werner",
+  "record_year": "2005",
+  "record_class": "LMP1",
+  "miles": 2.52,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  38.163243,
+  -122.458656
+ ],
+ "osmRadiusM": 1647,
+ "osmCounts": {
+  "raceway": 20,
+  "pit": 1,
+  "wall": 20,
+  "fence": 3,
+  "surface": 0,
+  "grandstand": 4,
+  "stadium": 2,
+  "building": 33,
+  "parking": 3,
+  "water": 6,
+  "road": 76
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 230287120,
+   "name": "Pit Road",
+   "lengthM": 922.3
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2906,
+  "height": 2638,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Sonoma Raceway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Sonoma_Raceway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Grand Prix Layout (2001–present)",
+   "saved": "trackmap.png"
+  },
+  {
+   "file": "Sonoma Raceway NASCAR Circuit 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Sonoma_Raceway_NASCAR_Circuit_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Club Layout (2001–present)",
+   "saved": "trackmap2.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

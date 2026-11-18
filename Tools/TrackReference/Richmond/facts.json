@@ -1,0 +1,107 @@
+{
+ "trackId": "Richmond",
+ "displayName": "Richmond Raceway",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.75,
+  "surfaceWidthM": 18.29,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Richmond Raceway",
+  "url": "https://en.wikipedia.org/wiki/Richmond_Raceway",
+  "coordinates": [
+   37.59168888888889,
+   -77.42091111111111
+  ],
+  "location": "600 East Laburnum Avenue; Richmond, Virginia, United States; 23222",
+  "opened": "",
+  "capacity": "Exact figure unknown; less than 50,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Richmond Raceway 2024.svg",
+    "caption": "D-shaped Oval (1988−present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "D-Shaped Oval (1988–present)",
+   "surface": "Asphalt",
+   "length_km": "1.207",
+   "length_mi": "0.750",
+   "turns": "4",
+   "banking": "Turns: 14°; Frontstretch: 8°; Backstretch: 2°",
+   "record_time": "0:15.9368 seconds (169.423 mph)",
+   "record_driver": "Sam Hornish Jr.",
+   "record_year": "2004",
+   "record_class": "IndyCar",
+   "miles": 0.75,
+   "index": 1
+  }
+ ],
+ "matchedLayout": {
+  "layout": "D-Shaped Oval (1988–present)",
+  "surface": "Asphalt",
+  "length_km": "1.207",
+  "length_mi": "0.750",
+  "turns": "4",
+  "banking": "Turns: 14°; Frontstretch: 8°; Backstretch: 2°",
+  "record_time": "0:15.9368 seconds (169.423 mph)",
+  "record_driver": "Sam Hornish Jr.",
+  "record_year": "2004",
+  "record_class": "IndyCar",
+  "miles": 0.75,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  37.592346,
+  -77.419248
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 2,
+  "pit": 1,
+  "wall": 0,
+  "fence": 1,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 1,
+  "building": 554,
+  "parking": 10,
+  "water": 0,
+  "road": 316
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 452377296,
+   "name": "Pit Road",
+   "lengthM": 620.7
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1594,
+  "height": 1308,
+  "groundMetresPerPixel": 0.6002,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Richmond Raceway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Richmond_Raceway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "D-shaped Oval (1988−present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

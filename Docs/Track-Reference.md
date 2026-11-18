@@ -105,7 +105,9 @@ can be saved but the picture will not come back with it - re-run the menu item. 
   The track features are fetched first and the context layers (buildings, roads) second, so a busy server
   costs the decoration before it costs the measurement.
 - Street circuits rarely have a closed raceway ring in OSM; their streets do, but the walker only follows
-  raceways and barriers.
+  raceways and barriers. For those, a committed `Tools/TrackReference/<id>/reference_ways.json` (synthetic
+  raceway ways, Overpass format) is merged into the OSM layers on every run; Chicago's is assembled from OSM
+  street centrelines in race order by `Tools/TrackReference/Chicago/build_reference.py`.
 
 ## Files
 

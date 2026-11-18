@@ -1,8 +1,51 @@
 {
  "trackId": "Chicago",
- "candidates": [],
- "best": null,
- "builtVsBest": null,
- "verdict": "unmeasured",
- "notes": []
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    -1
+   ],
+   "lengthM": 3414.7,
+   "lengthErrPct": -3.55,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 159.15,
+    "p95M": 255.12,
+    "maxM": 291.48,
+    "scale": 0.95
+   },
+   "index": 0
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 159.15,
+  "p95M": 255.12,
+  "maxM": 291.48,
+  "refToBuiltMaxM": 323.04,
+  "worstStretches": [
+   {
+    "fromM": 3138,
+    "toM": 3237,
+    "meanM": 283.6
+   },
+   {
+    "fromM": 258,
+    "toM": 356,
+    "meanM": 251.8
+   },
+   {
+    "fromM": 1310,
+    "toM": 1408,
+    "meanM": 246.1
+   }
+  ],
+  "scale": 0.95
+ },
+ "verdict": "wrong shape",
+ "notes": [
+  "reference lap from reference_ways.json merged in: Synthetic reference lap for the Chicago street course: OSM street centrelines in race order (2023-2025 layout, NBC Chicago turn-by-turn 2024), corners smoothed. Built by build_reference.py. An estimate of the racing line, not a survey."
+ ]
 }

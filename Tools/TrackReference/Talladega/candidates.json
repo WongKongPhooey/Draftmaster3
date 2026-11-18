@@ -1,0 +1,108 @@
+{
+ "trackId": "Talladega",
+ "candidates": [
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    8835825,
+    116792873,
+    8835825,
+    426163860,
+    426163859,
+    532106116
+   ],
+   "lengthM": 4271.6,
+   "lengthErrPct": -0.22,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 29.4,
+    "p95M": 56.61,
+    "maxM": 61.18,
+    "scale": 1.0106
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    426163859,
+    532106116,
+    8835825,
+    426163860
+   ],
+   "lengthM": 4303.9,
+   "lengthErrPct": 0.54,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 44.52,
+    "p95M": 106.59,
+    "maxM": 111.84,
+    "scale": 1.0194
+   },
+   "index": 1
+  },
+  {
+   "label": "fence ring as the OUTER edge, 7.3 m in",
+   "kind": "fence-outer",
+   "ways": [
+    116815792
+   ],
+   "lengthM": 4304.6,
+   "lengthErrPct": 0.55,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 44.72,
+    "p95M": 106.2,
+    "maxM": 112.25,
+    "scale": 1.02
+   },
+   "index": 2
+  },
+  {
+   "label": "fence ring as the INSIDE edge, 7.3 m out",
+   "kind": "fence-inner",
+   "ways": [
+    116815792
+   ],
+   "lengthM": 4396.5,
+   "lengthErrPct": 2.7,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 47.98,
+    "p95M": 112.36,
+    "maxM": 118.59,
+    "scale": 1.0439
+   },
+   "index": 3
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 29.4,
+  "p95M": 56.61,
+  "maxM": 61.18,
+  "refToBuiltMaxM": 61.2,
+  "worstStretches": [
+   {
+    "fromM": 720,
+    "toM": 818,
+    "meanM": 59.5
+   },
+   {
+    "fromM": 248,
+    "toM": 346,
+    "meanM": 58.3
+   },
+   {
+    "fromM": 348,
+    "toM": 446,
+    "meanM": 53.6
+   }
+  ],
+  "scale": 1.0106
+ },
+ "verdict": "wrong shape",
+ "notes": []
+}

@@ -71,7 +71,7 @@ WIKI_TITLES = {
     'IndyRoad': 'Indianapolis Motor Speedway',
     'MexicoCity': 'Autódromo Hermanos Rodríguez',
     'Miami': 'Homestead–Miami Speedway',
-    'SanDiego': 'Naval Base Coronado',
+    'SanDiego': 'Coronado Street Course',
     'LongPond': 'Pocono Raceway',
     'IRP': 'Lucas Oil Indianapolis Raceway Park',
 }
@@ -772,6 +772,12 @@ def build(tid, refresh=False, offline=False, batch=False):
             save_json(opath, osm)
     if osm and osm.get('contextMissing'):
         log.append('buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them')
+    # A committed reference lap where OSM maps no raceway (Chicago's street course): synthetic ways merged into
+    # the OSM layers, never written back to the cache. See Tools/TrackReference/<id>/reference_ways.json.
+    extra = load_json(os.path.join(folder, 'reference_ways.json'))
+    if extra:
+        osm = dict(osm or {}, elements=(osm or {}).get('elements', []) + extra['elements'])
+        log.append('reference lap from reference_ways.json merged in: ' + extra.get('note', ''))
     by_kind = {k: [] for k in ('raceway', 'pit', 'wall', 'fence', 'surface', 'grandstand', 'stadium', 'building',
                                'parking', 'water', 'road')}
     for e in (osm or {}).get('elements', []):

@@ -1,0 +1,196 @@
+{
+ "trackId": "Portland",
+ "displayName": "Portland International Raceway",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 1.97,
+  "surfaceWidthM": 12,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Portland International Raceway",
+  "url": "https://en.wikipedia.org/wiki/Portland_International_Raceway",
+  "coordinates": [
+   45.596944444444446,
+   -122.69583333333334
+  ],
+  "location": "Portland, Oregon, United States",
+  "opened": "1961",
+  "capacity": "30,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Portland international raceway.svg",
+    "caption": "Grand Prix Circuit (2008–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Circuit (2008–present)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.166",
+   "length_mi": "1.967",
+   "turns": "12",
+   "record_time": "0:58.7403",
+   "record_driver": "Carlos Muñoz",
+   "record_year": "2018",
+   "record_class": "IndyCar",
+   "miles": 1.967,
+   "index": 1
+  },
+  {
+   "layout": "Formula E Circuit (2023–2024)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.221",
+   "length_mi": "2.001",
+   "turns": "12",
+   "record_time": "1:10.650",
+   "record_driver": "Robin Frijns",
+   "record_year": "2024",
+   "record_class": "F-E",
+   "miles": 2.001,
+   "index": 2
+  },
+  {
+   "layout": "Grand Prix Circuit (1992–2007)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.129",
+   "length_mi": "1.944",
+   "turns": "12",
+   "record_time": "0.59.259",
+   "record_driver": "Will Power",
+   "record_year": "2006",
+   "record_class": "Champ Car",
+   "miles": 1.944,
+   "index": 3
+  },
+  {
+   "layout": "Grand Prix Circuit (1984–1991)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.093",
+   "length_mi": "1.922",
+   "turns": "12",
+   "record_time": "0:57.626",
+   "record_driver": "Wayne Taylor",
+   "record_year": "1991",
+   "record_class": "IMSA GTP",
+   "miles": 1.922,
+   "index": 4
+  },
+  {
+   "layout": "Grand Prix Circuit (1971–1983)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.082",
+   "length_mi": "1.915",
+   "turns": "9",
+   "record_time": "1:04.860",
+   "record_driver": "John Fitzpatrick",
+   "record_year": "1982",
+   "record_class": "IMSA GTP",
+   "miles": 1.915,
+   "index": 5
+  },
+  {
+   "layout": "Full Circuit (1969–1970)",
+   "surface": "Asphalt/concrete",
+   "length_km": "2.896",
+   "length_mi": "1.800",
+   "turns": "9",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.8,
+   "index": 6
+  },
+  {
+   "layout": "West Delta Park Circuit (1966–1968)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.160",
+   "length_mi": "1.964",
+   "turns": "11",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.964,
+   "index": 7
+  },
+  {
+   "layout": "West Delta Park Circuit (1961–1965)",
+   "surface": "Asphalt/concrete",
+   "length_km": "3.217",
+   "length_mi": "2.000",
+   "turns": "11",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 2.0,
+   "index": 8
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Circuit (2008–present)",
+  "surface": "Asphalt/concrete",
+  "length_km": "3.166",
+  "length_mi": "1.967",
+  "turns": "12",
+  "record_time": "0:58.7403",
+  "record_driver": "Carlos Muñoz",
+  "record_year": "2018",
+  "record_class": "IndyCar",
+  "miles": 1.967,
+  "index": 1
+ },
+ "lengthCheckPct": -0.15,
+ "venueCentre": [
+  45.597044,
+  -122.696317
+ ],
+ "osmRadiusM": 1364,
+ "osmCounts": {
+  "raceway": 6,
+  "pit": 1,
+  "wall": 31,
+  "fence": 21,
+  "surface": 1,
+  "grandstand": 13,
+  "stadium": 0,
+  "building": 1027,
+  "parking": 15,
+  "water": 29,
+  "road": 428
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 118127468,
+   "name": "Pit Road",
+   "lengthM": 655.0
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2891,
+  "height": 2140,
+  "groundMetresPerPixel": 0.6,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Portland international raceway.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Portland_international_raceway.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Readro",
+   "caption": "Grand Prix Circuit (2008–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

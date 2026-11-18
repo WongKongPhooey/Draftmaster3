@@ -1,0 +1,112 @@
+{
+ "trackId": "SanDiego",
+ "displayName": "Naval Base Coronado Street Circuit",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 3,
+  "surfaceWidthM": 12,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Coronado Street Course",
+  "url": "https://en.wikipedia.org/wiki/Coronado_Street_Course",
+  "coordinates": [
+   32.69916666666666,
+   -117.21527777777779
+  ],
+  "location": "Naval Base Coronado, San Diego, California",
+  "opened": "1997; Re-Opened: 2026",
+  "capacity": "",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Coronado Street Course 2026.png",
+    "caption": "NASCAR Circuit (2026)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "NASCAR Circuit (2026)",
+   "surface": "Asphalt",
+   "turns": "19",
+   "length_km": "5.472",
+   "length_mi": "3.400",
+   "record_time": "2:12.485",
+   "record_driver": "Kevin Magnussen",
+   "record_year": "2026",
+   "record_class": "NASCAR Cup",
+   "miles": 3.4,
+   "index": 1
+  },
+  {
+   "layout": "Speed Festival Circuit (1997–2016)",
+   "surface": "Asphalt",
+   "turns": "9",
+   "length_km": "2.736",
+   "length_mi": "1.700",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.7,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "NASCAR Circuit (2026)",
+  "surface": "Asphalt",
+  "turns": "19",
+  "length_km": "5.472",
+  "length_mi": "3.400",
+  "record_time": "2:12.485",
+  "record_driver": "Kevin Magnussen",
+  "record_year": "2026",
+  "record_class": "NASCAR Cup",
+  "miles": 3.4,
+  "index": 1
+ },
+ "lengthCheckPct": 13.33,
+ "venueCentre": [
+  32.699167,
+  -117.215278
+ ],
+ "osmRadiusM": 1894,
+ "osmCounts": {
+  "raceway": 3,
+  "pit": 0,
+  "wall": 1,
+  "fence": 14,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 0,
+  "building": 462,
+  "parking": 18,
+  "water": 5,
+  "road": 464
+ },
+ "osmPitLanes": [],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2901,
+  "height": 2508,
+  "groundMetresPerPixel": 0.5999,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Coronado Street Course 2026.png",
+   "source": "https://commons.wikimedia.org/wiki/File:Coronado_Street_Course_2026.png",
+   "licence": "CC BY-SA 4.0",
+   "artist": "WL2392",
+   "caption": "NASCAR Circuit (2026)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

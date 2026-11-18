@@ -1,0 +1,142 @@
+{
+ "trackId": "RoadAmerica",
+ "displayName": "Road America",
+ "type": "RoadCourse",
+ "game": {
+  "lengthMiles": 4.05,
+  "surfaceWidthM": 15,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Road America",
+  "url": "https://en.wikipedia.org/wiki/Road_America",
+  "coordinates": [
+   43.7975,
+   -87.99388888888889
+  ],
+  "location": "Town of Plymouth, Sheboygan County, at N7390 Highway 67, Elkhart Lake, Wisconsin, United States",
+  "opened": "",
+  "capacity": "Open seating without capacity limitation",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Road America.svg",
+    "caption": "Road America Grand Prix Course (1955–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Grand Prix Course (1955–present)",
+   "surface": "Asphalt",
+   "length_km": "6.515",
+   "length_mi": "4.048",
+   "turns": "14",
+   "record_time": "1:41.874",
+   "record_driver": "Alex Zanardi",
+   "record_year": "1998",
+   "record_class": "CART",
+   "miles": 4.048,
+   "index": 1
+  },
+  {
+   "layout": "Motorcycle Course (2003–present)",
+   "surface": "Asphalt",
+   "length_km": "6.437",
+   "length_mi": "4.000",
+   "turns": "15",
+   "record_time": "2:09.025",
+   "record_driver": "Josh Herrin",
+   "record_year": "2023",
+   "record_class": "SBK",
+   "miles": 4.0,
+   "index": 2
+  },
+  {
+   "layout": "Karting road course",
+   "surface": "Asphalt",
+   "length_km": "1.3",
+   "length_mi": "0.8",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 0.8,
+   "index": 3
+  },
+  {
+   "layout": "Off road racing road course (defunct)",
+   "surface": "Clay",
+   "length_km": "1.8",
+   "length_mi": "1.1",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.1,
+   "index": 4
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Grand Prix Course (1955–present)",
+  "surface": "Asphalt",
+  "length_km": "6.515",
+  "length_mi": "4.048",
+  "turns": "14",
+  "record_time": "1:41.874",
+  "record_driver": "Alex Zanardi",
+  "record_year": "1998",
+  "record_class": "CART",
+  "miles": 4.048,
+  "index": 1
+ },
+ "lengthCheckPct": -0.05,
+ "venueCentre": [
+  43.7975,
+  -87.993889
+ ],
+ "osmRadiusM": 2200,
+ "osmCounts": {
+  "raceway": 36,
+  "pit": 1,
+  "wall": 63,
+  "fence": 17,
+  "surface": 0,
+  "grandstand": 0,
+  "stadium": 0,
+  "building": 71,
+  "parking": 17,
+  "water": 6,
+  "road": 365
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 110527554,
+   "name": "Pit Lane",
+   "lengthM": 961.0
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 3216,
+  "height": 4000,
+  "groundMetresPerPixel": 0.6484,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Road America.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Road_America.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Will Pittenger",
+   "caption": "Road America Grand Prix Course (1955–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

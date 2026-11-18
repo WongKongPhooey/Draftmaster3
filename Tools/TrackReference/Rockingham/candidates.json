@@ -1,0 +1,111 @@
+{
+ "trackId": "Rockingham",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 1495.4,
+   "lengthErrPct": -1.15,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 14.32,
+    "p95M": 22.52,
+    "maxM": 23.61,
+    "scale": 1.006
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    245545526,
+    245545519
+   ],
+   "lengthM": 1495.4,
+   "lengthErrPct": -1.15,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 14.32,
+    "p95M": 22.52,
+    "maxM": 23.61,
+    "scale": 1.006
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    245545526
+   ],
+   "lengthM": 1560.9,
+   "lengthErrPct": 3.18,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 23.25,
+    "p95M": 41.39,
+    "maxM": 42.49,
+    "scale": 1.05
+   },
+   "index": 2
+  },
+  {
+   "label": "fence ring as the INSIDE edge, 8.4 m out",
+   "kind": "fence-inner",
+   "ways": [
+    1087801615
+   ],
+   "lengthM": 1646.1,
+   "lengthErrPct": 8.81,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 13.97,
+    "p95M": 25.93,
+    "maxM": 30.19,
+    "scale": 1.0295
+   },
+   "index": 3
+  },
+  {
+   "label": "fence ring as the OUTER edge, 8.4 m in",
+   "kind": "fence-outer",
+   "ways": [
+    1087801615
+   ],
+   "lengthM": 1552.1,
+   "lengthErrPct": 2.6,
+   "selfIntersects": true,
+   "index": 4
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 14.32,
+  "p95M": 22.52,
+  "maxM": 23.61,
+  "refToBuiltMaxM": 23.68,
+  "worstStretches": [
+   {
+    "fromM": 802,
+    "toM": 900,
+    "meanM": 22.4
+   },
+   {
+    "fromM": 302,
+    "toM": 400,
+    "meanM": 21.8
+   },
+   {
+    "fromM": 902,
+    "toM": 1001,
+    "meanM": 18.1
+   }
+  ],
+  "scale": 1.006
+ },
+ "verdict": "off",
+ "notes": []
+}

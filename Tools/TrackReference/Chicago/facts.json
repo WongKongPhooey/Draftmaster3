@@ -62,7 +62,7 @@
  ],
  "osmRadiusM": 1482,
  "osmCounts": {
-  "raceway": 1,
+  "raceway": 2,
   "pit": 0,
   "wall": 674,
   "fence": 418,
@@ -79,11 +79,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 991,
-  "height": 982,
-  "groundMetresPerPixel": 0.5999,
+  "width": 2562,
+  "height": 2825,
+  "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": [
   {

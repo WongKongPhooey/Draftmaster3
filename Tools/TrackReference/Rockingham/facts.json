@@ -1,0 +1,152 @@
+{
+ "trackId": "Rockingham",
+ "displayName": "Rockingham Speedway",
+ "type": "ShortTrack",
+ "game": {
+  "lengthMiles": 0.94,
+  "surfaceWidthM": 16.76,
+  "hasCommittedTrace": true,
+  "traceFoundBy": "batch"
+ },
+ "wikipedia": {
+  "title": "Rockingham Speedway",
+  "url": "https://en.wikipedia.org/wiki/Rockingham_Speedway",
+  "coordinates": [
+   34.974180555555556,
+   -79.61041944444443
+  ],
+  "location": "2152 North U.S. Highway 1; Rockingham, North Carolina, United States; 28379",
+  "opened": "1965",
+  "capacity": "32,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Rockingham Speedway.svg",
+    "caption": "D-shaped Oval (1965–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "D-shaped Oval (2022–present)",
+   "surface": "Asphalt",
+   "turns": "4",
+   "banking": "Turns 1 and 2: 22° ; Turns 3 and 4: 25°; Straights: 8°",
+   "length_km": "1.513",
+   "length_mi": "0.94",
+   "record_time": "0:22.847",
+   "record_driver": "Brent Crews",
+   "record_year": "2025",
+   "record_class": "ARCA Menards",
+   "miles": 0.94,
+   "index": 1
+  },
+  {
+   "layout": "Road Course (1977–present)",
+   "surface": "Asphalt",
+   "turns": "8",
+   "length_km": "2.414",
+   "length_mi": "1.500",
+   "banking": "Oval turns 1 and 2: 22° ; Oval turns 3 and 4: 25°; Straights: 8°",
+   "record_time": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.5,
+   "index": 2
+  },
+  {
+   "layout": "Little Rock (2008–present)",
+   "surface": "",
+   "length_km": "0.847",
+   "length_mi": "0.526",
+   "banking": "",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 0.526,
+   "index": 3
+  },
+  {
+   "layout": "D-shaped Oval (1965–2021)",
+   "surface": "Asphalt",
+   "length_mi": "1.017",
+   "length_km": "1.636",
+   "turns": "4",
+   "banking": "Turns 1 and 2: 22° ; Turns 3 and 4: 25°; Straights: 8°",
+   "record_time": "",
+   "record_driver": "",
+   "record_year": "",
+   "record_class": "",
+   "miles": 1.017,
+   "index": 4
+  }
+ ],
+ "matchedLayout": {
+  "layout": "D-shaped Oval (2022–present)",
+  "surface": "Asphalt",
+  "turns": "4",
+  "banking": "Turns 1 and 2: 22° ; Turns 3 and 4: 25°; Straights: 8°",
+  "length_km": "1.513",
+  "length_mi": "0.94",
+  "record_time": "0:22.847",
+  "record_driver": "Brent Crews",
+  "record_year": "2025",
+  "record_class": "ARCA Menards",
+  "miles": 0.94,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  34.974326,
+  -79.610148
+ ],
+ "osmRadiusM": 900,
+ "osmCounts": {
+  "raceway": 10,
+  "pit": 2,
+  "wall": 0,
+  "fence": 3,
+  "surface": 0,
+  "grandstand": 7,
+  "stadium": 0,
+  "building": 10,
+  "parking": 0,
+  "water": 0,
+  "road": 84
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 245545519,
+   "name": "Rockingham Speedway Pit Road",
+   "lengthM": 724.2
+  },
+  {
+   "wayId": 245545512,
+   "name": "Rockingham Speedway Pit Road",
+   "lengthM": 473.8
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 1897,
+  "height": 1343,
+  "groundMetresPerPixel": 0.6002,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Rockingham Speedway.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Rockingham_Speedway.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Pitlane02",
+   "caption": "D-shaped Oval (1965–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

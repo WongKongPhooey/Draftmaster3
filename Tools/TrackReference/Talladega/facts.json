@@ -1,0 +1,120 @@
+{
+ "trackId": "Talladega",
+ "displayName": "Talladega Superspeedway",
+ "type": "Superspeedway",
+ "game": {
+  "lengthMiles": 2.66,
+  "surfaceWidthM": 14.63,
+  "hasCommittedTrace": false,
+  "traceFoundBy": ""
+ },
+ "wikipedia": {
+  "title": "Talladega Superspeedway",
+  "url": "https://en.wikipedia.org/wiki/Talladega_Superspeedway",
+  "coordinates": [
+   33.566111111111105,
+   -86.07
+  ],
+  "location": "3366 Speedway Boulevard; Lincoln, Alabama, United States; 35096",
+  "opened": "1969",
+  "capacity": "80,000",
+  "matchedLayout": 1,
+  "trackMaps": [
+   {
+    "file": "Talladega Superspeedway 2024.svg",
+    "caption": "Tri-oval (1969–present)"
+   }
+  ],
+  "licence": "Text from Wikipedia, CC BY-SA 4.0"
+ },
+ "wikipediaLayouts": [
+  {
+   "layout": "Tri-Oval (1969–present)",
+   "banking": "Turns: 33° ; Tri-oval: 16.5°; Straights: 2°",
+   "surface": "Asphalt",
+   "length_km": "4.281",
+   "length_mi": "2.660",
+   "turns": "4",
+   "record_time": "0:46.530",
+   "record_driver": "Parker Kligerman",
+   "record_year": "2019",
+   "record_class": "NASCAR Cup",
+   "miles": 2.66,
+   "index": 1
+  },
+  {
+   "layout": "Road Course (1969–1989)",
+   "surface": "Asphalt",
+   "length_km": "6.437",
+   "length_mi": "4.000",
+   "turns": "11",
+   "record_time": "1:53.400",
+   "record_driver": "Peter Gregg",
+   "record_year": "1978",
+   "record_class": "IMSA GTX",
+   "miles": 4.0,
+   "index": 2
+  }
+ ],
+ "matchedLayout": {
+  "layout": "Tri-Oval (1969–present)",
+  "banking": "Turns: 33° ; Tri-oval: 16.5°; Straights: 2°",
+  "surface": "Asphalt",
+  "length_km": "4.281",
+  "length_mi": "2.660",
+  "turns": "4",
+  "record_time": "0:46.530",
+  "record_driver": "Parker Kligerman",
+  "record_year": "2019",
+  "record_class": "NASCAR Cup",
+  "miles": 2.66,
+  "index": 1
+ },
+ "lengthCheckPct": 0.0,
+ "venueCentre": [
+  33.566111,
+  -86.07
+ ],
+ "osmRadiusM": 1719,
+ "osmCounts": {
+  "raceway": 4,
+  "pit": 1,
+  "wall": 0,
+  "fence": 20,
+  "surface": 0,
+  "grandstand": 1,
+  "stadium": 1,
+  "building": 40,
+  "parking": 16,
+  "water": 2,
+  "road": 171
+ },
+ "osmPitLanes": [
+  {
+   "wayId": 116792873,
+   "name": "Pit Lane",
+   "lengthM": 760.3
+  }
+ ],
+ "wallGapMeasured": null,
+ "aerial": {
+  "file": "aerial.jpg",
+  "crs": "EPSG:3857",
+  "width": 2480,
+  "height": 3747,
+  "groundMetresPerPixel": 0.6001,
+  "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
+  "fetched": "2026-11-18"
+ },
+ "trackMap": [
+  {
+   "file": "Talladega Superspeedway 2024.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Talladega_Superspeedway_2024.svg",
+   "licence": "CC BY-SA 4.0",
+   "artist": "Stl66dmk",
+   "caption": "Tri-oval (1969–present)",
+   "saved": "trackmap.png"
+  }
+ ],
+ "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
+}

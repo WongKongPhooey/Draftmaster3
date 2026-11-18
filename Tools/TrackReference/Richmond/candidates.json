@@ -1,0 +1,83 @@
+{
+ "trackId": "Richmond",
+ "candidates": [
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "lengthM": 1179.6,
+   "lengthErrPct": -2.27,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.22,
+    "p95M": 2.4,
+    "maxM": 3.02,
+    "scale": 0.9754
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    452377300
+   ],
+   "lengthM": 1179.6,
+   "lengthErrPct": -2.27,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 1.22,
+    "p95M": 2.4,
+    "maxM": 3.02,
+    "scale": 0.9754
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    452377300,
+    452377296
+   ],
+   "lengthM": 1111.1,
+   "lengthErrPct": -7.95,
+   "selfIntersects": false,
+   "builtFit": {
+    "rmsM": 13.48,
+    "p95M": 26.99,
+    "maxM": 28.14,
+    "scale": 0.95
+   },
+   "index": 2
+  }
+ ],
+ "best": 0,
+ "builtVsBest": {
+  "rmsM": 1.22,
+  "p95M": 2.4,
+  "maxM": 3.02,
+  "refToBuiltMaxM": 3.13,
+  "worstStretches": [
+   {
+    "fromM": 522,
+    "toM": 621,
+    "meanM": 2.3
+   },
+   {
+    "fromM": 186,
+    "toM": 284,
+    "meanM": 2.1
+   },
+   {
+    "fromM": 338,
+    "toM": 436,
+    "meanM": 1.6
+   }
+  ],
+  "scale": 0.9754
+ },
+ "verdict": "matches",
+ "notes": []
+}
