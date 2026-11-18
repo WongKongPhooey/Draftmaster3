@@ -41,6 +41,8 @@ namespace Draftmaster.Sim
         public bool IsDropped(int id) => _dropped.Contains(id);
         public bool IsOnPit(int id) => _onPit.Contains(id);
         public bool HasPitted(int id) => _pitted.Contains(id);
+        // How many cars are on pit road right now (out of the queue until they leave it).
+        public int OnPitCount => _onPit.Count;
 
         // Stopped under this caution: dropped, or back at the tail it rejoined at. A pit exit clears it - that car has
         // its place by where it is on the road, so nobody is due to pass it.
@@ -140,5 +142,65 @@ namespace Draftmaster.Sim
 
         // Whether `id` ranks behind `other` in the restart order.
         public bool Behind(int id, int other) => Key(id) > Key(other);
+    }
+
+    // Two-wide for the restart. Under a caution the field runs single file in restart order (CautionOrder); once pit road
+    // has shut for good ("green next time by") and every car has left it, the order is set for the restart, and each car
+    // is given a place in a two-wide line-up: slot 0 the leader, slots 2k and 2k+1 a row, even slots one column and odd
+    // the other - as grid slots are on the formation lap (FormationLanes.Column). The slots are latched, not re-counted
+    // from the queue every step: a car dropping out of the queue mid-field would otherwise move every car behind it
+    // into the other column at once. A car that leaves the queue afterwards (stops on the track) loses its slot and its
+    // row partner runs on alone; a car that joins it afterwards (back up to speed, or off pit road) takes the next slot
+    // at the tail.
+    public sealed class RestartSlots
+    {
+        readonly Dictionary<int, int> _slot = new();
+        readonly HashSet<int> _inQueue = new();
+        readonly List<int> _gone = new();
+        int _next;
+
+        // The line-up has been set: the field is lining up two-wide.
+        public bool Latched { get; private set; }
+
+        // When to double up: pit road has shut for the rest of the caution and nobody is still on it (a car coming off it
+        // takes a place by where it is on the road, so the order is not settled until the last one is out) - or, whatever
+        // else, once the field is closing up for the green.
+        public static bool ShouldLatch(bool greenSignalled, int carsOnPitRoad, bool closingUp) =>
+            closingUp || (greenSignalled && carsOnPitRoad <= 0);
+
+        public void Clear()
+        {
+            _slot.Clear();
+            _next = 0;
+            Latched = false;
+        }
+
+        // Set the line-up from the restart queue (leader first).
+        public void Latch(IReadOnlyList<int> queue)
+        {
+            Clear();
+            Latched = true;
+            if (queue == null) return;
+            for (int i = 0; i < queue.Count; i++)
+                if (!_slot.ContainsKey(queue[i])) _slot[queue[i]] = _next++;
+        }
+
+        // Once latched, keep the line-up in step with the queue: a car no longer in it gives up its slot, a car new to it
+        // takes the next one at the tail (in queue order).
+        public void Update(IReadOnlyList<int> queue)
+        {
+            if (!Latched) return;
+            _inQueue.Clear();
+            if (queue != null) for (int i = 0; i < queue.Count; i++) _inQueue.Add(queue[i]);
+            _gone.Clear();
+            foreach (var kv in _slot) if (!_inQueue.Contains(kv.Key)) _gone.Add(kv.Key);
+            for (int i = 0; i < _gone.Count; i++) _slot.Remove(_gone[i]);
+            if (queue == null) return;
+            for (int i = 0; i < queue.Count; i++)
+                if (!_slot.ContainsKey(queue[i])) _slot[queue[i]] = _next++;
+        }
+
+        // This car's slot in the two-wide line-up; -1 before the line-up is set, or for a car without one.
+        public int SlotOf(int id) => Latched && _slot.TryGetValue(id, out int s) ? s : -1;
     }
 }

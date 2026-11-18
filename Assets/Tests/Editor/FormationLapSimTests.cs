@@ -262,7 +262,8 @@ public class FormationLapSimTests
     // A full-course caution on an oval (FullCourseCaution): from racing speed, the safety car drives out of the pits
     // (no jump), crawls on the inside while the field goes by until the leader comes up behind it, picks the leader
     // up, the field forms up behind it on the formation brain, it leads the field round to pit road once with pit road
-    // open (the one chance to stop), and the next time by it pits and the green waves near the line.
+    // open (the one chance to stop), and the next time by it pits and the green waves near the line - with the field
+    // doubled up two-wide for it, as at the start (CautionLineup.Slot), not single file nose to tail.
     [TestCase("Daytona")]
     public void ACautionRunsAPitsOpenLapThenGoesGreenTheNextTimeBy(string trackId)
     {
@@ -357,6 +358,24 @@ public class FormationLapSimTests
                               && ((bool)onPitProp.GetValue(scSpline) || (bool)splineType.GetField("usePitLane").GetValue(scSpline));
         var scPosAtFlag = (Vector2)posProp.GetValue(scSpline);
         scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leader + pickup });
+        // The restart order, frozen at the flag as FullCourseCaution.FreezeRestartOrder takes it: the running order on the
+        // road, leader first. (No tracker here, so the order is handed over car by car.)
+        var lineupType = Runtime("CautionLineup");
+        var running = new List<Transform>();
+        {
+            var behindLeader = new List<(float behind, Transform tf)>();
+            for (int i = 1; i < n; i++)
+                if (!(bool)onPitProp.GetValue(cars[i]))
+                    behindLeader.Add((Mathf.Repeat(leader - (float)distProp.GetValue(cars[i]), lap), cars[i].transform));
+            behindLeader.Sort((a, b) => a.behind.CompareTo(b.behind));
+            foreach (var e in behindLeader) running.Add(e.tf);
+        }
+        lineupType.GetMethod("Begin", new[] { typeof(IList<Transform>), typeof(IEnumerable<Transform>), typeof(float), typeof(float) })
+                  .Invoke(null, new object[] { running, new List<Transform>(), 3f, 30f });
+        var doubleUp = lineupType.GetMethod("UpdateDoubleFile");
+        var slotOf = lineupType.GetMethod("Slot");
+        var centreProp = splineType.GetProperty("CentreDistanceOnTrack");
+        var latProp = splineType.GetProperty("LateralOnTrack");
         scType.GetField("PickupLeader").SetValue(sc, cars[leaderIdx].transform);
         currentProp.SetValue(null, Enum.Parse(phaseType, "Caution"));
         var pickingUpProp = scType.GetProperty("PickingUp");
@@ -399,6 +418,7 @@ public class FormationLapSimTests
         bool scLeftPitRoad = false;
         int[] orderAt15 = null;
         var passes = new List<string>();
+        var lineUpMoves = new List<string>();   // after the double-up: a car taking back its place in the restart order
         var pos = new Vector2[n];
         var fwd = new Vector2[n];
         var touching = new HashSet<long>();
@@ -408,107 +428,161 @@ public class FormationLapSimTests
         float pitsOpenFrom = -1f, pitsShutAt = -1f;   // safety car travel since the pickup
         var pitRoadOpenProp = scType.GetProperty("PitRoadOpen");
         bool green = false;
+        // The two-wide restart: when the field doubled up (safety car travel since the pickup), and at the green each row
+        // (slots 2k and 2k+1) - how far apart along the road and across it.
+        float doubledAt = -1f, meanPairStagger = -1f, minPairSide = -1f, meanRowGap = -1f;
+        int pairsAtGreen = 0;
+        string pairsTrace = "";
+        var slotNow = new int[n];   // each car's restart slot, read every step while the caution runs (-1 none)
         int steps = Mathf.RoundToInt(900f / dt);
-        for (int step = 0; step < steps && !green; step++)
+        try
         {
-            t = (step + 1) * dt;
-            for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
-            scStep.Invoke(sc, null);
-            directorStep.Invoke(director, null);
-            foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);
-            if (scTravelAtPit < 0f && (bool)scType.GetProperty("Pitted").GetValue(sc))
-                scTravelAtPit = (float)scType.GetProperty("Travelled").GetValue(sc);
-            bool pitsOpen = (bool)pitRoadOpenProp.GetValue(sc);
-            if (pitsOpen && pitsOpenFrom < 0f) pitsOpenFrom = (float)scType.GetProperty("Travelled").GetValue(sc);
-            if (!pitsOpen && pitsOpenFrom >= 0f && pitsShutAt < 0f) pitsShutAt = (float)scType.GetProperty("Travelled").GetValue(sc);
-            green = Equals(currentProp.GetValue(null), greenPhase);
-
-            int perSecond = Mathf.RoundToInt(1f / dt);
-            if (t <= 10f + dt * 0.5f && (step + 1) % perSecond == 0)
-                for (int i = 1; i < n - 1; i++)   // not the straggler: it was limping at 60 mph
+            for (int step = 0; step < steps && !green; step++)
+            {
+                t = (step + 1) * dt;
+                doubleUp.Invoke(null, null);   // as FullCourseCaution.StepCaution
+                if (doubledAt < 0f && (bool)lineupType.GetProperty("DoubleFile").GetValue(null))
+                    doubledAt = (float)scType.GetProperty("Travelled").GetValue(sc);
+                for (int i = 1; i < n; i++) { var fc = cars[i].GetComponent(fcType); if (fc != null) fcStep.Invoke(fc, null); }
+                scStep.Invoke(sc, null);
+                directorStep.Invoke(director, null);
+                foreach (var c in cars) if (c != scSpline || scSpline.gameObject.activeSelf) splineStep.Invoke(c, null);
+                if (scTravelAtPit < 0f && (bool)scType.GetProperty("Pitted").GetValue(sc))
+                    scTravelAtPit = (float)scType.GetProperty("Travelled").GetValue(sc);
+                bool pitsOpen = (bool)pitRoadOpenProp.GetValue(sc);
+                if (pitsOpen && pitsOpenFrom < 0f) pitsOpenFrom = (float)scType.GetProperty("Travelled").GetValue(sc);
+                if (!pitsOpen && pitsOpenFrom >= 0f && pitsShutAt < 0f) pitsShutAt = (float)scType.GetProperty("Travelled").GetValue(sc);
+                green = Equals(currentProp.GetValue(null), greenPhase);
+                // The slots are only handed out under the caution, so read them every step until the green.
+                if (!green && doubledAt >= 0f)
+                    for (int i = 1; i < n; i++) slotNow[i] = (int)slotOf.Invoke(null, new object[] { cars[i].transform });
+                if (green)
                 {
-                    float now = (float)mphProp.GetValue(cars[i]);
-                    if (mphSecondAgo[i] - now > hardestSlowing) { hardestSlowing = mphSecondAgo[i] - now; hardestWho = $"{cars[i].name} {mphSecondAgo[i]:0}->{now:0} mph at t{t:0}"; }
-                    mphSecondAgo[i] = now;
-                }
-            if (meanAt3 < 0f && t >= 3f)
-            {
-                meanAt3 = 0f;
-                for (int i = 1; i < n; i++) meanAt3 += (float)mphProp.GetValue(cars[i]) / (n - 1);
-            }
-
-            for (int i = 0; i < n; i++)
-            {
-                float d = (float)distProp.GetValue(cars[i]);
-                bool onPit = (bool)onPitProp.GetValue(cars[i]);
-                float delta = Mathf.Repeat(d - prevD[i] + lap * 0.5f, lap) - lap * 0.5f;
-                if (!onPit && delta > 0f) travelled[i] += delta;
-                prevD[i] = d;
-                pos[i] = (Vector2)posProp.GetValue(cars[i]);
-                float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
-                fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
-            }
-            // The safety car drives out of the pits: it never jumps (60 mph is 0.5 m a step) - out of the pits, round
-            // on the inside, up onto the line and leading. Its pit-in at the end of the caution is reported, not judged
-            // here: the snap onto pit road at the entry is a separate known issue (FormationLapSimTests.Seams, SC JUMP).
-            if (scSpline.gameObject.activeSelf)
-            {
-                float stepM = (pos[0] - scPrevPos).magnitude;
-                if ((bool)scType.GetProperty("Pitted").GetValue(sc)) scPitInStep = Mathf.Max(scPitInStep, stepM);
-                else if (stepM > scBiggestStep)
-                {
-                    scBiggestStep = stepM;
-                    scBiggestAt = $"t{t:0.00} onPit {(bool)onPitProp.GetValue(scSpline)} usePit {(bool)splineType.GetField("usePitLane").GetValue(scSpline)} " +
-                                  $"picking up {(bool)pickingUpProp.GetValue(sc)} {(float)mphProp.GetValue(scSpline):0} mph";
-                }
-                scPrevPos = pos[0];
-                if (!(bool)onPitProp.GetValue(scSpline)) scLeftPitRoad = true;
-            }
-            bool leading = !(bool)pickingUpProp.GetValue(sc) && !(bool)onPitProp.GetValue(scSpline) && scSpline.gameObject.activeSelf;
-            if (leading && tailAtCaution < 0f) Spread(out tailAtCaution, out widestAtCaution);
-            // Contact once the field has had 15 s to slow from race pace and fall in behind the safety car. (Before
-            // that it is the race pace with no racing brain, which this harness does not model.)
-            // Nor on the green step itself: the hand-back to the racing brain (AIRacingBehaviour.TakeLateral) is not
-            // in this harness, which is why the formation runs above stop at the green too.
-            if (t < 15f || green) continue;
-
-            // Closing up: the field within 40 m car to car behind the safety car once it leads. And nobody passes
-            // anybody once the field has formed up.
-            if (leading)
-            {
-                Spread(out float tailNow, out float widestNow);
-                if (closedUpAt < 0f && widestNow < 40f) closedUpAt = t;
-                if (widestNow < minWidest) { minWidest = widestNow; minWidestAt = t; }
-                if (tailAtLap < 0f && (float)scType.GetProperty("Travelled").GetValue(sc) >= lap) { tailAtLap = tailNow; widestAtLap = widestNow; }
-            }
-            // A pass: a car more than a car length behind another at 15 s (cars still level then are filing into
-            // single file, which settles who is in front) that gets more than a car length ahead of it.
-            const float PassM = 6f;
-            if (orderAt15 == null)
-            {
-                orderAt15 = new int[n * n];
-                for (int i = 1; i < n; i++)
-                for (int j = 1; j < n; j++)
-                    orderAt15[i * n + j] = Progress(i) < Progress(j) - PassM ? 1 : 0;   // 1: i is behind j
-            }
-            else if (passes.Count < 10)
-                for (int i = 1; i < n; i++)
-                for (int j = 1; j < n; j++)
-                {
-                    if (orderAt15[i * n + j] != 1 || Progress(i) < Progress(j) + PassM) continue;
-                    passes.Add($"t{t:0.0} {cars[i].name} passed {cars[j].name}");
-                    orderAt15[i * n + j] = 0;
+                    var bySlot = new Dictionary<int, Component>();
+                    for (int i = 1; i < n; i++)
+                        if (doubledAt >= 0f && slotNow[i] >= 0 && !(bool)onPitProp.GetValue(cars[i])) bySlot[slotNow[i]] = cars[i];
+                    float staggerSum = 0f, rowSum = 0f;
+                    int rows = 0;
+                    minPairSide = float.MaxValue;
+                    var sbPairs = new System.Text.StringBuilder();
+                    float prevRowAt = float.NaN;
+                    for (int k = 0; bySlot.ContainsKey(2 * k); k++)
+                    {
+                        var a = bySlot[2 * k];
+                        float aAt = (float)centreProp.GetValue(a);
+                        if (!float.IsNaN(prevRowAt)) { rowSum += Mathf.Repeat(prevRowAt - aAt + lap * 0.5f, lap) - lap * 0.5f; rows++; }
+                        prevRowAt = aAt;
+                        if (!bySlot.TryGetValue(2 * k + 1, out var b)) continue;
+                        float along = Mathf.Repeat((float)centreProp.GetValue(b) - aAt + lap * 0.5f, lap) - lap * 0.5f;
+                        float side = Mathf.Abs((float)latProp.GetValue(b) - (float)latProp.GetValue(a));
+                        staggerSum += Mathf.Abs(along);
+                        minPairSide = Mathf.Min(minPairSide, side);
+                        pairsAtGreen++;
+                        sbPairs.Append($" row{k}: {along:+0.0;-0.0} m along, {side:0.0} m across;");
+                    }
+                    meanPairStagger = pairsAtGreen > 0 ? staggerSum / pairsAtGreen : -1f;
+                    meanRowGap = rows > 0 ? rowSum / rows : -1f;
+                    pairsTrace = sbPairs.ToString();
                 }
 
-            for (int i = 0; i < n; i++)
-            for (int j = i + 1; j < n; j++)
-            {
-                if (i == 0 && !scSpline.gameObject.activeSelf) continue;
-                if ((pos[i] - pos[j]).sqrMagnitude > 64f) continue;
-                long key = (long)i * 1000 + j;
-                if (Penetration(pos[i], fwd[i], pos[j], fwd[j]) <= 0f) { touching.Remove(key); continue; }
-                if (touching.Add(key)) contacts.Add($"t{t:0.0} {cars[i].name} / {cars[j].name} at {(float)distProp.GetValue(cars[i]):0} m");
+                int perSecond = Mathf.RoundToInt(1f / dt);
+                if (t <= 10f + dt * 0.5f && (step + 1) % perSecond == 0)
+                    for (int i = 1; i < n - 1; i++)   // not the straggler: it was limping at 60 mph
+                    {
+                        float now = (float)mphProp.GetValue(cars[i]);
+                        if (mphSecondAgo[i] - now > hardestSlowing) { hardestSlowing = mphSecondAgo[i] - now; hardestWho = $"{cars[i].name} {mphSecondAgo[i]:0}->{now:0} mph at t{t:0}"; }
+                        mphSecondAgo[i] = now;
+                    }
+                if (meanAt3 < 0f && t >= 3f)
+                {
+                    meanAt3 = 0f;
+                    for (int i = 1; i < n; i++) meanAt3 += (float)mphProp.GetValue(cars[i]) / (n - 1);
+                }
+
+                for (int i = 0; i < n; i++)
+                {
+                    float d = (float)distProp.GetValue(cars[i]);
+                    bool onPit = (bool)onPitProp.GetValue(cars[i]);
+                    float delta = Mathf.Repeat(d - prevD[i] + lap * 0.5f, lap) - lap * 0.5f;
+                    if (!onPit && delta > 0f) travelled[i] += delta;
+                    prevD[i] = d;
+                    pos[i] = (Vector2)posProp.GetValue(cars[i]);
+                    float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
+                    fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
+                }
+                // The safety car drives out of the pits: it never jumps (60 mph is 0.5 m a step) - out of the pits, round
+                // on the inside, up onto the line and leading. Its pit-in at the end of the caution is reported, not judged
+                // here: the snap onto pit road at the entry is a separate known issue (FormationLapSimTests.Seams, SC JUMP).
+                if (scSpline.gameObject.activeSelf)
+                {
+                    float stepM = (pos[0] - scPrevPos).magnitude;
+                    if ((bool)scType.GetProperty("Pitted").GetValue(sc)) scPitInStep = Mathf.Max(scPitInStep, stepM);
+                    else if (stepM > scBiggestStep)
+                    {
+                        scBiggestStep = stepM;
+                        scBiggestAt = $"t{t:0.00} onPit {(bool)onPitProp.GetValue(scSpline)} usePit {(bool)splineType.GetField("usePitLane").GetValue(scSpline)} " +
+                                      $"picking up {(bool)pickingUpProp.GetValue(sc)} {(float)mphProp.GetValue(scSpline):0} mph";
+                    }
+                    scPrevPos = pos[0];
+                    if (!(bool)onPitProp.GetValue(scSpline)) scLeftPitRoad = true;
+                }
+                bool leading = !(bool)pickingUpProp.GetValue(sc) && !(bool)onPitProp.GetValue(scSpline) && scSpline.gameObject.activeSelf;
+                if (leading && tailAtCaution < 0f) Spread(out tailAtCaution, out widestAtCaution);
+                // Contact once the field has had 15 s to slow from race pace and fall in behind the safety car. (Before
+                // that it is the race pace with no racing brain, which this harness does not model.)
+                // Nor on the green step itself: the hand-back to the racing brain (AIRacingBehaviour.TakeLateral) is not
+                // in this harness, which is why the formation runs above stop at the green too.
+                if (t < 15f || green) continue;
+
+                // Closing up: the field within 40 m car to car behind the safety car once it leads. And nobody passes
+                // anybody once the field has formed up.
+                if (leading)
+                {
+                    Spread(out float tailNow, out float widestNow);
+                    if (closedUpAt < 0f && widestNow < 40f) closedUpAt = t;
+                    if (widestNow < minWidest) { minWidest = widestNow; minWidestAt = t; }
+                    if (tailAtLap < 0f && (float)scType.GetProperty("Travelled").GetValue(sc) >= lap) { tailAtLap = tailNow; widestAtLap = widestNow; }
+                }
+                // A pass: a car more than a car length behind another at 15 s (cars still level then are filing into
+                // single file, which settles who is in front) that gets more than a car length ahead of it.
+                const float PassM = 6f;
+                if (orderAt15 == null)
+                {
+                    orderAt15 = new int[n * n];
+                    for (int i = 1; i < n; i++)
+                    for (int j = 1; j < n; j++)
+                        orderAt15[i * n + j] = Progress(i) < Progress(j) - PassM ? 1 : 0;   // 1: i is behind j
+                }
+                else if (passes.Count < 10)
+                    for (int i = 1; i < n; i++)
+                    for (int j = 1; j < n; j++)
+                    {
+                        if (orderAt15[i * n + j] != 1 || Progress(i) < Progress(j) + PassM) continue;
+                        // Lining up two-wide in the restart order (frozen at the flag): a car that lost a place filing
+                        // into single file - the field was racing side by side - is put back in front of the car it is
+                        // due ahead of. Not a pass.
+                        if (doubledAt >= 0f && slotNow[i] >= 0 && slotNow[j] >= 0 && slotNow[i] < slotNow[j])
+                            lineUpMoves.Add($"t{t:0.0} {cars[i].name} (slot {slotNow[i]}) back ahead of {cars[j].name} (slot {slotNow[j]})");
+                        else
+                            passes.Add($"t{t:0.0} {cars[i].name} passed {cars[j].name}");
+                        orderAt15[i * n + j] = 0;
+                    }
+
+                for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                {
+                    if (i == 0 && !scSpline.gameObject.activeSelf) continue;
+                    if ((pos[i] - pos[j]).sqrMagnitude > 64f) continue;
+                    long key = (long)i * 1000 + j;
+                    if (Penetration(pos[i], fwd[i], pos[j], fwd[j]) <= 0f) { touching.Remove(key); continue; }
+                    if (touching.Add(key)) contacts.Add($"t{t:0.0} {cars[i].name} / {cars[j].name} at {(float)distProp.GetValue(cars[i]):0} m");
+                }
             }
+
+        }
+        finally
+        {
+            lineupType.GetMethod("End").Invoke(null, null);
         }
 
         float leaderLaps = 0f;
@@ -523,8 +597,11 @@ public class FormationLapSimTests
                          $"safety car pitted at {scTravelAtPit / lap:0.00} laps; leader ran {leaderLaps:0.00} laps under caution; " +
                          $"tail {tailAtCaution:0} m behind the safety car (widest gap {widestAtCaution:0} m) as it picked up the leader, " +
                          $"{tailAtLap:0} m (widest {widestAtLap:0} m) after its first lap; closed up (all gaps < 40 m) at t{closedUpAt:0} s (tightest widest gap {minWidest:0} m at t{minWidestAt:0}); " +
-                         $"{passes.Count} passes, {contacts.Count} contacts; field {meanAtFlag:0} mph at the flag, {meanAt3:0} mph 3 s on, " +
-                         $"hardest slowing {hardestSlowing:0} mph/s ({hardestWho})\n  " + string.Join("\n  ", passes) +
+                         $"{passes.Count} passes ({lineUpMoves.Count} line-up moves into the restart order: {string.Join(", ", lineUpMoves)}), {contacts.Count} contacts; field {meanAtFlag:0} mph at the flag, {meanAt3:0} mph 3 s on, " +
+                         $"hardest slowing {hardestSlowing:0} mph/s ({hardestWho}); " +
+                         $"doubled up two-wide at {doubledAt / lap:0.00} laps after the pickup; at the green {pairsAtGreen} rows, " +
+                         $"mean stagger {meanPairStagger:0.0} m, least across {minPairSide:0.0} m, mean row gap {meanRowGap:0.0} m:{pairsTrace}\n  " +
+                         string.Join("\n  ", passes) +
                          "\n  " + string.Join("\n  ", contacts);
         Debug.Log(summary);
         // Out of the pits, not out of thin air: no jump anywhere, and it found the leader rather than giving up.
@@ -553,6 +630,14 @@ public class FormationLapSimTests
         Assert.Greater(closedUpAt, 0f, summary);
         Assert.Less(closedUpAt, t, summary);
         Assert.Less(widestAtLap, 60f, summary);
+        // Two-wide for the restart, as at the start: doubled up once pit road had shut, before the safety car pitted, and
+        // every row's pair side by side at the green - not single file nose to tail, which put each car inside the
+        // racing brain's hardFollowGap of the one in front as the green fell.
+        Assert.Greater(doubledAt, pitsShutAt - 1f, summary);
+        Assert.Less(doubledAt, scTravelAtPit, summary);
+        Assert.GreaterOrEqual(pairsAtGreen, (n - 1) / 2 - 1, summary);
+        Assert.Less(meanPairStagger, 3f, summary);
+        Assert.Greater(minPairSide, 2.5f, summary);
     }
 
     // Auto under a caution (DriveModeController.EnterAuto): the human is pacing in the train behind the safety car and
@@ -832,7 +917,7 @@ public class FormationLapSimTests
         float pickup = Draftmaster.Sim.CautionRules.CautionPickupGap((float)splineType.GetProperty("CurrentMph").GetValue(cars[leaderIdx]) / 2.237f,
                                                                      60f / 2.237f, 80f);   // as FullCourseCaution.Declare
         scType.GetMethod("DeployForCaution").Invoke(sc, new object[] { leaderD + pickup });
-        lineupType.GetMethod("Begin").Invoke(null, new object[]
+        lineupType.GetMethod("Begin", new[] { typeof(IList<Transform>), typeof(IEnumerable<Transform>), typeof(float), typeof(float) }).Invoke(null, new object[]
         {
             null, new List<Transform> { cars[leaderIdx].transform }, 3f, 30f
         });

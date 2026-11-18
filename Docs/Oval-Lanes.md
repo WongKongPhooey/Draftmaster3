@@ -521,7 +521,8 @@ Now, on a lane-AI oval (`OvalLaneDirector.Applies && Enabled`, so not the plate 
   round, so they never swing up the track.
 - **Pace lap**: `FormationController` puts each column on one (the column toward the infield on the low line),
   `SplineDriver.SetStartLane(-1 / +1)`. The pair is fitted inside the car-centre limits (`FitColumn`) where those
-  pinch (Daytona's pit exit). Weave and close-up run on top as before. Cautions are untouched (single file).
+  pinch (Daytona's pit exit). Weave and close-up run on top as before. Cautions run single file until pit road
+  has shut for good, then double up two-wide on the start lanes for the restart (`CautionLineup.Slot`, 2026-11-18).
 - **After the green**: the director gives low -> Inside, high -> Outside, and the car keeps to its start lane on top
   of that lane (`StartLaneShiftAt`, folded into `LaneShiftAt`) with no lane changes, until its flat-out launch is over
   (up to speed). Then it eases onto its racing lane over `startLaneReleaseSeconds` (3 s, smoothstep). A low car waits

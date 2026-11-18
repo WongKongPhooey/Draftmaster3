@@ -9,7 +9,8 @@ using UnityEngine;
 //     on the inside while the field goes by on the outside, until the restart leader comes up behind it - then it
 //     moves up onto the line in front of the leader and runs cruise pace (SafetyCar.DeployForCaution, PickupLeader);
 //   * every AI car goes back on the formation brain, single file behind it (FormationController), and the player is
-//     held behind the car in front (PaceLapAssist);
+//     held behind the car in front (PaceLapAssist) - until pit road has shut for good and the last car is off it, when
+//     the restart order is set and the field doubles up two-wide for the green, as at the start (CautionLineup.Slot);
 //   * pit road is closed until the safety car has the leader; then it leads the field round to pit road once with pit
 //     road open (PitRoadOpen) - the one chance under the caution to stop, for tyres or repairs
 //     (PitStopController.cautionRepairDamage, PlayerPitService);
@@ -234,6 +235,7 @@ public class FullCourseCaution : MonoBehaviour
     {
         CautionSeconds += dt;
         CautionLineup.Step(RacePositionTracker.Instance);
+        CautionLineup.UpdateDoubleFile();   // two-wide for the restart once the order is settled
         var sc = _director.SafetyCarInstance;
         if (sc == null) return;
         // Who the safety car is out to pick up, for as long as it is looking: the leader may pit, or be caught out.

@@ -8,8 +8,11 @@ using UnityEngine;
 //
 // Also drives it under a full-course CAUTION (FullCourseCaution): the same train behind the safety car, but single
 // file — the field is in running order by then, not grid order, so grid-slot columns, row partners and slot
-// anchors mean nothing — with no weave. A car coming in for a stop under the caution belongs to its
-// PitStopController on pit road.
+// anchors mean nothing — with no weave. Once the restart order is settled (pit road shut for good, nobody left on it)
+// every car has a slot in a two-wide restart line-up (CautionLineup.Slot), and from then on the slot does what the grid
+// slot does on the formation lap: columns, row partners drawn level, the slot anchor, the start lanes - the restart is
+// lined up exactly as the start is. A car coming in for a stop under the caution belongs to its PitStopController on
+// pit road.
 //
 // Works purely through SplineDriver's public knobs (aiMaxSpeedMph / aiMinDecelMphPerSec / tacticalLateralOffset /
 // paceMultiplier), so the car's path, corner speeds and dynamic motion are unchanged.
@@ -442,6 +445,12 @@ public class FormationController : MonoBehaviour
         if (_spline == null || _spline.TrackLength <= 0f) return;
         if (!RaceStart.UnderSafetyCar) return;
         bool caution = RaceStart.IsCaution;
+        // Under a caution, lining up two-wide for the restart: this car has a slot in the restart line-up, which stands in
+        // for its grid slot from here on (MySlot), and it runs the formation lap's rules rather than the caution's single
+        // file. Single file nose to tail, the cars went green 6 m apart in one lane: inside the racing brain's
+        // hardFollowGap, which caps a car to 60% of the speed of the one in front - a car slowing hard on the green and
+        // the car behind into it.
+        bool doubled = caution && MySlot() >= 0;
         // Under a caution the safety car comes out of the pits and crawls round on the inside until the restart leader is
         // up behind it (SafetyCar.PickingUp). Till then it is not the car to keep station off: every car but the leader
         // drives past it on the outside.
@@ -466,7 +475,7 @@ public class FormationController : MonoBehaviour
         float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
         bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
         _planner.Settings = closingUp && !_spline.usePitLane ? CloseUpPack()
-                          : caution && !_spline.usePitLane && _cautionCapMph > cruise + cautionSingleFileMph
+                          : caution && !doubled && !_spline.usePitLane && _cautionCapMph > cruise + cautionSingleFileMph
                               ? CautionApproachPack()   // still driving on round to the train
                               : pack;                   // in the train: room between cars to fall in single file
 
@@ -509,11 +518,12 @@ public class FormationController : MonoBehaviour
         float far = FarCatchUp(out bool leading, out float aheadGap, out bool aheadIsPace,
                                out float frontGap, out int carsAhead, out float aheadMph);
         float farBonus = farCatchUpBonusMph * far;
-        float anchor = caution ? 0f : SlotAnchorMph();   // under caution the field is in running order, not grid order
+        // Under caution the field is in running order, not grid order - until it has its restart slots.
+        float anchor = caution && !doubled ? 0f : SlotAnchorMph();
         // Under caution: drive on round at most of racing pace (Apply runs the speed plan at _cautionPaceNow), and come
         // down onto the car in front (or the safety car) only as the road to it runs out - off that car's own speed, so a
         // car still running the approach pace up the road holds nobody back. In the close-up its rules take over.
-        bool cautionApproach = caution && !closingUp && !settling;
+        bool cautionApproach = caution && !doubled && !closingUp && !settling;
         if (caution)
         {
             if (_racePace < 0f)
@@ -557,7 +567,7 @@ public class FormationController : MonoBehaviour
         else if (closingUp)
         {
             float frontRow = FormationDirector.Instance.CloseUpLeaderMph;
-            float align = caution ? 0f : PairAlign();
+            float align = caution && !doubled ? 0f : PairAlign();
             float bonus = leading ? 0f : closeUpBonusMph * (corner ? cornerCatchUpScale : 1f);
             // Short of my place in the stacked-up field (rows ahead x a settled row's gap, behind the front): close
             // on it, every car at once rather than row after row. By the road's own curvature, as the slot anchor.
@@ -566,7 +576,7 @@ public class FormationController : MonoBehaviour
                 var ps = CloseUpPack();
                 float spacing = FormationLanes.CloseUpSpacingM(frontRow, rowGap, ps.HeadwaySec, ps.MinGap,
                     2f * DefaultHalfLength, ps.StandstillClearM, ps.StationBufferM, ps.ReactionSec);
-                float catchUp = FormationLanes.CloseUpCatchUpMph(frontGap, carsAhead, caution ? 1 : 2, spacing,
+                float catchUp = FormationLanes.CloseUpCatchUpMph(frontGap, carsAhead, caution && !doubled ? 1 : 2, spacing,
                     closeUpArriveMarginM, closeUpCatchUpMphPerMetre, closeUpCatchUpMaxMph);
                 // On an oval the field is kinematic and its corner speed profile caps it, so a sweeping banked turn
                 // takes the whole of it — Darlington's close-up runs through Turns 3 and 4.
@@ -596,11 +606,11 @@ public class FormationController : MonoBehaviour
         // Lateral intent: the two-wide column the WHOLE lap (double file), with a gentle tyre-warming weave on early
         // straights that fades out near the line so the rows sit steady for the start. Through turns the column
         // eases toward centre (cornerColumnScale) but never collapses to single file.
-        // Under caution: single file on the line, no weave.
+        // Under caution: single file on the line, no weave - two-wide on the columns once lined up for the restart.
         bool weaveOk = !caution && !settling && !corner && !closingUp && !_planner.Swerving;
         _weaveEnv = FormationLanes.StepEnvelope(_weaveEnv, weaveOk, dt, weaveRampSeconds, weaveFadeOutSeconds);
-        int slot = columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
-        float column = caution ? 0f : FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
+        int slot = MySlot();
+        float column = caution && !doubled ? 0f : FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
 
         float boundLo = float.NegativeInfinity, boundHi = float.PositiveInfinity;
         _spline.GetLateralBounds(out boundLo, out boundHi);
@@ -669,7 +679,7 @@ public class FormationController : MonoBehaviour
         // every turn and the trioval. The column toward the infield takes the low line. The car keeps to it after the
         // green until up to speed (SplineDriver.startLanes).
         int startSide = 0;
-        if (!caution && !settling && !makingWay && !_spline.usePitLane && column != 0f && _spline.startLanes
+        if ((!caution || doubled) && !settling && !makingWay && !_spline.usePitLane && column != 0f && _spline.startLanes
             && OvalLaneDirector.Applies && OvalLaneDirector.Enabled)
         {
             float infield = _spline.InfieldSide;
@@ -711,7 +721,7 @@ public class FormationController : MonoBehaviour
         // the whole caution, the lanes drifting past each other. (All at once at the flag, a two- and three-wide pack
         // collapsing onto one line stood on the brakes; this sorts it out a car at a time at a gentle lift.)
         // Not a car going by one caught up in the crash, which is moving over to let it past.
-        bool singleFiling = caution && !settling && !yielding && !makingWay;
+        bool singleFiling = caution && !doubled && !settling && !yielding && !makingWay;
         if (singleFiling)
         {
             for (int i = 0; i < _cars.Count; i++)
@@ -801,8 +811,8 @@ public class FormationController : MonoBehaviour
     {
         float len = _spline.TrackLength;
         float myC = _spline.CentreDistanceOnTrack;
-        // No row partners under caution: the field runs single file in running order.
-        int partner = MySlot() >= 0 && !RaceStart.IsCaution ? MySlot() ^ 1 : int.MinValue;
+        // No row partners under caution until the field doubles up for the restart (MySlot is -1 till then).
+        int partner = MySlot() >= 0 ? MySlot() ^ 1 : int.MinValue;
         bool scOut = RaceStart.IsCaution && FormationDirector.Instance != null && !FormationDirector.Instance.FieldClosingUp;
         float reach = scOut ? len : len * 0.5f;
         float best = float.MaxValue, bestOther = float.MaxValue, bestMph = 0f;
@@ -829,7 +839,8 @@ public class FormationController : MonoBehaviour
             var p = humans[i];
             if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
             if (passCaught && CautionLineup.IsYielding(p.transform)) continue;
-            Consider(Mathf.Repeat(p.TrackDistance - myC, len), false, p.GridPosition >= 0 && p.GridPosition == partner, p.SpeedMph);
+            int pSlot = HumanSlot(p);
+            Consider(Mathf.Repeat(p.TrackDistance - myC, len), false, pSlot >= 0 && pSlot == partner, p.SpeedMph);
         }
 
         leading = bestOther == float.MaxValue || bestOtherIsPace;
@@ -850,7 +861,13 @@ public class FormationController : MonoBehaviour
         }
     }
 
-    int MySlot() => columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
+    // This car's slot: its grid slot on the formation lap; under a caution its slot in the two-wide restart line-up, or
+    // -1 while the field still runs single file (CautionLineup.Slot).
+    int MySlot() => RaceStart.IsCaution ? CautionLineup.Slot(transform)
+                  : columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
+
+    // The free-driven human's slot, the same way.
+    static int HumanSlot(PlayerVehicleController p) => RaceStart.IsCaution ? CautionLineup.Slot(p.transform) : p.GridPosition;
 
     // The nearest caught car moving over to be passed, from alongside to cautionPassScanM up the road: where it is
     // across the track.
@@ -939,7 +956,8 @@ public class FormationController : MonoBehaviour
     }
 
     static int SlotOf(SplineDriver d) =>
-        s_bySpline.TryGetValue(d, out var fc) && fc != null && fc.columnSlot >= 0 ? fc.columnSlot : d.qualifyingPosition;
+        RaceStart.IsCaution ? CautionLineup.Slot(d.transform)
+        : s_bySpline.TryGetValue(d, out var fc) && fc != null && fc.columnSlot >= 0 ? fc.columnSlot : d.qualifyingPosition;
 
     // mph to add (+) or take off (-) to draw level with my row partner: grid slots 2k and 2k+1 share a row. Zero with
     // no partner on the track, or one too far away to be lining up with yet.
@@ -962,7 +980,7 @@ public class FormationController : MonoBehaviour
         for (int i = 0; i < humans.Count; i++)
         {
             var p = humans[i];
-            if (p == null || !p.isActiveAndEnabled || p.GridPosition != partnerSlot || p.ObstacleTrack != _spline.track) continue;
+            if (p == null || !p.isActiveAndEnabled || HumanSlot(p) != partnerSlot || p.ObstacleTrack != _spline.track) continue;
             return Align(PackAvoidance.SignedGap(p.TrackDistance, myC, len));
         }
         return 0f;

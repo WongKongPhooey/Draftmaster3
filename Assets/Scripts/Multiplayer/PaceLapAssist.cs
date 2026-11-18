@@ -305,7 +305,8 @@ public class PaceLapAssist : MonoBehaviour
 
     // Caution: hold behind the nearest car in front on the road, whoever it is and whichever lane it is in, capped at
     // cautionMaxMph — no passing under the caution, so where the player comes out of the pits is where they run. Only
-    // a stopped or crawling car may be driven round. The leader of the train holds the director's close-up pace once
+    // a stopped or crawling car may be driven round. Once the field doubles up for the restart (CautionLineup.Slot) the
+    // player's row partner is drawn level with, not held behind, and the prompt says which line to take. The leader of the train holds the director's close-up pace once
     // the safety car peels off, as the AI front row does. Only reached off pit road: UpdateSpline hands pit road to
     // the limiter first.
     void UpdateCaution()
@@ -324,6 +325,11 @@ public class PaceLapAssist : MonoBehaviour
         // they drive past it on the outside like the rest of the field.
         var scNow = FormationDirector.Instance != null ? FormationDirector.Instance.SafetyCarInstance : null;
         var passSc = scNow != null && scNow.PassableBy(pvc.transform) ? scNow.Driver : null;
+        // Lining up two-wide for the restart: the other car of my row is beside me, not in front of me.
+        int mySlot = CautionLineup.Slot(pvc.transform);
+        int partnerSlot = mySlot >= 0 ? mySlot ^ 1 : -1;
+        SplineDriver partner = null;
+        float infield = 0f;
         SplineDriver ahead = null;
         float gap = float.MaxValue;
         for (int i = 0; i < field.Count; i++)
@@ -331,6 +337,8 @@ public class PaceLapAssist : MonoBehaviour
             var d = field[i];
             if (d == null || !d.isActiveAndEnabled || d.IsOnPit || d.TrackLength <= 0f) continue;
             if (d == passSc) continue;
+            if (infield == 0f && d.GetComponent<SafetyCar>() == null) infield = d.InfieldSide;
+            if (partnerSlot >= 0 && CautionLineup.Slot(d.transform) == partnerSlot) { partner = d; continue; }
             if (d.CurrentMph < cautionMovingMph) continue;
             if (!meCaught && CautionLineup.IsYielding(d.transform)) continue;
             bool inMyLane = Mathf.Abs(d.LateralOnTrack - myLat) <= cautionLaneHalfWidth;
@@ -382,6 +390,15 @@ public class PaceLapAssist : MonoBehaviour
             return;
         }
         _promptTitle = "Caution";
+        if (mySlot >= 0)
+        {
+            // The columns as on the formation lap (FormationLanes.Column): even slots at -lateral, odd at +lateral.
+            bool minusSide = (mySlot & 1) == 0;
+            string line = infield == 0f ? "your" : (infield < 0f) == minusSide ? "the inside" : "the outside";
+            _promptText = partner != null ? $"Double up: {line} line, beside car #{CarNumberOf(partner.transform)}"
+                                          : $"Double up: {line} line";
+            return;
+        }
         if (ahead == null) { _promptText = "Hold your position"; return; }
         string who = paceCar != null ? "the safety car" : $"car #{CarNumberOf(ahead.transform)}";
         _promptText = gap > catchUpGap ? $"Close up behind {who}" : $"Hold station behind {who}";

@@ -211,4 +211,86 @@ public class CautionOrderTests
         Assert.IsFalse(o.HasPitted(2));
         CollectionAssert.AreEqual(new[] { 2, 1 }, o.Queue);
     }
+
+    // ---- Two-wide for the restart (RestartSlots) ----
+
+    [Test]
+    public void NoSlotsUntilTheLineUpIsSet()
+    {
+        var slots = new RestartSlots();
+        slots.Update(new[] { 1, 2, 3 });
+        Assert.IsFalse(slots.Latched);
+        Assert.AreEqual(-1, slots.SlotOf(1));
+    }
+
+    [Test]
+    public void TheLineUpIsTheRestartQueue_LeaderOnSlotZero()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 4, 9, 2, 7, 5 });
+        var slots = new RestartSlots();
+        slots.Latch(o.Queue);
+        Assert.IsTrue(slots.Latched);
+        Assert.AreEqual(0, slots.SlotOf(4));
+        Assert.AreEqual(1, slots.SlotOf(9));   // row 1, the other column
+        Assert.AreEqual(2, slots.SlotOf(2));
+        Assert.AreEqual(3, slots.SlotOf(7));
+        Assert.AreEqual(4, slots.SlotOf(5));
+        Assert.AreEqual(-1, slots.SlotOf(99));
+    }
+
+    [Test]
+    public void DoublesUpOncePitRoadHasShutAndEmptied_OrAtTheCloseUpWhatever()
+    {
+        Assert.IsFalse(RestartSlots.ShouldLatch(false, 0, false), "pit road still open (or the safety car still picking up)");
+        Assert.IsFalse(RestartSlots.ShouldLatch(true, 1, false), "a car still on pit road takes a place when it comes off it");
+        Assert.IsTrue(RestartSlots.ShouldLatch(true, 0, false));
+        Assert.IsTrue(RestartSlots.ShouldLatch(false, 2, true), "closing up for the green: two-wide whatever");
+    }
+
+    [Test]
+    public void ACarStillOnPitRoadHoldsUpTheLineUp()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3 });
+        o.Observe(2, true, 20f, 1000);
+        Assert.AreEqual(1, o.OnPitCount);
+        Assert.IsFalse(RestartSlots.ShouldLatch(true, o.OnPitCount, false));
+        o.Observe(2, false, 25f, 900);   // out behind the others
+        Assert.AreEqual(0, o.OnPitCount);
+        Assert.IsTrue(RestartSlots.ShouldLatch(true, o.OnPitCount, false));
+    }
+
+    [Test]
+    public void ACarLeavingTheQueueMovesNobodyElse_ACarJoiningGoesToTheTail()
+    {
+        var o = new CautionOrder();
+        o.Freeze(new[] { 1, 2, 3, 4, 5 });
+        var slots = new RestartSlots();
+        slots.Latch(o.Queue);
+
+        // Car 2 stops: it gives up its slot, and nobody behind it changes column.
+        o.Observe(2, false, Stopped, 1000);
+        slots.Update(o.Queue);
+        Assert.AreEqual(-1, slots.SlotOf(2));
+        Assert.AreEqual(0, slots.SlotOf(1));
+        Assert.AreEqual(2, slots.SlotOf(3));
+        Assert.AreEqual(3, slots.SlotOf(4));
+        Assert.AreEqual(4, slots.SlotOf(5));
+
+        // Back up to speed: the back of the queue, and the next slot at the tail.
+        o.Observe(2, false, Racing, 1000);
+        slots.Update(o.Queue);
+        Assert.AreEqual(5, slots.SlotOf(2));
+    }
+
+    [Test]
+    public void TheNextCautionStartsSingleFileAgain()
+    {
+        var slots = new RestartSlots();
+        slots.Latch(new[] { 1, 2 });
+        slots.Clear();
+        Assert.IsFalse(slots.Latched);
+        Assert.AreEqual(-1, slots.SlotOf(1));
+    }
 }

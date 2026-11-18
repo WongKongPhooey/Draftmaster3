@@ -13,9 +13,14 @@ using UnityEngine;
 // (RacePositionTracker sorts by it), and the field drives into it: a car that stopped and rejoined at the back, with
 // anybody behind it who is due ahead of it, slows and moves down to the inside to be passed (FormationController,
 // PaceLapAssist for the player), and the cars due ahead go by it on the outside. Nobody else passes under the caution.
+//
+// Single file until the order is settled for the restart; then two-wide, as at the start (RestartSlots): once pit road
+// has shut for the last time and the last car is off it, each car is given a slot in a two-wide line-up from the queue,
+// and the field doubles up for the green on the formation lap's columns and rows (FormationController, PaceLapAssist).
 public static class CautionLineup
 {
     static readonly CautionOrder _order = new();
+    static readonly RestartSlots _slots = new();
     static readonly HashSet<Transform> _yielding = new();
     static readonly List<int> _scratch = new();
     static readonly Dictionary<Transform, PlayerVehicleController> _pvcOf = new();
@@ -27,14 +32,26 @@ public static class CautionLineup
     // once. A car is stopped under `stoppedMph` and rejoins (at the back) at `rejoinMph`.
     public static void Begin(RacePositionTracker rt, IEnumerable<Transform> stopped, float stoppedMph, float rejoinMph)
     {
-        _scratch.Clear();
+        List<Transform> running = null;
         if (rt != null)
         {
+            running = new List<Transform>();
             var order = rt.Order;
             for (int i = 0; i < order.Count; i++)
-                if (order[i] != null && order[i].tf != null) _scratch.Add(order[i].tf.GetInstanceID());
+                if (order[i] != null && order[i].tf != null) running.Add(order[i].tf);
         }
+        Begin(running, stopped, stoppedMph, rejoinMph);
+    }
+
+    // The same from a running order given car by car, leader first (the headless caution sims, which have no tracker).
+    public static void Begin(IList<Transform> running, IEnumerable<Transform> stopped, float stoppedMph, float rejoinMph)
+    {
+        _scratch.Clear();
+        if (running != null)
+            for (int i = 0; i < running.Count; i++)
+                if (running[i] != null) _scratch.Add(running[i].GetInstanceID());
         _order.Freeze(_scratch);
+        _slots.Clear();
         _order.StopMps = Mathf.Max(0f, stoppedMph) * CautionOrder.MphToMps;
         _order.RejoinMps = Mathf.Max(_order.StopMps, rejoinMph * CautionOrder.MphToMps);
         _yielding.Clear();
@@ -51,6 +68,27 @@ public static class CautionLineup
         _yielding.Clear();
         _pvcOf.Clear();
         _order.Freeze(null);
+        _slots.Clear();
+    }
+
+    // The field has its two-wide restart line-up (RestartSlots) and is lining up two-wide for the green.
+    public static bool DoubleFile => Active && _slots.Latched;
+
+    // This car's slot in the two-wide restart line-up (0 the leader; 2k and 2k+1 a row, even and odd the two columns, as
+    // grid slots on the formation lap); -1 before the field doubles up, or for a car that has no place in it.
+    public static int Slot(Transform t) => Active && t != null ? _slots.SlotOf(t.GetInstanceID()) : -1;
+
+    // Once a step under the caution, after Step: set the two-wide line-up once pit road has shut for good and nobody is
+    // left on it, or as the field closes up for the green whatever (RestartSlots.ShouldLatch).
+    public static void UpdateDoubleFile()
+    {
+        if (!Active || _slots.Latched) return;
+        var director = FormationDirector.Instance;
+        // Not while pit road is still open: SafetyCar.ClosingUp also reads true for a moment as the safety car crosses the
+        // line on the pits-open lap, and cars still to stop would be given slots.
+        bool closingUp = director != null && director.FieldClosingUp && !FullCourseCaution.PitRoadOpen;
+        if (RestartSlots.ShouldLatch(FullCourseCaution.GreenSignalled, _order.OnPitCount, closingUp))
+            _slots.Latch(_order.Queue);
     }
 
     // Once a step under the caution: every car's speed, pit road and race distance into the queue (CautionOrder.Observe)
@@ -67,6 +105,7 @@ public static class CautionLineup
                        : rt.track != null && rt.track.IsOnPitSurface(e.tf.position);
             _order.Observe(e.tf.GetInstanceID(), onPit, SpeedOf(e), e.progress);
         }
+        _slots.Update(_order.Queue);
         _yielding.RemoveWhere(t => t == null);
     }
 
