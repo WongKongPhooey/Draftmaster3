@@ -6,7 +6,8 @@ using UnityEngine;
 // drives to its box, holds for a service stop (fresh tyres + repaired bodywork), then rejoins. The racing brain
 // is parked while on pit road so it doesn't try to race down the lane. Under a full-course caution pit road is open
 // for one pass only (FullCourseCaution.PitRoadOpen) - the field's one chance to stop - and a damaged car comes in then
-// for repairs (cautionRepairDamage).
+// for repairs (cautionRepairDamage). Around a caution (Draftmaster.Sim.CautionPitGate): a car stops once under it and
+// not again until after the restart, and once the green is signalled nobody pits until over the restart line.
 //
 // The player's car carries one while Auto drives it (DriveModeController.EnsureAutoPitBrain): tyre strategy and the
 // demo stop off, it comes in for damage - under a caution at the first pits-open pass, under green once it is badly
@@ -117,6 +118,9 @@ public class PitStopController : MonoBehaviour
     float _prevDist = -1f;
     bool _parking;
 
+    // Who may pit around a full-course caution: one stop under it, none on the lap the green is signalled.
+    readonly CautionPitGate _cautionGate = new CautionPitGate();
+
     // The move across between the driving line and the box strip (PitBoxPath), latched when it starts: where it
     // started from, the pit-lane distance it started at, and how long it is. In: centerline -> strip, out: back.
     bool _cutting, _pullingOut, _pulledOut;
@@ -173,6 +177,8 @@ public class PitStopController : MonoBehaviour
         AcquireRefs();
         if (_greenTime < 0f) _greenTime = Time.time;   // first green frame this car saw
         TrackCoolDown();
+        _cautionGate.Step(RaceStart.IsCaution, FullCourseCaution.GreenSignalled, !_spline.IsOnPit,
+                          _spline.DistanceOnTrack, _spline.TrackLength);
 
         switch (_state)
         {
@@ -186,12 +192,24 @@ public class PitStopController : MonoBehaviour
                         _state = State.HeadingToPit;
                     }
                 }
-                else if (WantsPit()) { _state = State.HeadingToPit; _forcedDone = true; }
+                else if (WantsPit())
+                {
+                    _state = State.HeadingToPit;
+                    _forcedDone = true;
+                    _cautionGate.CommittedToStop(RaceStart.IsCaution);
+                }
                 break;
 
             case State.HeadingToPit:
                 if (!_spline.IsOnPit)
                 {
+                    // The green has been signalled before this car reached pit road: nobody pits on this lap.
+                    if (!_parking && !_spline.usePitLane && _cautionGate.AbortRunIn)
+                    {
+                        _spline.ClearPitApproach();
+                        _state = State.Racing;
+                        break;
+                    }
                     _cutting = false;
                     _lane = -1;
                     _laneMoving = false;
@@ -617,10 +635,14 @@ public class PitStopController : MonoBehaviour
         bool knownRace = director != null && director.isActiveAndEnabled && director.raceLaps > 0;
         if (knownRace && RaceDirector.Progress01 >= 1f - 1f / director.raceLaps) return false;
 
-        // Under caution, only on the pits-open pass, and decided on the run in to the entry - a car a lap away when
-        // pit road opens would otherwise still be heading in after it has shut, on the green-flag lap.
+        // Around a caution (CautionPitGate): under it, only with pit road open, on a pass of the entry made before it
+        // shuts, and once per caution; nobody from the green being signalled until over the restart line.
         bool caution = RaceStart.IsCaution;
-        if (caution && (!FullCourseCaution.PitRoadOpen || !NearPitEntry())) return false;
+        if (!_cautionGate.MayPit(caution, FullCourseCaution.PitRoadOpen, ToPitEntry(), FullCourseCaution.PitRoadOpenMetresLeft))
+            return false;
+        // ...and decided on the run in to the entry - a car a lap away when pit road opens would otherwise still be
+        // heading in after it has shut, on the green-flag lap.
+        if (caution && !NearPitEntry()) return false;
 
         // Demo guarantee: pit once a set time into the race even on fresh tyres, so stops are always visible —
         // but not in a race too short for a stop to make sense.
@@ -647,10 +669,16 @@ public class PitStopController : MonoBehaviour
     // On the run in to the pit entry: inside the approach lead, plus room to start it.
     bool NearPitEntry()
     {
+        float toEntry = ToPitEntry();
+        return toEntry > pitEntryWindow && toEntry <= pitApproachLeadM + 150f;
+    }
+
+    // Road (m) from here to the pit entry; infinite with no track.
+    float ToPitEntry()
+    {
         var tb = _spline.track;
         float lap = _spline.TrackLength;
-        if (tb == null || tb.track == null || lap <= 0f) return false;
-        float toEntry = Mathf.Repeat(tb.track.PitEntryDistanceOnLap - _spline.DistanceOnTrack, lap);
-        return toEntry > pitEntryWindow && toEntry <= pitApproachLeadM + 150f;
+        if (tb == null || tb.track == null || lap <= 0f) return float.MaxValue;
+        return Mathf.Repeat(tb.track.PitEntryDistanceOnLap - _spline.DistanceOnTrack, lap);
     }
 }

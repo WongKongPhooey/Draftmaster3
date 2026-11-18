@@ -58,6 +58,33 @@ public class FullCourseCaution : MonoBehaviour
         }
     }
 
+    // How much further (m) the safety car runs before pit road shuts: unlimited under green (or with no safety car),
+    // 0 while it is shut.
+    public static float PitRoadOpenMetresLeft
+    {
+        get
+        {
+            if (!RaceStart.IsCaution) return float.MaxValue;
+            var director = FormationDirector.Instance;
+            var sc = director != null ? director.SafetyCarInstance : null;
+            return sc == null ? float.MaxValue : sc.PitRoadOpenMetresLeft;
+        }
+    }
+
+    // The field has been told it is going green at the restart line: the safety car has the leader and pit road has
+    // shut for the rest of the caution ("Green next time by", then "Green at the line"). Nobody pits from here until
+    // they have crossed the restart line (Draftmaster.Sim.CautionPitGate).
+    public static bool GreenSignalled
+    {
+        get
+        {
+            if (!RaceStart.IsCaution) return false;
+            var director = FormationDirector.Instance;
+            var sc = director != null ? director.SafetyCarInstance : null;
+            return sc != null && !sc.PickingUp && !sc.PitRoadOpen;
+        }
+    }
+
     FormationDirector _director;
     int _oval = -1;   // -1 unresolved, 0 no, 1 yes
 

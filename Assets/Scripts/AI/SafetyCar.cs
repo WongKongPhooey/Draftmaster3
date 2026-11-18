@@ -127,6 +127,8 @@ public class SafetyCar : MonoBehaviour
     // Under a caution, pit road is open: from the pickup until the field has been by pit road once
     // (CautionRules.PitsOpenUntil). Closed while it is still out picking up the leader, and on the green-flag lap.
     public bool PitRoadOpen => _caution && _stage == CautionStage.Leading && !_pitting && _travelled < _pitsOpenUntil;
+    // How much further (m) the safety car runs before pit road shuts; 0 while it is shut.
+    public float PitRoadOpenMetresLeft => PitRoadOpen ? _pitsOpenUntil - _travelled : 0f;
 
     // The car this caution's safety car is out to pick up: the head of the restart order on the track (set by
     // FullCourseCaution). Until it has it (PickingUp), every other car drives past the safety car on the outside.
