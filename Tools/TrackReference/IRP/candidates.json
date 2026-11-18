@@ -2,57 +2,52 @@
  "trackId": "IRP",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    123830268
-   ],
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: the OSM raceway ring, way 123830268 (checked on NAIP: it sits on the racing surface all round; the audit pick); -4.52% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Lucas Oil Raceway 100%"
-   ],
-   "lengthM": 1060.3,
-   "lengthErrPct": -4.52,
+   "names": [],
+   "lengthM": 1059.4,
+   "lengthErrPct": -4.6,
    "selfIntersects": false,
    "counterTurnDeg": 0.0,
    "flags": [],
    "builtFit": {
-    "rmsM": 24.53,
-    "p95M": 30.89,
+    "rmsM": 24.54,
+    "p95M": 30.92,
     "maxM": 31.21,
-    "scale": 0.9947
+    "scale": 0.9944
    },
    "index": 0
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 24.53,
-  "p95M": 30.89,
+  "rmsM": 24.54,
+  "p95M": 30.92,
   "maxM": 31.21,
-  "refToBuiltMaxM": 31.21,
+  "refToBuiltMaxM": 31.22,
   "worstStretches": [
    {
-    "fromM": 674,
-    "toM": 772,
-    "meanM": 30.9
+    "fromM": 676,
+    "toM": 774,
+    "meanM": 31.0
    },
    {
-    "fromM": 52,
-    "toM": 150,
+    "fromM": 54,
+    "toM": 152,
     "meanM": 30.8
    },
    {
-    "fromM": 152,
-    "toM": 250,
+    "fromM": 154,
+    "toM": 252,
     "meanM": 30.7
    }
   ],
-  "scale": 0.9947
+  "scale": 0.9944
  },
  "verdict": "off",
- "notes": [
-  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
- ]
+ "notes": []
 }

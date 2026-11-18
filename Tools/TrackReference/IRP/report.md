@@ -28,19 +28,17 @@ Ranked: a lap that does not cross itself, then one with nothing against it (no p
 
 | # | What | Lap | vs published | Against it | Turns against | Runs on | Built line fits within (RMS / p95 / max) | OSM ways |
 |---|---|---|---|---|---|---|---|---|
-| 0 (best) | raceway ring taken as the centre | 1060 m | -4.52% | - | 0 deg | Lucas Oil Raceway 100% | 24.5 / 30.9 / 31.2 m (scale x0.995) | 123830268 |
-
-Mapped pit lanes: way 531132316 Pitlane (616 m)
+| 0 (best) | committed trace (Assets/TrackTraces) | 1059 m | -4.60% | - | 0 deg | - | 24.5 / 30.9 / 31.2 m (scale x0.994) |  |
 
 ## How far the game is from the best candidate
 
-Fitted by rotation, translation and uniform scale (x0.9947). RMS **24.5 m**, 95% within 30.9 m, worst point 31.2 m; worst gap from the candidate back to the game 31.2 m.
+Fitted by rotation, translation and uniform scale (x0.9944). RMS **24.5 m**, 95% within 30.9 m, worst point 31.2 m; worst gap from the candidate back to the game 31.2 m.
 
 Furthest-out stretches (mean deviation over 100 m, in metres along the game spline from its seam - the export's first point, which is the start line unless the track sets a startFinishDistance):
 
-- 674-772 m: 30.9 m
-- 52-150 m: 30.8 m
-- 152-250 m: 30.7 m
+- 676-774 m: 31.0 m
+- 54-152 m: 30.8 m
+- 154-252 m: 30.7 m
 
 ## Files
 
@@ -53,6 +51,5 @@ Furthest-out stretches (mean deviation over 100 m, in metres along the game spli
 ## Next steps
 
 - Use a candidate: `python -I Tools/track_reference.py IRP --write-trace=<#> [--start=apex|lat,lon] [--pit=<wayId>]`, then Unity `Draftmaster > Tracks > Import Traced Geometry For Every Trace`, re-export the geometry, re-run this report, retrain the racing line.
-- Note: buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them.
 
 OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0.

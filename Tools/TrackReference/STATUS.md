@@ -17,7 +17,7 @@ Every venue measured against the real one by `python -I Tools/track_reference.py
 | [RoadAmerica](RoadAmerica/report.md) | wrong shape | 198.5 / 300.8 / 331.7 | raceway ring taken as the centre | -0.29% | -0.05% | NAIP |
 | [Sonoma](Sonoma/report.md) | wrong shape | 147.5 / 281.4 / 296.4 | committed trace (Assets/TrackTraces) | -6.72% | +0.00% | NAIP |
 | [Talladega](Talladega/report.md) | wrong shape | 29.4 / 56.6 / 61.2 | raceway ring taken as the centre | -0.22% | +0.00% | NAIP |
-| [IRP](IRP/report.md) | off | 24.5 / 30.9 / 31.2 | raceway ring taken as the centre | -4.52% | -0.58% | NAIP |
+| [IRP](IRP/report.md) | off | 24.5 / 30.9 / 31.2 | committed trace (Assets/TrackTraces) | -4.60% | -0.58% | NAIP |
 | [Rockingham](Rockingham/report.md) | off | 14.3 / 22.5 / 23.6 | committed trace (Assets/TrackTraces) | -1.15% | +0.00% | NAIP |
 | [Dover](Dover/report.md) | close | 4.2 / 8.0 / 8.8 | committed trace (Assets/TrackTraces) | +3.22% | +0.00% | NAIP |
 | [Iowa](Iowa/report.md) | close | 4.0 / 6.4 / 8.9 | committed trace (Assets/TrackTraces) | +1.08% | -0.57% | NAIP |

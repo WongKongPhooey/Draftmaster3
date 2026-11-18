@@ -58,6 +58,11 @@ symmetric four-piece oval (38 m RMS off the real track); its trace was rewritten
 for the curvature importer, with a mapped pit lane cut down to the way's front-stretch run (the way also wraps both
 turn aprons). Re-importing it in Unity is still to do.
 
+IRP had no trace (its generated oval was a long thin 464 x 156 m, 24.5 m RMS off the real one). One was written
+2026-11-18 from `track_reference.py` candidate 0 (OSM's raceway ring, on the racing surface all round), with the
+mapped pit lane cut to the way's front-stretch run (it also wraps the Turn 1 and Turn 3-4 aprons). Importing it in
+Unity is still to do.
+
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
 Daytona, Talladega, Indianapolis, COTA, Road America, Lime Rock and Watkins Glen — are not a bug in the
 fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,345m of its 4,281m lap drawn
