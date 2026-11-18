@@ -5,6 +5,7 @@
     python -I Tools/track_reference.py Phoenix --refresh     # ignore the cache, fetch everything again
     python -I Tools/track_reference.py Phoenix --offline     # re-render from the cache, no network
     python -I Tools/track_reference.py Phoenix --write-trace=2 [--start=apex|lat,lon] [--pit=<wayId>] [--force]
+    python -I Tools/track_reference.py --status              # STATUS.md from every venue's committed report, offline
     python -I Tools/track_reference.py --selftest            # the fitting maths on a synthetic lap
 
 For one venue it collects, into Tools/TrackReference/<id>/:
@@ -18,8 +19,11 @@ For one venue it collects, into Tools/TrackReference/<id>/:
   track map   the Wikipedia infobox's layout diagram, from Wikimedia Commons, with its licence.
   candidates  every closed ring OSM can make near the published lap length - raceway lines taken as the
               centre, walls taken as the outer edge or the inside edge and offset by half the game's
-              racing surface - each scored by how far its lap is from the published one, and by whether it
-              crosses itself. The committed trace (Assets/TrackTraces/<id>.json) is scored the same way.
+              racing surface - each checked for crossing itself, running down a pit lane, running on another
+              circuit's roads and turning the wrong way for the track type, then ranked by those and by how
+              far its lap is from the published one. The committed trace (Assets/TrackTraces/<id>.json) is
+              checked the same way. Raceway rings also come from a junction search, so a road course that
+              leaves an oval is found.
   built fit   the game's own centreline (Tools/TrackExports/<id>.json) fitted onto the best candidate by
               rotation, translation and a uniform scale, then measured point by point: RMS / 95th
               percentile / worst deviation in metres, and the three stretches of the lap (in metres from
@@ -507,19 +511,187 @@ def ring_ways(ring, ways):
     return out
 
 
-def find_candidates(by_kind, frame, published_m, width_m, trace):
-    """Every closed ring near the published lap, as a centreline: (label, kind, ways, centre xy)."""
+def _metres(a, b):
+    k = math.cos(math.radians(a[0])) * 111320.0
+    return math.hypot((b[1] - a[1]) * k, (b[0] - a[0]) * 110540.0)
+
+
+def _bearing(a, b):
+    return math.atan2(b[0] - a[0], (b[1] - a[1]) * math.cos(math.radians(a[0])))
+
+
+def branch_rings(ways, want, tol, max_turn_deg=100.0, budget=400000, limit=400):
+    """Every simple loop through the junctions of these ways whose length is near the lap.
+
+    fetch_traces.rings walks straight on at every junction, which is what an oval lap does - and exactly what a
+    road course sharing an oval does not: the Roval and the Indianapolis road course leave the banking at a
+    junction where the oval carries straight on, so the straight-on walker can only ever find the oval (2.5% from
+    the road course's lap at Indianapolis, near enough to be taken for it). Here the junction graph is searched
+    instead: at a junction any branch within max_turn_deg of straight ahead may be taken (a car can turn off at an
+    angle but cannot double back), and every loop of the right length is kept. Ranking which of them is the
+    circuit is find_candidates' job."""
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for w in ways:
+        g = w['geometry']
+        for a, b in zip(g, g[1:]):
+            ka, kb = ft.key(a), ft.key(b)
+            if ka != kb:
+                adj[ka].add(kb)
+                adj[kb].add(ka)
+    junction = {k for k, v in adj.items() if len(v) != 2}
+    edges, done = [], set()
+    for j in junction:
+        for n in adj[j]:
+            if (j, n) in done:
+                continue
+            path = [j, n]
+            while path[-1] not in junction:
+                nxt = [m for m in adj[path[-1]] if m != path[-2]]
+                path.append(nxt[0])
+            done.add((path[0], path[1]))
+            done.add((path[-1], path[-2]))
+            edges.append(path)
+
+    def heading(path, at_end):
+        """Bearing about 15 m into (or out of) a chain, so one short mapping step does not decide it."""
+        pts = path[::-1] if at_end else path
+        acc, i = 0.0, 1
+        while i < len(pts) - 1 and acc + _metres(pts[i - 1], pts[i]) < 15:
+            acc += _metres(pts[i - 1], pts[i])
+            i += 1
+        b = _bearing(pts[0], pts[i])
+        return b + math.pi if at_end else b          # at_end: the direction of travel arriving at path[-1]
+
+    out = defaultdict(list)                          # node -> [(edge index, forward?, length, leave, arrive)]
+    for i, p in enumerate(edges):
+        L = sum(_metres(a, b) for a, b in zip(p, p[1:]))
+        out[p[0]].append((i, True, L, heading(p, False), heading(p, True)))
+        out[p[-1]].append((i, False, L, heading(p[::-1], False), heading(p[::-1], True)))
+    lo, hi, max_turn = want * (1 - tol), want * (1 + tol), math.radians(max_turn_deg)
+
+    def turn(a, b):
+        return abs((b - a + math.pi) % (2 * math.pi) - math.pi)
+
+    found, seen, spent = [], set(), [0]
+
+    def dfs(start, first_leave, node, arrive, length, nodes, chain, lowest):
+        for i, fwd, L, leave, arr in out[node]:
+            spent[0] += 1
+            if spent[0] > budget or len(found) >= limit:
+                return
+            if i < lowest or i in chain or turn(arrive, leave) > max_turn or length + L > hi:
+                continue
+            p = edges[i] if fwd else edges[i][::-1]
+            if p[-1] == start:
+                if length + L >= lo and turn(arr, first_leave) <= max_turn:
+                    sig = frozenset(chain + [i])
+                    if sig not in seen:
+                        seen.add(sig)
+                        ring = []
+                        for j, f in zip(chain + [i], dirs + [fwd]):
+                            q = edges[j] if f else edges[j][::-1]
+                            ring.extend(q[:-1])
+                        found.append([{'lat': k[0], 'lon': k[1]} for k in ring + ring[:1]])
+                continue
+            if p[-1] in nodes:
+                continue
+            nodes.add(p[-1])
+            chain.append(i)
+            dirs.append(fwd)
+            dfs(start, first_leave, p[-1], arr, length + L, nodes, chain, lowest)
+            chain.pop()
+            dirs.pop()
+            nodes.discard(p[-1])
+
+    for i in sorted(range(len(edges)), key=lambda i: -sum(_metres(a, b) for a, b in zip(edges[i], edges[i][1:]))):
+        p = edges[i]
+        for fwd in (True, False):
+            q = p if fwd else p[::-1]
+            if q[0] == q[-1]:
+                continue                             # a closed way on its own: fetch_traces.rings has it
+            L = sum(_metres(a, b) for a, b in zip(q, q[1:]))
+            dirs = [fwd]
+            dfs(q[0], heading(q, False), q[-1], heading(q, True), L, {q[0], q[-1]}, [i], i)
+    return found
+
+
+# Raceway names that belong to some other circuit at the venue: a lap that runs along one is a chain of somebody
+# else's track. For an oval the road course and its chicanes are somebody else's too. Not 'short course': Watkins
+# Glen's full lap runs along ways named for the short course it shares them with.
+OTHER_CIRCUIT = re.compile(r'kart|dirt|drag|moto ?cross|1/4|quarter|small oval|legends|'
+                           r'bandolero|skid|autocross|club|test track|motorcycle|runoff|run-off', re.I)
+OTHER_CIRCUIT_OVAL = re.compile(r'road ?course|roval|chicane|infield|grand prix', re.I)
+
+
+def ring_profile(nodes, race_ways, pit_ids, oval):
+    """How much of a ring runs down a pit lane, and along ways named for another circuit, by matching its edges
+    to the OSM ways they came from (a committed trace carries OSM's own node coordinates, so it matches too)."""
+    edge = {}
+    for w in race_ways:
+        g = w['geometry']
+        for a, b in zip(g, g[1:]):
+            ka, kb = ft.key(a), ft.key(b)
+            edge.setdefault((ka, kb), w)
+            edge.setdefault((kb, ka), w)
+    total = pit = other = 0.0
+    names = {}
+    for a, b in zip(nodes, nodes[1:] + nodes[:1]):
+        ka, kb = ft.key(a), ft.key(b)
+        L = _metres(ka, kb)
+        total += L
+        w = edge.get((ka, kb))
+        if not w:
+            continue
+        name = w.get('tags', {}).get('name', '')
+        names[name] = names.get(name, 0.0) + L
+        if w['id'] in pit_ids:
+            pit += L
+        elif name and all(OTHER_CIRCUIT.search(n) or (oval and OTHER_CIRCUIT_OVAL.search(n)) for n in name.split(';')):
+            other += L                               # 'Charlotte Motor Speedway;1/4 Mile track' is both: not foreign
+    total = total or 1.0
+    top = sorted(((v, k) for k, v in names.items() if k), reverse=True)[:4]
+    return {'pitShare': round(pit / total, 3), 'otherCircuitShare': round(other / total, 3),
+            'names': ['%s %.0f%%' % (k, 100 * v / total) for v, k in top]}
+
+
+def counter_turn_deg(xy):
+    """Degrees the lap turns against its own overall direction. An oval turns one way only (a tri-oval dogleg is
+    a few tens of degrees back); a road course turns right as often as left. A ring that is the wrong one of the
+    two for the track's type has been chained from the wrong roads."""
+    P = tw.smooth_closed(tw.resample_closed(xy, 10.0), 4)
+    n = len(P)
+    h = [math.atan2(P[(i + 1) % n][1] - P[i][1], P[(i + 1) % n][0] - P[i][0]) for i in range(n)]
+    d = [(h[(i + 1) % n] - h[i] + math.pi) % (2 * math.pi) - math.pi for i in range(n)]
+    sgn = 1.0 if sum(d) > 0 else -1.0
+    return round(math.degrees(sum(-x * sgn for x in d if x * sgn < 0)), 1)
+
+
+# Degrees against the lap (counter_turn_deg) that tell an oval from a road course. Measured: real oval rings 0-37
+# (Atlanta's chicane-cut ring 37), rings chained through an oval's infield road course 116-157, road courses
+# 410-760 (Indianapolis road course, Roval, COTA). Lime Rock, nearly all right-handers, is the low end.
+OVAL_COUNTER_TURN_MAX = 90.0
+ROAD_COUNTER_TURN_MIN = 90.0
+
+
+def find_candidates(by_kind, frame, published_m, width_m, trace, track_type=''):
+    """Every closed ring near the published lap, as a centreline: (label, kind, ways, centre xy), ranked so the
+    one that is really this circuit comes first (see the sort at the end)."""
+    oval = track_type != 'RoadCourse'
+    pit_ids = {w['id'] for w in by_kind['pit']}
+    race_ways = by_kind['raceway'] + by_kind['pit']
     cands = []
     if trace:
         xy = [frame.xy(p['lat'], p['lon']) for p in trace['geometry']]
         if xy[0] == xy[-1]:
             xy = xy[:-1]
+        g = trace['geometry'][:-1] if ft.key(trace['geometry'][0]) == ft.key(trace['geometry'][-1]) else trace['geometry']
         cands.append({'label': 'committed trace (Assets/TrackTraces)', 'kind': 'trace', 'ways': [],
-                      'centre': xy, 'note': trace.get('foundBy', '')})
+                      'centre': xy, 'note': trace.get('foundBy', '')} | ring_profile(g, race_ways, pit_ids, oval))
 
-    def rings_of(ways, tol):
+    def rings_of(ways, tol, extra=()):
         found = []
-        for r in ft.rings(ways, published_m, tol=tol):
+        for r in list(ft.rings(ways, published_m, tol=tol)) + list(extra):
             xy = [frame.xy(p['lat'], p['lon']) for p in r]
             if xy[0] == xy[-1]:
                 xy = xy[:-1]
@@ -529,14 +701,25 @@ def find_candidates(by_kind, frame, published_m, width_m, trace):
             if abs(L - published_m) / published_m > tol:
                 continue
             cx, cy = sum(p[0] for p in xy) / len(xy), sum(p[1] for p in xy) / len(xy)
-            if any(abs(L - f[1]) / L < 0.01 and math.hypot(cx - f[2], cy - f[3]) < 15 for f in found):
+            # The same loop found twice (both walkers, either direction). Length and centre alone are not
+            # enough: a lap down the pit lane instead of the front stretch is within 1% and 15 m of the real
+            # one, and must survive to be ranked below it.
+            if any(abs(L - f[1]) / L < 0.01 and math.hypot(cx - f[2], cy - f[3]) < 15 and same_loop(xy, f[4])
+                   for f in found):
                 continue
             found.append((r, L, cx, cy, xy))
         return found
 
-    for r, L, _, _, xy in rings_of(by_kind['raceway'] + by_kind['pit'], 0.12):
+    def same_loop(a, b):
+        d, _ = nearest(resample(a, 200), resample(b, 400))
+        return float(d.max()) < 3.0
+
+    # Raceway rings: the straight-on walker over raceway and pit ways, as ever, plus every loop through the
+    # junctions of the raceway ways alone (branch_rings), which is how a road course that leaves an oval is found.
+    for r, L, _, _, xy in rings_of(race_ways, 0.12, branch_rings(by_kind['raceway'], published_m, 0.12)):
+        nodes = r[:-1] if ft.key(r[0]) == ft.key(r[-1]) else r
         cands.append({'label': 'raceway ring taken as the centre', 'kind': 'raceway',
-                      'ways': ring_ways(r, by_kind['raceway'] + by_kind['pit']), 'centre': xy})
+                      'ways': ring_ways(r, race_ways), 'centre': xy} | ring_profile(nodes, race_ways, pit_ids, oval))
     for kind in ('wall', 'fence'):
         for r, L, _, _, xy in rings_of(by_kind[kind], 0.15):
             base = tw.smooth_closed(tw.resample_closed(xy, 2.0), 20)
@@ -549,11 +732,39 @@ def find_candidates(by_kind, frame, published_m, width_m, trace):
         c['lengthM'] = round(closed_length(c['centre']), 1)
         c['lengthErrPct'] = round((c['lengthM'] / published_m - 1) * 100, 2)
         c['selfIntersects'] = self_intersects(c['centre'])
-    # Committed trace first when it is plausible (somebody already chose it), then by lap length.
-    cands.sort(key=lambda c: (c['selfIntersects'], c['kind'] != 'trace' or abs(c['lengthErrPct']) > 5,
+        c['counterTurnDeg'] = counter_turn_deg(c['centre'])
+        flags = []
+        if c.get('pitShare', 0) > 0.02:
+            flags.append('runs %.0f%% down a pit lane' % (100 * c['pitShare']))
+        if c.get('otherCircuitShare', 0) > 0.03:
+            flags.append('%.0f%% on ways named for another circuit' % (100 * c['otherCircuitShare']))
+        if oval and c['counterTurnDeg'] > OVAL_COUNTER_TURN_MAX:
+            flags.append('turns %.0f deg against the lap: not an oval' % c['counterTurnDeg'])
+        if not oval and c['counterTurnDeg'] < ROAD_COUNTER_TURN_MIN:
+            flags.append('turns only %.0f deg against the lap: an oval, not a road course' % c['counterTurnDeg'])
+        c['flags'] = flags
+    # Ranked: a lap that does not cross itself; then one with nothing against it (no pit lane, no other circuit's
+    # roads, turning the way this type of track turns) - length alone picked Atlanta's oval-plus-road-course
+    # chain over the oval, 0.06% from the lap against 2.6%; then the committed trace when it is plausible
+    # (somebody already chose it); then by lap length.
+    cands.sort(key=lambda c: (c['selfIntersects'], len(c['flags']), c['kind'] != 'trace' or abs(c['lengthErrPct']) > 5,
                               abs(c['lengthErrPct'])))
-    return cands[:8]
+    # A road course's junction search finds the same lap many times over, differing only by a run-off loop or a
+    # connector a few metres off the line; keep the best-ranked of each so the list shows real alternatives.
+    kept = []
+    for c in cands:
+        if c['kind'] == 'raceway' and any(k['kind'] in ('raceway', 'trace') and near_same(c['centre'], k['centre'])
+                                          for k in kept):
+            continue
+        kept.append(c)
+    return kept[:8]
 
+
+def near_same(a, b):
+    """Two loops that are within 5 m of each other for 90% of the lap."""
+    N = np()
+    d, _ = nearest(resample(a, 300), resample(b, 600))
+    return float(N.percentile(d, 90)) < 5.0
 
 # ---------------------------------------------------------------------------------------------- imagery
 
@@ -785,7 +996,7 @@ def build(tid, refresh=False, offline=False, batch=False):
             by_kind[classify(e)].append(e)
 
     frame = Frame(*centre)
-    cands = find_candidates(by_kind, frame, published_m, width_m, trace)
+    cands = find_candidates(by_kind, frame, published_m, width_m, trace, export["type"])
     best = next((c for c in cands if not c['selfIntersects']), None)
 
     # Fit the game's line onto every candidate; the best candidate's fit is the headline.
@@ -943,17 +1154,23 @@ def write_report(folder, facts, summary):
         wg = facts['wallGapMeasured']
         L += ['', 'Measured on OSM: %s - median %.1f m (p10 %.1f, p90 %.1f).' % (wg['note'], wg['medianM'], wg['p10M'], wg['p90M'])]
     L += ['', '## Centreline candidates', '',
-          '| # | What | Lap | vs published | Crosses itself | Built line fits within (RMS / p95 / max) | OSM ways |',
-          '|---|---|---|---|---|---|---|']
+          'Ranked: a lap that does not cross itself, then one with nothing against it (no pit lane, no other '
+          "circuit's roads, turning the way this type of track turns), then the committed trace, then lap length. "
+          '"Turns against" is how far the lap turns against its own direction: near 0 on an oval, hundreds of '
+          'degrees on a road course.', '',
+          '| # | What | Lap | vs published | Against it | Turns against | Runs on | Built line fits within (RMS / p95 / max) | OSM ways |',
+          '|---|---|---|---|---|---|---|---|---|']
     for c in summary['candidates']:
         bf = c.get('builtFit')
-        L.append('| %d%s | %s | %.0f m | %+.2f%% | %s | %s | %s |' % (
+        against = (['crosses itself'] if c['selfIntersects'] else []) + c.get('flags', [])
+        L.append('| %d%s | %s | %.0f m | %+.2f%% | %s | %s | %s | %s | %s |' % (
             c['index'], ' (best)' if c['index'] == summary['best'] else '', c['label'], c['lengthM'], c['lengthErrPct'],
-            'yes' if c['selfIntersects'] else 'no',
+            '; '.join(against) or '-', '%.0f deg' % c['counterTurnDeg'] if 'counterTurnDeg' in c else '-',
+            ', '.join(c.get('names', [])) or '-',
             '%.1f / %.1f / %.1f m (scale x%.3f)' % (bf['rmsM'], bf['p95M'], bf['maxM'], bf['scale']) if bf else '-',
             ','.join(str(i) for i in c['ways'][:8]) + ('...' if len(c['ways']) > 8 else '')))
     if not summary['candidates']:
-        L.append('| - | OSM has no closed ring near the published lap here | | | | | |')
+        L.append('| - | OSM has no closed ring near the published lap here | | | | | | | |')
     if facts['osmPitLanes']:
         L += ['', 'Mapped pit lanes: ' + ', '.join('way %d %s(%.0f m)' % (p['wayId'], (p['name'] + ' ') if p['name'] else '',
                                                                            p['lengthM']) for p in facts['osmPitLanes'])]
@@ -1081,7 +1298,31 @@ def selftest():
     c = parse_coord(box['coordinates'])
     ok2 = abs(c[0] - 29.1856) < 1e-3 and abs(c[1] + 81.0694) < 1e-3 and box['layout2'].endswith('[[Course|course]]')
     print('selftest: infobox/coord parse -> %s' % ('PASS' if ok2 else 'FAIL'))
-    return ok and ok2
+    # Candidate selection: a road course leaving an oval at a junction where the oval carries straight on. The
+    # straight-on walker can only find the oval; the junction search must find the road course too, and the
+    # oval must read as an oval (no turning against the lap) and the road course as not one.
+    fr = Frame(39.8, -86.2)
+
+    def way(wid, pts, name):
+        return {'id': wid, 'tags': {'name': name}, 'geometry': [dict(zip(('lat', 'lon'), fr.latlon(x, y))) for x, y in pts]}
+
+    arc = lambda cx, a0, a1: [(cx + 100 * math.cos(math.radians(a)), 100 * math.sin(math.radians(a)))
+                              for a in range(a0, a1 - 1, -10)]
+    bottom = [(float(x), -100.0) for x in range(200, -201, -20)]             # eastern end of the bottom straight first
+    top = [(float(x), 100.0) for x in range(-200, 201, 20)]
+    infield = [(0.0, 100.0), (40, 70), (60, 30), (20, 0), (-20, -20), (10, -50), (40, -70), (0.0, -100.0)]
+    ways = [way(1, bottom[:11], 'Speedway'), way(2, bottom[10:] + arc(-200, 270, 90)[1:] + top[1:11], 'Speedway'),
+            way(3, top[10:] + arc(200, 90, -90)[1:], 'Speedway'), way(4, infield, 'Road Course')]
+    xy_of = lambda r: [fr.xy(p['lat'], p['lon']) for p in r][:-1]
+    oval_len = closed_length(xy_of(ft.rings(ways[:3], 1428, tol=0.2)[0])) if ft.rings(ways[:3], 1428, tol=0.2) else 0
+    road = [xy_of(r) for r in branch_rings(ways, 1032, 0.08)]
+    found_road = any(abs(closed_length(r) - 1032) < 30 for r in road)
+    ct_oval = counter_turn_deg(xy_of(ft.rings(ways[:3], 1428, tol=0.2)[0])) if oval_len else 999
+    ct_road = max((counter_turn_deg(r) for r in road), default=0)
+    ok3 = found_road and abs(oval_len - 1428) < 40 and ct_oval < OVAL_COUNTER_TURN_MAX and ct_road > ROAD_COUNTER_TURN_MIN
+    print('selftest: junction search found the road course %s (%d loops), oval %.0f m turns %.0f deg against, '
+          'road course %.0f deg -> %s' % (found_road, len(road), oval_len, ct_oval, ct_road, 'PASS' if ok3 else 'FAIL'))
+    return ok and ok2 and ok3
 
 
 def main():
@@ -1093,6 +1334,9 @@ def main():
         if len(args) != 1:
             sys.exit('--write-trace needs exactly one track id')
         write_trace(args[0], int(wt.split('=')[1]), '--force' in sys.argv)
+        return
+    if '--status' in sys.argv:
+        write_status(committed_results())
         return
     refresh, offline = '--refresh' in sys.argv, '--offline' in sys.argv
     if '--all' in sys.argv:
@@ -1121,9 +1365,21 @@ def main():
         write_status(results)
 
 
+def committed_results():
+    """Every venue's last measurement, from its committed candidates.json and facts.json (no network, no cache)."""
+    out = []
+    for tid in sorted(f[:-5] for f in os.listdir(EXPORTS) if f.endswith('.json')):
+        summ = load_json(os.path.join(OUT, tid, 'candidates.json'))
+        facts = load_json(os.path.join(OUT, tid, 'facts.json'))
+        out.append(summ | {'facts': facts} if summ and facts else
+                   {'trackId': tid, 'error': 'not measured yet; run python -I Tools/track_reference.py %s' % tid})
+    return out
+
+
 def write_status(results):
     L = ['# Track reference status', '',
-         'Every venue measured against the real one by `python -I Tools/track_reference.py --all` (%s). '
+         'Every venue measured against the real one by `python -I Tools/track_reference.py --all`, or rebuilt from '
+         "each venue's last report by `--status` (%s). "
          '"Built RMS" is how far the game\'s centreline is from the best real-world centreline candidate after '
          'fitting position, rotation and scale; matches <= 4 m, close <= 10 m, off <= 25 m, else wrong shape. '
          'Per-venue detail: `Tools/TrackReference/<id>/report.md`. See `Docs/Track-Reference.md`.' % time.strftime('%Y-%m-%d'),
@@ -1146,6 +1402,21 @@ def write_status(results):
     with open(os.path.join(OUT, 'STATUS.md'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(L))
     print('wrote', os.path.join(OUT, 'STATUS.md'))
+
+
+def audit_section():
+    """The per-venue verdict a person reached by looking at the overview: which side is wrong (the game's track or
+    the reference candidate), whether the venue needs a rebuild, and from what. Kept in TrackReference/audit.json so
+    it survives STATUS.md being regenerated."""
+    audit = load_json(os.path.join(OUT, 'audit.json'))
+    if not audit:
+        return []
+    L = ['## Audit', '', audit.get('intro', ''), '',
+         '| Track | Wrong | Rebuild | From | Why |', '|---|---|---|---|---|']
+    for tid, a in sorted(audit['venues'].items()):
+        L.append('| %s | %s | %s | %s | %s |' % (tid, a['wrong'], a['rebuild'], a['from'], a['why']))
+    L.append('')
+    return L
 
 
 if __name__ == '__main__':

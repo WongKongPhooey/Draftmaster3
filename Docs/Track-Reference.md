@@ -8,6 +8,7 @@ screenshots.
 ```
 python -I Tools/track_reference.py <TrackId>      # one venue, ~1-2 min the first time, seconds after
 python -I Tools/track_reference.py --all          # every venue + Tools/TrackReference/STATUS.md
+python -I Tools/track_reference.py --status       # STATUS.md again from every venue's committed report, offline
 ```
 
 Track ids are the ones in `Tools/TrackExports/` (`FortWorth` for Texas, `LongPond` for Pocono, ...).
@@ -22,7 +23,7 @@ Into `Tools/TrackReference/<id>/`:
 | **OSM** | Overpass, one cached answer | Raceway lines, pit lanes, walls/barriers/fences, `area:highway` surfaces, grandstands, plus buildings, roads, car parks and water for context. |
 | **Aerial** | USGS NAIP (public domain, US only) | Web Mercator, so pixels are square in ground metres; the exact metres per pixel is in `aerial.json`. ~0.6 m/px. |
 | **Track maps** | Wikimedia Commons | The infobox diagrams with their captions and licences. Look at these for corner names and layout variants. |
-| **Candidates** | OSM, derived | Every closed ring near the published lap: raceway rings taken as the centre, wall/fence rings taken as the **outer edge** or as the **inside edge** and offset by half the game's racing surface, and the committed trace. Each scored by lap error and self-intersection. |
+| **Candidates** | OSM, derived | Every closed ring near the published lap: raceway rings taken as the centre, wall/fence rings taken as the **outer edge** or as the **inside edge** and offset by half the game's racing surface, and the committed trace. Ranked as described under *Choosing the candidate*. |
 | **Built fit** | `Tools/TrackExports/<id>.json` | The game's centreline fitted onto each candidate (rotation, translation, uniform scale; any start point, either direction), then measured point by point: RMS, 95th percentile, worst point, and the three worst 100 m stretches by spline metre. |
 | **Overview** | All of the above | `cache/overview_small.jpg` (1600 px) and full-size `overview.jpg`: the aerial with every layer, the candidates in green (best bright), and the game's line coloured by how far off it is (cyan <= 4 m, amber <= 10 m, red beyond), with spline-metre dots every 500 m. |
 | **Alignment** | Built fit | `cache/alignment.json`: the aerial's corners in the package's own metres, for the Unity overlay. |
@@ -51,6 +52,30 @@ wall at most ovals). A scale of x0.99-x1.02 is normal.
 **Always look at `overview_small.jpg` before trusting a number.** The best candidate is chosen by lap
 length, and a wall ring offset the wrong way (outer read as inner) can be within 2% on length while sitting
 a whole track width off. The image makes that obvious in a second.
+
+## Choosing the candidate
+
+Raceway rings come from two searches: the straight-on walker (follow the road, carry straight on at every
+junction - what an oval lap does) and a junction search that may turn off at any junction within 100 degrees of
+straight ahead, which is the only way to find a road course that leaves an oval (the Roval, the Indianapolis
+road course: the straight-on walker can only ever find the oval there). Each ring is then checked for what is
+against it, shown in the report's *Against it* column:
+
+- **runs down a pit lane** - more than 2% of it on a pit way (COTA's old best took the pit lane for the front straight);
+- **on ways named for another circuit** - more than 3% on a kart track, dirt track, quarter-mile, skidpad, club
+  circuit or run-off road, and on an oval also on a road course, Roval or chicane (Atlanta's old best and committed
+  trace ran through Pit Road and the AMS Small Oval). A name listing two circuits (`Charlotte Motor Speedway;1/4 Mile
+  track`) is shared, not foreign;
+- **turns the wrong way for the track type** - *Turns against* is how far the lap turns against its own direction:
+  0-40 degrees on a real oval, 400-760 on a road course; past 90 degrees is not an oval, under 90 not a road course.
+
+The ranking is: does not cross itself, then fewest things against it, then the committed trace if within 5% of
+the lap, then lap length. Length alone used to decide, and a chain through the infield can be closer to the
+published lap than the oval itself (Atlanta: 0.06% against 2.6%). Near-duplicates (within 5 m for 90% of the
+lap) keep only the best-ranked, so the list shows real alternatives.
+
+`Tools/TrackReference/audit.json` holds the verdict a person reached per venue - which side is wrong, whether to
+rebuild and from which candidate - and `STATUS.md` prints it under *Audit*, so it survives regeneration.
 
 ## Building or fixing a track from the report
 
@@ -113,9 +138,10 @@ can be saved but the picture will not come back with it - re-run the menu item. 
 
 | File | Role |
 | --- | --- |
-| `Tools/track_reference.py` | The pipeline. `--selftest` checks the fitting maths and the infobox parser offline. |
+| `Tools/track_reference.py` | The pipeline. `--selftest` checks the fitting maths, the infobox parser and the junction search offline. |
 | `Tools/TrackReference/<id>/` | Per venue: `report.md`, `facts.json`, `candidates.json`; `cache/` (ignored). |
-| `Tools/TrackReference/STATUS.md` | Every venue's verdict, worst first. |
+| `Tools/TrackReference/STATUS.md` | Every venue's verdict, worst first, then the audit. |
+| `Tools/TrackReference/audit.json` | Per venue, by hand: which side is wrong, rebuild or not, from which candidate. |
 | `Assets/Scripts/Tracks/Core/TrackReferenceAlignment.cs` | Alignment corners -> sprite placement. Headless-tested (`TrackReferenceAlignmentTests`). |
 | `Assets/Editor/TrackReferenceOverlay.cs` | The `Draftmaster > Tracks > Reference` menu. |
 | `.claude/skills/track-reference/SKILL.md` | How Claude should use all this when asked to make a track accurate. |

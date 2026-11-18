@@ -122,10 +122,10 @@
   "surface": 1,
   "grandstand": 7,
   "stadium": 1,
-  "building": 29,
-  "parking": 10,
-  "water": 1,
-  "road": 446
+  "building": 125,
+  "parking": 46,
+  "water": 5,
+  "road": 482
  },
  "osmPitLanes": [
   {
@@ -159,10 +159,10 @@
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
   "width": 2552,
-  "height": 3491,
-  "groundMetresPerPixel": 0.6,
+  "height": 3407,
+  "groundMetresPerPixel": 0.5999,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": null,
  "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"

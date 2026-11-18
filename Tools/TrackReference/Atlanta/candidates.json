@@ -2,18 +2,27 @@
  "trackId": "Atlanta",
  "candidates": [
   {
-   "label": "committed trace (Assets/TrackTraces)",
-   "kind": "trace",
-   "ways": [],
-   "note": "batch",
-   "lengthM": 2479.8,
-   "lengthErrPct": 0.06,
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    288853230,
+    288848526
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "EchoPark Speedway 100%"
+   ],
+   "lengthM": 2413.4,
+   "lengthErrPct": -2.62,
    "selfIntersects": false,
+   "counterTurnDeg": 0.3,
+   "flags": [],
    "builtFit": {
-    "rmsM": 36.93,
-    "p95M": 57.66,
-    "maxM": 86.51,
-    "scale": 0.9946
+    "rmsM": 46.48,
+    "p95M": 70.61,
+    "maxM": 73.64,
+    "scale": 1.0119
    },
    "index": 0
   },
@@ -22,43 +31,61 @@
    "kind": "raceway",
    "ways": [
     288853230,
+    288853232,
+    1158426818,
+    288853232,
     918350520,
     918350519,
     288853232,
     288848523
    ],
+   "pitShare": 0.265,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "EchoPark Speedway 74%",
+    "Pit Road 26%"
+   ],
+   "lengthM": 2392.0,
+   "lengthErrPct": -3.49,
+   "selfIntersects": false,
+   "counterTurnDeg": 0.5,
+   "flags": [
+    "runs 26% down a pit lane"
+   ],
+   "builtFit": {
+    "rmsM": 33.21,
+    "p95M": 43.03,
+    "maxM": 44.56,
+    "scale": 0.9906
+   },
+   "index": 1
+  },
+  {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "batch",
+   "pitShare": 0.148,
+   "otherCircuitShare": 0.035,
+   "names": [
+    "EchoPark Speedway 82%",
+    "Pit Road 15%",
+    "AMS Small Oval 4%"
+   ],
    "lengthM": 2479.8,
    "lengthErrPct": 0.06,
    "selfIntersects": false,
+   "counterTurnDeg": 117.5,
+   "flags": [
+    "runs 15% down a pit lane",
+    "4% on ways named for another circuit",
+    "turns 118 deg against the lap: not an oval"
+   ],
    "builtFit": {
     "rmsM": 36.93,
     "p95M": 57.66,
     "maxM": 86.51,
     "scale": 0.9946
-   },
-   "index": 1
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    288853230,
-    918350519,
-    918350520,
-    288853232,
-    1158426818,
-    288853232,
-    288853230,
-    288848526
-   ],
-   "lengthM": 2506.7,
-   "lengthErrPct": 1.14,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 36.79,
-    "p95M": 56.67,
-    "maxM": 87.14,
-    "scale": 0.9943
    },
    "index": 2
   },
@@ -67,88 +94,63 @@
    "kind": "raceway",
    "ways": [
     288853230,
-    1158426917,
-    288853230,
-    288848526
-   ],
-   "lengthM": 2416.3,
-   "lengthErrPct": -2.51,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 47.01,
-    "p95M": 68.59,
-    "maxM": 73.89,
-    "scale": 1.0067
-   },
-   "index": 3
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    288853230,
-    288848526
-   ],
-   "lengthM": 2413.4,
-   "lengthErrPct": -2.62,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 46.48,
-    "p95M": 70.61,
-    "maxM": 73.64,
-    "scale": 1.0119
-   },
-   "index": 4
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    288853230,
+    918350519,
+    918350520,
     288853232,
     1158426818,
     288853232,
-    918350520,
-    918350519,
-    288853232,
-    288848523
+    288853230,
+    288848526
    ],
-   "lengthM": 2392.0,
-   "lengthErrPct": -3.49,
+   "pitShare": 0.153,
+   "otherCircuitShare": 0.035,
+   "names": [
+    "EchoPark Speedway 81%",
+    "Pit Road 15%",
+    "AMS Small Oval 4%"
+   ],
+   "lengthM": 2506.7,
+   "lengthErrPct": 1.14,
    "selfIntersects": false,
+   "counterTurnDeg": 145.8,
+   "flags": [
+    "runs 15% down a pit lane",
+    "4% on ways named for another circuit",
+    "turns 146 deg against the lap: not an oval"
+   ],
    "builtFit": {
-    "rmsM": 33.21,
-    "p95M": 43.03,
-    "maxM": 44.56,
-    "scale": 0.9906
+    "rmsM": 36.79,
+    "p95M": 56.67,
+    "maxM": 87.14,
+    "scale": 0.9943
    },
-   "index": 5
+   "index": 3
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 36.93,
-  "p95M": 57.66,
-  "maxM": 86.51,
-  "refToBuiltMaxM": 95.64,
+  "rmsM": 46.48,
+  "p95M": 70.61,
+  "maxM": 73.64,
+  "refToBuiltMaxM": 73.77,
   "worstStretches": [
    {
-    "fromM": 1358,
-    "toM": 1456,
-    "meanM": 75.1
+    "fromM": 400,
+    "toM": 498,
+    "meanM": 71.3
    },
    {
-    "fromM": 512,
-    "toM": 610,
-    "meanM": 47.3
+    "fromM": 186,
+    "toM": 284,
+    "meanM": 71.3
    },
    {
-    "fromM": 1258,
-    "toM": 1356,
-    "meanM": 45.4
+    "fromM": 286,
+    "toM": 384,
+    "meanM": 65.8
    }
   ],
-  "scale": 0.9946
+  "scale": 1.0119
  },
  "verdict": "wrong shape",
  "notes": []

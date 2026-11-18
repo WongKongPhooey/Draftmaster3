@@ -236,13 +236,13 @@
   "pit": 2,
   "wall": 163,
   "fence": 104,
-  "surface": 13,
+  "surface": 5,
   "grandstand": 27,
   "stadium": 4,
-  "building": 0,
-  "parking": 0,
-  "water": 0,
-  "road": 0
+  "building": 6049,
+  "parking": 70,
+  "water": 10,
+  "road": 1413
  },
  "osmPitLanes": [
   {
@@ -258,6 +258,15 @@
  ],
  "wallGapMeasured": null,
  "aerial": null,
- "trackMap": null,
+ "trackMap": [
+  {
+   "file": "Autódromo Hermanos Rodríguez 2015.svg",
+   "source": "https://commons.wikimedia.org/wiki/File:Aut%C3%B3dromo_Hermanos_Rodr%C3%ADguez_2015.svg",
+   "licence": "CC BY-SA 3.0",
+   "artist": "Pitlane02",
+   "caption": "",
+   "saved": "trackmap.png"
+  }
+ ],
  "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"
 }

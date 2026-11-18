@@ -16,9 +16,17 @@
     401660627,
     1052107104
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Charlotte Motor Speedway 95%",
+    "Charlotte Motor Speedway;1/4 Mile track 5%"
+   ],
    "lengthM": 2363.0,
    "lengthErrPct": -2.11,
    "selfIntersects": false,
+   "counterTurnDeg": 3.3,
+   "flags": [],
    "builtFit": {
     "rmsM": 42.79,
     "p95M": 67.6,
@@ -31,6 +39,49 @@
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
+    116107359,
+    402168711,
+    116107372,
+    402168711,
+    1052107104,
+    401660627,
+    402168709,
+    116034341,
+    676112675,
+    116034341,
+    396483278,
+    918050113,
+    396483278,
+    402168711
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.134,
+   "names": [
+    "Charlotte Motor Speedway 81%",
+    "Charlotte Motor Speedway Roval Frontstretch Chicane 7%",
+    "Charlotte Motor Speedway Roval Backstretch Chicane 6%",
+    "Charlotte Motor Speedway;1/4 Mile track 5%"
+   ],
+   "lengthM": 2420.5,
+   "lengthErrPct": 0.27,
+   "selfIntersects": false,
+   "counterTurnDeg": 157.3,
+   "flags": [
+    "13% on ways named for another circuit",
+    "turns 157 deg against the lap: not an oval"
+   ],
+   "builtFit": {
+    "rmsM": 39.6,
+    "p95M": 66.32,
+    "maxM": 72.52,
+    "scale": 1.0089
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
     827346006,
     835498378,
     827346004,
@@ -38,16 +89,26 @@
     827346004,
     1265117379
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 1.0,
+   "names": [
+    "Ten Tenths Motor Club 100%"
+   ],
    "lengthM": 2617.2,
    "lengthErrPct": 8.42,
    "selfIntersects": false,
+   "counterTurnDeg": 509.6,
+   "flags": [
+    "100% on ways named for another circuit",
+    "turns 510 deg against the lap: not an oval"
+   ],
    "builtFit": {
     "rmsM": 74.25,
     "p95M": 123.09,
     "maxM": 147.68,
     "scale": 0.95
    },
-   "index": 1
+   "index": 2
   }
  ],
  "best": 0,

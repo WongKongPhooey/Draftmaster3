@@ -13,7 +13,10 @@ Full guide: `Docs/Track-Reference.md`. Short version:
 2. Read `Tools/TrackReference/<id>/report.md`, then LOOK at `Tools/TrackReference/<id>/cache/overview_small.jpg`
    with the Read tool before trusting the verdict. Check the best candidate (bright green) sits on the
    real racing surface; outer-vs-inner wall readings can be close on length but a track width apart.
-   Also glance at `cache/trackmap.png` (Wikipedia diagram) for corner layout.
+   Also glance at `cache/trackmap.png` (Wikipedia diagram) for corner layout. A candidate's *Against it*
+   column (pit lane, another circuit's ways, wrong turning for the type) means it is a chain, not the circuit -
+   never write one as a trace. Per-venue rebuild decisions live in `Tools/TrackReference/audit.json` (printed
+   under *Audit* in STATUS.md; `--status` regenerates STATUS.md offline).
 3. Verdict = RMS of the game's centreline against the best real one after a rotation/translation/scale
    fit: matches <= 4 m (WG, Daytona, Texas are 1.5-2 m), close <= 10, off <= 25, else wrong shape.
 4. To fix geometry: `--write-trace=<candidate#> [--start=apex|lat,lon] [--pit=<wayId>]` -> Unity

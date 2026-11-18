@@ -74,10 +74,10 @@
   "surface": 0,
   "grandstand": 0,
   "stadium": 0,
-  "building": 0,
-  "parking": 0,
-  "water": 0,
-  "road": 0
+  "building": 166,
+  "parking": 5,
+  "water": 6,
+  "road": 64
  },
  "osmPitLanes": [
   {
@@ -94,7 +94,7 @@
   "height": 1991,
   "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-17"
+  "fetched": "2026-11-18"
  },
  "trackMap": [
   {

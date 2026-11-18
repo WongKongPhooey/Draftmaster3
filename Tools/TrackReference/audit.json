@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-18",
+  "intro": "Every venue the 2026-11-17 run called 'wrong shape' or 'off', checked by eye on `cache/overview_small.jpg` after candidate selection was fixed (see `Docs/Track-Reference.md` - Reading the verdict). 'Wrong' says which side is at fault: the game's track, or the reference candidate the 2026-11-17 run measured it against. Candidate numbers are the ones in each venue's current `report.md`; `--write-trace=<#>` takes them. No track has been changed. In all eleven the game's line is wrong; in five the old reference was wrong too (a chain through a pit lane or another circuit's roads), and two committed traces (Atlanta, Kansas) are such chains and must be replaced, not imported.",
+  "venues": {
+    "Atlanta": {
+      "wrong": "game, and the committed trace",
+      "rebuild": "yes",
+      "from": "#0 (OSM way 288853230, the oval itself, -2.6%); pit way 288853232",
+      "why": "Game is the generic stadium oval (1035 x 382 m) on a wider quad-oval (about 950 x 510 m); 46.5 m RMS. The committed trace Assets/TrackTraces/Atlanta.json (old best) is not the oval: it runs 15% down Pit Road and through the AMS Small Oval and turns 118 deg against the lap - why the importer refused it. Replace it with #0, do not import the old one."
+    },
+    "COTA": {
+      "wrong": "game (old reference ran down the pit lane)",
+      "rebuild": "yes",
+      "from": "#0 (Grand Prix circuit, raceway only, +0.28%); pit way 514836373",
+      "why": "Game's hand-authored RoadCourseLayouts line is a loose sketch, 68 m RMS, most corners in the wrong place. The old best (-0.01%) took the 948 m Pit Lane way instead of the front straight; the new #0 sits on the circuit all the way round. NASCAR has raced the 2.4 mi National-style layout since 2025 - the game's 3.41 mi GP lap is a TrackDimensions decision, not a geometry one."
+    },
+    "Charlotte": {
+      "wrong": "game",
+      "rebuild": "yes",
+      "from": "#0 (Charlotte Motor Speedway oval ways, -2.1%)",
+      "why": "Game is a narrow generic oval (1021 x 351 m) on a wide 1.5 mi quad-oval; 42.8 m RMS. The reference was right (the same ring as before; OSM draws it a little inside the groove, which the importer's rescale to the published lap absorbs). The Roval-chicane chains now rank below it."
+    },
+    "CharlotteRoval": {
+      "wrong": "game (old reference was an oval-and-Roval chain)",
+      "rebuild": "yes",
+      "from": "#0 (oval + Roval + Roval 2024 infield + both chicanes, -1.07%)",
+      "why": "Game line leaves the venue entirely - loops through the car parks north and south of the speedway; 107.6 m RMS. The old best (-3.19%) came from the straight-on walker, which cannot turn off the oval where the Roval does; the junction search finds the Roval proper. #0 includes both the frontstretch and backstretch chicanes; check the infield against the 2024 layout on the Unity aerial overlay before writing the trace (no diagram on Commons)."
+    },
+    "Darlington": {
+      "wrong": "game",
+      "rebuild": "yes (re-import)",
+      "from": "#0 committed trace (= OSM way 104277971, Darlington Raceway, -4.5%)",
+      "why": "Game is a symmetric oval (817 x 513 m) spilling outside the walls at both ends; the real egg is 843 x 393 m; 38.2 m RMS with the fit's scale pinned at its 0.95 limit. The trace is on the racing surface (drawn toward the inside, hence -4.5%) and README says it imported, yet the export is not that shape: either the package was regenerated afterwards or Tools/TrackExports/Darlington.json is stale. Re-export first; if still off, re-run Import Traced Geometry."
+    },
+    "Indianapolis": {
+      "wrong": "game",
+      "rebuild": "yes",
+      "from": "#0 (IMS oval's named ways: main straight, turns 1-4, short chutes, backstretch, +1.2%)",
+      "why": "Game is a long thin stadium (1807 x 360 m); the real oval is a rounded rectangle (about 1.4 x 0.8 km) with short chutes; 150 m RMS. Not a tool artefact: #0 is a clean ring of the oval's own ways, and the outer-wall offset #1 gives the same fit (150.6 m)."
+    },
+    "IndyRoad": {
+      "wrong": "game (old reference was a backstretch-and-pit-lane chain)",
+      "rebuild": "yes",
+      "from": "#0 (+0.00%) or #1 (-0.44%) - pick by the turn 1 / turns 12-12A layout",
+      "why": "Game line wanders far outside the speedway; 163 m RMS. The old best (+0.99%) was the oval's backstretch chained through the warm-up lane and pit lanes; the new candidates are real road-course laps. #0 and #1 differ only where OSM maps 'Alternate Corner 1' and 'Alternate Corners 12 & 12A': choose the one matching the 2014-present Grand Prix course (14 turns) on the Unity aerial overlay."
+    },
+    "Kansas": {
+      "wrong": "game, and the committed trace",
+      "rebuild": "yes",
+      "from": "#1 (OSM way 37552701, Kansas Speedway, +2.6%) - or #0, the outer fence offset 8.4 m in, which agrees",
+      "why": "Game is a narrow oval (1022 x 345 m) on a 1.5 mi tri-oval about 950 x 460 m; 70 m RMS against the real ring. The committed trace (old best, +0.24%) runs 34% down the pit lane - the importer refused it; replace it with #1."
+    },
+    "LimeRock": {
+      "wrong": "game",
+      "rebuild": "yes",
+      "from": "#0 (Climbing Turn layout, +0.02%); #1 is the South Chicane variant (-1.9%)",
+      "why": "Game line follows the west side then leaves the property north and south; 46.7 m RMS. Reference right: #0 runs on the circuit all round. Wikipedia's full course is 1.53 mi against the game's 1.50: use #1 if the series runs the chicane, and check TrackDimensions' length."
+    },
+    "MexicoCity": {
+      "wrong": "game",
+      "rebuild": "yes",
+      "from": "#0 committed trace (GP circuit through the Foro Sol, +1.0%), rewritten with --write-trace=0",
+      "why": "Game line is a loose sketch; 121 m RMS. No NAIP imagery (outside the US), but the trace (94% on ways OSM names Autódromo Hermanos Rodríguez) follows the 2015-present layout through the stadium. The importer refused it on its 3% closure check, which is a segmentation problem, not a wrong reference: re-segment with --write-trace=0 (or take #1, +0.07%)."
+    },
+    "IRP": {
+      "wrong": "game",
+      "rebuild": "yes",
+      "from": "#0 (OSM way 123830268, Lucas Oil Raceway, -4.5%)",
+      "why": "Game is a long thin oval (464 x 156 m) on a wider, rounder 0.686 mi oval; 24.5 m RMS. The OSM ring sits on the racing surface toward the inside line (hence -4.5%; the importer rescales to the lap)."
+    }
+  }
+}
