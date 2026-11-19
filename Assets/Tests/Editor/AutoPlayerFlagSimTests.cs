@@ -18,8 +18,15 @@ using UnityEngine;
 //
 // Phone build 0.8.24, Daytona on Auto (2026-11-19): at the green every car behind the player slowed and the field
 // crashed; when the caution came out the leaders slammed on the brakes and caused a second, bigger crash.
-// Neither reproduced here (2026-11-19): from the green every car is flat out (throttle 1, brake 0) with no contact, with
-// and without the lane controls; at the caution the leaders lift at 2 m/s^2. Bisected against the 0.8.23 scripts
+// The first harness (2026-11-19) did not reproduce either: it built the Auto car with every AI component already on it,
+// so its dynamic model had never moved. The phone's own logs did (AIIncidentRecorder, Daytona, 44 cars, player P26):
+// within 0.1 s of the green the cars right behind the player were asked for 5 mph (stoppedCreepMph, the stop short of a
+// wreck with no room left) and then 30 mph (grassEscapeMaxMph, round it on the grass), while the "wreck" pulled away from
+// them at race speed. The Auto car was the wreck: FormationController switched its PlayerVehicleController back on at the
+// green still holding the speed and heading it had when Auto took it, rolling, somewhere else on the lap, and CautionWatch
+// read a car moving 30+ degrees off the road as one spinning and held it as a wreck for 1.5 s. So the green here hands the
+// player's car over the way the game does - the human's car, rolling round turn 1 on the formation lap, through
+// AIHandover.ToAI and FormationController.TakeOver - in a 44-car field with the player 26th. Bisected against the 0.8.23 scripts
 // (before a13f9548, 6746d1b2 and 6b3839fc - AIRacingBehaviour, FormationController, SplineDriver, CautionLineup,
 // FullCourseCaution, PaceLapAssist): the same numbers, step for step. What the live race has that this does not:
 // Physics2D contacts, the safety car driving out of the pit exit (SafetyCar.StepPitOut), RacePositionTracker.
@@ -32,6 +39,9 @@ public class AutoPlayerFlagSimTests
     const float HalfLength = 2.4f, HalfWidth = 1f;
     const int FieldCars = 20;          // AI cars; the player's car is one more
     const int PlayerSlot = 4;          // row 3, inside: cars behind it and beside it
+    const int GreenFieldCars = 43;     // the green: the phone's 44-car Daytona field
+    const int GreenPlayerSlot = 25;    // P26, row 13 outside, as on the phone: 18 cars behind it
+    const float HandoverTurnDeg = 90f; // Auto took the car this far round the lap from its grid slot (turn 1-2)
     const float RowGap = 7f;           // m, row to row as the close-up brings the field to the line
     const float FormationMph = 60f;    // FormationController.cruiseMph / the pace car's pace
     const float HardBrakeMps2 = 6f;    // a stamp on the brakes (the caution's own lift is CautionRules.ApproachDecelMps2, 2)
@@ -92,6 +102,7 @@ public class AutoPlayerFlagSimTests
         public Action laneDirector;
         public Component watch;
         public float t, lap, clock = 1000f;
+        public int playerIndex = -1;
         public readonly List<string> contacts = new List<string>();
         public readonly HashSet<long> touching = new HashSet<long>();
         public List<Component> wreck = new List<Component>();
@@ -108,10 +119,11 @@ public class AutoPlayerFlagSimTests
     public void NoCarBrakesHardAtTheGreenBehindAnAutoPlayer(bool laneControls)
     {
         s_trace = new StringBuilder("\n  trace:");
-        var sim = Build(laneControls);
+        s_traceCar = GreenPlayerSlot + 2;   // the car straight behind the player
+        var sim = Build(laneControls, GreenFieldCars, GreenPlayerSlot);
         RunFormation(sim, 6f);
         var log = new StringBuilder();
-        float playerD = CentreD(sim, sim.cars[PlayerSlot]);
+        float playerD = CentreD(sim, sim.cars[sim.playerIndex]);
         Green(sim);
         Run(sim, 10f, log, "green");
         string report = Report(sim, "green", log, behindOf: playerD) + (s_trace != null ? s_trace.ToString() : "");
@@ -162,7 +174,7 @@ public class AutoPlayerFlagSimTests
 
     // ---- The field ----
 
-    Sim Build(bool laneControls)
+    Sim Build(bool laneControls, int fieldCars = FieldCars, int playerSlot = PlayerSlot)
     {
         UnityEngine.Random.InitState(11);   // the brains roll reaction times and the like: the same roll every run
         var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
@@ -209,10 +221,11 @@ public class AutoPlayerFlagSimTests
         sim.watch = watchGo.AddComponent(Runtime("CautionWatch"));
         Call(sim.watch, "Awake");
 
-        int total = FieldCars + 1;
+        int total = fieldCars + 1;
+        sim.playerIndex = playerSlot;
         for (int slot = 0; slot < total; slot++)
         {
-            bool player = slot == PlayerSlot;
+            bool player = slot == playerSlot;
             var go = new GameObject(player ? "Player" : $"AI{slot:D2}");
             _spawned.Add(go);
             var spline = go.AddComponent(splineType);
@@ -232,9 +245,12 @@ public class AutoPlayerFlagSimTests
                 float pace = 0.97f + 0.03f * ((slot * 7) % 11) / 10f;
                 Set(spline, "paceMultiplier", pace * aiPace);
             }
-            var racing = go.AddComponent(racingType);
-            Set(racing, "mistakeProbabilityPerSecond", 0f);
-            if (player && laneControls) Set(racing, "playerLane", slot % 2 == 0 ? -1 : 1);   // DriveModeController.UpdateLanes: its own side
+            Component racing = null, input = null;
+            if (!player)
+            {
+                racing = go.AddComponent(racingType);
+                Set(racing, "mistakeProbabilityPerSecond", 0f);
+            }
             var pvc = go.AddComponent(pvcType);
             Set(pvc, "vehicleInfo", vehicleInfo);
             Set(pvc, "track", track);
@@ -242,29 +258,45 @@ public class AutoPlayerFlagSimTests
             Set(pvc, "angleOffsetDeg", 180f);
             Set(pvc, "grassTrails", false);
             Set(pvc, "enableWheelspin", false);
-            Set(pvc, "externalInput", true);
+            Set(pvc, "externalInput", true);   // the player's too until Start: the human's bought parts (PlayerCarBuild) left off
             Set(pvc, "damageImpairsHandling", false);
             Set(pvc, "surfaceSpray", false);
             Set(pvc, "impactDebris", false);
             if (!player) Set(pvc, "corneringStiffness", 15f);   // GridSpawner.aiCorneringStiffness; the player's own car keeps its own
-            var input = go.AddComponent(inputType);
-            Set(input, "steerGain", 1.5f);   // GridSpawner.aiSteerGain / aiSpeedGain, which AIHandover passes too
-            Set(input, "speedGain", 2f);
+            if (!player)
+            {
+                input = go.AddComponent(inputType);
+                Set(input, "steerGain", 1.5f);   // GridSpawner.aiSteerGain / aiSpeedGain, which AIHandover passes too
+                Set(input, "speedGain", 2f);
+            }
 
             Call(spline, "Awake");
-            Call(spline, "OnEnable");
-            _enabled.Add(spline);
-            Call(racing, "Awake");
-            if (!player) racingType.GetMethod("SetBasePace").Invoke(racing, new object[] { (float)splineType.GetField("paceMultiplier").GetValue(spline) / aiPace });
-            Call(input, "Awake");
+            if (!player)
+            {
+                Call(spline, "OnEnable");
+                _enabled.Add(spline);
+                Call(racing, "Awake");
+                racingType.GetMethod("SetBasePace").Invoke(racing, new object[] { (float)splineType.GetField("paceMultiplier").GetValue(spline) / aiPace });
+                Call(input, "Awake");
+            }
             Call(pvc, "Start");
             Call(spline, "Start");
             sim.lap = (float)splineType.GetProperty("TrackLength").GetValue(spline);
             Assert.Greater(sim.lap, 100f, "The AI brain never built its spline.");
             int row = slot / 2;
-            Set(spline, "startDistance", Mathf.Repeat(sf - 40f - row * RowGap, sim.lap));
+            float slotD = Mathf.Repeat(sf - 40f - row * RowGap, sim.lap);
+            if (player)
+            {
+                HandToAuto(go, spline, pvc, slotD, sim.lap);
+                racing = go.GetComponent(racingType);
+                input = go.GetComponent(inputType);
+                Set(racing, "mistakeProbabilityPerSecond", 0f);
+                if (laneControls) Set(racing, "playerLane", slot % 2 == 0 ? -1 : 1);   // DriveModeController.UpdateLanes: its own side
+            }
+            // On its grid slot - for the player's car, where its formation lap on Auto has brought it.
+            Set(spline, "startDistance", slotD);
             splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
-            Call(input, "OnEnable");
+            if (!player) Call(input, "OnEnable");
 
             Component fc;
             if (player)
@@ -275,6 +307,9 @@ public class AutoPlayerFlagSimTests
                 Assert.IsNotNull(fc, "TakeOver refused the player's car on the formation lap");
                 Call(fc, "Awake");
                 Call(fc, "OnEnable");
+                // Kinematic behind the safety car: the model and its driver switched off, as the game would see it.
+                if (!((Behaviour)pvc).enabled) Call(pvc, "OnDisable");
+                if (!((Behaviour)input).enabled) Call(input, "OnDisable");
             }
             else
             {
@@ -299,6 +334,45 @@ public class AutoPlayerFlagSimTests
             sim.cars.Add(car);
         }
         return sim;
+    }
+
+    // The player's car as the human has it on the formation lap - its SplineDriver off, the dynamic model driving, rolling at
+    // pace speed round turn 1, HandoverTurnDeg round the lap from its grid slot - handed to Auto the way
+    // DriveModeController.EnterAuto does it: GridSpawner's corner scale, AIHandover.ToAI (brain, racing AI and input driver
+    // onto the car's own dynamic model), then FormationController.TakeOver(dynamicModel). On the phone that is the lane
+    // controls taking the car as it comes off pit road onto the formation lap, or the player pressing AUTO anywhere round
+    // it. The car then runs the rest of the formation lap kinematically to its slot (Build puts it there).
+    void HandToAuto(GameObject go, Component spline, Component pvc, float slotD, float lap)
+    {
+        var splineType = spline.GetType();
+        var tangent = splineType.GetMethod("MainTangentWorldDeg");
+        float Heading(float d) => (float)tangent.Invoke(spline, new object[] { d });
+        float slotHeading = Heading(slotD);
+        float handoverD = slotD;
+        for (float ahead = 10f; ahead < lap; ahead += 10f)
+        {
+            handoverD = Mathf.Repeat(slotD + ahead, lap);
+            if (Mathf.Abs(Mathf.DeltaAngle(Heading(handoverD), slotHeading)) >= HandoverTurnDeg) break;
+        }
+        Set(spline, "startDistance", handoverD);
+        splineType.GetMethod("PlaceAtStartDistance").Invoke(spline, null);
+        pvc.GetType().GetMethod("SeedPose").Invoke(pvc, new object[] { (Vector2)go.transform.position, Heading(handoverD), FormationMph / 2.237f });
+        Set(pvc, "externalInput", false);   // the human's
+        ((Behaviour)spline).enabled = false;
+        Call(pvc, "OnEnable");              // the human's car: an obstacle, its brain out of the field
+
+        Set(spline, "cornerSpeedScale", 0.95f);   // EnterAuto: GridSpawner.aiCornerSpeedScale
+        bool taken = (bool)Runtime("AIHandover").GetMethod("ToAI").Invoke(null, new object[] { go, 1.5f, 2f });
+        Assert.IsTrue(taken, "AIHandover.ToAI refused the player's car.");
+        // Edit mode runs no Awake / OnEnable / OnDisable for what ToAI adds and switches: run them as the game would.
+        Call(pvc, "OnDisable");
+        Call(spline, "OnEnable");
+        _enabled.Add(spline);
+        Call(go.GetComponent(Runtime("AIRacingBehaviour")), "Awake");
+        var input = go.GetComponent(Runtime("SplineInputDriver"));
+        Call(input, "Awake");
+        Call(input, "OnEnable");
+        Call(pvc, "OnEnable");
     }
 
     // The formation brain brings the two-wide field to the line at pace speed (kinematic, under the "safety car").

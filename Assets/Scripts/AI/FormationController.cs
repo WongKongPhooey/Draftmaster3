@@ -423,6 +423,23 @@ public class FormationController : MonoBehaviour
         {
             // Dynamic again (PreGrid frozen-hold, or Green racing). Re-enabling SplineInputDriver re-asserts
             // externalMotionController and re-seeds the dynamic model from the current spline pose + speed.
+            //
+            // ...but only on its own next FixedUpdate, and the model is switched on now. Until then it still holds the
+            // speed and heading it had when it was last switched off - for a car handed over to Auto while rolling
+            // (somewhere round the formation lap) or one that went into a caution at racing speed, a car doing 50 mph
+            // pointing the way the road went a lap ago. CautionWatch read exactly that as a car spinning (moving, 30+
+            // degrees off the road), held it as a wreck for wreckHoldSeconds, and at the green the cars behind the
+            // player's Auto car stopped short of it and went for the grass at 30 mph (phone 0.8.24, Daytona, 20 cars
+            // wrecked). So the model is seeded here, from the pose the spline has been placing the car at, before
+            // anything can read it. Only coming back from kinematic (the model was off): a car whose model was running
+            // keeps its own state.
+            if (_pvc != null && !_pvc.enabled && _spline != null && _spline.TrackLength > 0f && _spline.track != null
+                && !_spline.externalMotionController)
+            {
+                Vector3 seed = _spline.track.transform.TransformPoint(
+                    new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f));
+                _pvc.SeedPose(new Vector2(seed.x, seed.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
+            }
             if (_pvc != null) _pvc.enabled = true;
             if (_input != null) _input.enabled = true;
             else if (_spline != null) _spline.externalMotionController = true;
