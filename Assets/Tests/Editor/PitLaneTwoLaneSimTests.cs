@@ -7,7 +7,8 @@ using UnityEngine;
 
 // Two cars come in to pit side by side on a real track (Daytona) and run pit road as two lanes (PitLanes): the one
 // that is alongside takes the far lane, nobody touches anybody, both stop in their own boxes, and each pulls out
-// into the far lane for the run to the exit. Kinematic cars (SplineDriver + PitStopController), stepped by hand.
+// into the lane it picked on the way out (PitLanes.ExitLane: the far lane, or the box-side lane when the far one has
+// the other car in it) and stays there to the exit. Kinematic cars (SplineDriver + PitStopController), stepped by hand.
 public class PitLaneTwoLaneSimTests
 {
     const BindingFlags All = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -80,7 +81,7 @@ public class PitLaneTwoLaneSimTests
             float pitWidth = (float)Get(track, "PitDrivingWidth");
             float park = (float)Get(track, "PitBoxLaneCenterLateral");
             Assert.IsTrue(Draftmaster.Sim.PitLanes.TwoLanes(pitWidth, park), $"Daytona's pit road ({pitWidth:0.0} m) is one lane.");
-            float farLat = Draftmaster.Sim.PitLanes.Lateral(Draftmaster.Sim.PitLanes.FarSide, pitWidth, park);
+            float LaneLat(int lane) => Draftmaster.Sim.PitLanes.Lateral(lane, pitWidth, park);
 
             var splineType = Runtime("SplineDriver");
             var pscType = Runtime("PitStopController");
@@ -132,6 +133,7 @@ public class PitLaneTwoLaneSimTests
             float dt = Time.fixedDeltaTime;
             bool split = false, aPitted = false, bPitted = false, aDone = false, bDone = false;
             float aOutWorst = 0f, bOutWorst = 0f;
+            int aExitLane = -1, bExitLane = -1;
             string contact = null;
             var log = new StringBuilder("[PitLanes] Daytona two cars");
             for (int step = 0; step < Mathf.RoundToInt(120f / dt) && !(aDone && bDone); step++)
@@ -148,9 +150,11 @@ public class PitLaneTwoLaneSimTests
                 if ((bool)Get(b, "pitStopHold")) bPitted = true;
                 if (aPitted && !aOn) aDone = true;
                 if (bPitted && !bOn) bDone = true;
-                // Leaving the box: once the pull-out is done, on the far lane.
-                if ((bool)Get(pa, "_pulledOut") && aOn) aOutWorst = Mathf.Max(aOutWorst, Mathf.Abs((float)Get(a, "lateralOffset") - farLat));
-                if ((bool)Get(pb, "_pulledOut") && bOn) bOutWorst = Mathf.Max(bOutWorst, Mathf.Abs((float)Get(b, "lateralOffset") - farLat));
+                // Leaving the box: once the pull-out is done, in the lane it picked.
+                if ((bool)Get(pa, "_pulledOut") && aOn) aOutWorst = Mathf.Max(aOutWorst, Mathf.Abs((float)Get(a, "lateralOffset") - LaneLat((int)Get(pa, "_lane"))));
+                if ((bool)Get(pb, "_pulledOut") && bOn) bOutWorst = Mathf.Max(bOutWorst, Mathf.Abs((float)Get(b, "lateralOffset") - LaneLat((int)Get(pb, "_lane"))));
+                if ((bool)Get(pa, "_pulledOut") && aExitLane < 0) aExitLane = (int)Get(pa, "_lane");
+                if ((bool)Get(pb, "_pulledOut") && bExitLane < 0) bExitLane = (int)Get(pb, "_lane");
 
                 if (contact == null && (aOn || bOn)
                     && Overlap((Vector2)Get(a, "CommandedLocalPos"), (float)Get(a, "CommandedHeadingDeg"),
@@ -161,13 +165,15 @@ public class PitLaneTwoLaneSimTests
                     log.Append($"\n  t{(step + 1) * dt,5:0.0} A {(aOn ? "pit" : "trk")} d{(float)Get(a, "DistanceOnTrack"),6:0} lat{(float)Get(a, "lateralOffset"),5:0.0} lane {la,2} {(float)Get(a, "CurrentMph"),3:0} mph" +
                                $" | B {(bOn ? "pit" : "trk")} d{(float)Get(b, "DistanceOnTrack"),6:0} lat{(float)Get(b, "lateralOffset"),5:0.0} lane {lb,2} {(float)Get(b, "CurrentMph"),3:0} mph");
             }
+            log.Append($"\n  exit lanes A {aExitLane} B {bExitLane}");
             Debug.Log(log.ToString());
 
             Assert.IsTrue(split, "The two cars never ran pit road a lane each.\n" + log);
             Assert.IsNull(contact, "The cars touched on pit road: " + contact + "\n" + log);
             Assert.IsTrue(aPitted && bPitted, "A car never stopped in its box.\n" + log);
             Assert.IsTrue(aDone && bDone, "A car never left pit road.\n" + log);
-            Assert.Less(Mathf.Max(aOutWorst, bOutWorst), 0.3f, "Out of the box, a car was not in the far lane.\n" + log);
+            Assert.Less(Mathf.Max(aOutWorst, bOutWorst), 0.3f, "Out of the box, a car was not in the lane it picked.\n" + log);
+            Assert.IsTrue(aExitLane >= 0 && bExitLane >= 0, "A car never finished pulling out into a lane.\n" + log);
         }
         finally
         {

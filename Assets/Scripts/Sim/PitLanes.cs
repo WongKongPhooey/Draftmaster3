@@ -8,7 +8,8 @@ namespace Draftmaster.Sim
     // Lane 0 runs next to the boxes: it is the lane a car brakes down to turn into its own box. Lane 1 is the far
     // lane. A car coming in alongside another takes lane 1 rather than running into it, and moves across to lane 0
     // once there is room; a car leaving its box pulls out across lane 0 into lane 1 and runs that to the exit, clear
-    // of the cars still braking down lane 0 for their boxes. A pit road too narrow for two cars side by side (or with
+    // of the cars still braking down lane 0 for their boxes - or into lane 0 when lane 1 already has a car in it, and
+    // waits in its box for a gap when both do (ExitLane). A pit road too narrow for two cars side by side (or with
     // no box strip, so parked cars sit in the road) is one lane, down the middle.
     public static class PitLanes
     {
@@ -24,7 +25,14 @@ namespace Draftmaster.Sim
             public float lateral;    // across it (m), the same frame as the box strip's parkLateral
             public float mph;
             public int lane;         // the lane it is in or moving to; -1 = unknown (judge by lateral)
+            public float stopLine;   // where down pit road (m) it is braking to stop in its box; <= 0 = not stopping
         }
+
+        // A car within this far (m) of me, either way, is alongside: in the way of a pull-out whatever its speed.
+        public const float AlongsideM = 5f;
+        // Slower than this (mph) a car behind is stopped or queuing - it waits for me, it does not run into me.
+        public const float MovingMph = 2f;
+        const float MphToMps = 1f / 2.237f;
 
         public static bool TwoLanes(float pitWidth, float parkLateral)
             => pitWidth >= MinTwoLaneWidth && Mathf.Abs(parkLateral) > 0.01f;
@@ -89,5 +97,44 @@ namespace Draftmaster.Sim
         public static bool BoxSideOpen(float myDistance, float travelled, IReadOnlyList<Car> cars, float pitWidth, float parkLateral,
                                        float behindM, float aheadM, float settleM)
             => travelled >= settleM && LaneClear(BoxSide, myDistance, cars, pitWidth, parkLateral, behindM, aheadM);
+
+        // The lane a car pulling out of its box at `myDistance` takes, or -1 to stay in the box and wait for a gap.
+        // The far lane first - clear of the cars braking down the box side for their boxes - if nobody is in it; the
+        // box-side lane if the far one is taken; and if both are taken, neither. Reaching the far lane means crossing
+        // the box-side lane, so that has to be clear too: a car in the box-side lane always means wait.
+        // One lane (too narrow, or no box strip): the middle - the caller keeps its own gate there.
+        public static int ExitLane(float myDistance, IReadOnlyList<Car> cars, float pitWidth, float parkLateral,
+                                   float behindSeconds, float behindMinM, float aheadM)
+        {
+            if (!TwoLanes(pitWidth, parkLateral)) return BoxSide;
+            if (ExitBlocked(BoxSide, myDistance, cars, pitWidth, parkLateral, behindSeconds, behindMinM, aheadM)) return -1;
+            return ExitBlocked(FarSide, myDistance, cars, pitWidth, parkLateral, behindSeconds, behindMinM, aheadM)
+                ? BoxSide : FarSide;
+        }
+
+        // Is there a car in `lane` that a car pulling out of its box at `myDistance` would pull into or across the nose
+        // of? Alongside or ahead up to `aheadM` (the length of the pull-out), at any speed - a car stopped there is
+        // as much in the way as a moving one. Behind, a moving car close enough to arrive within `behindSeconds`
+        // (never less than `behindMinM`): pit-road speed covers a short fixed gap in well under the time a car takes
+        // to get rolling out of its box. Not a car behind that is braking to stop in a box short of mine - it never
+        // gets here - nor one stopped or queuing behind, which waits for me.
+        public static bool ExitBlocked(int lane, float myDistance, IReadOnlyList<Car> cars, float pitWidth, float parkLateral,
+                                       float behindSeconds, float behindMinM, float aheadM)
+        {
+            if (cars == null) return false;
+            for (int i = 0; i < cars.Count; i++)
+            {
+                var c = cars[i];
+                if (LaneOf(c, pitWidth, parkLateral) != lane) continue;
+                float g = c.distance - myDistance;
+                if (g > aheadM) continue;
+                if (g >= -AlongsideM) return true;
+                if (c.mph < MovingMph) continue;
+                if (c.stopLine > 0f && c.stopLine < myDistance - AlongsideM) continue;
+                float reach = Mathf.Max(behindMinM, c.mph * MphToMps * Mathf.Max(0f, behindSeconds));
+                if (-g <= reach) return true;
+            }
+            return false;
+        }
     }
 }

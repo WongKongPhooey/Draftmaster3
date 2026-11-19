@@ -44,8 +44,10 @@ public class PitStopController : MonoBehaviour
     public float boxCrawlMph = 5f;
     [Tooltip("Tell the crew the car is coming this far (m) up the lane from the box, so their sign man is out with the board down before it arrives — the board is what marks the stop.")]
     public float signCallM = 35f;
-    [Tooltip("After service, hold in the box while another moving pit-lane car is within this many metres behind the box — pull out into a gap, not into traffic.")]
+    [Tooltip("After service, hold in the box while another moving pit-lane car is within this many metres behind the box — pull out into a gap, not into traffic. On a two-lane pit road this is the shortest gap behind, per lane (exitYieldSeconds can make it longer).")]
     public float exitYieldBehindM = 14f;
+    [Tooltip("Two-lane pit road: a moving car behind in a lane counts as in that lane's way if it would reach the box within this many seconds at its speed (never less than exitYieldBehindM). The car pulls out into the far lane if that is clear, the box-side lane if only the far one is taken, and waits in the box while both are.")]
+    public float exitYieldSeconds = 2f;
     [Tooltip("Pit-lane ACC: stop this far (m) behind a stationary car in the lane ahead.")]
     public float pitFollowStopGap = 6f;
     [Tooltip("Reset bodywork damage during the stop too.")]
@@ -142,10 +144,11 @@ public class PitStopController : MonoBehaviour
 
     public bool IsPitting => _state != State.Racing;
     // The pit-road lane this car is driving down (PitLanes.BoxSide / FarSide), or -1 while it is not in one - in its
-    // box, cutting in or pulling out, or not on pit road at all. Other cars judge a -1 by where it is across the lane.
+    // box, cutting in, or not on pit road at all. Other cars judge a -1 by where it is across the lane. A car pulling
+    // out of its box already claims the lane it is pulling into, so the car in the next box sees it is taken.
     public int PitLaneIndex =>
         (_state == State.HeadingToPit && _spline != null && _spline.IsOnPit && !_cutting) ||
-        (_state == State.Leaving && _spline != null && _spline.IsOnPit && !_spline.pitStopHold && !_pullingOut)
+        (_state == State.Leaving && _spline != null && _spline.IsOnPit && !_spline.pitStopHold)
             ? _lane : -1;
     // Stopped in its box after the race, and staying there.
     public bool IsParkedAfterRace => _state == State.Parked;
@@ -358,10 +361,24 @@ public class PitStopController : MonoBehaviour
                     // Yield: stay in the box until no moving pit-lane car is bearing down from behind,
                     // so the pull-out merges into a gap instead of across someone's nose.
                     // The stop line has to be released first or SplineDriver re-pins the car every frame.
+                    // Two-lane pit road: out into the far lane if nobody is in it, the box-side lane if the far one
+                    // is taken, and stay put while both are (PitLanes.ExitLane). The lane is picked here, as the
+                    // car goes, and kept to the exit.
                     _pullingOut = false;
                     _pulledOut = false;
-                    if (PitExitClear())
+                    _lane = -1;
+                    int exitLane = PitLanes.BoxSide;
+                    bool go;
+                    if (TwoLanes && _spline.IsOnPit && _spline.PitLength > 0f)
                     {
+                        exitLane = PitLanes.ExitLane(_spline.PitProgress01 * _spline.PitLength, PitCars(), PitWidth,
+                                                     PitLane.ParkLateral, exitYieldSeconds, exitYieldBehindM, laneCheckAheadM);
+                        go = exitLane >= 0;
+                    }
+                    else go = PitExitClear();
+                    if (go)
+                    {
+                        _lane = exitLane;
                         _spline.pitParkDistance = -1f;
                         _spline.aiMaxSpeedMph = 200f;
                         _spline.pitStopHold = false;
@@ -374,9 +391,10 @@ public class PitStopController : MonoBehaviour
                     // lane and to be on the line before the exit. A fixed lateral rate in time swung the car
                     // through 50 degrees and more as it crawled out of the box.
                     float myD = _spline.PitProgress01 * _spline.PitLength;
-                    // Out into the far lane (two-lane pit road), across the box-side lane the cars coming in are
-                    // braking down for their boxes; the middle of a one-lane road.
-                    _lane = PitLanes.FarSide;
+                    // Into the lane picked on the way out of the box: the far lane (two-lane pit road), across the
+                    // box-side lane the cars coming in are braking down for their boxes, or the box-side lane when the
+                    // far one was taken; the middle of a one-lane road.
+                    if (_lane < 0) _lane = TwoLanes ? PitLanes.FarSide : PitLanes.BoxSide;
                     float outLat = LaneLat(_lane);
                     if (!_pullingOut && !_pulledOut && Mathf.Abs(_spline.lateralOffset - outLat) > 0.01f)
                     {
@@ -525,6 +543,7 @@ public class PitStopController : MonoBehaviour
                 lateral = d.lateralOffset,
                 mph = d.CurrentMph,
                 lane = psc != null && psc.isActiveAndEnabled ? psc.PitLaneIndex : -1,
+                stopLine = d.pitParkDistance,
             });
         }
         return s_pitCars;

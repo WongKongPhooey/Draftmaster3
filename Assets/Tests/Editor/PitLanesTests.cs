@@ -83,6 +83,61 @@ public class PitLanesTests
         Assert.IsFalse(PitLanes.BoxSideOpen(135f, 35f, beside, Width, Park, 10f, 12f, 30f), "a car there");
     }
 
+    // Leaving the box (ExitLane): the far lane when it is free, the box-side lane when only the far one has a car in
+    // it, and wait in the box while both do.
+    const float ExitSecs = 2f, ExitMinM = 14f, ExitAhead = 12f;
+    static int Exit(float myD, params PitLanes.Car[] cars)
+        => PitLanes.ExitLane(myD, new List<PitLanes.Car>(cars), Width, Park, ExitSecs, ExitMinM, ExitAhead);
+
+    [Test]
+    public void LeavingTheBox_TheFarLane_WhenNobodyIsInEither()
+    {
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f));
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f, At(190f, Park, -1, 0f), At(210f, Park, -1, 0f)),
+                        "cars in the boxes either side are not in a lane");
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f, At(260f, -2.5f, PitLanes.FarSide, 50f)), "a car well down the lane, going away");
+    }
+
+    [Test]
+    public void LeavingTheBox_TheBoxSideLane_WhenACarIsInTheFarLane()
+    {
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(201f, -2.5f, PitLanes.FarSide, 40f)), "alongside");
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(208f, -2.5f, PitLanes.FarSide, 0f)), "stopped just ahead, in the way of the pull-out");
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(170f, -2.5f, PitLanes.FarSide, 50f)), "coming down the far lane at pit speed, 30 m back");
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(195f, -2.0f, -1, 30f)), "judged by where it is across the road");
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(209f, Park - 1f, PitLanes.FarSide, 5f)),
+                        "the car in the next box is already pulling out into the far lane");
+    }
+
+    [Test]
+    public void LeavingTheBox_WaitForAGap_WhenBothLanesHaveACar()
+    {
+        Assert.AreEqual(-1, Exit(200f, At(201f, -2.5f, PitLanes.FarSide, 40f), At(199f, 2.5f, PitLanes.BoxSide, 40f)));
+        Assert.AreEqual(-1, Exit(200f, At(175f, -2.5f, PitLanes.FarSide, 50f), At(180f, 2.5f, PitLanes.BoxSide, 50f)),
+                        "both lanes coming down behind");
+        // The far lane is across the box-side lane: a car there coming past is waited for too.
+        Assert.AreEqual(-1, Exit(200f, At(180f, 2.5f, PitLanes.BoxSide, 50f)));
+    }
+
+    [Test]
+    public void LeavingTheBox_ACarBehindThatWillNotReachMe_IsNoReasonToWait()
+    {
+        // Braking down the box-side lane for a box short of mine: it stops before it gets here.
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f, new PitLanes.Car { distance = 185f, lateral = 2.5f, lane = PitLanes.BoxSide, mph = 25f, stopLine = 190f }));
+        // ...but one braking for a box beyond mine comes past.
+        Assert.AreEqual(-1, Exit(200f, new PitLanes.Car { distance = 185f, lateral = 2.5f, lane = PitLanes.BoxSide, mph = 25f, stopLine = 230f }));
+        // Stopped or queuing behind: it waits for me.
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f, At(190f, -2.5f, PitLanes.FarSide, 0f)));
+        // A slow car far enough back to be more than the headway away.
+        Assert.AreEqual(PitLanes.FarSide, Exit(200f, At(180f, -2.5f, PitLanes.FarSide, 10f)), "20 m back at 10 mph is ~4.5 s away");
+        Assert.AreEqual(PitLanes.BoxSide, Exit(200f, At(190f, -2.5f, PitLanes.FarSide, 10f)), "inside the 14 m floor");
+    }
+
+    [Test]
+    public void LeavingTheBox_OnAOneLaneRoad_IsTheMiddle()
+        => Assert.AreEqual(PitLanes.BoxSide,
+                           PitLanes.ExitLane(200f, new List<PitLanes.Car> { At(201f, 0f, -1, 40f) }, 6f, Park, ExitSecs, ExitMinM, ExitAhead));
+
     [Test]
     public void LaneClear_LooksBehindAndAhead()
     {

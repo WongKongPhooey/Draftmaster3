@@ -37,6 +37,7 @@
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\CautionPitGate.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\CautionOrder.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\WreckEscape.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\PitLanes.cs" />
   </ItemGroup>
 
   <!-- Tests that only reach the assemblies above. -->
@@ -63,6 +64,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\CautionOrderTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\CautionPitGateTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\WreckEscapeTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PitLanesTests.cs" />
     <Compile Include="HeadlessSetup.cs" />
   </ItemGroup>
 
