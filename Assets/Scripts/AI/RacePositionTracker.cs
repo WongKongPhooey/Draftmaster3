@@ -62,6 +62,8 @@ public class RacePositionTracker : MonoBehaviour
     // Main centerline length (m). Lets callers turn an entry's progress back into a fraction of a lap.
     public float TrackLength => _len;
     public int PlayerPosition => _playerEntry != null ? _playerEntry.position : 0;
+    // The local player's lap count (goes up each time they cross the start/finish line); -1 with no player car.
+    public int PlayerLap => _playerEntry != null ? _playerEntry.lap : -1;
     public int PositionOf(SplineDriver d)
     {
         if (d == null) return 0;
