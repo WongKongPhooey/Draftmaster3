@@ -23,6 +23,10 @@ Full guide: `Docs/Track-Reference.md`. Short version:
    `Draftmaster > Tracks > Import Traced Geometry For Every Trace` (via MCP `execute_menu_item`) ->
    `Export Geometry For Paddock Layout (Selected Track)` -> re-run the report -> retrain the racing line.
    Never overwrite WatkinsGlen, Daytona, FortWorth or Martinsville (needs `--force`; Josh hand-built them).
+   Scope (Josh, 2026-11-19): shape the track correctly - that is the job. Then a paddock from the standard
+   randomised layout (`python Tools/paddock_generate.py <TrackId> --regenerate` off the re-exported geometry), and outside the paddock
+   only the scatter (crowds, fan RVs, trees/greenery via `Scenery > Scatter Scenery`). No landmarks, stands,
+   buildings or other bespoke environment objects.
 5. Width/banking/lap counts live in `Assets/Scripts/Tracks/Core/TrackDimensions.cs`; the report shows
    Wikipedia's figures beside the game's.
 

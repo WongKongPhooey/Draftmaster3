@@ -104,6 +104,13 @@ rebuild and from which candidate - and `STATUS.md` prints it under *Audit*, so i
 5. **Retrain the racing line** (a re-import keeps the old one if the lap length did not change - see
    `Docs/Tracks.md` § Training the racing line) and re-dress what depends on the geometry.
 
+**Scope of a rebuild (Josh, 2026-11-19).** The job is the track's *shape*. After it, give the venue a paddock from
+the standard randomised layout the authored tracks use: re-export the geometry (step 4), then
+`python Tools/paddock_generate.py <TrackId> --regenerate` (generated variants were laid out on the old shape; authored ones are kept) (see `Docs/Overnight-Lanes.md` § Paddock sidecars). Outside the
+paddock, the only dressing is the scatter: crowds, the fan RVs, trees and other greenery
+(`Draftmaster > Tracks > Scenery > Scatter Scenery`, `Docs/Tracks.md` § Scenery). Don't author landmarks,
+grandstands, buildings or other bespoke environment objects for a rebuilt venue.
+
 Banking, width, pit speed and lap counts still come from `TrackDimensions`. The report shows Wikipedia's
 banking text next to the game's numbers, and where an outer and an inner wall ring are both mapped it
 measures the gap between them (`wallGapMeasured` - outer wall to pit wall, so an upper bound on width).
