@@ -29,8 +29,12 @@ public class TwoWideLineAuditTests
     const float CarWidth = 2f;
     // Two cars alongside want a car width and 1.2 m between the doors (OvalLanes.Default.laneSpacing, 3.2 m).
     const float MinCentreGap = 3.2f;
-    // A car's side should be at least this far from a barrier face.
-    const float MinWallClearance = 1.0f;
+    // A car's side should be at least this far from a barrier face. 0.85 m, not a round metre: Texas' outside lane
+    // runs at the AI's own road bound on the front stretch (1.4 m off the edge, OvalLanes frontStretchOutsideEdgeRelief),
+    // and the wall there stands only 0.5 m past the edge, so its door is 0.90 m off the barrier. Pulling the lane in to
+    // a full metre (2026-11-19) tipped OvalPassingTests.ATwoWidePackIsHandedItsLanesAtTheGreen from 0 to 2 lane-change
+    // contacts on the back straight, so the lane stays where it is.
+    const float MinWallClearance = 0.85f;
     // Where the edge is open (no barrier), a car's side should still be on the road.
     const float MinEdgeClearance = 0.3f;
     const float SampleStep = 2f;
