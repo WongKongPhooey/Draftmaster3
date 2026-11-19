@@ -124,7 +124,7 @@ public class TouchDriveControls : MonoBehaviour
     static bool Broadcasting => DriveModeController.Current != null && !DriveModeController.Current.IsDriving;
 
     // Draftmaster 2's lane controls have the car on Auto: the steer buttons stay up to pick the lane, the pedals go,
-    // and the AUTO button's place shows the lane.
+    // and the AUTO button's place shows the lane (still the AUTO button: tapping it takes the car back).
     static bool LaneSteering => DriveModeController.Current != null && DriveModeController.Current.LaneSteering;
 
     // The limiter button only while there is something to toggle: in the pit lane, with a hand toggle allowed.

@@ -22,7 +22,8 @@ using Draftmaster.Controls;
 // as soon as the player is racing it - rolling off pit road, or on the grid before the start - and left / right no
 // longer steer it. Each press moves it a lane across the road (Draftmaster.Controls.LaneSelect): the inside line, the
 // middle line or the outside line, which the AI then drives (AIRacingBehaviour.playerLane), speed and following its
-// own. V and the AUTO button do nothing meanwhile - the car is the AI's to drive until the setting is turned off.
+// own. V and the AUTO button still take the car back (the usual pedal-tap hand-back), and the lanes then leave it
+// with the player - no re-engaging at speed - until they put it on Auto again.
 public class DriveModeController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -77,6 +78,9 @@ public class DriveModeController : MonoBehaviour
     readonly AutoHandBack _handBack = new AutoHandBack();
     readonly LaneSelect _laneSelect = new LaneSelect();
     bool _laneActive;            // the lane controls have the player's lane on the car's brain
+    // The player took the car back off the lane controls (V / AUTO): they drive it, and the lanes do not put it back on
+    // Auto until they are on Auto again in the seat with no hand-back pending.
+    bool _laneOptOut;
     AIRacingBehaviour _laneBrain;
 
     // The Draftmaster 2 lane controls are driving the player's car: Auto on, left / right picking the lane.
@@ -131,7 +135,14 @@ public class DriveModeController : MonoBehaviour
 
     void UpdateLanes()
     {
-        if (!LegacyLaneControls.Enabled) { StopLanes(); return; }
+        if (!LegacyLaneControls.Enabled) { _laneOptOut = false; StopLanes(); return; }
+        // Back on Auto from the seat with nothing waiting to hand it over (V again, the AUTO button, the hand-back
+        // cancelled): the opt-out is over and the lanes pick the car up again. Not while out of the seat - the crew
+        // chief's headset puts the car on Auto and hands it back, and the player should get it back as they left it.
+        if (_laneOptOut && !_driving && !_handBack.Waiting && InSeat) _laneOptOut = false;
+        // The player asked for the car back: while the AI waits for the pedal tap it drives its own line, and once the
+        // player has it the lanes leave it alone.
+        if (_laneOptOut) { StopLanes(); return; }
         if (_driving)
         {
             StopLanes();
@@ -403,13 +414,14 @@ public class DriveModeController : MonoBehaviour
     {
         // The session is over and the AI is bringing the player's car home: it is not theirs to take back.
         if (PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine) return;
-        // The lane controls keep the car on Auto: left / right are all the driving there is.
-        if (LegacyLaneControls.Enabled && !_driving) return;
         if (_driving) { SetDriving(false); return; }
         // Auto off: the AI drives on until a pedal is tapped. Asked again while it waits: Auto stays on.
         if (_handBack.Waiting) { _handBack.Cancel(); return; }
         ReadPedals(out float throttle, out float brake);
         _handBack.Arm(throttle, brake);
+        // With the lane controls on, this is the player leaving them: they would otherwise put the car straight back
+        // on Auto the moment it is handed over (it is racing, above laneEngageMph).
+        if (LegacyLaneControls.Enabled) _laneOptOut = true;
     }
 
     // Team switching moved the human into a different chassis: auto/resume must now operate on THAT
