@@ -67,6 +67,12 @@ public class DriveModeController : MonoBehaviour
     // Auto has been switched off and the AI is still driving, waiting for the player to tap a pedal.
     public bool HandBackPending => _handBack.Waiting;
     public GameObject PlayerCar => playerCar;
+    // The player's own car while Auto drives it for them from the seat. The AI input driver Auto bolts on means
+    // PlayerVehicleController.Human no longer answers with it, and the race HUD - position, lap, speed, tyres - still
+    // belongs to it (PlayerVehicleController.Local). Null while the player drives (Human has the car), on foot, from
+    // the pit wall, or while the AI brings the car home at the end of a session. The controller can be switched off:
+    // behind the safety car FormationController hands the car to its SplineDriver.
+    public PlayerVehicleController AutoCar => !_driving && InSeat ? _pvc : null;
 
     PlayerVehicleController _pvc;
     SplineDriver _spline;

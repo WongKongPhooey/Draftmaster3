@@ -33,7 +33,7 @@ public class IronOvalRaceHUD : MonoBehaviour
     public float draftEaseRate = 4f;
 
     Transform _player;
-    IVehicleSpeedReadout _speed;
+    SplineDriver _spline;
     TireModel _tires;
     FuelTank _fuel;
     PlayerVehicleController _pvc;
@@ -71,13 +71,15 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     void Rebind()
     {
-        // The local player's car: a live PVC with no AI brain bolted on. Off the registry rather than a
-        // scene search — on foot this rebind never latches, so it would otherwise scan the whole paddock
-        // four times a second for the entire walk.
-        if (_pvc == null || !_pvc.isActiveAndEnabled) _pvc = PlayerVehicleController.Human;
+        // The local player's car, driven by them or by Auto for them (PlayerVehicleController.Local). Human alone
+        // dropped the car the moment Auto's AI input driver went on it: once the safety car switched its controller
+        // off (formation lap, a caution) the HUD let go and never found it again, so POS, LAP and MPH were gone for
+        // the rest of the Auto run. Off the registry rather than a scene search — on foot this rebind never latches,
+        // so it would otherwise scan the whole paddock four times a second for the entire walk.
+        if (_pvc == null || !_pvc.isActiveAndEnabled) _pvc = PlayerVehicleController.Local;
 
         _player = _pvc != null ? _pvc.transform : null;
-        _speed = _pvc as IVehicleSpeedReadout;
+        _spline = _pvc != null ? _pvc.GetComponent<SplineDriver>() : null;
         _tires = _pvc != null ? _pvc.GetComponent<TireModel>() : null;
         _fuel = _pvc != null ? _pvc.GetComponent<FuelTank>() : null;
     }
@@ -171,9 +173,9 @@ public class IronOvalRaceHUD : MonoBehaviour
     // leftward as the number gains a digit; on a phone it stands on top of the touch pedals, as the headset does.
     void DrawSpeedBlock()
     {
-        if (_speed == null) return;
+        if (_pvc == null) return;
 
-        float mph = _speed.SpeedMps * 2.237f;
+        float mph = SpeedMps() * 2.237f;
         _shownMph = Mathf.Lerp(_shownMph, mph, 1f - Mathf.Exp(-12f * Time.unscaledDeltaTime));
         string text = Mathf.RoundToInt(_shownMph).ToString();
 
@@ -292,6 +294,16 @@ public class IronOvalRaceHUD : MonoBehaviour
         if (RaceWeekend.IsPracticeLike || laps <= 0) return lap;
         total = laps;
         return Mathf.Min(lap, total);
+    }
+
+    // The car's speed from whatever is moving it. On Auto behind the safety car FormationController switches the
+    // controller off and the SplineDriver writes the transform, and a switched-off controller's speed stays frozen
+    // at the moment it stopped — so the spline's own speed is read then (as DrivingCameraFeel does).
+    float SpeedMps()
+    {
+        if (_pvc.isActiveAndEnabled) return _pvc.SpeedMps;
+        if (_spline != null && _spline.isActiveAndEnabled && !_spline.externalMotionController) return _spline.SpeedMps;
+        return _pvc.SpeedMps;
     }
 
     // How much tow the player is getting, 0..1 — the same TowFactor the car's physics runs on. That is

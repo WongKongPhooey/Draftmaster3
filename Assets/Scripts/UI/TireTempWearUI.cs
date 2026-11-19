@@ -63,7 +63,7 @@ public class TireTempWearUI : MonoBehaviour
     // on foot there is nothing to find.
     static TireModel FindPlayerTires()
     {
-        var car = PlayerVehicleController.Human;   // the human car has no AI input driver
+        var car = PlayerVehicleController.Local;   // the player's car, on Auto too
         return car != null ? car.GetComponent<TireModel>() : null;
     }
 

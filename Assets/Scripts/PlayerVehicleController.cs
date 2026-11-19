@@ -50,6 +50,21 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         }
     }
 
+    // The local player's own car, whoever has the wheel: the human-driven car, or the one Auto is driving for them
+    // (DriveModeController.AutoCar). For the readouts that belong to the player's car even while the AI drives it.
+    // Unlike Human it can come back switched off - on Auto behind the safety car the SplineDriver moves the car.
+    public static PlayerVehicleController Local
+    {
+        get
+        {
+            var human = Human;
+            if (human != null) return human;
+            var drive = DriveModeController.Current;
+            var auto = drive != null ? drive.AutoCar : null;
+            return auto != null ? auto : null;
+        }
+    }
+
     // A live, human-driven car: alive (Unity null, not C# null — a car destroyed this frame is still in
     // the list until its OnDisable runs), enabled, and with no AI input driver on it.
     public static bool IsHuman(PlayerVehicleController pvc) =>

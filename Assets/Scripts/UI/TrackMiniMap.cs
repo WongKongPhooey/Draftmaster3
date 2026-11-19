@@ -98,7 +98,7 @@ public class TrackMiniMap : MonoBehaviour
         // Point at the field register and the car register; both stay current on their own, and positions
         // are read live each frame.
         _aiCars = RaceField.Drivers;
-        if (_playerCar == null || !_playerCar.isActiveAndEnabled) _playerCar = PlayerVehicleController.Human;
+        if (_playerCar == null || !_playerCar.isActiveAndEnabled) _playerCar = PlayerVehicleController.Local;
     }
 
     // The race scene's road is the active package's; the scene search is only for a hand-built test scene
