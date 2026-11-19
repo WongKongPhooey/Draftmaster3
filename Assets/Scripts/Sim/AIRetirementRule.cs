@@ -6,8 +6,8 @@ namespace Draftmaster.Sim
     // When an AI car's race is over, and where it is parked once it is — lifted out of AIRetirement so it can be
     // pinned in EditMode.
     //
-    // Two ways out. A car bent past `breakdownDamage` stops working: the engine is gone, it rolls to a stop, and
-    // after a short wait (`brokenWait`) it is retired. A car that is not broken but has sat stopped on the circuit
+    // Two ways out. A car bent past `breakdownDamage`, or with a wheel off (WheelHubs), stops working: the engine
+    // is gone, it rolls to a stop, and after a short wait (`brokenWait`) it is retired. A car that is not broken but has sat stopped on the circuit
     // for `stuckWait` — beached, wedged against a wall, pointing the wrong way with nobody able to get it going —
     // is retired too. Either way it is then lifted off the circuit to the far side of the infield wall, out of the
     // race, and stops raising yellows.
@@ -17,6 +17,12 @@ namespace Draftmaster.Sim
         // A threshold of 0 or less disables breakdowns.
         public static bool BrokenDown(float damage, float breakdownDamage) =>
             breakdownDamage > 0f && damage >= breakdownDamage;
+
+        // The same, with the wheels counted: a car that has lost a wheel (VehicleDamage.WheelsOff — the bodywork
+        // folded in past the point where it joins the axle, see WheelHubs) is finished whatever its damage figure
+        // says, unless `wheelOffBreaksDown` is off.
+        public static bool BrokenDown(float damage, float breakdownDamage, int wheelsOff, bool wheelOffBreaksDown) =>
+            (wheelOffBreaksDown && wheelsOff > 0) || BrokenDown(damage, breakdownDamage);
 
         // Whether a car stopped for `stoppedFor` seconds (negative = moving) is retired now. A broken-down car goes
         // after `brokenWait`; one that could still drive only after the longer `stuckWait`.

@@ -326,6 +326,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         }
     }
     FuelTank _fuel;
+    // A wheel has come off: the bodywork folded in past the point where it joins the axle (VehicleDamage.wheelHubs).
+    // The car has no drive left — it rolls to a stop, an AI car breaks down (AIRetirement) and the player is offered
+    // the tow (StrandedTow).
+    public bool WheelOff => _bodywork != null && _bodywork.WheelsOff > 0;
     // Angle (deg, 0..180) between the nose and the direction of travel, and the angle past which a hit car breaks
     // away at the current speed - telemetry for tuning the Spin Slide knobs.
     public float TravelAngleDeg => Draftmaster.Sim.SpinSlide.TravelAngleDeg(_vx, _vy);
@@ -665,6 +669,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _lastSteerIn = steerIn; _lastThrottleIn = throttleIn; _lastBrakeIn = brakeIn;
         // Out of fuel in a race: the engine cuts and the car coasts (FuelTank, Draftmaster.Sim.FuelPlan).
         if (FuelDry) throttleIn = 0f;
+        // A wheel off: nothing left to drive it (VehicleDamage.WheelsOff).
+        if (WheelOff) throttleIn = 0f;
 
         // Steering → front-wheel angle, rate-limited and speed-scaled.
         float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));

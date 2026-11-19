@@ -17,6 +17,15 @@ public class AIRetirementRuleTests
     }
 
     [Test]
+    public void ACarWithAWheelOffBreaksDownWhateverItsDamage()
+    {
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.1f, 0.6f, 1, true), "a wheel off is the end of it");
+        Assert.IsFalse(AIRetirementRule.BrokenDown(0.1f, 0.6f, 0, true));
+        Assert.IsFalse(AIRetirementRule.BrokenDown(0.1f, 0.6f, 2, false), "switched off, wheels do not count");
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.7f, 0.6f, 0, true), "the damage threshold still stands");
+    }
+
+    [Test]
     public void ACarInsideTheFrameIsInShot()
     {
         // 16:9 frame, 30 m half-height: corners ~60 m from centre.

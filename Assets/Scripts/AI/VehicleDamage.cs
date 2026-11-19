@@ -93,6 +93,21 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // DentAmount grew. DamageDebris knocks bits off the car from there.
     public event System.Action<Vector2, float> Dented;
 
+    [Header("Wheels")]
+    [Tooltip("Where each wheel joins its axle, in sprite fractions (x nose 0 to tail 1, y across the car). Fixed to " +
+             "the chassis: when a hit folds the bodywork outline in past one, that wheel has come off and the car " +
+             "is finished (AIRetirement breaks an AI car down; the player's car loses drive). Selected in the " +
+             "Scene view they draw as green dots, red once off. Empty = wheels never come off.")]
+    public Vector2[] wheelHubs = (Vector2[])WheelHubs.Default.Clone();
+
+    // Raised the moment a wheel comes off: which hub (index into wheelHubs) and where it was, in world space.
+    public event System.Action<int, Vector2> WheelLost;
+
+    // How many wheels have come off. Latched: bending the panels back out (a partial Repair) does not put a wheel
+    // back on; only RepairFull — a car rebuilt between sessions, or towed back and fixed — does.
+    public int WheelsOff { get; private set; }
+    public bool WheelOff(int index) => _wheelOff != null && index >= 0 && index < _wheelOff.Length && _wheelOff[index];
+
     [Header("Repair")]
     [Tooltip("Stick grey duct-tape strips over the bodywork wherever a repair (pit stop or crew) straightens it.")]
     public bool ductTapeOnRepair = true;
@@ -134,6 +149,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // Per-vertex fold limit (maxDent x deform weight x end gain) and the vertex folded furthest, for DentAmount.
     float[] _dentLimit;
     int _deepest = -1;
+    // Which hubs have lost their wheel (parallel to wheelHubs), and their local positions as built.
+    bool[] _wheelOff;
+    Vector2[] _hubLocal;
 
     // Scratch for one press: the displacement field, which vertices the press reached, and the buffers
     // BodyDeform smooths through. Allocated once in Build so an impact costs no garbage.
@@ -218,6 +236,12 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _mesh.RecalculateBounds();
         mf.sharedMesh = _mesh;
         RefreshDent();
+
+        int hubs = wheelHubs != null ? wheelHubs.Length : 0;
+        _hubLocal = new Vector2[hubs];
+        _wheelOff = new bool[hubs];
+        WheelsOff = 0;
+        for (int i = 0; i < hubs; i++) _hubLocal[i] = WheelHubs.LocalPoint(wheelHubs[i], size);
 
         if (ductTapeOnRepair && Application.isPlaying)
         {
@@ -439,6 +463,40 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual * TrackConditions.DamageMultiplier);
         if (biasDen > 1e-6f) _biasAccum += (biasNum / biasDen) * Mathf.Clamp01(severity);
         DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
+
+        CheckWheels();
+    }
+
+    // Any hub the folded outline no longer covers has lost its wheel. Latched until RepairFull.
+    void CheckWheels()
+    {
+        if (_hubLocal == null || _wheelOff == null || _current == null) return;
+        int vx = gridX + 1, vy = gridY + 1;
+        for (int i = 0; i < _hubLocal.Length; i++)
+        {
+            if (_wheelOff[i] || !WheelHubs.Exposed(_hubLocal[i], _current, vx, vy)) continue;
+            _wheelOff[i] = true;
+            WheelsOff++;
+            Vector2 world = transform.TransformPoint(_hubLocal[i]);
+            if (Application.isPlaying)
+                Debug.Log($"[Damage] {transform.root.name} lost its {WheelHubs.Name(i)} wheel " +
+                          $"(damage {DamageLevel:0.00}, {WheelsOff} off)");
+            WheelLost?.Invoke(i, world);
+        }
+    }
+
+    // The hubs, so they can be seen and checked against the art: green while the wheel is on, red once it is off.
+    void OnDrawGizmosSelected()
+    {
+        if (wheelHubs == null || sourceSprite == null) return;
+        Vector2 size = sourceSprite.bounds.size;
+        float r = Mathf.Max(0.05f, size.y * 0.04f);
+        for (int i = 0; i < wheelHubs.Length; i++)
+        {
+            Gizmos.color = WheelOff(i) ? Color.red : Color.green;
+            Vector3 world = transform.TransformPoint(WheelHubs.LocalPoint(wheelHubs[i], size));
+            Gizmos.DrawWireSphere(world, r * transform.lossyScale.x);
+        }
     }
 
     // Beat a fraction of the damage out of the panels. The crew working on a car between runs is not the
@@ -553,6 +611,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         DamageLevel = 0f;
         DamageBiasX = 0f;
         _biasAccum = 0f;
+        // Rebuilt whole: new hubs, wheels back on.
+        if (_wheelOff != null) System.Array.Clear(_wheelOff, 0, _wheelOff.Length);
+        WheelsOff = 0;
         BodyChanged?.Invoke();
     }
 }

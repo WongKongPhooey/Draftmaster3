@@ -110,6 +110,8 @@ public class StrandedTow : MonoBehaviour
 
         if (_stoppedSince < 0f) _stoppedSince = Time.time;
         float damage = _bodywork != null ? _bodywork.DamageLevel : 0f;
+        // A car with a wheel off is wrecked whatever its damage figure says (VehicleDamage.WheelsOff).
+        if (_bodywork != null && _bodywork.WheelsOff > 0) damage = Mathf.Max(damage, 1f);
         return Draftmaster.Sim.StrandedTowRule.Offer(Time.time - _stoppedSince, damage, RaceWeekend.IsPracticeLike,
                                                      requireDamage, damageAtLeast, stoppedForSeconds,
                                                      undamagedStoppedForSeconds);

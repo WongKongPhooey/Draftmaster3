@@ -4,8 +4,9 @@ using UnityEngine;
 
 // An AI car's way out of the race.
 //
-// Two things end it (AIRetirementRule). Bent past breakdownDamage, the car stops working: the engine is gone, the
-// throttle is cut and the driver rolls it to a stop on the brakes, still steering along their line. And a car that
+// Two things end it (AIRetirementRule). Bent past breakdownDamage, or with a wheel off (the bodywork folded in past
+// one of VehicleDamage's wheel hubs), the car stops working: the engine is gone, the throttle is cut and the
+// driver rolls it to a stop on the brakes, still steering along their line. And a car that
 // sits stopped on the circuit too long — broken down, beached, wedged against the wall, facing the wrong way — is
 // retired: lifted off the circuit and parked on the far side of the infield wall, with room checked for it there.
 // Where a stretch has no infield wall it is parked well out in the infield instead, clear of every part of the road.
@@ -35,6 +36,9 @@ public class AIRetirement : MonoBehaviour
     [Tooltip("Bodywork damage (VehicleDamage.DamageLevel, 0..1 — a full-severity hit adds ~0.18) at which the car " +
              "stops working. 0 = cars never break down.")]
     [Range(0f, 1f)] public float breakdownDamage = 0.6f;
+    [Tooltip("A car that has lost a wheel — its bodywork folded in past the point where the wheel joins the axle " +
+             "(VehicleDamage.wheelHubs) — breaks down whatever its damage level.")]
+    public bool breakdownOnWheelOff = true;
     [Tooltip("Brake (0..1) a broken-down car rolls to a stop on. Gentle: it is coasting off, not stopping for a wreck.")]
     [Range(0f, 1f)] public float breakdownBrake = 0.3f;
 
@@ -149,7 +153,7 @@ public class AIRetirement : MonoBehaviour
         // A car in the pit lane is about to be repaired, not broken down; it breaks down where it is out on track,
         // on its own dynamic model — not while a caution's formation queue is driving it kinematically.
         if (!BrokenDown && !_spline.IsOnPit && _bodywork != null && _input != null && _input.enabled
-            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage))
+            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff))
             BreakDown();
 
         float now = Time.fixedTime;
@@ -205,7 +209,8 @@ public class AIRetirement : MonoBehaviour
         // kinematically and drive it round behind the safety car instead of leaving it to be retired.
         var formation = GetComponent<FormationController>();
         if (formation != null) formation.enabled = false;
-        Debug.Log($"[AIRetire] {name} broke down (damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
+        string why = _bodywork.WheelsOff > 0 ? $"{_bodywork.WheelsOff} wheel(s) off, " : "";
+        Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
     }
 
     // Due out of the race: pick and hold a spot over the infield wall, then wait for the camera to look away

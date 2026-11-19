@@ -1,0 +1,90 @@
+using UnityEngine;
+
+namespace Draftmaster.Sim
+{
+    // Where each wheel bolts onto its axle, and whether the bodywork still covers it.
+    //
+    // A car's shell is a deformable mesh (VehicleDamage) folded in by every hit. Underneath it, at four fixed points
+    // on the chassis, sit the hubs — the places a wheel joins the axle. They do not move with the panels: they are
+    // part of the frame. While the bodywork outline still wraps a hub, the corner is bent but the wheel is on. Once a
+    // hit has folded the outline in PAST a hub, the corner has been crushed back through the suspension and the wheel
+    // is gone — a car in that state is not driving anywhere, however low its overall damage figure reads.
+    //
+    // Hubs are authored in sprite fractions, the same frame the safety cell is: x runs along the car from the nose
+    // (0) to the tail (1) — the liveries lie nose at sprite x=0 — and y across it, door to door. The defaults are read
+    // off the 64x32 liveries (12.8 px/m, so a 5 m x 2.5 m car): the tyres poke out of the body at pixels 5-15 (front)
+    // and 43-53 (rear) along its length. The outermost pixel row is the tyre, which is about 0.3 m wide; the wheel
+    // bolts onto the hub a little inboard of the tyre's middle, about 0.2 m in from the side of the body.
+    //
+    // Pure geometry, so it can be pinned in EditMode and headless.
+    public static class WheelHubs
+    {
+        // Front-left, front-right, rear-left, rear-right — in sprite fractions (see the header). Which of y 0 and 1 is
+        // "left" depends on how the car is turned; the names are only for reading logs.
+        public static readonly Vector2[] Default =
+        {
+            new Vector2(0.17f, 0.08f),
+            new Vector2(0.17f, 0.92f),
+            new Vector2(0.76f, 0.08f),
+            new Vector2(0.76f, 0.92f),
+        };
+
+        public static string Name(int index) => index switch
+        {
+            0 => "front-left",
+            1 => "front-right",
+            2 => "rear-left",
+            3 => "rear-right",
+            _ => $"wheel {index}",
+        };
+
+        // A hub's position in the bodywork mesh's local frame, for a mesh `size` across built centred on the origin
+        // (VehicleDamage lays its grid out from -size/2 to +size/2).
+        public static Vector2 LocalPoint(Vector2 fraction, Vector2 size) =>
+            new Vector2(-size.x * 0.5f + size.x * fraction.x, -size.y * 0.5f + size.y * fraction.y);
+
+        // Whether `point` is still inside the outline of the deformed bodywork: the outer ring of a `vx` x `vy` vertex
+        // grid laid out row by row (index = y * vx + x), as VehicleDamage builds it. Nonzero winding, so a panel folded
+        // over itself does not flip the answer the way an even-odd count would.
+        public static bool Covered(Vector2 point, Vector3[] grid, int vx, int vy)
+        {
+            if (grid == null || vx < 2 || vy < 2 || grid.Length < vx * vy) return true;
+
+            int winding = 0;
+            int n = RingLength(vx, vy);
+            Vector2 a = RingVertex(grid, vx, vy, n - 1);
+            for (int k = 0; k < n; k++)
+            {
+                Vector2 b = RingVertex(grid, vx, vy, k);
+                if (a.y <= point.y)
+                {
+                    if (b.y > point.y && Cross(a, b, point) > 0f) winding++;
+                }
+                else if (b.y <= point.y && Cross(a, b, point) < 0f) winding--;
+                a = b;
+            }
+            return winding != 0;
+        }
+
+        // Exposed = no longer covered by the bodywork: the wheel on this hub has come off.
+        public static bool Exposed(Vector2 point, Vector3[] grid, int vx, int vy) => !Covered(point, grid, vx, vy);
+
+        // The outer ring, walked once round: along row 0, up the last column, back along the top row, down column 0.
+        static int RingLength(int vx, int vy) => 2 * (vx - 1) + 2 * (vy - 1);
+
+        static Vector2 RingVertex(Vector3[] grid, int vx, int vy, int k)
+        {
+            int w = vx - 1, h = vy - 1;
+            if (k < w) return grid[k];                                   // row 0, x = 0 .. w-1
+            k -= w;
+            if (k < h) return grid[k * vx + w];                          // column w, y = 0 .. h-1
+            k -= h;
+            if (k < w) return grid[h * vx + (w - k)];                    // row h, x = w .. 1
+            k -= w;
+            return grid[(h - k) * vx];                                   // column 0, y = h .. 1
+        }
+
+        // > 0 when `p` is left of the directed edge a -> b.
+        static float Cross(Vector2 a, Vector2 b, Vector2 p) => (b.x - a.x) * (p.y - a.y) - (p.x - a.x) * (b.y - a.y);
+    }
+}
