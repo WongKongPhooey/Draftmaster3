@@ -84,6 +84,42 @@ public class PitBoxPathTests
         Assert.AreEqual(a, PitBoxPath.Lateral(BoxLateral, 0f, len * 0.4f, len));
     }
 
+    // The player parks wherever they stop: here 1 m short of their box and 1 m out towards the lane, in the box ahead
+    // of an AI car pulling out. The ladder-fitted curve (floored at the old 8 m) meets their tail before it is across;
+    // the curve fitted past where they actually are (FitPast) is across, with the margin, before the nose gets there.
+    [Test]
+    public void PullingOutFitsPastAPlayerParkedShortOfTheirBox()
+    {
+        const float ShortBy = 1f, OutBy = 1f, AheadMargin = 1f, ExitMin = 5f;
+        float gap = Spacing - ShortBy;                       // centre to centre
+        float room = gap - CarLength - AheadMargin;          // rolled when the nose is AheadMargin short of their tail
+        float need = OutBy + Clearance;                      // across from them, measured from my box
+
+        float ladder = PitBoxPath.Length(BoxLateral, Spacing, CarLength, Clearance, Gentle, MinLen);
+        float movedLadder = BoxLateral - PitBoxPath.Lateral(BoxLateral, 0f, gap - CarLength, ladder);
+        Assert.Less(movedLadder, need, "the old curve runs into the parked car's tail");
+
+        float fit = Mathf.Max(ExitMin, Mathf.Min(ladder, PitBoxPath.FitPast(-BoxLateral, need, room)));
+        float moved = BoxLateral - PitBoxPath.Lateral(BoxLateral, 0f, room, fit);
+        Assert.GreaterOrEqual(moved, need - 1e-3f, "across before the nose reaches their tail");
+        Assert.Less(fit, ladder, "turns out more sharply than the ladder curve");
+        Assert.AreEqual(0f, PitBoxPath.Lateral(BoxLateral, 0f, fit, fit), 1e-5f, "on the driving line at the end");
+    }
+
+    [Test]
+    public void FitPastLimits()
+    {
+        // Nothing to get past, or nothing to move: no constraint.
+        Assert.IsTrue(float.IsPositiveInfinity(PitBoxPath.FitPast(BoxLateral, 0f, 5f)));
+        Assert.IsTrue(float.IsPositiveInfinity(PitBoxPath.FitPast(0f, 2f, 5f)));
+        // Already level with it: as short as the caller allows.
+        Assert.AreEqual(0f, PitBoxPath.FitPast(BoxLateral, 2f, -1f));
+        // The whole move needed: the whole curve inside the room.
+        Assert.AreEqual(5f, PitBoxPath.FitPast(BoxLateral, BoxLateral + 3f, 5f), 1e-4f);
+        // Half the move needed: the curve's midpoint at the room.
+        Assert.AreEqual(10f, PitBoxPath.FitPast(-BoxLateral, BoxLateral * 0.5f, 5f), 1e-3f);
+    }
+
     [Test]
     public void LengthLimits()
     {

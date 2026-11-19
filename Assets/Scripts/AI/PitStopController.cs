@@ -38,6 +38,10 @@ public class PitStopController : MonoBehaviour
     public float boxPathMinLength = 8f;
     [Tooltip("Margin (m) on top of a car's width that the car must be across from the car in the next box while it is alongside it, going in and coming out.")]
     public float boxPathClearance = 0.5f;
+    [Tooltip("Shortest run (m) over which a car leaving its box gets back across to its lane - shorter than boxPathMinLength, so a car can turn out sharply round a car stopped close in front of it (the player, who parks wherever they stop) instead of meeting its tail and waiting there.")]
+    public float exitPathMinLength = 5f;
+    [Tooltip("Leaving the box, be across past the car parked ahead (boxPathClearance) this far (m) before the nose reaches its tail - a margin for a car that lags its path, and for a car stopped short of its box.")]
+    public float exitClearAheadM = 1f;
     [Tooltip("Braking rate (m/s^2) used to size the approach to the box. The car is capped at the speed it can still stop from, so it arrives AT its own box instead of sailing through it into the next car's.")]
     public float boxApproachDecel = 5f;
     [Tooltip("Speed (mph) the car keeps creeping at over the last few metres into the box.")]
@@ -403,8 +407,12 @@ public class PitStopController : MonoBehaviour
                         _pathStartD = myD;
                         // SplineDriver zeroes lateralOffset at the exit and eases what is left as a merge bias,
                         // which is a sideways slide of its own, so the curve is done before then.
+                        // Fitted to the box ladder, and tighter still past a car actually stopped ahead of this one
+                        // (ExitFitPastParked) - the player parks wherever they stop, often short of the box and out
+                        // towards the lane, and a curve that meets their tail before it is across stalls there.
                         float room = (_spline.PitLength * _spline.pitExitThreshold - myD) * 0.8f;
-                        _pathLength = BoxPathLength(outLat - _pathFrom, 0f, Mathf.Max(room, boxPathMinLength));
+                        _pathLength = BoxPathLength(outLat - _pathFrom, exitClearAheadM, Mathf.Max(room, exitPathMinLength), exitPathMinLength);
+                        _pathLength = Mathf.Max(exitPathMinLength, Mathf.Min(_pathLength, ExitFitPastParked(myD, _pathFrom, outLat)));
                     }
                     if (_pullingOut)
                     {
@@ -512,13 +520,70 @@ public class PitStopController : MonoBehaviour
 
     // Length (m) of the move between the driving line and the box strip (PitBoxPath), from this car's footprint and
     // the box ladder. `maxLength` > 0 caps it (the lane left to the exit).
-    float BoxPathLength(float delta, float endMargin, float maxLength = 0f)
+    float BoxPathLength(float delta, float endMargin, float maxLength = 0f, float minLength = -1f)
     {
-        if (_collision == null) _collision = GetComponent<VehicleCollision>();
-        Vector2 half = _collision != null ? _collision.halfExtents : new Vector2(1.0f, 2.4f);
+        Vector2 half = HalfExtents;
         float spacing = PitLane.Configured ? PitLane.Spacing : 0f;
         return Draftmaster.Sim.PitBoxPath.Length(delta, spacing, 2f * half.y, 2f * half.x + boxPathClearance,
-                                                 boxPathAngleDeg, boxPathMinLength, maxLength, endMargin);
+                                                 boxPathAngleDeg, minLength >= 0f ? minLength : boxPathMinLength, maxLength, endMargin);
+    }
+
+    Vector2 HalfExtents
+    {
+        get
+        {
+            if (_collision == null) _collision = GetComponent<VehicleCollision>();
+            return _collision != null ? _collision.halfExtents : new Vector2(1.0f, 2.4f);
+        }
+    }
+
+    // How far ahead (m) down pit road a stopped car can still shape the pull-out from the box.
+    const float ExitFitAheadM = 20f;
+
+    // The longest pull-out from `fromLat` (the box) to `outLat` (the lane) that still gets past every car stopped
+    // ahead of this one where it actually is (PitBoxPath.FitPast): its car width plus boxPathClearance across from
+    // it, exitClearAheadM before the nose reaches its tail. +infinity when nothing stopped ahead is in the way. The
+    // AI field parks on its box marks, which BoxPathLength already fits; the free-driven player (RaceObstacles, not
+    // RaceField) parks wherever they stop, and is what the car in the box behind used to pull out into and stall
+    // against, waiting for the player to leave. A car sitting out in the lane itself is not one to fit round.
+    float ExitFitPastParked(float myD, float fromLat, float outLat)
+    {
+        float best = float.PositiveInfinity;
+        float delta = outLat - fromLat;
+        if (Mathf.Abs(delta) < 1e-3f || !_spline.IsOnPit) return best;
+        Vector2 half = HalfExtents;
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.IsOnPit || d.PitLength <= 0f) continue;
+            best = Mathf.Min(best, ExitFitPast(d.PitProgress01 * d.PitLength - myD, d.LateralOnTrack, d.CurrentMph,
+                                               fromLat, delta, half));
+        }
+
+        float reach = Mathf.Max(Mathf.Abs(PitLane.ParkLateral), PitWidth * 0.5f) + 3f;   // on pit road or its box strip
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled) continue;
+            if (!_spline.ProjectOntoPit(p.transform.position, out float pd, out float plat) || Mathf.Abs(plat) > reach) continue;
+            best = Mathf.Min(best, ExitFitPast(pd - myD, plat, Mathf.Abs(p.SpeedMph), fromLat, delta, half));
+        }
+        return best;
+    }
+
+    // One car's say in ExitFitPastParked: `gap` m ahead (centre to centre), at `lat` across, going `mph`.
+    float ExitFitPast(float gap, float lat, float mph, float fromLat, float delta, Vector2 half)
+    {
+        if (gap <= 0.5f || gap > ExitFitAheadM || mph >= PitLanes.MovingMph) return float.PositiveInfinity;
+        float d = Mathf.Abs(delta);
+        float toward = (lat - fromLat) * Mathf.Sign(delta);       // how far out towards the lane it sits from my box
+        if (toward > d) return float.PositiveInfinity;           // out in the lane I am heading for: not one to pass
+        float need = Mathf.Min(d, toward + 2f * half.x + boxPathClearance);
+        float room = gap - 2f * half.y - exitClearAheadM;
+        return PitBoxPath.FitPast(delta, need, room);
     }
 
     // ---- Two-lane pit road ------------------------------------------------------------------------------------

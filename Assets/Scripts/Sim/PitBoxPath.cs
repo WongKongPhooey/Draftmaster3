@@ -45,6 +45,21 @@ namespace Draftmaster.Sim
             return Mathf.Max(len, floor);
         }
 
+        // Length (m) of a pull-out of `delta` m across that has made `need` m of it by the time it has rolled `room` m:
+        // the curve that gets past a car parked ahead wherever it actually stopped - short of its box, or out towards
+        // the lane - rather than where the box ladder says it should be. A pull-out turns across only as it rolls, so
+        // one that meets that car's tail before it is across stops against it and never gets any further across.
+        // +infinity when there is nothing to fit (need <= 0, or no move); `room` <= 0 (already level with it) asks for
+        // 0 - the caller's shortest curve. A `need` of the whole move or more fits the whole curve inside `room`.
+        public static float FitPast(float delta, float need, float room)
+        {
+            float d = Mathf.Abs(delta);
+            if (need <= 0f || d < 1e-3f) return float.PositiveInfinity;
+            if (room <= 0f) return 0f;
+            float t = InverseSmoothStep(Mathf.Min(need / d, 1f));
+            return t > 1e-4f ? room / t : float.PositiveInfinity;
+        }
+
         // Lateral after rolling `travelled` m of a `length` m curve from `from` to `to`.
         public static float Lateral(float from, float to, float travelled, float length)
             => to + FormationLanes.PullOutLateral(from - to, travelled, length);
