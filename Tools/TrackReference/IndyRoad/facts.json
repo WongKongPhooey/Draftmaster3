@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 2.44,
   "surfaceWidthM": 15,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 1: raceway ring taken as the centre (ways 588780271,992135043,588780307,297115178,1213055864,588780277,1213055864,588780290,1213055864,1213055866); -0.44% from the published lap"
  },
  "wikipedia": {
   "title": "Indianapolis Motor Speedway",
@@ -131,8 +131,8 @@
  },
  "lengthCheckPct": -0.04,
  "venueCentre": [
-  39.798333,
-  -86.232778
+  39.793978,
+  -86.235835
  ],
  "osmRadiusM": 1606,
  "osmCounts": {
@@ -181,9 +181,9 @@
   }
  ],
  "wallGapMeasured": {
-  "medianM": 1.5,
-  "p10M": 1.5,
-  "p90M": 1.5,
+  "medianM": 1.4,
+  "p10M": 1.4,
+  "p90M": 1.4,
   "note": "gap between the two longest wall rings (outer wall to pit wall / inside wall)"
  },
  "aerial": {

@@ -184,6 +184,202 @@ namespace Draftmaster.Tracks
             return false;
         }
 
+        // Pit road beside a STRAIGHT front stretch - a road course's pit lane (Indianapolis). TryFitToLine's arcs both
+        // turn towards the infield, which can only meet a lane the main line curves across, as at an oval's tri-oval;
+        // a lane running parallel to a straight needs an S at each end: towards the lane and straighten (entry), off
+        // it towards the main line and straighten (exit). Each S is two arcs of `radius`. The second arc of the entry
+        // and the first of the exit are tangent to the lane, so their centres sit `radius` from it on the main line's
+        // side, `2 * radius` from the arc they meet - a circle-line intersection, nothing to search but where along
+        // the main line to leave and rejoin. Those are chosen so the straight starts at `startAlong` and ends at
+        // `endAlong` (metres along `lineDir` from `linePoint`, the mapped lane's ends) as nearly as the radius allows.
+        public struct SideRoad
+        {
+            public float entryDistance, exitDistance, radius;
+            public float entryOutDeg, entryInDeg;   // signed like a TrackSegment angle: towards the lane, then straighten
+            public float straightLength;
+            public float exitOutDeg, exitInDeg;     // off the lane towards the main line, then onto it
+            public float startMiss, endMiss;        // how far the straight's ends are from the mapped ends (m)
+            float ArcLength(float deg) => radius * Mathf.Abs(deg) * Mathf.Deg2Rad;
+            public float EntryLength => ArcLength(entryOutDeg) + ArcLength(entryInDeg);
+            public float ExitLength => ArcLength(exitOutDeg) + ArcLength(exitInDeg);
+            public float Length => EntryLength + straightLength + ExitLength;
+        }
+
+        const float GoodMissMetres = 25f;
+
+        public static bool TryFitAlongside(Func<float, Pose> poseAt, float lapLength, float side,
+                                           Vector2 linePoint, Vector2 lineDir, float startAlong, float endAlong,
+                                           float entryNear, float exitNear, float window, float[] radii,
+                                           out SideRoad road, float maxTurnDeg = 60f)
+        {
+            road = default;
+            if (poseAt == null || lapLength <= 0f || radii == null || lineDir.sqrMagnitude < 1e-6f) return false;
+            lineDir.Normalize();
+            Vector2 lineLeft = new Vector2(-lineDir.y, lineDir.x);
+            float lineHeading = Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg;
+
+            bool found = false;
+            float bestMiss = float.MaxValue;
+            foreach (float radius in radii)
+            {
+                // The lane's arcs' centres: on the main line's side of the lane, `radius` off it.
+                Vector2 q = linePoint - lineLeft * side * radius;
+
+                float bestE = 0f, missE = float.MaxValue, eOut = 0f, eIn = 0f, eFoot = 0f;
+                float bestX = 0f, missX = float.MaxValue, xOut = 0f, xIn = 0f, xFoot = 0f;
+                for (float d = entryNear - window; d <= entryNear + window; d += 2f)
+                {
+                    if (!SolveS(poseAt(Fold(d, lapLength)), true, side, radius, q, lineDir, lineLeft, lineHeading, linePoint,
+                                maxTurnDeg, out float o, out float i, out float f)) continue;
+                    if (Mathf.Abs(f - startAlong) < missE) { missE = Mathf.Abs(f - startAlong); bestE = d; eOut = o; eIn = i; eFoot = f; }
+                }
+                for (float d = exitNear - window; d <= exitNear + window; d += 2f)
+                {
+                    if (!SolveS(poseAt(Fold(d, lapLength)), false, side, radius, q, lineDir, lineLeft, lineHeading, linePoint,
+                                maxTurnDeg, out float o, out float i, out float f)) continue;
+                    if (Mathf.Abs(f - endAlong) < missX) { missX = Mathf.Abs(f - endAlong); bestX = d; xOut = o; xIn = i; xFoot = f; }
+                }
+                if (missE == float.MaxValue || missX == float.MaxValue || xFoot - eFoot < 1f) continue;
+                // Radii are tried largest first, and the first whose straight lands within GoodMissMetres of both
+                // mapped ends wins: a pit lane is a gentle S, not the tightest one that hits the mark exactly.
+                bool good = Mathf.Max(missE, missX) <= GoodMissMetres;
+                if (!good && missE + missX >= bestMiss) continue;
+
+                bestMiss = good ? 0f : missE + missX;
+                found = true;
+                road = new SideRoad
+                {
+                    entryDistance = Fold(bestE, lapLength),
+                    exitDistance = Fold(bestX, lapLength),
+                    radius = radius,
+                    entryOutDeg = eOut, entryInDeg = eIn,
+                    straightLength = xFoot - eFoot,
+                    exitOutDeg = xOut, exitInDeg = xIn,
+                    startMiss = missE, endMiss = missX,
+                };
+                if (good) break;
+            }
+            return found;
+        }
+
+        // One S of TryFitAlongside from the main line pose `p`: the arc centred `radius` to `side` of it, the lane-side
+        // centre 2r away (ahead for the entry, behind for the exit), the heading where the two arcs meet, and where
+        // the S meets the lane (its foot, metres along the lane line).
+        static bool SolveS(Pose p, bool entry, float side, float radius, Vector2 q, Vector2 lineDir, Vector2 lineLeft,
+                           float lineHeading, Vector2 linePoint, float maxTurnDeg,
+                           out float outDeg, out float inDeg, out float foot)
+        {
+            outDeg = inDeg = foot = 0f;
+            Vector2 c1 = p.position + Left(p.headingDeg) * side * radius;
+            Vector2 w = q - c1;
+            float b = Vector2.Dot(w, lineDir);
+            float disc = b * b - (w.sqrMagnitude - 4f * radius * radius);
+            if (disc < 0f) return false;
+            float t = entry ? -b + Mathf.Sqrt(disc) : -b - Mathf.Sqrt(disc);
+            Vector2 c2 = q + lineDir * t;
+            Vector2 radial = (c1 + c2) * 0.5f - c1;
+            Vector2 travel = side * new Vector2(-radial.y, radial.x);
+            float meet = Mathf.Atan2(travel.y, travel.x) * Mathf.Rad2Deg;
+            // Entry: main heading -> meet turning to `side`, meet -> lane turning away from it.
+            // Exit: lane -> meet turning away from `side`, meet -> main heading turning to it.
+            float toSide = entry ? side * Mathf.DeltaAngle(p.headingDeg, meet) : side * Mathf.DeltaAngle(meet, p.headingDeg);
+            float away = entry ? side * Mathf.DeltaAngle(lineHeading, meet) : side * Mathf.DeltaAngle(meet, lineHeading);
+            if (toSide < 0.5f || toSide > maxTurnDeg || away < -0.01f || away > maxTurnDeg) return false;
+            outDeg = entry ? side * toSide : -side * Mathf.Max(0f, away);
+            inDeg = entry ? -side * Mathf.Max(0f, away) : side * toSide;
+            foot = Vector2.Dot(c2 + lineLeft * side * radius - linePoint, lineDir);
+            return true;
+        }
+
+        // A mapped pit lane (already in the lap's plane, in the direction cars use it) as pit road beside a straight
+        // front stretch: the lane's straight runs parallel to the main line at the lane's middle, at the mapped lane's
+        // mean distance from the main line (never closer than `minOffset`, which keeps pit road off the racing
+        // surface), from where the mapped lane starts to where it ends. See TryFitAlongside.
+        public static bool TryFitMappedLaneAlongside(Func<float, Pose> poseAt, float lapLength, float side,
+                                                     IList<Vector2> lane, float minOffset, out SideRoad road,
+                                                     out float offset)
+        {
+            road = default;
+            offset = 0f;
+            if (poseAt == null || lane == null || lane.Count < 2 || lapLength <= 0f) return false;
+
+            float Nearest(Vector2 q)
+            {
+                float best = 0f, bestSq = float.MaxValue;
+                for (float d = 0f; d < lapLength; d += 2f)
+                {
+                    float sq = (poseAt(d).position - q).sqrMagnitude;
+                    if (sq < bestSq) { bestSq = sq; best = d; }
+                }
+                return best;
+            }
+
+            // Length-weighted mean distance of the lane from the main line, and its middle.
+            float total = 0f, weighted = 0f;
+            for (int i = 1; i < lane.Count; i++) total += Vector2.Distance(lane[i - 1], lane[i]);
+            if (total < 1f) return false;
+            Vector2 middle = lane[0];
+            float walked = 0f;
+            for (int i = 1; i < lane.Count; i++)
+            {
+                float len = Vector2.Distance(lane[i - 1], lane[i]);
+                for (float s = 2.5f; s < len; s += 5f)
+                {
+                    Vector2 q = Vector2.Lerp(lane[i - 1], lane[i], s / len);
+                    var p = poseAt(Nearest(q));
+                    weighted += Vector2.Dot(q - p.position, Left(p.headingDeg)) * side * Mathf.Min(5f, len - s + 2.5f);
+                }
+                if (walked < total * 0.5f && walked + len >= total * 0.5f)
+                    middle = Vector2.Lerp(lane[i - 1], lane[i], (total * 0.5f - walked) / Mathf.Max(len, 1e-4f));
+                walked += len;
+            }
+            offset = Mathf.Max(minOffset, weighted / total);
+
+            var mid = poseAt(Nearest(middle));
+            Vector2 dir = Forward(mid.headingDeg);
+            Vector2 linePoint = mid.position + Left(mid.headingDeg) * side * offset;
+            float startAlong = Vector2.Dot(lane[0] - linePoint, dir);
+            float endAlong = Vector2.Dot(lane[lane.Count - 1] - linePoint, dir);
+
+            // Where the main line curves in towards the lane's line (Indianapolis's last corner, onto the front
+            // stretch), the mapped lane's end would put pit road on the racing surface: start and end the straight
+            // where it is clear of it.
+            bool Clear(float along)
+            {
+                Vector2 q = linePoint + dir * along;
+                var p = poseAt(Nearest(q));
+                return Vector2.Dot(q - p.position, Left(p.headingDeg)) * side >= minOffset - 0.5f;
+            }
+            while (startAlong < endAlong && !Clear(startAlong)) startAlong += 5f;
+            while (endAlong > startAlong && !Clear(endAlong)) endAlong -= 5f;
+            if (endAlong - startAlong < 50f) return false;
+            var radii = new[] { 120f, 90f, 60f, 40f, 30f };
+            return TryFitAlongside(poseAt, lapLength, side, linePoint, dir, startAlong, endAlong,
+                                   Nearest(lane[0]), Nearest(lane[lane.Count - 1]), 400f, radii, out road);
+        }
+
+        // The point `distance` along a side road from its entry pose (for walking it in tests).
+        public static Vector2 PointOnSideRoad(Pose a, SideRoad road, float distance)
+        {
+            Vector2 pos = a.position;
+            float heading = a.headingDeg, left = distance;
+            var turns = new[] { road.entryOutDeg, road.entryInDeg, 0f, road.exitOutDeg, road.exitInDeg };
+            for (int k = 0; k < turns.Length && left > 0f; k++)
+            {
+                if (k == 2)
+                {
+                    float run = Mathf.Min(left, road.straightLength);
+                    pos += Forward(heading) * run;
+                    left -= run;
+                    continue;
+                }
+                float arc = road.radius * Mathf.Abs(turns[k]) * Mathf.Deg2Rad;
+                Arc(ref pos, ref heading, road.radius, turns[k], Mathf.Min(left, arc));
+                left -= arc;
+            }
+            return pos;
+        }
+
         // The zero of f nearest `near` within ±window, by a 2 m scan then bisection.
         static bool Root(Func<float, float> f, float near, float window, out float root)
         {

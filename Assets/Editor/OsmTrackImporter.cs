@@ -104,6 +104,7 @@ public static class OsmTrackImporter
         public string attribution;
         public string startFinish;      // "firstNode": the trace starts on the start/finish line (trace_from_wall.py)
         public string segmentation;     // "curvature": a precise trace, read as runs of constant curvature
+        public string direction;        // "clockwise": a road course raced that way (track_reference.py --clockwise)
         public Node[] pitLane;          // the mapped pit lane, in the direction cars use it (trace_from_wall.py --pit)
         public Node[] geometry;
     }
@@ -157,7 +158,9 @@ public static class OsmTrackImporter
         var projected = OsmTrackGeometry.Project(latLon);
         var points = projected.GetRange(0, mainCount);
         var pitPoints = projected.GetRange(mainCount, projected.Count - mainCount);
-        bool reversed = MakeCounterClockwise(points);
+        // Ovals run counter-clockwise. A road course raced clockwise (Indianapolis) says so, and keeps it: made
+        // counter-clockwise it would be the same shape driven backwards, every corner the wrong way round.
+        bool reversed = trace.direction == "clockwise" ? MakeClockwise(points) : MakeCounterClockwise(points);
 
         // A trace that starts on the start/finish line keeps that start: the lap is not rotated, and the piece
         // the line falls in stays cut in two so segment 0 begins exactly there.
@@ -175,10 +178,9 @@ public static class OsmTrackImporter
         if (trace.segmentation == "curvature")
         {
             // The smoothing window scales with the lap: 120 m suits Daytona's 4 km, but on Martinsville's 0.8 km
-            // it is half a turn and smeared both corners down the straights.
-            float traced = 0f;
-            for (int i = 0; i < points.Count; i++) traced += Vector2.Distance(points[i], points[(i + 1) % points.Count]);
-            lap = OsmTrackGeometry.SegmentByCurvature(points, windowMetres: Mathf.Min(120f, traced * 0.03f));
+            // it is half a turn and smeared both corners down the straights. A road course is read much tighter.
+            bool roadCourse = TrackDimensions.TryGet(trackId, out TrackDimensionRow kindRow) && kindRow.kind == TrackKind.RoadCourse;
+            lap = OsmTrackGeometry.SegmentTrace(points, roadCourse);
             LapGeometry.NormaliseTurnAngles(lap);
             readings.Append("constant-curvature runs");
         }
@@ -298,8 +300,8 @@ public static class OsmTrackImporter
             v2.SampleAuthoredSpline(d, out Vector2 p, out float h);
             return new PitChordFit.Pose(p, h);
         };
-        // Counter-clockwise (MakeCounterClockwise), so the infield is on the left.
-        if (!PitChordFit.TryFit(poseAt, lap, v2.startFinishDistance, 1f, radius, clearance, out var road))
+        // The infield is on the left of a counter-clockwise lap and on the right of a clockwise one.
+        if (!PitChordFit.TryFit(poseAt, lap, v2.startFinishDistance, InfieldSide(v2), radius, clearance, out var road))
             return "; NO chord pit road fits this lap - pit lane left alone";
 
         ApplyPitRoad(v2, row, road);
@@ -381,9 +383,24 @@ public static class OsmTrackImporter
         }
 
         var radii = new[] { 250f, 200f, 160f, 120f, 90f, 60f, 40f, 30f, 25f };
-        if (!PitChordFit.TryFitToLine(poseAt, lap, 1f, first, last - first, Nearest(first), Nearest(last), 400f,
+        if (!PitChordFit.TryFitToLine(poseAt, lap, InfieldSide(v2), first, last - first, Nearest(first), Nearest(last), 400f,
                                       radii, out var road))
-            return $"; mapped pit lane would not fit (trace laid over the lap to {misfit:0.#} m) - pit lane left alone";
+        {
+            // Not a chord across a curving front stretch but a lane beside a straight one (a road course): S-bends on
+            // and off, the straight at the lane's mean distance from the main line, clear of the racing surface.
+            var lane = new List<Vector2>();
+            foreach (var q in pitLane) lane.Add(Map(q));
+            float pitWidth = v2.pitDefaultWidth > 0f ? v2.pitDefaultWidth : row.pitWidthMetres;
+            float minOffset = v2.defaultWidth * 0.5f + pitWidth * 0.5f + 1f;
+            if (!PitChordFit.TryFitMappedLaneAlongside(poseAt, lap, InfieldSide(v2), lane, minOffset, out var beside,
+                                                       out float offset))
+                return $"; mapped pit lane would not fit (trace laid over the lap to {misfit:0.#} m) - pit lane left alone";
+            ApplySideRoad(v2, row, beside);
+            return $"; pit road beside the straight on the mapped pit lane {beside.Length:0}m (S-bends r{beside.radius:0}m " +
+                   $"{beside.entryOutDeg:0.#}/{beside.entryInDeg:0.#} and {beside.exitOutDeg:0.#}/{beside.exitInDeg:0.#}deg, " +
+                   $"straight {beside.straightLength:0}m {offset:0.#}m off the line, ends {beside.startMiss:0.#}/" +
+                   $"{beside.endMiss:0.#}m from the mapped ones; trace laid over the lap to {misfit:0.#} m)";
+        }
 
         ApplyPitRoad(v2, row, road);
         return $"; pit road on the mapped pit lane {road.Length:0}m (arcs r{road.radius:0}m, " +
@@ -415,6 +432,38 @@ public static class OsmTrackImporter
         PinPitTo(v2, road.exitDistance, false);
         // The limit ends where the straight does: the exit arc is the run back up onto the banking.
         v2.pitExitLineDistance = road.EntryArc + road.straightLength;
+    }
+
+    static void ApplySideRoad(TrackInfoV2 v2, TrackDimensionRow row, PitChordFit.SideRoad road)
+    {
+        float width = v2.pitDefaultWidth > 0f ? v2.pitDefaultWidth : row.pitWidthMetres;
+        int limit = v2.pitSpeedLimit > 0 ? v2.pitSpeedLimit : row.pitSpeedLimitMph;
+        var pieces = new List<TrackInfoV2.TrackSegment>();
+        void Add(string label, float length, float angle)
+        {
+            if (length < 0.05f) return;
+            pieces.Add(new TrackInfoV2.TrackSegment
+            {
+                label = label,
+                type = Mathf.Approximately(angle, 0f) ? TrackInfoV2.SegmentType.Straight : TrackInfoV2.SegmentType.Turn,
+                length = length,
+                angle = angle,
+                maxSpeed = limit,
+                width = width,
+            });
+        }
+        float Arc(float deg) => road.radius * Mathf.Abs(deg) * Mathf.Deg2Rad;
+        Add("Pit Entry", Arc(road.entryOutDeg), road.entryOutDeg);
+        Add("Pit Entry", Arc(road.entryInDeg), road.entryInDeg);
+        Add("Pit Road", road.straightLength, 0f);
+        Add("Pit Exit", Arc(road.exitOutDeg), road.exitOutDeg);
+        Add("Pit Exit", Arc(road.exitInDeg), road.exitInDeg);
+        v2.pitSegments = pieces.ToArray();
+        v2.pitStartHeadingOffset = 0f;
+        PinPitTo(v2, road.entryDistance, true);
+        PinPitTo(v2, road.exitDistance, false);
+        // The limit ends where the straight does: the S-bend after it is the run back onto the circuit.
+        v2.pitExitLineDistance = road.EntryLength + road.straightLength;
     }
 
     // Point the pit entry (or exit) at whatever segment now holds that distance around the lap, with the
@@ -496,6 +545,23 @@ public static class OsmTrackImporter
             maxTurnDegrees = from.maxTurnDegrees,
             keepSeam = from.keepSeam,
         };
+    }
+
+    // +1 when the infield is on the left (a counter-clockwise lap, angles summing to +360), -1 when on the right.
+    static float InfieldSide(TrackInfoV2 v2)
+    {
+        float total = 0f;
+        foreach (var seg in v2.segments) total += seg.angle;
+        return total < 0f ? -1f : 1f;
+    }
+
+    // The mirror of MakeCounterClockwise, for a road course raced clockwise. True when the trace had to be reversed.
+    static bool MakeClockwise(List<Vector2> points)
+    {
+        points.Reverse();
+        bool wasCounterClockwise = MakeCounterClockwise(points);   // only reverses (back) a trace drawn counter-clockwise
+        points.Reverse();
+        return wasCounterClockwise;
     }
 
     // The cars run the way the circuit does, and a traced ring runs whichever way the mapper drew it. Signed
@@ -633,11 +699,13 @@ public static class OsmTrackImporter
                 float f0 = before / groupLength, f1 = (before + piece.length) / groupLength;
                 bool first = group[0] == i, last = group[group.Count - 1] == i;
                 float lead = Mathf.Clamp(groupLength * 0.35f, 10f, 90f);
+                // Line() is a left-hander's (apex on the left, negative). A right-hander's is its mirror.
+                float hand = holdLane || piece.angle >= 0f ? 1f : -1f;
                 seg.leadIn = first ? lead : 0f;
                 seg.leadOut = last ? lead : 0f;
                 seg.racingLine = new TrackInfoV2.SegmentRacingLine
                 {
-                    idealEntry = Line(f0), idealApex = Line((f0 + f1) * 0.5f), idealExit = Line(f1),
+                    idealEntry = hand * Line(f0), idealApex = hand * Line((f0 + f1) * 0.5f), idealExit = hand * Line(f1),
                     leftEntry = -outer, leftApex = -outer, leftExit = -outer,
                     rightEntry = outer, rightApex = outer, rightExit = outer,
                     // The corner's entry and exit are anchored once, at its ends; the pieces between carry

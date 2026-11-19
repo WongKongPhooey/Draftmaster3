@@ -73,13 +73,14 @@ namespace Draftmaster.Tracks
 
         // Spread the corner angles so they sum to exactly one full turn, in proportion to what they already
         // are. A traced lap comes back a few degrees out purely from resampling, and those few degrees are
-        // the difference between a road that closes and one that spirals.
+        // the difference between a road that closes and one that spirals. One turn the way the lap already
+        // turns: left (+360) for a counter-clockwise lap, right (-360) for a clockwise road course.
         public static void NormaliseTurnAngles(IList<Piece> lap, float target = 360f)
         {
             float total = TotalAngle(lap);
             if (Mathf.Abs(total) < 1f) return;
 
-            float k = target / total;
+            float k = Mathf.Abs(target) * Mathf.Sign(total) / total;
             for (int i = 0; i < lap.Count; i++)
             {
                 if (!lap[i].isTurn) continue;
