@@ -3229,7 +3229,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_mainLength > 0f) d = ((d % _mainLength) + _mainLength) % _mainLength;
         var s = track.SampleAt(d, _mainSamples);
         Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-        float lat = LateralAt(d) + LaneShiftAt(d) + lateralOffset + TacticalLateral;
+        // Going round a stopped car (avoidingStopped, AIRacingBehaviour) the car holds a place across the ROAD, clear of
+        // it - not an offset off the racing line. Aimed off the line up ahead, the aim slid in wherever the line crosses
+        // the road and the dynamic car cut back into the wreck at speed (WreckEscapeGreenSimTests): the line here instead.
+        float lineAt = avoidingStopped && !LaneFollowing ? _distance : d;
+        float lat = LateralAt(lineAt) + LaneShiftAt(d) + lateralOffset + TacticalLateral;
         if (_leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(d, out float lo, out float hi);
