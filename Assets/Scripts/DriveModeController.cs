@@ -82,6 +82,8 @@ public class DriveModeController : MonoBehaviour
     // Auto until they are on Auto again in the seat with no hand-back pending.
     bool _laneOptOut;
     AIRacingBehaviour _laneBrain;
+    // The car was on Auto when it was towed in (TowedToPits): Auto goes back on once the driver is sat in it again.
+    bool _autoAfterTow;
 
     // The Draftmaster 2 lane controls are driving the player's car: Auto on, left / right picking the lane.
     public bool LaneSteering => _laneActive;
@@ -122,9 +124,38 @@ public class DriveModeController : MonoBehaviour
         // with nothing open over the race.
         if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
 
+        UpdateAutoAfterTow();
         UpdateHandBack();
         UpdateLanes();
         UpdateButton();
+    }
+
+    // ---- The tow ----
+
+    // PitLaneStart.TowToPits is about to park the player's car in its box. On Auto, the AI is taken off it the way
+    // V takes it off - Auto off, the brain and its pit stop dropped, the car the human's - rather than the tow
+    // switching the brain off underneath this component. That left Auto "on" here with nobody driving: the car came
+    // back from the repair under the player's controls while the HUD, the touch controls (pedals hidden) and the
+    // lane controls all still read it as Auto. A car that was on Auto goes back on Auto once the driver is back in
+    // it (UpdateAutoAfterTow), lane controls and all. A car the player had asked to take back (hand-back waiting)
+    // stays theirs.
+    public void TowedToPits(GameObject car)
+    {
+        if (car == null || car != playerCar) return;
+        _autoAfterTow = !_driving && !_handBack.Waiting && InSeat;
+        SetDriving(true);
+    }
+
+    // Back in the towed car with its controls live - climbed back in after the crew finished, or handed back by the
+    // repair in a race with no on-foot body - and nothing over the race: Auto goes back on.
+    void UpdateAutoAfterTow()
+    {
+        if (!_autoAfterTow) return;
+        if (!_driving) { _autoAfterTow = false; return; }   // on Auto again some other way
+        if (!InSeat || PadInput.ModalOpen || _pvc == null || !_pvc.enabled) return;
+        if (_zoom != null && !_zoom.IsDriving) return;
+        _autoAfterTow = false;
+        SetDriving(false);
     }
 
     // ---- Draftmaster 2 lane controls ----
@@ -430,6 +461,7 @@ public class DriveModeController : MonoBehaviour
     {
         if (car == null) return;
         StopLanes();
+        _autoAfterTow = false;
         playerCar = car;
         _pvc = car.GetComponent<PlayerVehicleController>();
         _spline = car.GetComponent<SplineDriver>();

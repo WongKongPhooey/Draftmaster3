@@ -312,6 +312,85 @@ public class TowToPitsTests
         }
     }
 
+    // The scene's Auto switch, on the rig's car, as the scene would have it: OnEnable makes it Current, and EditMode
+    // runs none of its callbacks, so the refs Start would find are handed over by hand. No SplineDriver on the rig,
+    // so handing the car over is the switch's own state alone - which is what the HUD, the touch pedals and the lane
+    // controls all read.
+    static Component AutoSwitch(Rig rig, bool onAuto)
+    {
+        var drive = rig.StartGo.AddComponent(Runtime("DriveModeController"));
+        SetField(drive, "playerCar", rig.CarGo);
+        SetField(drive, "_pvc", rig.Car);
+        SetField(drive, "_zoom", rig.Start);
+        SetField(drive, "_driving", !onAuto);
+        Invoke(drive, "OnEnable");
+        return drive;
+    }
+
+    static void Invoke(object target, string method) =>
+        target.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+              .Invoke(target, null);
+
+    static bool OnAuto(Component drive) => !(bool)drive.GetType().GetProperty("IsDriving").GetValue(drive);
+
+    [Test]
+    public void ACarOnAutoIsStillOnAutoWhenTheDriverIsBackInIt()
+    {
+        // Auto (and the lane controls, which keep the car on Auto all race) through a tow: the tow switched the AI
+        // brain off underneath the Auto switch, which went on believing the car was on Auto. The driver came back
+        // to a car under their own controls with the pedals hidden, and nothing ever put the AI back on.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            var drive = AutoSwitch(rig, onAuto: true);
+            try
+            {
+                Assert.IsTrue(rig.Tow());
+                Assert.IsFalse(OnAuto(drive), "the tow takes the car off Auto properly, not just its brain");
+
+                // Out of the car while the crew work: nothing goes back on Auto with nobody in it.
+                Invoke(drive, "UpdateAutoAfterTow");
+                Assert.IsFalse(OnAuto(drive), "a parked car with the driver out of it is not on Auto");
+
+                // Back in it with the controls live (StartDriving): Auto again.
+                Type phase = rig.Start.GetType().GetNestedType("EntryPhase", BindingFlags.NonPublic);
+                SetField(rig.Start, "_phase", Enum.Parse(phase, "Driving"));
+                ((Behaviour)rig.Car).enabled = true;
+                Invoke(drive, "UpdateAutoAfterTow");
+                Assert.IsTrue(OnAuto(drive), "the car goes back on Auto once the driver is in it again");
+            }
+            finally { Invoke(drive, "OnDisable"); }
+        }
+    }
+
+    [Test]
+    public void ACarThePlayerHadAskedForBackStaysTheirsAfterATow()
+    {
+        // V / AUTO pressed and the AI waiting for the pedal tap: the player wanted the car. The tow hands it over
+        // outright and Auto stays off when they climb back in.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            var drive = AutoSwitch(rig, onAuto: true);
+            try
+            {
+                object handBack = GetField(drive, "_handBack");
+                handBack.GetType().GetMethod("Arm").Invoke(handBack, new object[] { 0f, 0f });
+
+                Assert.IsTrue(rig.Tow());
+                Type phase = rig.Start.GetType().GetNestedType("EntryPhase", BindingFlags.NonPublic);
+                SetField(rig.Start, "_phase", Enum.Parse(phase, "Driving"));
+                ((Behaviour)rig.Car).enabled = true;
+                Invoke(drive, "UpdateAutoAfterTow");
+
+                Assert.IsFalse(OnAuto(drive), "the player is driving it");
+                Assert.IsFalse((bool)drive.GetType().GetProperty("HandBackPending").GetValue(drive),
+                               "and nothing is still waiting to hand it over");
+            }
+            finally { Invoke(drive, "OnDisable"); }
+        }
+    }
+
     [Test]
     public void TheTowTellsTheRunningOrderTheCarWasMovedNotDriven()
     {

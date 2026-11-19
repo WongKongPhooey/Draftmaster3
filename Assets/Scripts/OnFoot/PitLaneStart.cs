@@ -1173,6 +1173,13 @@ public class PitLaneStart : MonoBehaviour
         // is dragged to its box and repaired with the driver left sat in it.
         if (_player == null && GameSession.OnFootAllowed) return false;
 
+        // On Auto (V, the AUTO button, the lane controls): Auto is taken off the car properly before anything
+        // below switches its brain off, and remembers to go back on once the driver is back in the car.
+        // Switching the brain off underneath DriveModeController left it believing the car was still on Auto:
+        // the car came back under the player's controls with the pedals hidden. See DriveModeController.TowedToPits.
+        var drive = DriveModeController.Current;
+        if (drive != null) drive.TowedToPits(car.gameObject);
+
         // Controls off first. The body is about to be teleported and a live controller would spend the
         // frame fighting the move.
         car.enabled = false;
