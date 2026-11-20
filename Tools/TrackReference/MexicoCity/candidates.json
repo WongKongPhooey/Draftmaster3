@@ -5,21 +5,19 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
+   "note": "track_reference.py candidate 0: the committed OSM raceway trace round the 2015-present Grand Prix circuit (through the Foro Sol), rewritten 2026-11-20 for the curvature importer, raced clockwise, start/finish on the main straight, mapped Pit Lane ways 638504647+772763791; the detour down unnamed raceway way 1128592397 off the back straight (not part of the circuit) replaced by the straight it bypasses; +0.05% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Autódromo Hermanos Rodríguez 94%"
-   ],
-   "lengthM": 4340.6,
-   "lengthErrPct": 1.02,
+   "names": [],
+   "lengthM": 4302.2,
+   "lengthErrPct": 0.12,
    "selfIntersects": false,
-   "counterTurnDeg": 587.5,
+   "counterTurnDeg": 497.4,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.32,
-    "p95M": 194.66,
-    "maxM": 247.53,
+    "rmsM": 121.3,
+    "p95M": 194.4,
+    "maxM": 247.32,
     "scale": 0.95
    },
    "index": 0
@@ -74,34 +72,35 @@
    "kind": "raceway",
    "ways": [
     1128592396,
+    605367312,
+    772755822,
+    772755821,
+    772754606,
+    772754605,
+    638491478,
+    772754605,
+    638491478,
+    772754605,
+    772754604,
     772754608,
     772754607,
     772754608,
-    772754604,
-    772754605,
-    638491478,
-    772754605,
-    638491478,
-    772754605,
-    772754606,
-    772755821,
-    772755822,
-    605367312
+    1128592397
    ],
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
    "names": [
-    "Autódromo Hermanos Rodríguez 89%"
+    "Autódromo Hermanos Rodríguez 86%"
    ],
-   "lengthM": 4253.0,
-   "lengthErrPct": -1.02,
+   "lengthM": 4285.2,
+   "lengthErrPct": -0.27,
    "selfIntersects": false,
-   "counterTurnDeg": 407.1,
+   "counterTurnDeg": 493.1,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.79,
-    "p95M": 204.27,
-    "maxM": 255.95,
+    "rmsM": 121.86,
+    "p95M": 206.82,
+    "maxM": 258.45,
     "scale": 0.95
    },
    "index": 2
@@ -110,6 +109,12 @@
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
+    605367312,
+    823823139,
+    823823141,
+    772755824,
+    1128592396,
+    605367312,
     1128592396,
     772754608,
     772754607,
@@ -124,30 +129,22 @@
     772754605,
     772754606,
     772755821,
-    772755822,
-    605367312,
-    823823139,
-    823823140,
-    823823139,
-    823823141,
-    772755824,
-    1128592396,
-    605367312
+    772755822
    ],
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
    "names": [
-    "Autódromo Hermanos Rodríguez 87%"
+    "Autódromo Hermanos Rodríguez 85%"
    ],
-   "lengthM": 4666.5,
-   "lengthErrPct": 8.6,
+   "lengthM": 4668.3,
+   "lengthErrPct": 8.64,
    "selfIntersects": false,
-   "counterTurnDeg": 647.5,
+   "counterTurnDeg": 614.9,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.04,
-    "p95M": 218.24,
-    "maxM": 268.4,
+    "rmsM": 121.08,
+    "p95M": 218.88,
+    "maxM": 269.06,
     "scale": 0.95
    },
    "index": 3
@@ -201,25 +198,25 @@
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 121.32,
-  "p95M": 194.66,
-  "maxM": 247.53,
-  "refToBuiltMaxM": 205.51,
+  "rmsM": 121.3,
+  "p95M": 194.4,
+  "maxM": 247.32,
+  "refToBuiltMaxM": 205.27,
   "worstStretches": [
    {
     "fromM": 1886,
     "toM": 1984,
-    "meanM": 240.6
+    "meanM": 240.3
    },
    {
     "fromM": 1986,
     "toM": 2084,
-    "meanM": 203.7
+    "meanM": 203.4
    },
    {
     "fromM": 1786,
     "toM": 1884,
-    "meanM": 193.5
+    "meanM": 193.3
    }
   ],
   "scale": 0.95

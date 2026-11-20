@@ -47,7 +47,7 @@ because somebody edited a map.
 
 Twenty-one venues have a trace. Fifteen of those import: the rest are refused by the importer itself,
 because the shape it reads does not close to within 3% of its own lap, and a reading that far out is worse
-than the generated or hand-authored geometry it would replace. Refused today: Mexico City,
+than the generated or hand-authored geometry it would replace. Refused today:
 Mid-Ohio, Milwaukee, Portland, Rockingham, Sonoma. Watkins Glen is skipped on purpose — it is hand-measured
 off satellite imagery and a trace does not improve on it. Atlanta's old trace (refused) ran down pit road and
 through the AMS Small Oval; it was rewritten 2026-11-18 from `track_reference.py` candidate 0 (the oval itself)
@@ -73,6 +73,13 @@ Lime Rock had no trace (its RoadCourseLayouts sketch was 46.7 m RMS off the real
 no chicane - 1.498 mi against the 1.5 mi in TrackDimensions), raced clockwise, start/finish on the front straight and
 the mapped Pit Lane way 35341695. Imported the same day: 70 pieces, closed 2.6 m -> 0, and the package re-dressed and
 its line retrained; it now measures 1.4 m RMS against the real track.
+
+Mexico City's old batch trace was refused on the 3% closure check. It was rewritten 2026-11-20 from
+`track_reference.py` candidate 0 (the same OSM raceway ways round the 2015-present Grand Prix circuit through the Foro
+Sol), raced clockwise, start/finish estimated on the main straight (OSM marks none) and the mapped Pit Lane ways
+638504647 + 772763791. The candidate also detoured 33 m off the back straight round unnamed raceway way 1128592397, an
+access loop rather than the circuit; that stretch was replaced by the straight it bypasses (lap +1.02% -> +0.05%). Read
+headless at the road-course window it lies 2.1 m RMS off the trace; importing it in Unity is still to do.
 
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
 Daytona, Talladega, Indianapolis, Road America and Watkins Glen — are not a bug in the

@@ -24,6 +24,8 @@ using UnityEngine;
 // IndyRoad (imported 2026-11-19, raced clockwise) is the known-good road course: 1.8 m RMS once exported.
 // COTA (traced 2026-11-20 from track_reference.py candidate 0, the Grand Prix circuit) is the one waiting on
 // a Unity import. LimeRock (traced from candidate 0 and imported 2026-11-20, raced clockwise) reads 1.4 m.
+// MexicoCity (traced 2026-11-20 from candidate 0, the 2015-present Grand Prix circuit, raced clockwise) waits on
+// a Unity import too.
 //
 // Engine-free (Draftmaster.Tracks Core only, no JsonUtility), so it also runs under Tools/HeadlessTests.
 public class TracedOvalImportTests
@@ -47,6 +49,7 @@ public class TracedOvalImportTests
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
+    [TestCase("MexicoCity")]
     [TestCase("Daytona")]
     public void TraceImportsAsAClosedLapOfThePublishedLength(string id)
     {
@@ -63,6 +66,7 @@ public class TracedOvalImportTests
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
+    [TestCase("MexicoCity")]
     [TestCase("Daytona")]
     public void BuiltLapLiesOnTheTrace(string id)
     {
@@ -77,6 +81,7 @@ public class TracedOvalImportTests
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
+    [TestCase("MexicoCity")]
     [TestCase("Daytona")]
     public void MappedPitLaneFitsAsPitRoad(string id)
     {
@@ -185,6 +190,7 @@ public class TracedOvalImportTests
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
+    [TestCase("MexicoCity")]
     public void AiGetsRoundTheBuiltRoadCourse(string id)
     {
         var r = Read(id);

@@ -6,7 +6,7 @@
   "lengthMiles": 2.67,
   "surfaceWidthM": 15,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: the committed OSM raceway trace round the 2015-present Grand Prix circuit (through the Foro Sol), rewritten 2026-11-20 for the curvature importer, raced clockwise, start/finish on the main straight, mapped Pit Lane ways 638504647+772763791; the detour down unnamed raceway way 1128592397 off the back straight (not part of the circuit) replaced by the straight it bypasses; +0.05% from the published lap"
  },
  "wikipedia": {
   "title": "Autódromo Hermanos Rodríguez",
@@ -227,8 +227,8 @@
  },
  "lengthCheckPct": 0.15,
  "venueCentre": [
-  19.402686,
-  -99.089986
+  19.403005,
+  -99.089183
  ],
  "osmRadiusM": 1725,
  "osmCounts": {
@@ -236,7 +236,7 @@
   "pit": 2,
   "wall": 163,
   "fence": 104,
-  "surface": 5,
+  "surface": 13,
   "grandstand": 27,
   "stadium": 4,
   "building": 6049,
