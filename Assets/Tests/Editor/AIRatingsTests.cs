@@ -73,6 +73,22 @@ public class AIRatingsTests
         Assert.AreEqual(low.consistency01, high.consistency01, Tol);
     }
     [Test]
+    public void TrackAptitudeCostsCornerCommitmentFromTheTopDown()
+    {
+        // An ace at this kind of track loses nothing (the per-track calibration is tuned to the best driver), and
+        // leaving it out is the same as an ace, so the old curve is unchanged for callers that don't pass it.
+        Assert.AreEqual(AIRatings.CornerCommitment(0.7f, 1f, 0.5f), AIRatings.CornerCommitment(0.7f, 1f, 0.5f, 1f, 1f), Tol);
+        // A novice gives up the whole aptitude spread on top of what their strength costs.
+        Assert.AreEqual(AIRatings.AptitudeCommitmentSpread,
+                        AIRatings.CornerCommitment(0.7f, 1f, 0.5f, 1f, 1f) - AIRatings.CornerCommitment(0.7f, 1f, 0.5f, 1f, 0f), Tol);
+        // A track that narrows the field's spread (TrackConditions.AiSpreadScale) narrows the aptitude's share too.
+        Assert.AreEqual(0.35f * AIRatings.AptitudeCommitmentSpread,
+                        AIRatings.CornerCommitment(0.7f, 1f, 0.5f, 0.35f, 1f) - AIRatings.CornerCommitment(0.7f, 1f, 0.5f, 0.35f, 0f), Tol);
+        // The weakest, least apt driver still keeps the floor rather than being clamped back up to it.
+        Assert.Less(AIRatings.CornerCommitment(0f, 1f, 0.5f, 1f, 0f), AIRatings.MinCornerCommitment);
+    }
+
+    [Test]
     public void TyreManagementStretchesASetEitherWay()
     {
         Assert.AreEqual(1.15f, AIRatings.TyreWearScale(0f), Tol);

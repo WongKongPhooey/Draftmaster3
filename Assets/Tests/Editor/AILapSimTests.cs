@@ -269,6 +269,46 @@ public class AILapSimTests
         Assert.IsEmpty(r.incidents, Report($"The AI didn't lap Watkins Glen cleanly at pace {pace:0.00}, line {lineFactor:0.00}", r));
     }
 
+    // Road-course aptitude has to show on the stopwatch. Two drivers identical in every stat but ROAD COURSES (1 vs
+    // 20, out of 20), rated the way AIDriverBinding rates them and driven at calibrated Watkins Glen: the ace should
+    // be about two seconds a lap quicker. Consistency is maxed so neither the event roll nor the session jitter moves
+    // anything - the whole gap is the aptitude.
+    [Test]
+    public void RoadCourseAptitudeIsWorthAboutTwoSecondsAtWatkinsGlen()
+    {
+        const int statMax = 20, qualifying = 10, consistency = 20, aggression = 10;
+        var conditions = Runtime("TrackConditions");
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var laps = new Dictionary<int, float>();
+        var sb = new StringBuilder("[LapSim] road-course aptitude at calibrated Watkins Glen");
+        try
+        {
+            calib.Invoke(null, new object[] { "WatkinsGlen" });
+            float aiPace = (float)conditions.GetField("AiPaceMultiplier").GetValue(null);
+            float spread = (float)conditions.GetField("AiSpreadScale").GetValue(null);
+            foreach (int aptitude in new[] { 1, 20 })
+            {
+                var ratings = Draftmaster.Sim.AIRatings.ForEvent(qualifying, aptitude, consistency, aggression, statMax, 0.5f, 0.5f);
+                float pace = Draftmaster.Sim.AIRatings.BasePace(ratings.strength01, ratings.consistency01, 0.5f) * aiPace;
+                float commit = Draftmaster.Sim.AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, 0.5f, spread,
+                                                                          aptitude / (float)statMax);
+                float grip = Draftmaster.Sim.AIRatings.DriverGrip(ratings.strength01);
+                Despawn(); SpawnTrack();
+                var r = Drive(2, pace: pace, lineFactor: Draftmaster.Sim.AIRatings.LineFactor(ratings.aggression01),
+                              splineOverrides: new Dictionary<string, object> { { "cornerCommitment", commit }, { "driverGrip", grip } });
+                Assert.AreEqual(2, r.lapTimes.Count, Report($"aptitude {aptitude}: the car didn't finish its laps", r));
+                laps[aptitude] = r.lapTimes[1];
+                sb.Append($"\n  aptitude {aptitude}: strength {ratings.strength01:0.000} pace {pace:0.000} commit {commit:0.0000} " +
+                          $"grip {grip:0.000} lap {r.lapTimes[1]:0.00} s, {r.incidents.Count} incidents");
+            }
+        }
+        finally { calib.Invoke(null, new object[] { "" }); }
+        float gap = laps[1] - laps[20];
+        sb.Append($"\n  gap {gap:0.00} s");
+        Debug.Log(sb.ToString());
+        Assert.That(gap, Is.InRange(1.5f, 2.5f), sb.ToString());
+    }
+
     // SCRATCH (remove): Texas field spread sweep.
     [Test]
     [Explicit("scratch")]

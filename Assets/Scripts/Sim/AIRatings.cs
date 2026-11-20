@@ -101,10 +101,22 @@ namespace Draftmaster.Sim
         // far under 1 it goes (TrackConditions.AiSpreadScale): 1 = the whole 0.93-1 range; on an oval, where every car
         // has the same engine and the corners are all that separate them, the full range made the weakest car 4.5% a
         // lap slower than the best and the field strung out over a lap in a few dozen.
-        public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01, float spread = 1f)
+        //
+        // trackAptitude01 is the driver's aptitude for this kind of track (ShortTracks / RoadCourses / ..., over StatMax).
+        // It is already half of strength, but through strength alone a road-course 1 and a road-course 20 who were
+        // otherwise identical lapped calibrated Watkins Glen only 0.9 s apart (lap sim, 68.0 vs 67.1 s) - the specialist
+        // barely showed. So aptitude also takes up to AptitudeCommitmentSpread more off the commitment on its own, from
+        // the top down: an ace (1) loses nothing, so the best driver - who the per-track AI calibration is tuned to - laps
+        // as before, and the 1-vs-20 gap at Watkins Glen is about 2 s (AILapSimTests). 1 = no deficit, so callers that
+        // don't pass it get the old curve.
+        public const float AptitudeCommitmentSpread = 0.035f;
+        public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01, float spread = 1f,
+                                             float trackAptitude01 = 1f)
         {
             float jitter = Mathf.Lerp(-(1f - consistency01) * 0.012f, (1f - consistency01) * 0.004f, Mathf.Clamp01(jitterRoll01));
-            float c = Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) + jitter, MinCornerCommitment - 0.01f, 1f);
+            float aptitude = AptitudeCommitmentSpread * (1f - Mathf.Clamp01(trackAptitude01));
+            float c = Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) - aptitude + jitter,
+                                  MinCornerCommitment - AptitudeCommitmentSpread - 0.01f, 1f);
             return 1f - (1f - c) * Mathf.Max(0f, spread);
         }
 

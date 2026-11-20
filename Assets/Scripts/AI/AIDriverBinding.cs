@@ -9,7 +9,8 @@ public class AIDriverBinding : MonoBehaviour
     public Driver driver;
     public VehicleInfo vehicleInfo;
 
-    // Share of the grip limit the lowest-rated driver corners at (the best take all of it).
+    // Share of the grip limit the lowest-strength driver corners at (the best take all of it), before the
+    // track-type aptitude's own deficit (AIRatings.AptitudeCommitmentSpread).
     public const float MinCornerCommitment = AIRatings.MinCornerCommitment;
 
     SplineDriver _spline;
@@ -68,7 +69,8 @@ public class AIDriverBinding : MonoBehaviour
             // inside a band whose width is the driver's consistency; aggression gets a small roll of its own.
             string trackId = TrackSelection.CurrentId;
             var rolls = EventRolls(driver.Id, trackId);
-            var ratings = AIRatings.ForEvent(driver.Qualifying, TrackAptitude(driver, TrackSelection.CurrentType),
+            int aptitude = TrackAptitude(driver, TrackSelection.CurrentType);
+            var ratings = AIRatings.ForEvent(driver.Qualifying, aptitude,
                                              driver.Consistency, driver.Aggression, Driver.StatMax, rolls.x, rolls.y);
 
             // The maths is AIRatings', shared with the headless pack sim so it races the same field.
@@ -91,8 +93,10 @@ public class AIDriverBinding : MonoBehaviour
             // How close to the grip limit they corner. Pace can't do this: it is capped at the limit, and every
             // car sits above it, so without it the whole field cornered identically, strung out ~5 lengths
             // apart and never passed.
+            // The track-type aptitude also counts on its own here, so a specialist is worth ~2 s a lap at Watkins Glen.
             _spline.cornerCommitment = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, Random.value,
-                                                                TrackConditions.AiSpreadScale);
+                                                                TrackConditions.AiSpreadScale,
+                                                                Mathf.Clamp01(aptitude / (float)Driver.StatMax));
             _spline.driverGrip = AIRatings.DriverGrip(ratings.strength01);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
