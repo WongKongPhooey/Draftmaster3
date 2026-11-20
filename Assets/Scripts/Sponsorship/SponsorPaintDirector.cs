@@ -11,8 +11,10 @@ using UnityEngine.SceneManagement;
 // the book changes is instant (event-driven) — that's what makes a decal appear the moment it's placed on
 // the garage board.
 //
-// Self-installing on the same terms as the other paddock features: single player, in a scene that actually
-// has cars in it.
+// Self-installing on the same terms as the other paddock features: only while the career is running
+// (GameSession.CareerActive), in a scene that actually has cars in it. Sponsors are a career system — a
+// SINGLE RACE, a Master Draft race or the lobby race shows every car in its factory livery, with neither
+// the placeholder AI sponsors nor the player's career deals and paint job.
 public class SponsorPaintDirector : MonoBehaviour
 {
     [Tooltip("How long after a scene load to keep looking for newly spawned cars.")]
@@ -35,6 +37,7 @@ public class SponsorPaintDirector : MonoBehaviour
 
     static void TryInstall()
     {
+        if (!GameSession.CareerActive) return;                                  // sponsors are career-only
         if (FindObjectOfType<SponsorPaintDirector>() != null) return;
         if (FindObjectOfType<PlayerVehicleController>(true) == null) return;   // no cars here (menus, garage)
         SponsorPainter.Forget();                                               // fresh scene, fresh paintwork

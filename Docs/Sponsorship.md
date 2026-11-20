@@ -130,7 +130,9 @@ texture** and hands back a `Sprite`. The decal therefore dents with the panel it
 second renderer or sorting order, and cannot drift as the car rotates — and the AI field gets sponsors
 through the same call.
 
-`SponsorPaintDirector` self-installs in any scene with cars: it polls briefly after load (the AI field
+`SponsorPaintDirector` self-installs in any scene with cars **while the career is running**
+(`GameSession.CareerActive` — a Single Race, Master Draft race or lobby race keeps every car in its factory
+livery, no sponsors and no paint-shop scheme): it polls briefly after load (the AI field
 spawns several frames in, after the driver database opens), paints the player's car from `SponsorBook` and
 every AI car from its car number, and repaints the player instantly whenever the book changes.
 
