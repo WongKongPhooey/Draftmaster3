@@ -138,6 +138,14 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Pack Racing (superspeedways - TrackConditions.AiPackRacing)")]
     [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line: a car is 4.8 m long, so this is a bumper's width - bump-drafting distance.")]
     public float packFollowGap = 6.2f;
+    [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line through the corners: a few metres clear of its bumper, still well inside the tow (DraftAero.PushLinkGap). Bump drafting is for the straights - a car shoved along through a banked turn at full speed is the car that gets turned round, and that was most of the big ones at Daytona. Blended in from packFollowGap by packCornerRadius / packStraightRadius.")]
+    public float packCornerFollowGap = 8.5f;
+    [Tooltip("Driven-line radius (m) at or under which the road ahead is a corner, for packCornerFollowGap. Daytona's and Talladega's turns run ~300 m.")]
+    public float packCornerRadius = 450f;
+    [Tooltip("Driven-line radius (m) at or over which the road ahead is a straight and the line closes up to packFollowGap again - a bump draft. Between the two the gap blends: Daytona's tri-oval dogleg (~600 m) keeps most of the bump.")]
+    public float packStraightRadius = 700f;
+    [Tooltip("Seconds of road ahead, at our speed, scanned for a corner. A line takes a few seconds to drop back a couple of metres without a brake stab down it, so the gap starts opening before turn-in; the current position is always in the scan, so it holds to the corner exit.")]
+    public float packCornerLeadSeconds = 3f;
     [Tooltip("How hard (m/s²) a car is willing to shed closing speed on the car ahead in its line: the closing speed it carries is the speed it could lose at this rate over the room left. Gentle - nobody stands on the brakes in a pack.")]
     public float packCloseDecel = 1.2f;
     [Tooltip("Seconds between lane decisions. A pack changes shape over seconds, not frames.")]
@@ -1474,7 +1482,7 @@ public class AIRacingBehaviour : MonoBehaviour
         s.Stickiness = fieldStickiness;
         s.SideGap = fieldSideGap;
         float myMps = _spline.CurrentMph * MphToMps;
-        if (Pack) { s.FollowGap = packFollowGap; s.CloseDecel = packCloseDecel; }
+        if (Pack) { s.FollowGap = PackFollowGapHere(); s.CloseDecel = packCloseDecel; }
         else
         {
             // Away from a pack the field follows at the braking-aware gap and sheds closing speed like a racing car;
@@ -1562,14 +1570,34 @@ public class AIRacingBehaviour : MonoBehaviour
     // ---- Pack racing ----
 
     // The speed (mph) to hold behind a car in our line: close on it no faster than we could shed at packCloseDecel
-    // over the room left to a bumper's width behind it, then sit there - a touch under its speed if we're inside it.
+    // over the room left to a bumper's width behind it (more through a corner - PackFollowGapHere), then sit there - a
+    // touch under its speed if we're inside it.
     float PackFollowCap(float aheadMph, float gap)
     {
-        float room = gap - packFollowGap;
+        float room = gap - PackFollowGapHere();
         if (room > 0f) return aheadMph + Mathf.Sqrt(2f * packCloseDecel * room) / MphToMps;
         // Inside a bumper's width: ease back a little, never far under it - asking for 5 mph under the car ahead
         // turned into a brake stab the next car had to match, and so on down the line. Touching is bump drafting.
         return Mathf.Max(0f, aheadMph + Mathf.Max(room * 0.6f, -2.5f));
+    }
+
+    // The centre-to-centre gap to hold behind the car ahead in a line here: a bump draft (packFollowGap) on the
+    // straights, a few metres off the bumper (packCornerFollowGap) through the corners - nobody shoves the car ahead
+    // round a turn. Cached on the car's track position, since several cars ahead can ask in one step.
+    float _packGapAtDistance = float.NaN, _packGapCached;
+    float PackFollowGapHere()
+    {
+        float at = _spline.DistanceOnTrack;
+        if (at == _packGapAtDistance) return _packGapCached;
+        _packGapAtDistance = at;
+        float corner = 0f;
+        if (packCornerFollowGap > packFollowGap && packStraightRadius > packCornerRadius)
+        {
+            float scan = Mathf.Max(30f, _spline.CurrentMph * MphToMps * packCornerLeadSeconds);
+            corner = Mathf.InverseLerp(packStraightRadius, packCornerRadius, _spline.CurvatureRadiusAhead(scan));
+        }
+        _packGapCached = Mathf.Lerp(packFollowGap, Mathf.Max(packFollowGap, packCornerFollowGap), corner);
+        return _packGapCached;
     }
 
     // Which lane to race in, as a lateral. A car stays in its lane unless:

@@ -172,6 +172,90 @@ public class AutoPlayerFlagSimTests
         }
     }
 
+    // ---- Bump drafting: the straights only ----
+
+    // A line nose to tail at full speed through Daytona's turns, each car shoving the one ahead round the banking, was
+    // where the big wrecks came from. The pack closes to a bump draft on the straights and drops a few metres off the
+    // bumper through the turns (AIRacingBehaviour.packCornerFollowGap). Measured on the racing pack after the launch:
+    // for every running car, the gap (centre to centre) to the nearest car ahead in its line (DraftAero.PushLateral),
+    // bucketed by the driven-line radius where the car is. cornerGap false is the comparison: the old bump draft
+    // everywhere.
+    const float TurnRadius = 450f, StraightRadius = 1500f, InLineLateral = 1.4f, NoseToTail = 5.2f;
+
+    [TestCase(true)]
+    [TestCase(false, Explicit = true, Reason = "Comparison only: bump drafting through the turns too (the old pack).")]
+    public void ThePackBumpDraftsOnTheStraightsButNotInTheTurns(bool cornerGap)
+    {
+        var sim = Build(false);
+        if (!cornerGap)
+            foreach (var c in sim.cars) Set(c.racing, "packCornerFollowGap", 6.2f);
+        RunFormation(sim, 6f);
+        Green(sim);
+        Run(sim, 12f, new StringBuilder(), null);
+
+        var sd = Runtime("SplineDriver");
+        var latP = sd.GetProperty("LateralOnTrack");
+        var radius = sd.GetMethod("CurvatureRadiusAhead");
+        var turn = new List<float>();
+        var straight = new List<float>();
+        int turnTouch = 0, straightTouch = 0;
+        int steps = Mathf.RoundToInt(40f / Time.fixedDeltaTime);
+        int n = sim.cars.Count;
+        var d = new float[n];
+        var lat = new float[n];
+        for (int s = 0; s < steps; s++)
+        {
+            StepAll(sim, null);
+            if (s % 5 != 0) continue;
+            for (int i = 0; i < n; i++)
+            {
+                d[i] = CentreD(sim, sim.cars[i]);
+                lat[i] = (float)latP.GetValue(sim.cars[i].spline);
+            }
+            for (int i = 0; i < n; i++)
+            {
+                float best = float.MaxValue;
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == i || Mathf.Abs(lat[j] - lat[i]) > InLineLateral) continue;
+                    float g = Mathf.Repeat(d[j] - d[i], sim.lap);
+                    if (g > 0.5f && g < 20f && g < best) best = g;
+                }
+                if (best == float.MaxValue) continue;
+                float r = (float)radius.Invoke(sim.cars[i].spline, new object[] { 0f });
+                if (r < TurnRadius) { turn.Add(best); if (best < NoseToTail) turnTouch++; }
+                else if (r > StraightRadius) { straight.Add(best); if (best < NoseToTail) straightTouch++; }
+            }
+        }
+
+        string Stats(List<float> g, int touch)
+        {
+            if (g.Count == 0) return "no samples";
+            g.Sort();
+            float mean = 0f;
+            foreach (var x in g) mean += x;
+            mean /= g.Count;
+            return $"{g.Count} samples, mean {mean:0.00} m, p5 {g[g.Count / 20]:0.00}, min {g[0]:0.00}, nose to tail (<{NoseToTail} m) {100f * touch / g.Count:0.0}%";
+        }
+        string report = $"[BumpDraftSim] {TrackId} cornerGap {cornerGap}: in line, gap to the car ahead (centre to centre)" +
+                        $"\n  turns (R < {TurnRadius} m): {Stats(turn, turnTouch)}" +
+                        $"\n  straights (R > {StraightRadius} m): {Stats(straight, straightTouch)}" +
+                        $"\n  contacts: {sim.contacts.Count}";
+        Debug.Log(report);
+        if (!cornerGap) return;
+        Assert.Greater(turn.Count, 200, "Too few in-line samples in the turns to judge. " + report);
+        Assert.Greater(straight.Count, 200, "Too few in-line samples on the straights to judge. " + report);
+        // Measured 2026-11-20, 20 cars + the Auto player, 40 s of racing after the launch: nose to tail on the car ahead
+        // 25.4% of the time in the turns and 34.9% on the straights before (cornerGap false, 50 contacts); 4.7% in the
+        // turns and 25.0% on the straights after (22 contacts), turn minimum 0.5 m -> 4.2 m.
+        float turnShare = (float)turnTouch / turn.Count, straightShare = (float)straightTouch / straight.Count;
+        // Bump drafting still happens on the straights...
+        Assert.Greater(straightShare, 0.12f, "The pack no longer closes up to bump draft on the straights. " + report);
+        // ...but not through the turns: the line runs a few metres off the bumper there.
+        Assert.Less(turnShare, 0.10f, "Cars are still nose to tail on the car ahead through the turns. " + report);
+        Assert.Less(turnShare, straightShare * 0.5f, "The pack runs as tight through the turns as on the straights. " + report);
+    }
+
     // ---- The field ----
 
     Sim Build(bool laneControls, int fieldCars = FieldCars, int playerSlot = PlayerSlot)
