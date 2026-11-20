@@ -209,6 +209,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Aero draft effects: slipstream tow (extra accel + top speed behind a car) and side draft (drag when a rival's nose sits beside the rear quarter). Strengths and gates come from VehicleInfo.")]
     public bool enableDraft = true;
 
+    [Header("Engine Temperature")]
+    [Tooltip("Engine temperature (Draftmaster.Sim.EngineTemp): nose to tail on the car ahead the radiator gets no air and the engine heats - about two laps of pushing at pack speed overheats it and it loses power. About 0.75 of a car length back holds the temperature; more room, or an empty lane, cools it; so does going slower (a caution).")]
+    public bool enableEngineTemp = true;
+
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
     public float reverseMaxSpeed = 5f;
@@ -352,6 +356,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Grip left to the tyres in the wake of the car ahead (Draftmaster.Sim.DirtyAir): 1 in clean air.
     public float DirtyAirGrip { get; private set; } = 1f;
     public float PushFactor { get; private set; }       // pushed along by a line of cars nose to tail behind us (DraftAero.Push)  // side draft suffered from a rival's nose on our quarter
+    // Engine temperature (°C, Draftmaster.Sim.EngineTemp) and how much of the grille the car ahead covers this step.
+    public float EngineTempC { get; private set; } = Draftmaster.Sim.EngineTemp.NormalC;
+    public float RadiatorCover { get; private set; }
+    public bool EngineOverheating => EngineTempC > Draftmaster.Sim.EngineTemp.OverheatC;
+    // Back to normal running temperature (a new race, a reset car).
+    public void ResetEngineTemp() { EngineTempC = Draftmaster.Sim.EngineTemp.NormalC; RadiatorCover = 0f; }
 
     // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
     // Only the active HUMAN car registers (an AI car keeps an enabled SplineDriver and is already in RaceField).
@@ -504,6 +514,24 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 out tow, out _, out sideDraft);
             if (pushing) push = DraftAero.Push(track, len, TrackDistance, TrackLateral, SpeedMph, gameObject, vehicleInfo);
         }
+    }
+
+    // How much of the grille the cars ahead cover, from the same track pose as the draft field. Nothing on the pit lane.
+    float ComputeRadiatorCover()
+    {
+        if (_brainSpline != null && _brainSpline.enabled && _brainSpline.TrackLength > 0f)
+        {
+            if (_brainSpline.IsOnPit) return 0f;
+            return DraftAero.RadiatorCover(_brainSpline.track, _brainSpline.TrackLength, _brainSpline.DistanceOnTrack,
+                _brainSpline.LateralOnTrack, gameObject);
+        }
+        if (_isObstacle && track != null)
+        {
+            float len = DraftAero.TrackLengthFor(track);
+            if (len <= 0f) return 0f;
+            return DraftAero.RadiatorCover(track, len, TrackDistance, TrackLateral, gameObject);
+        }
+        return 0f;
     }
 
     void Start()
@@ -738,6 +766,19 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // The same wake that tows the car down the straight takes downforce off it in the corner (NR2003).
         DirtyAirGrip = Draftmaster.Sim.DirtyAir.GripFactor(tow, speedNow, TrackConditions.DirtyAirLoss);
 
+        // Engine temperature: the car ahead's wake on the grille heats it at speed, room and clean air cool it, and a
+        // slow car cools whatever is ahead of it (EngineTemp). The work it does is reckoned against the plate speed on
+        // a plate track, where the pack races.
+        if (enableEngineTemp)
+        {
+            RadiatorCover = ComputeRadiatorCover();
+            float heatRefMps = TrackConditions.PlateMph > 0f ? TrackConditions.PlateMph / 2.237f : Draftmaster.Sim.EngineTemp.ReferenceMps;
+            EngineTempC = Draftmaster.Sim.EngineTemp.Step(EngineTempC, RadiatorCover,
+                Draftmaster.Sim.EngineTemp.SpeedShare(speedNow, heatRefMps), dt);
+        }
+        else ResetEngineTemp();
+        float enginePower = Draftmaster.Sim.EngineTemp.PowerFactor(EngineTempC);
+
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
         // but targets above what the engine can physically reach do nothing — so the engine must scale with them.
@@ -765,7 +806,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
         topMps *= (1f + vehicleInfo.draftingTopSpeedGain * towWorth * cardDraftScale * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
         topMps *= cardPowerScale;
-        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * throttleIn;
+        // An overheated engine makes less power and runs out of breath sooner.
+        topMps *= Draftmaster.Sim.EngineTemp.TopSpeedFactor(EngineTempC);
+        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * enginePower * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
         if (tow > 0f) accel += vehicleInfo.draftingTowAccel * towWorth * cardDraftScale * TrackConditions.DraftScale * throttleIn;

@@ -146,6 +146,8 @@ public class AIRacingBehaviour : MonoBehaviour
     public float packStraightRadius = 700f;
     [Tooltip("Seconds of road ahead, at our speed, scanned for a corner. A line takes a few seconds to drop back a couple of metres without a brake stab down it, so the gap starts opening before turn-in; the current position is always in the scan, so it holds to the corner exit.")]
     public float packCornerLeadSeconds = 3f;
+    [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line while this car's engine runs hot (Draftmaster.Sim.EngineTemp.HotC, until it is back under CooledC): about one and a half car lengths off the bumper, where the radiator gets air and the engine cools, instead of pushing it into overheating.")]
+    public float packHotFollowGap = 12f;
     [Tooltip("How hard (m/s²) a car is willing to shed closing speed on the car ahead in its line: the closing speed it carries is the speed it could lose at this rate over the room left. Gentle - nobody stands on the brakes in a pack.")]
     public float packCloseDecel = 1.2f;
     [Tooltip("Seconds between lane decisions. A pack changes shape over seconds, not frames.")]
@@ -375,6 +377,21 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
             return _pvc != null && _pvc.enabled ? _pvc.TowFactor : 0f;
+        }
+    }
+    // The engine is running hot (EngineTemp): latched at HotC, cleared back under CooledC, so a car backs off the
+    // bumper until it has properly cooled rather than flicking back on at the threshold.
+    bool _engineHot;
+    bool EngineHot
+    {
+        get
+        {
+            if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
+            if (_pvc == null || !_pvc.enabled || !_pvc.enableEngineTemp) return _engineHot = false;
+            float t = _pvc.EngineTempC;
+            if (t >= Draftmaster.Sim.EngineTemp.HotC) _engineHot = true;
+            else if (t <= Draftmaster.Sim.EngineTemp.CooledC) _engineHot = false;
+            return _engineHot;
         }
     }
     readonly LateralField _field = new LateralField();
@@ -1586,6 +1603,13 @@ public class AIRacingBehaviour : MonoBehaviour
     // round a turn. Cached on the car's track position, since several cars ahead can ask in one step.
     float _packGapAtDistance = float.NaN, _packGapCached;
     float PackFollowGapHere()
+    {
+        float gap = PackFollowGapForRoad();
+        // A hot engine backs off the bumper into air that cools it (EngineTemp) - on the straights too.
+        return EngineHot ? Mathf.Max(gap, packHotFollowGap) : gap;
+    }
+
+    float PackFollowGapForRoad()
     {
         float at = _spline.DistanceOnTrack;
         if (at == _packGapAtDistance) return _packGapCached;

@@ -256,6 +256,103 @@ public class AutoPlayerFlagSimTests
         Assert.Less(turnShare, straightShare * 0.5f, "The pack runs as tight through the turns as on the straights. " + report);
     }
 
+    // ---- Engine temperature: no bump drafting for ever ----
+
+    // Nose to tail on the car ahead the radiator gets no air and the engine heats (Draftmaster.Sim.EngineTemp); a car
+    // whose engine runs hot backs off the bumper (AIRacingBehaviour.packHotFollowGap) until it has cooled. The pack is
+    // set to bump draft everywhere (packFollowGap and packCornerFollowGap a few tenths off the bumper) - the constant
+    // pushing engine temperature is there to stop. Measured over about three laps of Daytona after the launch: every
+    // running car's engine temperature, and its gap (centre to centre) to the car ahead in its line, split by whether
+    // the engine was hot.
+    // The pack as tuned (bump draft on the straights only) measured 2026-11-20: peak engine temperature median 96.2 C,
+    // max 99.1 C - its gaps (9.3 m mean in line) keep the engines cool without the hot-car gap ever coming into it.
+    [Test]
+    public void APackPushingEverywhereHeatsItsEnginesAndAHotCarBacksOff()
+    {
+        var sim = Build(false);
+        foreach (var c in sim.cars)
+        {
+            if (c.player) continue;
+            Set(c.racing, "packFollowGap", 5.2f);
+            Set(c.racing, "packCornerFollowGap", 5.2f);
+        }
+        RunFormation(sim, 6f);
+        Green(sim);
+        Run(sim, 12f, new StringBuilder(), null);
+
+        var latP = Runtime("SplineDriver").GetProperty("LateralOnTrack");
+        var tempP = Runtime("PlayerVehicleController").GetProperty("EngineTempC");
+        var coverP = Runtime("PlayerVehicleController").GetProperty("RadiatorCover");
+        var speedP = Runtime("PlayerVehicleController").GetProperty("SpeedMps");
+        float plateMps = (float)Runtime("TrackConditions").GetField("PlateMph").GetValue(null) / 2.237f;
+        double coverSum = 0, shareSum = 0, mphSum = 0;
+        int heatingSamples = 0;
+        float hotC = Draftmaster.Sim.EngineTemp.HotC, overheatC = Draftmaster.Sim.EngineTemp.OverheatC;
+        int n = sim.cars.Count;
+        var d = new float[n];
+        var lat = new float[n];
+        var temp = new float[n];
+        var peak = new float[n];
+        var hotGaps = new List<float>();
+        var coolGaps = new List<float>();
+        int samples = 0, hotSamples = 0, overheatSamples = 0;
+        int steps = Mathf.RoundToInt(150f / Time.fixedDeltaTime);
+        for (int s = 0; s < steps; s++)
+        {
+            StepAll(sim, null);
+            if (s % 10 != 0) continue;
+            for (int i = 0; i < n; i++)
+            {
+                d[i] = CentreD(sim, sim.cars[i]);
+                lat[i] = (float)latP.GetValue(sim.cars[i].spline);
+                temp[i] = ((Behaviour)sim.cars[i].pvc).enabled ? (float)tempP.GetValue(sim.cars[i].pvc) : float.NaN;
+                if (temp[i] > peak[i]) peak[i] = temp[i];
+            }
+            for (int i = 0; i < n; i++)
+            {
+                if (sim.cars[i].player || float.IsNaN(temp[i])) continue;
+                samples++;
+                float cover = (float)coverP.GetValue(sim.cars[i].pvc);
+                float v = (float)speedP.GetValue(sim.cars[i].pvc);
+                coverSum += cover;
+                shareSum += Draftmaster.Sim.EngineTemp.SpeedShare(v, plateMps);
+                mphSum += v * 2.237f;
+                if (cover > Draftmaster.Sim.EngineTemp.HoldCover) heatingSamples++;
+                if (temp[i] >= hotC) hotSamples++;
+                if (temp[i] > overheatC) overheatSamples++;
+                float best = float.MaxValue;
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == i || Mathf.Abs(lat[j] - lat[i]) > InLineLateral) continue;
+                    float g = Mathf.Repeat(d[j] - d[i], sim.lap);
+                    if (g > 0.5f && g < 20f && g < best) best = g;
+                }
+                if (best == float.MaxValue) continue;
+                (temp[i] >= hotC ? hotGaps : coolGaps).Add(best);
+            }
+        }
+
+        float Mean(List<float> g) { float m = 0f; foreach (var x in g) m += x; return g.Count > 0 ? m / g.Count : float.NaN; }
+        var sorted = new List<float>(peak);
+        sorted.Sort();
+        string report = $"[EngineTempSim] {TrackId}, 150 s of racing: peak engine temp per car min {sorted[0]:0.0} median {sorted[n / 2]:0.0} max {sorted[n - 1]:0.0} C" +
+                        $"\n  hot (>= {hotC} C) {100f * hotSamples / Mathf.Max(1, samples):0.0}% of car-samples, overheating (> {overheatC} C) {100f * overheatSamples / Mathf.Max(1, samples):0.0}%" +
+                        $"\n  in line, gap to the car ahead: hot {Mean(hotGaps):0.00} m ({hotGaps.Count}), not hot {Mean(coolGaps):0.00} m ({coolGaps.Count})" +
+                        $"\n  mean speed {mphSum / Mathf.Max(1, samples):0.0} mph (plate {plateMps * 2.237f:0.0}), speed share {shareSum / Mathf.Max(1, samples):0.000}, " +
+                        $"radiator cover {coverSum / Mathf.Max(1, samples):0.000}, closer than the hold distance {100f * heatingSamples / Mathf.Max(1, samples):0.0}%" +
+                        $"\n  contacts: {sim.contacts.Count}";
+        Debug.Log(report);
+        TestContext.WriteLine(report);
+        Assert.Greater(samples, 1000, "Too few samples to judge. " + report);
+        // Pushing heats the engines: the pack warms up, and the cars that push longest run hot inside three laps.
+        Assert.Greater(sorted[n / 2], Draftmaster.Sim.EngineTemp.NormalC + 5f, "Pushing never warmed the engines up. " + report);
+        Assert.GreaterOrEqual(sorted[n - 1], hotC, "Nobody pushed long enough to run hot. " + report);
+        // A hot car backs off the bumper: it does not sit pushing into an overheat.
+        Assert.Less((float)overheatSamples / samples, 0.05f, "Cars sit overheating in the pack. " + report);
+        if (hotGaps.Count >= 50)
+            Assert.Greater(Mean(hotGaps), Mean(coolGaps), "A hot car runs as close to the car ahead as a cool one. " + report);
+    }
+
     // ---- The field ----
 
     Sim Build(bool laneControls, int fieldCars = FieldCars, int playerSlot = PlayerSlot)

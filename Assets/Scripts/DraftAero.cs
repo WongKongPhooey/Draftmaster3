@@ -136,6 +136,40 @@ public static class DraftAero
         return (1f - Mathf.Pow(0.55f, count)) * speed01;
     }
 
+    // How much of this car's grille the cars ahead cover (0..1, the most any one of them does) - what heats the engine
+    // (Draftmaster.Sim.EngineTemp). Same track-space pose as the draft field.
+    public static float RadiatorCover(TrackBuilder track, float trackLen, float myDist, float myLat, GameObject self)
+    {
+        if (track == null || trackLen <= 0f) return 0f;
+        float reach = Draftmaster.Sim.EngineTemp.CarLength + Draftmaster.Sim.EngineTemp.CleanGap;
+        float cover = 0f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || !d.isActiveAndEnabled || d.gameObject == self || d.IsOnPit) continue;
+            if (d.track != track || d.TrackLength <= 0f) continue;
+            cover = Mathf.Max(cover, CoverFrom(trackLen, myDist, myLat, d.DistanceOnTrack, d.LateralOnTrack, reach));
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.gameObject == self || p.ObstacleTrack != track) continue;
+            cover = Mathf.Max(cover, CoverFrom(trackLen, myDist, myLat, p.TrackDistance, p.TrackLateral, reach));
+        }
+        return cover;
+    }
+
+    static float CoverFrom(float trackLen, float myDist, float myLat, float otherDist, float otherLat, float reach)
+    {
+        float g = otherDist - myDist; // + = other car ahead of us
+        if (g > trackLen * 0.5f) g -= trackLen;
+        else if (g < -trackLen * 0.5f) g += trackLen;
+        if (g <= 0f || g > reach) return 0f;
+        return Draftmaster.Sim.EngineTemp.Cover(g, otherLat - myLat);
+    }
+
     static void AddBehind(float trackLen, float myDist, float myLat, float otherDist, float otherLat, float window)
     {
         float g = myDist - otherDist;   // + = other car behind us

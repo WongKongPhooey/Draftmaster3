@@ -203,7 +203,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         style.normal.textColor = prev;
     }
 
-    // Tyre life, draft and fuel, as the design's cell rows: alarm red for the rubber, telemetry blue for
+    // Tyre life, draft, fuel and engine temperature, as the design's cell rows: alarm red for the rubber, telemetry blue for
     // the tow, gold for the tank. Sits on the right, under where the track map lives.
     void DrawMeters()
     {
@@ -212,8 +212,8 @@ public class IronOvalRaceHUD : MonoBehaviour
         // narrower than the rows drawn inside it.
         float inset = PixelGUI.Px(4f) + PixelGUI.Px(6f);
         float w = PixelGUI.CellsWidth(10) + inset * 2f;
-        // Three label + row sections, a Px(4) gap between each, and the same Px(2) of slack at the foot.
-        float h = inset * 2f + 3f * PixelGUI.LineH + 3f * PixelGUI.CellsHeight + PixelGUI.Px(10f);
+        // Four label + row sections, a Px(4) gap between each, and the same Px(2) of slack at the foot.
+        float h = inset * 2f + 4f * PixelGUI.LineH + 4f * PixelGUI.CellsHeight + PixelGUI.Px(14f);
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
 
@@ -251,6 +251,18 @@ public class IronOvalRaceHUD : MonoBehaviour
         float fuel = _fuel != null ? _fuel.Fraction : 1f;
         PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), Mathf.RoundToInt(fuel * 10f), 10,
                        fuel > 0.2f ? PixelGUI.Gold : PixelGUI.Danger);
+        cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
+
+        // Engine temperature (EngineTemp): empty at normal running, full at overheating. Amber once it runs hot -
+        // back off the bumper or find clean air - and alarm red when it is losing power.
+        float tempC = _pvc != null && _pvc.isActiveAndEnabled ? _pvc.EngineTempC : Draftmaster.Sim.EngineTemp.NormalC;
+        var tempColour = tempC >= Draftmaster.Sim.EngineTemp.OverheatC ? PixelGUI.Danger
+                       : tempC >= Draftmaster.Sim.EngineTemp.HotC ? PixelGUI.Gold : PixelGUI.Confirm;
+        label.normal.textColor = tempColour;
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Temp", label);
+        cy += PixelGUI.LineH;
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight),
+                       Mathf.RoundToInt(Draftmaster.Sim.EngineTemp.Gauge01(tempC) * 10f), 10, tempColour);
 
         label.normal.textColor = prev;
     }

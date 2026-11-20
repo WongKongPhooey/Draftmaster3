@@ -33,6 +33,7 @@
     <Compile Include="$(ProjectRoot)Assets\Scripts\Tracks\Core\**\*.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\SpinSlide.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\PlateDraft.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\EngineTemp.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\FuelPlan.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\CautionPitGate.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\CautionOrder.cs" />
@@ -61,6 +62,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RaceFlowTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\SpinSlideTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PlateDraftTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\EngineTempTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\FuelPlanTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\CautionOrderTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\CautionPitGateTests.cs" />

@@ -1,0 +1,103 @@
+using UnityEngine;
+
+namespace Draftmaster.Sim
+{
+    // Engine temperature: a car tucked onto the bumper of the car ahead has its grille in that car's wake, the
+    // radiator stops getting air, and the engine heats. It is what stops a superspeedway pack bump-drafting lap
+    // after lap: about two laps nose to tail at pack speed and the engine is overheating and losing power.
+    //
+    // It is a rate model, not a settling one - the gap decides whether the temperature is going up, holding or
+    // coming down:
+    //
+    //   * Bumper to bumper (a push) heats it at the full rate.
+    //   * About three quarters of a car length back (HoldCarLengths) it holds whatever temperature it has.
+    //   * Further back it cools, quicker the more clean air there is in front of the grille; an empty lane
+    //     (nothing ahead within CleanCarLengths, or the car ahead a lane over) cools it quickest.
+    //
+    // Both ends scale with speed. The heat goes with the work the engine does, so with v² (SpeedShare), and a
+    // slow car is cooled by the engine not working: under caution everything comes down, nose to tail or not.
+    //
+    // Overheated (past OverheatC) the engine loses power and some top speed, which drops the car off the bumper,
+    // which cools it - pushing regulates itself. PlayerVehicleController runs it for every dynamic car, player and
+    // AI alike; AIRacingBehaviour opens its pack gap when its engine runs hot.
+    public static class EngineTemp
+    {
+        public const float CarLength = 4.8f;          // metres, nose to tail (AIRacingBehaviour.packFollowGap's car)
+        public const float HoldCarLengths = 0.75f;    // bumper gap at which the temperature holds
+        public const float CleanCarLengths = 3f;      // bumper gap at which the grille is in clean air
+        public const float HoldGap = CarLength * HoldCarLengths;     // 3.6 m bumper to bumper
+        public const float CleanGap = CarLength * CleanCarLengths;   // 14.4 m bumper to bumper
+        // Lateral offset from the car ahead's line within which its wake covers the whole grille (a line of cars
+        // wanders a little either side of it), and past which it misses it (DraftAero.TowLateralHalfWidth).
+        public const float FullCoverLateral = 1f;
+        public const float LateralHalfWidth = 2.5f;
+
+        public const float NormalC = 95f;     // running temperature in clean air; never cools below it
+        public const float HotC = 118f;       // the gauge goes amber: time to back off
+        public const float CooledC = 105f;    // back to normal running after being hot (AI hysteresis)
+        public const float OverheatC = 125f;  // power starts going
+        public const float MaxC = 135f;       // full overheat loss; the temperature stops here
+
+        // °C/s at full pace: bumper to bumper (the full push) and the empty lane. 30 °C from normal to overheating
+        // nose to tail is ~90 s - two laps of Daytona at pack speed; an empty lane takes it back down in a minute.
+        public const float HeatRate = 0.33f;
+        public const float CoolRate = 0.5f;
+
+        // Speed (m/s, ~168 mph) at which the engine is working flat out for heat; off a plate track. On a plate
+        // track it is the plate speed, where the pack races.
+        public const float ReferenceMps = 75f;
+
+        public const float MaxPowerLoss = 0.15f;     // share of engine pull gone at MaxC
+        public const float MaxTopSpeedLoss = 0.03f;  // share of top speed gone at MaxC (~6 mph at Daytona)
+
+        // 0..1: how much of the work an engine at this speed is doing, against the reference speed.
+        public static float SpeedShare(float speedMps, float referenceMps)
+        {
+            if (referenceMps <= 0f || speedMps <= 0f) return 0f;
+            float q = speedMps / referenceMps;
+            return Mathf.Clamp01(q * q);
+        }
+
+        // How much of our grille one car ahead covers (0..1), from the centre-to-centre gap along the track (+ = it
+        // is ahead) and the lateral offset between us. 1 = bumper to bumper on its line, 0.5 = the hold distance,
+        // 0 = clean air (CleanGap back, a lane over, or behind us).
+        public const float HoldCover = 0.5f;
+        public static float Cover(float centreGap, float lateralDelta)
+        {
+            if (centreGap <= 0f) return 0f;
+            float lat = 1f - Mathf.Clamp01((Mathf.Abs(lateralDelta) - FullCoverLateral) / (LateralHalfWidth - FullCoverLateral));
+            if (lat <= 0f) return 0f;
+            float gap = Mathf.Max(0f, centreGap - CarLength);   // bumper to bumper
+            float c;
+            if (gap <= HoldGap) c = 1f - (1f - HoldCover) * gap / HoldGap;
+            else c = HoldCover * (1f - Mathf.Clamp01((gap - HoldGap) / (CleanGap - HoldGap)));
+            return c * lat;
+        }
+
+        // °C per second for a grille this covered (the most any car ahead covers it) at this speed share.
+        public static float Rate(float cover, float speedShare)
+        {
+            cover = Mathf.Clamp01(cover);
+            speedShare = Mathf.Clamp01(speedShare);
+            float heat = 0f, clean = 0f;
+            if (cover > HoldCover) heat = (cover - HoldCover) / (1f - HoldCover);
+            else clean = (HoldCover - cover) / HoldCover;   // cooling goes with the share of the grille in clean air
+            // Heat goes with the work; a slow engine cools whatever is in front of it.
+            float cool = Mathf.Clamp01(clean + (1f - speedShare));
+            return HeatRate * speedShare * heat - CoolRate * cool;
+        }
+
+        // One step of the engine's temperature, held between NormalC and MaxC.
+        public static float Step(float tempC, float cover, float speedShare, float dt)
+            => Mathf.Clamp(tempC + Rate(cover, speedShare) * dt, NormalC, MaxC);
+
+        // 0 at or under OverheatC, 1 at MaxC.
+        public static float Overheat01(float tempC) => Mathf.Clamp01((tempC - OverheatC) / (MaxC - OverheatC));
+
+        public static float PowerFactor(float tempC) => 1f - MaxPowerLoss * Overheat01(tempC);
+        public static float TopSpeedFactor(float tempC) => 1f - MaxTopSpeedLoss * Overheat01(tempC);
+
+        // The gauge: 0 at normal running, 1 at overheating.
+        public static float Gauge01(float tempC) => Mathf.Clamp01((tempC - NormalC) / (OverheatC - NormalC));
+    }
+}
