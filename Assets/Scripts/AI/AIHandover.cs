@@ -29,6 +29,7 @@ public static class AIHandover
         var racing = car.GetComponent<AIRacingBehaviour>();
         if (racing == null) racing = car.AddComponent<AIRacingBehaviour>();
         racing.enabled = true;
+        racing.JoinRunningRace();             // mid-race under green: not a start (no start-side hold, no restart settle)
 
         var input = car.GetComponent<SplineInputDriver>();
         if (input == null) input = car.AddComponent<SplineInputDriver>();

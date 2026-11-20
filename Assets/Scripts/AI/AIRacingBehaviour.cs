@@ -372,6 +372,7 @@ public class AIRacingBehaviour : MonoBehaviour
     readonly LateralField _field = new LateralField();
     bool _wasGreen;
     float _greenSeconds;
+    bool _joinedRunning;   // taken over mid-race (JoinRunningRace): the next green step is not a start
     float _startSideShare = float.NaN;   // 0 = AI left bound, 1 = right; NaN = not holding a side
     SplineDriver.CornerPhase _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
     int _startSideStage;   // 0 = not yet on a straight since the green, 1 = on one, 2 = into the first corner
@@ -415,6 +416,16 @@ public class AIRacingBehaviour : MonoBehaviour
         _stint = GetComponent<PracticeAIStint>();
         _pvc = GetComponent<PlayerVehicleController>();
         if (_spline != null) _byDriver[_spline] = this;
+    }
+
+    // Taken over with the race already running under green (Auto, a team switch - AIHandover.ToAI): the green this brain
+    // sees first is not a start or a restart. Counted as one, the car held the side of the road it was handed over on
+    // (holdStartSides) or, in a pack, froze its lateral while under race speed (restartSettleMaxSeconds) - which a
+    // car braking for a wreck always is, so it slowed right down behind it and never steered round it.
+    public void JoinRunningRace()
+    {
+        _joinedRunning = RaceStart.IsGreen;
+        _wasGreen = false;
     }
 
     // Parked (pit road, the formation, a handover): no swerve of ours is left on the car's line for whoever drives it next.
@@ -483,7 +494,7 @@ public class AIRacingBehaviour : MonoBehaviour
         // owns the AI's speed cap and line so the field forms up behind the safety car.
         if (!RaceStart.IsGreen)
         {
-            _wasGreen = false; _spline.allowRunOff = false; _runOffHold = 0f; _spline.avoidingStopped = false;
+            _wasGreen = false; _joinedRunning = false; _spline.allowRunOff = false; _runOffHold = 0f; _spline.avoidingStopped = false;
             // Under a caution FormationController drives the car, and its own way round a wreck on the grass with it.
             if (!RaceStart.IsCaution) _spline.allowGrass = false;
             _grassHold = 0f; _escapeGrass = false; _recoveryAroundStopped = false; _prevUntactical = float.NaN;
@@ -497,15 +508,17 @@ public class AIRacingBehaviour : MonoBehaviour
         if (!_wasGreen)
         {
             _wasGreen = true;
-            _greenSeconds = 0f;
+            // Joined mid-race: long past the green, so no start hold, restart settle or start brake pad.
+            _greenSeconds = _joinedRunning ? 3600f : 0f;
             _startSideShare = float.NaN;
             _startSideStage = 0;
             _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
-            if (holdStartSides && !Pack && !_spline.IsOnPit && _spline.GetLateralBounds(out float sLo, out float sHi) && sHi - sLo > 1f)
+            if (holdStartSides && !_joinedRunning && !Pack && !_spline.IsOnPit && _spline.GetLateralBounds(out float sLo, out float sHi) && sHi - sLo > 1f)
                 // Where the formation put us (its column, handed over by TakeLateral), not where the car has got to yet.
                 _startSideShare = Mathf.Clamp01((_spline.UntacticalLateral + _smoothedTactical - sLo) / (sHi - sLo));
         }
         else _greenSeconds += dt;
+        _joinedRunning = false;
 
         // Race phase. A field that races lap 1 exactly the way it races the last lap reads as a machine, so
         // the drivers settle in over the opening laps - wider gaps, fewer lunges - and throw everything at
@@ -926,9 +939,11 @@ public class AIRacingBehaviour : MonoBehaviour
         // once a car moves it goes all the way - nobody backs out of a lane change in a pack.
         if (fieldOn && !wantOvertake)
             desiredTactical = fieldLat - _spline.UntacticalLateral;
-        else if (Pack && !underYellow && !_spline.IsOnPit && RestartSettling(_greenSeconds))
+        else if (Pack && !underYellow && !_spline.IsOnPit && !(wantOvertake && _passAroundStopped) && RestartSettling(_greenSeconds))
         {
-            // Up to speed in the formation it lined up in; lanes are picked once there.
+            // Up to speed in the formation it lined up in; lanes are picked once there. Never past a stopped car, though:
+            // a car braking for one is "not up to speed yet" by definition, and holding its lateral there meant it slowed
+            // right down behind the wreck and never steered round it (AutoStoppedCarSimTests).
             desiredTactical = _smoothedTactical;
             _packLane = -1;
             _packMoving = false;
