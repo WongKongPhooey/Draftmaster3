@@ -4,7 +4,7 @@
     python -I Tools/track_reference.py --all                 # every venue in Tools/TrackExports, + STATUS.md
     python -I Tools/track_reference.py Phoenix --refresh     # ignore the cache, fetch everything again
     python -I Tools/track_reference.py Phoenix --offline     # re-render from the cache, no network
-    python -I Tools/track_reference.py Phoenix --write-trace=2 [--start=apex|lat,lon] [--pit=<wayId>] [--force]
+    python -I Tools/track_reference.py Phoenix --write-trace=2 [--start=apex|lat,lon] [--pit=<wayId>[,<wayId>]] [--clockwise] [--force]
     python -I Tools/track_reference.py --status              # STATUS.md from every venue's committed report, offline
     python -I Tools/track_reference.py --selftest            # the fitting maths on a synthetic lap
 
@@ -1224,7 +1224,11 @@ def write_trace(tid, index, force):
     lon0 = sum(p[1] for p in ll) / len(ll)
     frame = Frame(lat0, lon0)
     centre = tw.smooth_closed(tw.resample_closed([frame.xy(*p) for p in ll], 2.0), 4)
-    if tw.signed_area(centre) < 0:
+    # The way the cars run: counter-clockwise (every oval), or clockwise for a road course raced that way
+    # (--clockwise; OSM tags it, e.g. road_course=clockwise at Indianapolis). The importer keeps the direction
+    # the trace declares.
+    clockwise = '--clockwise' in sys.argv
+    if (tw.signed_area(centre) < 0) != clockwise:
         centre.reverse()
     start = next((a[8:] for a in sys.argv if a.startswith('--start=')), None)
     if start == 'apex':
@@ -1245,6 +1249,7 @@ def write_trace(tid, index, force):
                    % (index, c['label'], ','.join(str(i) for i in c['ways']), c['lengthErrPct']),
         'publishedMiles': g['lengthMiles'],
         'startFinish': 'firstNode' if start else '',
+        'direction': 'clockwise' if clockwise else 'counterclockwise',
         'segmentation': 'curvature',
         'tracedMetres': round(closed_length(centre), 1),
         'surfaceWidthMetres': g['surfaceWidthM'],

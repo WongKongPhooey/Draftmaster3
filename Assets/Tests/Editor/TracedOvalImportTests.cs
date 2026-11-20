@@ -23,7 +23,7 @@ using UnityEngine;
 // straight front stretch falls back to the importer's lane-beside-the-straight fit when no chord fits.
 // IndyRoad (imported 2026-11-19, raced clockwise) is the known-good road course: 1.8 m RMS once exported.
 // COTA (traced 2026-11-20 from track_reference.py candidate 0, the Grand Prix circuit) is the one waiting on
-// a Unity import.
+// a Unity import. LimeRock (traced from candidate 0 and imported 2026-11-20, raced clockwise) reads 1.4 m.
 //
 // Engine-free (Draftmaster.Tracks Core only, no JsonUtility), so it also runs under Tools/HeadlessTests.
 public class TracedOvalImportTests
@@ -46,6 +46,7 @@ public class TracedOvalImportTests
     [TestCase("Charlotte")]
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
+    [TestCase("LimeRock")]
     [TestCase("Daytona")]
     public void TraceImportsAsAClosedLapOfThePublishedLength(string id)
     {
@@ -61,6 +62,7 @@ public class TracedOvalImportTests
     [TestCase("Charlotte")]
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
+    [TestCase("LimeRock")]
     [TestCase("Daytona")]
     public void BuiltLapLiesOnTheTrace(string id)
     {
@@ -74,6 +76,7 @@ public class TracedOvalImportTests
     [TestCase("Charlotte")]
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
+    [TestCase("LimeRock")]
     [TestCase("Daytona")]
     public void MappedPitLaneFitsAsPitRoad(string id)
     {
@@ -130,7 +133,10 @@ public class TracedOvalImportTests
         }
         float misfit = 0f;
         for (int i = 0; i < from.Count; i++) misfit = Mathf.Max(misfit, Vector2.Distance(Map(from[i] / scale), to[i]));
-        Assert.Less(misfit, 5f, $"{id}: the trace only lays over the built front stretch to {misfit:0.0} m");
+        // The importer's +-800 m window is most of a short road course (LimeRock: two-thirds of its 2.4 km lap, through
+        // five corners), so the whole window lays over a little looser there than an oval's front stretch does.
+        float misfitLimit = r.roadCourse ? 8f : 5f;
+        Assert.Less(misfit, misfitLimit, $"{id}: the trace only lays over the built front stretch to {misfit:0.0} m");
 
         Vector2 first = Map(r.pitLane[0]), last = Map(r.pitLane[r.pitLane.Count - 1]);
         float Nearest(Vector2 q)
@@ -178,6 +184,7 @@ public class TracedOvalImportTests
     // shape, not the absolute time.
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
+    [TestCase("LimeRock")]
     public void AiGetsRoundTheBuiltRoadCourse(string id)
     {
         var r = Read(id);

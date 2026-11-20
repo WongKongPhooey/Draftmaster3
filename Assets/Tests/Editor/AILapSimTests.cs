@@ -269,6 +269,29 @@ public class AILapSimTests
         Assert.IsEmpty(r.incidents, Report($"The AI didn't lap Watkins Glen cleanly at pace {pace:0.00}, line {lineFactor:0.00}", r));
     }
 
+    // Lime Rock was rebuilt from the real circuit (2026-11-20, OSM raceway trace, 1.4 m RMS off it). The AI have to
+    // get round the new shape with its track tuning, at the pace the game hands them and at either end of the line
+    // spread, without leaving the road.
+    [Test]
+    public void AnAICarLapsLimeRockCleanly(
+        [Values(0.93f * 1.2f, 1.04f * 1.2f)] float pace,
+        [Values(-0.05f, 0.08f)] float lineFactor)
+    {
+        var conditions = Runtime("TrackConditions");
+        conditions.GetMethod("ApplyTrackTuning").Invoke(null, new object[] { "LimeRock" });
+        try
+        {
+            SpawnTrack("Assets/Resources/TrackPackages/LimeRock.prefab");
+            var r = Drive(laps: 3, pace: pace, lineFactor: lineFactor);
+            string report = Report($"[LapSim] LimeRock pace {pace:0.00} line {lineFactor:0.00}", r);
+            Debug.Log(report);
+            TestContext.WriteLine(report);
+            Assert.AreEqual(3, r.lapTimes.Count, Report("The car didn't finish its laps", r));
+            Assert.IsEmpty(r.incidents, report);
+        }
+        finally { conditions.GetMethod("Reset").Invoke(null, null); }
+    }
+
     // Road-course aptitude has to show on the stopwatch. Two drivers identical in every stat but ROAD COURSES (1 vs
     // 20, out of 20), rated the way AIDriverBinding rates them and driven at calibrated Watkins Glen: the ace should
     // be about two seconds a lap quicker. Consistency is maxed so neither the event roll nor the session jitter moves

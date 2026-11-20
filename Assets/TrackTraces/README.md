@@ -68,8 +68,14 @@ COTA had no trace (its RoadCourseLayouts sketch was 68 m RMS off the real circui
 the mapped Pit Lane way and the start/finish line estimated mid front straight (OSM marks none). Read headless at the
 road-course window it lies 2.5 m RMS off the trace; importing it in Unity is still to do.
 
+Lime Rock had no trace (its RoadCourseLayouts sketch was 46.7 m RMS off the real circuit). One was written
+2026-11-20 from `track_reference.py` candidate 0 (OSM's raceway ways round the full circuit with the Climbing Turn,
+no chicane - 1.498 mi against the 1.5 mi in TrackDimensions), raced clockwise, start/finish on the front straight and
+the mapped Pit Lane way 35341695. Imported the same day: 70 pieces, closed 2.6 m -> 0, and the package re-dressed and
+its line retrained; it now measures 1.4 m RMS against the real track.
+
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
-Daytona, Talladega, Indianapolis, Road America, Lime Rock and Watkins Glen — are not a bug in the
+Daytona, Talladega, Indianapolis, Road America and Watkins Glen — are not a bug in the
 fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,345m of its 4,281m lap drawn
 and Daytona 3,368m of 4,023m, with the rest simply not there. A venue with no usable trace keeps its
 generated geometry, which is why the generator stays.

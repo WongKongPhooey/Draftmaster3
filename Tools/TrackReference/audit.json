@@ -52,9 +52,9 @@
     },
     "LimeRock": {
       "wrong": "game",
-      "rebuild": "yes",
-      "from": "#0 (Climbing Turn layout, +0.02%); #1 is the South Chicane variant (-1.9%)",
-      "why": "Game line follows the west side then leaves the property north and south; 46.7 m RMS. Reference right: #0 runs on the circuit all round. Wikipedia's full course is 1.53 mi against the game's 1.50: use #1 if the series runs the chicane, and check TrackDimensions' length."
+      "rebuild": "done 2026-11-20",
+      "from": "#0 (Climbing Turn layout, +0.02%), now Assets/TrackTraces/LimeRock.json (start/finish = first node on the front straight; pit = way 35341695); #1 is the South Chicane variant (-1.9%)",
+      "why": "Game line followed the west side then left the property north and south; 46.7 m RMS. Reference right: #0 runs on the circuit all round. Wikipedia's full course is 1.53 mi; #0 (no chicane) is 1.498 mi, which is the 1.5 mi / 7 turns TrackDimensions already has, so the length stays. Rebuilt 2026-11-20 from #0 (raced clockwise): read at the road-course curvature window, 70 pieces, closed 2.6 m -> 0, rescaled to 1.5 mi; width 11 m and banking still from TrackDimensions. Pit road on the mapped lane (798 m, r200 arcs, 540 m straight). Package re-dressed (road, ground, walls, paddock + RV; the 5 generated grandstands Dress added were removed - scatter only), scenery re-scattered, geometry re-exported, paddock sidecar regenerated (validator clean). Line retrained from scratch (68.20 -> 66.62 s). Now matches at 1.4 m RMS (p95 2.7, max 4.7); the chicane ring #1 reads 6.7 m against it. AI lap sim (AILapSimTests.AnAICarLapsLimeRockCleanly, pace 1.12/1.25 x line -0.05/0.08, 3 laps): 50.9-51.2 s, 0 incidents."
     },
     "MexicoCity": {
       "wrong": "game",

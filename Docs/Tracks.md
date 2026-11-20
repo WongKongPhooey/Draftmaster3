@@ -311,7 +311,8 @@ someone authored corner by corner.
 Twenty-one venues have a trace and fifteen of them import: Atlanta and Kansas (rewritten 2026-11-18 from
 the reference pipeline), Bristol, Bowman Gray, Darlington, Dover, Fort
 Worth, Gateway, Iowa, Las Vegas, Michigan, New Hampshire, Phoenix, Pocono and Richmond. The rest are
-refused for now. Watkins Glen is skipped by name — it is hand-measured off satellite imagery.
+refused for now. Lime Rock (2026-11-20) imports from the reference pipeline too, raced clockwise like the
+Indianapolis road course. Watkins Glen is skipped by name — it is hand-measured off satellite imagery.
 
 The other twelve venues have **no usable trace at all**, and that is a hole in OSM rather than in the
 fetch: Talladega has 3,345m of its 4,281m lap drawn as raceway and Daytona 3,368m of 4,023m, the rest

@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 1.5,
   "surfaceWidthM": 11,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 293189364,293189369,293189360,293189359,17179697,293189371,293189372,293189368,293189363,341048663,293189385,293189362,293189389); 0.02% from the published lap"
  },
  "wikipedia": {
   "title": "Lime Rock Park",
@@ -62,8 +62,8 @@
  },
  "lengthCheckPct": 2.0,
  "venueCentre": [
-  41.927689,
-  -73.383597
+  41.927413,
+  -73.383598
  ],
  "osmRadiusM": 1122,
  "osmCounts": {

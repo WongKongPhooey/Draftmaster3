@@ -2,41 +2,23 @@
  "trackId": "LimeRock",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    293189364,
-    293189369,
-    293189360,
-    293189359,
-    17179697,
-    293189371,
-    293189372,
-    293189368,
-    293189363,
-    341048663,
-    293189385,
-    293189362,
-    293189389
-   ],
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 293189364,293189369,293189360,293189359,17179697,293189371,293189372,293189368,293189363,341048663,293189385,293189362,293189389); 0.02% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Sam Posey Straight 25%",
-    "Paul Newman Straight 14%",
-    "Climbing Turn 10%",
-    "Big Bend 10%"
-   ],
-   "lengthM": 2414.4,
-   "lengthErrPct": 0.02,
+   "names": [],
+   "lengthM": 2411.1,
+   "lengthErrPct": -0.12,
    "selfIntersects": false,
-   "counterTurnDeg": 190.1,
+   "counterTurnDeg": 187.5,
    "flags": [],
    "builtFit": {
-    "rmsM": 46.72,
-    "p95M": 85.54,
-    "maxM": 99.02,
-    "scale": 0.95
+    "rmsM": 1.41,
+    "p95M": 2.7,
+    "maxM": 4.73,
+    "scale": 0.9934
    },
    "index": 0
   },
@@ -74,10 +56,10 @@
    "counterTurnDeg": 184.7,
    "flags": [],
    "builtFit": {
-    "rmsM": 47.42,
-    "p95M": 86.97,
-    "maxM": 95.3,
-    "scale": 0.95
+    "rmsM": 6.66,
+    "p95M": 16.88,
+    "maxM": 24.9,
+    "scale": 0.9816
    },
    "index": 1
   },
@@ -119,39 +101,39 @@
     "runs 17% down a pit lane"
    ],
    "builtFit": {
-    "rmsM": 49.18,
-    "p95M": 86.56,
-    "maxM": 97.39,
-    "scale": 0.95
+    "rmsM": 7.19,
+    "p95M": 17.49,
+    "maxM": 17.74,
+    "scale": 0.9861
    },
    "index": 2
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 46.72,
-  "p95M": 85.54,
-  "maxM": 99.02,
-  "refToBuiltMaxM": 108.88,
+  "rmsM": 1.41,
+  "p95M": 2.7,
+  "maxM": 4.73,
+  "refToBuiltMaxM": 4.76,
   "worstStretches": [
    {
-    "fromM": 846,
-    "toM": 944,
-    "meanM": 87.5
+    "fromM": 1874,
+    "toM": 1972,
+    "meanM": 2.8
    },
    {
-    "fromM": 450,
-    "toM": 548,
-    "meanM": 83.8
+    "fromM": 1974,
+    "toM": 2072,
+    "meanM": 2.3
    },
    {
-    "fromM": 746,
-    "toM": 844,
-    "meanM": 79.8
+    "fromM": 860,
+    "toM": 958,
+    "meanM": 2.3
    }
   ],
-  "scale": 0.95
+  "scale": 0.9934
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }
