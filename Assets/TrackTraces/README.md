@@ -63,8 +63,13 @@ IRP had no trace (its generated oval was a long thin 464 x 156 m, 24.5 m RMS off
 mapped pit lane cut to the way's front-stretch run (it also wraps the Turn 1 and Turn 3-4 aprons). Importing it in
 Unity is still to do.
 
+COTA had no trace (its RoadCourseLayouts sketch was 68 m RMS off the real circuit). One was written 2026-11-20 from
+`track_reference.py` candidate 0 (OSM's raceway ways round the Grand Prix circuit, counter-clockwise as raced), with
+the mapped Pit Lane way and the start/finish line estimated mid front straight (OSM marks none). Read headless at the
+road-course window it lies 2.5 m RMS off the trace; importing it in Unity is still to do.
+
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
-Daytona, Talladega, Indianapolis, COTA, Road America, Lime Rock and Watkins Glen — are not a bug in the
+Daytona, Talladega, Indianapolis, Road America, Lime Rock and Watkins Glen — are not a bug in the
 fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,345m of its 4,281m lap drawn
 and Daytona 3,368m of 4,023m, with the rest simply not there. A venue with no usable trace keeps its
 generated geometry, which is why the generator stays.

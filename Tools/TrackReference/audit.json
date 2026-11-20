@@ -10,9 +10,9 @@
     },
     "COTA": {
       "wrong": "game (old reference ran down the pit lane)",
-      "rebuild": "yes",
-      "from": "#0 (Grand Prix circuit, raceway only, +0.28%); pit way 514836373",
-      "why": "Game's hand-authored RoadCourseLayouts line is a loose sketch, 68 m RMS, most corners in the wrong place. The old best (-0.01%) took the 948 m Pit Lane way instead of the front straight; the new #0 sits on the circuit all the way round. NASCAR has raced the 2.4 mi National-style layout since 2025 - the game's 3.41 mi GP lap is a TrackDimensions decision, not a geometry one."
+      "rebuild": "trace written 2026-11-20; Unity import pending",
+      "from": "#0 (Grand Prix circuit, raceway only, +0.27%), now Assets/TrackTraces/COTA.json (--write-trace=0 --start=30.13205,-97.63985); pit way 514836373",
+      "why": "Game's hand-authored RoadCourseLayouts line is a loose sketch, 68 m RMS, most corners in the wrong place. The old best (-0.01%) took the 948 m Pit Lane way instead of the front straight; the new #0 sits on the circuit all the way round. NASCAR has raced the 2.4 mi National-style layout since 2025 - the game's 3.41 mi GP lap is a TrackDimensions decision, not a geometry one. Rebuilt 2026-11-20 as far as a lane without the Editor can. OSM has no start/finish node here, so the line is an estimate: mid front straight, level with the middle of the straight run of the mapped Pit Lane. Counter-clockwise, as raced. The importer's road-course path (OsmTrackGeometry.SegmentTrace, 24 m window) had been lost from develop - OsmTrackImporter called it and the Editor assembly did not compile - and is restored. Read headless (TracedOvalImportTests, the importer's own Core path): closes within the 3% gate, rescaled to 3.41 mi, and the built lap lies 2.5 m RMS off the trace - 'matches' once imported (IndyRoad, imported, reads 1.9 m the same way and measured 1.8 m exported). The mapped Pit Lane fits as pit road beside the front straight (743 m: S-bends r60, 629 m straight 12.9 m off the line, ends 0.6 / 7.3 m from the mapped ones). An AI lap of the built shape on the RacingLineTrainer model (SplineDriver's speed profile) gets round: centreline 117.6 s, trained 108.0 s, slowest point 64 mph. Width 15 m and banking 0 still from TrackDimensions. The stale trained line (5488 m, the same length, so it would have been accepted on the new shape) is deleted. Still to do in Unity: Import Traced Geometry (selected asset) on COTA only, Export Geometry For Paddock Layout (Selected Track), re-run this report, redress walls/ground (generated dressing only; scatter, paddock via paddock_generate.py --regenerate), retrain the line, run the COTA track tests and a lap sim in Unity."
     },
     "Charlotte": {
       "wrong": "game",
@@ -40,9 +40,9 @@
     },
     "IndyRoad": {
       "wrong": "game (old reference was a backstretch-and-pit-lane chain)",
-      "rebuild": "yes",
-      "from": "#0 (+0.00%) or #1 (-0.44%) - pick by the turn 1 / turns 12-12A layout",
-      "why": "Game line wanders far outside the speedway; 163 m RMS. The old best (+0.99%) was the oval's backstretch chained through the warm-up lane and pit lanes; the new candidates are real road-course laps. #0 and #1 differ only where OSM maps 'Alternate Corner 1' and 'Alternate Corners 12 & 12A': choose the one matching the 2014-present Grand Prix course (14 turns) on the Unity aerial overlay."
+      "rebuild": "done 2026-11-19",
+      "from": "the old #1 (OSM's 'IMS Road Course' ring, -0.44%), now the committed trace (#0)",
+      "why": "Game line wandered far outside the speedway; 163 m RMS. The old best (+0.99%) was the oval's backstretch chained through the warm-up lane and pit lanes; the new candidates are real road-course laps. The old #0 (+0.00%) runs OSM's 'Alternate Corner 1 Entry' and 'Alternate Corners 12 & 12A'; the old #1 is 93% on ways named plain 'IMS Road Course' (the 2014-present Grand Prix course) and reads as exactly 14 corners. Rebuilt 2026-11-19 from #1: --write-trace=1 --start=39.7931571,-86.2388466 (OSM's 'IMS Start-Finish Line' on the bricks) --pit=588780329,1176980820 (F1 pit lane + IMS Pit Lane) --clockwise (OSM tags road_course=clockwise; the importer used to force every trace counter-clockwise, which would have run the course backwards). Read at a road-course curvature window (24 m; the oval 117 m rounded the hairpins to 13 m RMS): 80 pieces, 14 corners, closed 5 m -> 0, rescaled to 2.439 mi; width 15 m and banking 0 still from TrackDimensions. Pit road beside the front stretch on the mapped lane (S-bends r120, 701 m straight 19.7 m off the line, ends within 0.7 m of the mapped ones). Package re-laid (road, ground, walls, 12 stands, scenery); the hand-only paddock left as it was. Line retrained from scratch. Now matches at 1.8 m RMS (p95 3.4, max 5.5); the old #0 (alternate corners) reads 9.8 m against it."
     },
     "Kansas": {
       "wrong": "game, and the committed trace",

@@ -19,6 +19,11 @@ using UnityEngine;
 // land before anybody opens Unity. Daytona is here as the known-good case: imported, exported and measured at
 // 1.5 m RMS with a 731 m pit road; this reading gives 1.9 m and the same pit road. Charlotte (traced
 // 2026-11-18 from OSM's raceway ring, track_reference.py candidate 0) reads 1.0 m with an 820 m pit road.
+// Road courses are read at the road-course window (OsmTrackGeometry.SegmentTrace), and a pit lane beside a
+// straight front stretch falls back to the importer's lane-beside-the-straight fit when no chord fits.
+// IndyRoad (imported 2026-11-19, raced clockwise) is the known-good road course: 1.8 m RMS once exported.
+// COTA (traced 2026-11-20 from track_reference.py candidate 0, the Grand Prix circuit) is the one waiting on
+// a Unity import.
 //
 // Engine-free (Draftmaster.Tracks Core only, no JsonUtility), so it also runs under Tools/HeadlessTests.
 public class TracedOvalImportTests
@@ -28,15 +33,19 @@ public class TracedOvalImportTests
 
     struct Reading
     {
-        public List<Vector2> trace;      // projected, counter-clockwise, node 0 on the start/finish line
+        public List<Vector2> trace;      // projected, in the direction raced, node 0 on the start/finish line
         public List<Vector2> pitLane;    // same plane
         public bool reversed;
         public List<LapGeometry.Piece> lap;
         public float gapBefore, lapBefore;
         public bool closed;
+        public float side;               // +1 counter-clockwise (infield on the left), -1 clockwise
+        public bool roadCourse;
     }
 
     [TestCase("Charlotte")]
+    [TestCase("COTA")]
+    [TestCase("IndyRoad")]
     [TestCase("Daytona")]
     public void TraceImportsAsAClosedLapOfThePublishedLength(string id)
     {
@@ -46,10 +55,12 @@ public class TracedOvalImportTests
             $"{id}: the trace reads as a lap that misses itself by {r.gapBefore:0} m - the importer would refuse it");
         Assert.IsTrue(TrackDimensions.TryGet(id, out var row));
         Assert.AreEqual(row.LapMetres, LapGeometry.TotalLength(r.lap), 1f);
-        Assert.AreEqual(360f, LapGeometry.TotalAngle(r.lap), 1f, "a counter-clockwise lap turns once, left");
+        Assert.AreEqual(360f * r.side, LapGeometry.TotalAngle(r.lap), 1f, "a lap turns once, the way it is raced");
     }
 
     [TestCase("Charlotte")]
+    [TestCase("COTA")]
+    [TestCase("IndyRoad")]
     [TestCase("Daytona")]
     public void BuiltLapLiesOnTheTrace(string id)
     {
@@ -61,6 +72,8 @@ public class TracedOvalImportTests
     }
 
     [TestCase("Charlotte")]
+    [TestCase("COTA")]
+    [TestCase("IndyRoad")]
     [TestCase("Daytona")]
     public void MappedPitLaneFitsAsPitRoad(string id)
     {
@@ -131,13 +144,92 @@ public class TracedOvalImportTests
             return best;
         }
         var radii = new[] { 250f, 200f, 160f, 120f, 90f, 60f, 40f, 30f, 25f };
-        Assert.IsTrue(PitChordFit.TryFitToLine(PoseAt, lapLength, 1f, first, last - first, Nearest(first), Nearest(last),
-                                               400f, radii, out var road),
-                      $"{id}: the mapped pit lane would not fit - the importer would leave the old pit lane");
+        if (!PitChordFit.TryFitToLine(PoseAt, lapLength, r.side, first, last - first, Nearest(first), Nearest(last),
+                                      400f, radii, out var road))
+        {
+            // OsmTrackImporter.FitMappedPit's fallback: pit road beside a straight front stretch on the mapped lane.
+            var lane = new List<Vector2>();
+            foreach (var q in r.pitLane) lane.Add(Map(q));
+            Assert.IsTrue(TrackDimensions.TryGet(id, out var dims));
+            float pitWidth = dims.pitWidthMetres > 0f ? dims.pitWidthMetres : dims.widthMetres * 0.5f;
+            float minOffset = dims.widthMetres * 0.5f + pitWidth * 0.5f + 1f;
+            Assert.IsTrue(PitChordFit.TryFitMappedLaneAlongside(PoseAt, lapLength, r.side, lane, minOffset,
+                                                                out var beside, out float offset),
+                          $"{id}: the mapped pit lane would not fit - the importer would leave the old pit lane");
+            TestContext.WriteLine($"{id}: pit road beside the straight {beside.Length:0} m (S-bends r{beside.radius:0}, " +
+                                  $"straight {beside.straightLength:0} m {offset:0.0} m off the line, entry at " +
+                                  $"{beside.entryDistance:0} m, exit at {beside.exitDistance:0} m, ends " +
+                                  $"{beside.startMiss:0.0}/{beside.endMiss:0.0} m from the mapped ones), " +
+                                  $"trace laid over the lap to {misfit:0.0} m");
+            return;
+        }
         TestContext.WriteLine($"{id}: pit road {road.Length:0} m (arcs r{road.radius:0}, straight {road.straightLength:0} m), " +
                               $"trace laid over the lap to {misfit:0.0} m");
         Assert.Greater(road.straightLength, 0.7f * Vector2.Distance(first, last),
                        $"{id}: pit road's straight is much shorter than the mapped lane");
+    }
+
+    // A road course rebuilt from a trace before anybody can drive it in Unity: lap the built shape with the
+    // RacingLineTrainer model (the speed profile SplineDriver bakes - grip-limited corner speeds, then accel and
+    // braking passes), first on the centreline and then after a short training session. The AI gets round if
+    // every corner has a speed the car can carry, the lap time is a road-course lap rather than a crawl, and
+    // training still finds a line inside the road. Car numbers are the Cup car's trained grip (COTA's old line:
+    // 33.9 m/s^2, ~3.5 g, so laps run quicker than the real ~2:12) and a plain accel/brake pair; the point is the
+    // shape, not the absolute time.
+    [TestCase("COTA")]
+    [TestCase("IndyRoad")]
+    public void AiGetsRoundTheBuiltRoadCourse(string id)
+    {
+        var r = Read(id);
+        Assert.IsTrue(r.roadCourse, $"{id}: not a road course");
+        Assert.IsTrue(TrackDimensions.TryGet(id, out var row));
+
+        var pts = Walk(r.lap, 2f);
+        int n = pts.Count;
+        float half = row.widthMetres * 0.5f;
+        var course = new RacingLineTrainer.Course
+        {
+            centre = pts.ToArray(),
+            right = new Vector2[n],
+            minLateral = new float[n],
+            maxLateral = new float[n],
+        };
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 d = (pts[(i + 1) % n] - pts[(i - 1 + n) % n]).normalized;
+            course.right[i] = new Vector2(d.y, -d.x);
+            course.minLateral[i] = -half;
+            course.maxLateral[i] = half;
+        }
+        Assert.IsTrue(course.IsValid(out string why), why);
+
+        var car = RacingLineTrainer.CarLimits.Simple(lateralAccelMps2: 33.9f, topSpeedMps: 85f, accel: 6f, decel: 12f);
+        var seed = new float[n];
+        var centre = RacingLineTrainer.Analyse(course, seed, car);
+
+        var settings = RacingLineTrainer.Settings.For(LapGeometry.TotalLength(r.lap));
+        settings.rounds = 3;
+        settings.maxPassesPerRound = 2;
+        var trained = RacingLineTrainer.Train(course, seed, car, settings);
+        var lap = RacingLineTrainer.Analyse(course, trained.lateral, car);
+
+        float slowest = float.MaxValue, slowestAt = 0f, along = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            if (lap.speedMps[i] < slowest) { slowest = lap.speedMps[i]; slowestAt = along; }
+            along += Vector2.Distance(pts[i], pts[(i + 1) % n]);
+        }
+        float lapMiles = LapGeometry.TotalLength(r.lap) / 1609.344f;
+        TestContext.WriteLine($"{id}: centreline lap {centre.lapTimeSeconds:0.0} s, trained {lap.lapTimeSeconds:0.0} s " +
+                              $"({3600f * lapMiles / lap.lapTimeSeconds:0.0} mph average, {trained.lapsSimulated} laps), " +
+                              $"slowest {slowest * 2.237f:0} mph at {slowestAt:0} m");
+
+        Assert.Greater(slowest, 8f, $"{id}: a corner the car all but stops for ({slowest * 2.237f:0} mph at {slowestAt:0} m)");
+        Assert.Less(lap.lapTimeSeconds, centre.lapTimeSeconds + 0.01f, $"{id}: training made the lap slower");
+        float average = 3600f * lapMiles / lap.lapTimeSeconds;
+        Assert.That(average, Is.InRange(60f, 135f), $"{id}: {average:0} mph is not a road-course lap");
+        for (int i = 0; i < n; i++)
+            Assert.That(trained.lateral[i], Is.InRange(-half - 0.01f, half + 0.01f), $"{id}: trained line left the road at sample {i}");
     }
 
     // ------------------------------------------------------------------------------------------ the reading
@@ -165,19 +257,21 @@ public class TracedOvalImportTests
             Vector2 a = r.trace[i], b = r.trace[(i + 1) % r.trace.Count];
             twiceArea += (double)a.x * b.y - (double)b.x * a.y;
         }
-        r.reversed = twiceArea < 0;
+        Assert.IsTrue(TrackDimensions.TryGet(id, out var row), $"{id}: not in TrackDimensions");
+        r.roadCourse = row.kind == TrackKind.RoadCourse;
+        // Ovals run counter-clockwise; a road course raced clockwise says so in the trace (OsmTrackImporter).
+        bool clockwise = Regex.IsMatch(text, "\"direction\"\\s*:\\s*\"clockwise\"");
+        r.side = clockwise ? -1f : 1f;
+        r.reversed = clockwise ? twiceArea > 0 : twiceArea < 0;
         if (r.reversed) r.trace.Reverse();
         // The trace repeats its first node to close; the importer's resample drops it, and so does the fit here.
         if (Vector2.Distance(r.trace[0], r.trace[r.trace.Count - 1]) < 0.5f) r.trace.RemoveAt(r.trace.Count - 1);
 
-        float traced = 0f;
-        for (int i = 0; i < r.trace.Count; i++) traced += Vector2.Distance(r.trace[i], r.trace[(i + 1) % r.trace.Count]);
-        r.lap = OsmTrackGeometry.SegmentByCurvature(r.trace, windowMetres: Mathf.Min(120f, traced * 0.03f));
+        r.lap = OsmTrackGeometry.SegmentTrace(r.trace, r.roadCourse);
         LapGeometry.NormaliseTurnAngles(r.lap);
         r.gapBefore = LapGeometry.ClosureGap(r.lap);
         r.lapBefore = LapGeometry.TotalLength(r.lap);
         r.closed = LapGeometry.Close(r.lap);
-        Assert.IsTrue(TrackDimensions.TryGet(id, out var row), $"{id}: not in TrackDimensions");
         LapGeometry.Rescale(r.lap, row.LapMetres);
         return r;
     }

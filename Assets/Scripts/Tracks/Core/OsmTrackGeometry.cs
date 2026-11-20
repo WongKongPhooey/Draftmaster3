@@ -114,6 +114,23 @@ namespace Draftmaster.Tracks
             return outPts;
         }
 
+        // A committed curvature trace read as the importer reads it (OsmTrackImporter, and TracedOvalImportTests
+        // headless). An oval's window scales with the lap - 120 m suits Daytona's 4 km, but on Martinsville's
+        // 0.8 km it is half a turn and smears both corners down the straights. A road course is read much
+        // tighter: its corners are hairpins and chicanes 20-60 m long, and Indianapolis's road course at the
+        // oval's 117 m window rounded them off to 13 m RMS from its trace; at RoadCourseWindowMetres it lies
+        // within 2 m. Its map nodes come from raceway centrelines, not 16 m-spaced wall nodes, so the short
+        // window does not read node noise as corners.
+        public const float RoadCourseWindowMetres = 24f;
+
+        public static List<LapGeometry.Piece> SegmentTrace(IList<Vector2> points, bool roadCourse)
+        {
+            float traced = 0f;
+            for (int i = 0; i < points.Count; i++) traced += Vector2.Distance(points[i], points[(i + 1) % points.Count]);
+            float window = roadCourse ? RoadCourseWindowMetres : Mathf.Min(120f, traced * 0.03f);
+            return SegmentByCurvature(points, windowMetres: window);
+        }
+
         // The lap as runs of near-constant curvature, for a trace good enough to be followed closely.
         //
         // Segment() reads a lap as corners and straights, one arc per corner. That suits a hand-drawn raceway

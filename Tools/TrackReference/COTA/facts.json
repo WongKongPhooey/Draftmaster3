@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 3.41,
   "surfaceWidthM": 15,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 118258940,118258951,118258935,118258946,118258929,118258931,118258962,118258958,118258930,514820041,514820043,514758200,118258956,118258954,118258950,118258939,118258959,118258957,118256423,514836011,118258952,118258937,118258933,514836010,118258928,118258961,118258943,118258947,118258942,1571489343,514820045,1571489343); 0.27% from the published lap"
  },
  "wikipedia": {
   "title": "Circuit of the Americas",
@@ -83,17 +83,17 @@
  },
  "lengthCheckPct": 0.47,
  "venueCentre": [
-  30.132778,
-  -97.641111
+  30.135435,
+  -97.634576
  ],
  "osmRadiusM": 2106,
  "osmCounts": {
-  "raceway": 35,
+  "raceway": 39,
   "pit": 1,
   "wall": 62,
-  "fence": 18,
-  "surface": 0,
-  "grandstand": 9,
+  "fence": 19,
+  "surface": 10,
+  "grandstand": 8,
   "stadium": 0,
   "building": 848,
   "parking": 28,
@@ -112,10 +112,10 @@
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
   "width": 4000,
-  "height": 2617,
-  "groundMetresPerPixel": 0.6072,
+  "height": 2601,
+  "groundMetresPerPixel": 0.612,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-20"
  },
  "trackMap": [
   {
