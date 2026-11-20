@@ -1552,6 +1552,26 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _startSeeded = true;
     }
 
+    // A racing-AI takeover mid-race (AIHandover.ToAI: Auto, a team switch): the car stays where it is across the
+    // road and the AI's own lateral moves it from there. EngageFromCurrentPose merges the path from the car onto
+    // line + tactical offset over a fixed run - a sweep across the road that the racing AI neither plans nor sees,
+    // and that its way round a stopped car (laid relative to the line) fought for the whole run. At Texas, Auto
+    // taking a car 7 m off the racing line on the way into Turn 1 swept it back across the road into the wreck it
+    // was steering round (AutoStoppedCarSimTests). Folds the merge's standing offset into the tactical offset
+    // instead; the arriving slope stays a merge, so the path still carries on through the join. Returns the
+    // tactical offset for the AI to adopt (AIRacingBehaviour.TakeLateral). A lane car or one on pit road keeps the
+    // merge: its lateral is owned by the lane (OvalLaneDirector hands a lane over from the car's lateral) or the pit.
+    public float FoldMergeIntoTactical()
+    {
+        if (_onPit || LaneFollowing || StartLaneBridging || !(_mergeLength > 0f) || !_hasPrevLateral)
+            return tacticalLateralOffset;
+        float slope = _mergeTangent / _mergeLength;
+        tacticalLateralOffset += _mergeFrom;
+        // Whatever the road bounds clamp back off the new base (a car out on the run-off) is still merged in.
+        BeginMerge(_prevLateral - MergeBaseLateralAt(_distance), slope);
+        return tacticalLateralOffset;
+    }
+
     void Start()
     {
         // Re-resolve the gearbox: GridSpawner adds it AFTER this SplineDriver, so the Awake fetch missed it.

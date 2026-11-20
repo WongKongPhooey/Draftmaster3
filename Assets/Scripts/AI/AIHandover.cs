@@ -30,6 +30,8 @@ public static class AIHandover
         if (racing == null) racing = car.AddComponent<AIRacingBehaviour>();
         racing.enabled = true;
         racing.JoinRunningRace();             // mid-race under green: not a start (no start-side hold, no restart settle)
+        // From where the car is across the road, not swept back onto the line by a merge the AI doesn't steer.
+        racing.TakeLateral(spline.FoldMergeIntoTactical());
 
         var input = car.GetComponent<SplineInputDriver>();
         if (input == null) input = car.AddComponent<SplineInputDriver>();

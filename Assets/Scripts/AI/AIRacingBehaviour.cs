@@ -426,6 +426,7 @@ public class AIRacingBehaviour : MonoBehaviour
     {
         _joinedRunning = RaceStart.IsGreen;
         _wasGreen = false;
+        _prevUntactical = float.NaN;   // the line moved on while the human drove: no stale step to hold against
     }
 
     // Parked (pit road, the formation, a handover): no swerve of ours is left on the car's line for whoever drives it next.

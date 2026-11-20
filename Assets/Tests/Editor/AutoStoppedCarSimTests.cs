@@ -25,6 +25,12 @@ using UnityEngine;
 // the car bodies rather than the brains' plans - not needed by any case here, and in WreckEscapeGreenSimTests it traded
 // the two wreck contacts for two more car-to-car ones.
 //
+// Texas (FortWorth), added the same day, hit it at 56 mph from 120 m into Turn 1 (wreck half on the line): Auto took
+// the car 7 m off the racing line, and EngageFromCurrentPose's merge swept the brain's path back across the road onto
+// the line - through the wreck - while the racing AI's way round it (laid relative to the line) fought the merge the
+// whole way. Now the handover folds that offset into the AI's tactical offset (SplineDriver.FoldMergeIntoTactical),
+// so the AI moves the car from where it is. Same case after: no contact, 6.7 m clear, never below 117 mph.
+//
 // Each scenario: the wreck at one place and lateral across the road, the Auto car 350 m short of it at race pace, run
 // until it is past or 40 s. No physics, so contacts are geometric (car boxes 4.8 x 2.0 m from the transforms) and a car
 // that drives into the wreck goes through it - live, that is the crash. Everything is by reflection: the runtime types
@@ -79,6 +85,8 @@ public class AutoStoppedCarSimTests
     [TestCase("Daytona", false, StartBack)]
     [TestCase("Daytona", true, StartBack)]
     [TestCase("Daytona", false, 120f)]
+    [TestCase("FortWorth", false, StartBack)]
+    [TestCase("FortWorth", false, 120f)]
     public void AnAutoCarDrivesRoundOneStoppedCar(string trackId, bool asRestart, float startBack)
     {
         UnityEngine.Random.InitState(5);
@@ -305,7 +313,9 @@ public class AutoStoppedCarSimTests
             {
                 object R(string f) => racing.GetType().GetField(f, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(racing);
                 trace.Append($"\n    {toGo:0} m {mph:0} mph cap {Mathf.Min(999f, (float)capField.GetValue(spline)):0} car {(float)latProp.GetValue(spline):0.0} " +
-                             $"plan {(float)planProp.GetValue(spline):0.0} tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(spline):0.0} | " +
+                             $"plan {(float)planProp.GetValue(spline):0.0} line {(float)splineType.GetProperty("UntacticalLateral").GetValue(spline):0.0} " +
+                             $"tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(spline):0.0} " +
+                             $"lane {splineType.GetProperty("LaneFollowing").GetValue(spline)}/{(float)splineType.GetField("laneAvoidLateral").GetValue(spline):0.0} | " +
                              $"wreck car {(float)latProp.GetValue(wSpline):0.0} plan {(float)planProp.GetValue(wSpline):0.0} | " +
                              $"around {R("_passAroundStopped")} at {(float)R("_passTargetLat"):0.0}+{(float)R("_passClearance"):0.0} " +
                              $"commit {(float)R("_commitTimer"):0.0} dir {(float)R("_commitDir"):0} rec {(float)R("_recoveryTimer"):0.0} " +
