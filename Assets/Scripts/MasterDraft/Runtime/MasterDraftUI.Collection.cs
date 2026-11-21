@@ -13,12 +13,13 @@ using UnityEngine.UI;
 // What the design draws, and what it reads here:
 //  * Header "CARD COLLECTION  10 / 48 collected" — the chrome's title row (DrawChromeState): what the open tab
 //    holds out of everything it could.
-//  * Tabs BUILDS / CARS / DRIVERS / TEAMS / NUMBERS where the design has its rarity tabs (Josh, 2026-11-14): what
-//    there is to collect. Cars = the paint schemes in Paints.json (Core PaintCatalog), named after their sponsors;
+//  * Tabs BUILDS / CARS / DRIVERS / CREW CHIEFS / NUMBERS where the design has its rarity tabs (Josh, 2026-11-14):
+//    what there is to collect. Cars = the paint schemes in Paints.json (Core PaintCatalog), named after their sponsors;
 //    Builds = one build, the highest rated driver, car and crew chief card in the collection (TeamRules.BestBuild,
 //    Josh 2026-11-20 — the DM2 garage car grid that was here is in git history); Drivers = every driver card in
 //    the collection, each copy, best OVR first, as card faces (MasterDraftCardView) — confirm opens the card's
-//    Detail (Make Active / Bench); Teams and Numbers are still to come. On the right, on Cars, cyclers: "SORT: RARITY" (Rarity / Class / Number) and "RARITY: ALL"
+//    Detail (Make Active / Bench); Crew Chiefs (replaced Teams, 2026-11-21) = the same for every crew chief card —
+//    the Detail's Use This Chief; Numbers is still to come. On the right, on Cars, cyclers: "SORT: RARITY" (Rarity / Class / Number) and "RARITY: ALL"
 //    (DM2's 1-4 stars, in the design's rarity colours).
 //  * Cards five across, two rows and the top of a third, scrolling: rarity frame and plate, the class badge where
 //    the design has LV1-LV6 (R for Rookie, then D, C, B, A, S — CardCollection.ClassLetter), the number, the
@@ -323,7 +324,8 @@ public partial class MasterDraftUI
         {
             case GarageTab.Builds: BuildBestBuild(p); break;
             case GarageTab.Cars: BuildPaintsGrid(p); break;
-            case GarageTab.Drivers: BuildDriversGrid(p); break;
+            case GarageTab.Drivers: BuildCardsGrid(p, CardType.Driver, "No driver cards yet."); break;
+            case GarageTab.CrewChiefs: BuildCardsGrid(p, CardType.CrewChief, "No crew chief cards yet."); break;
             default:
                 Text(_content, $"{PaintCollection.TabName(_garageTab)}: coming soon.", IronOvalUI.Role.Data, CollectionStyle.Meta,
                      new Vector2(0f, CollectionTop - 10f), new Vector2(600f, 18f));
@@ -406,33 +408,33 @@ public partial class MasterDraftUI
                   id => ShowPaint(paints.Get(id), PaintCollection.Owns(p.paints, id)));
     }
 
-    // Drivers: every driver card in the collection — each copy its own card — best OVR first, then by name, then
-    // uid so copies keep their order. No filters: the Rarity / Sort cyclers are the Cars tab's. Confirm opens the
-    // card's Detail, where it can be made the active driver or benched.
-    void BuildDriversGrid(MasterDraftProfile p)
+    // Drivers / Crew Chiefs: every card of `type` in the collection — each copy its own card — best OVR first, then
+    // by name, then uid so copies keep their order. No filters: the Rarity / Sort cyclers are the Cars tab's.
+    // Confirm opens the card's Detail: a driver can be made active or benched there, a crew chief used.
+    void BuildCardsGrid(MasterDraftProfile p, CardType type, string empty)
     {
-        var list = DriverCards(p);
+        var list = CardsOfType(p, type);
         foreach (var c in list) _collectionIds.Add(c.uid);
         GarageOwnedCount = GarageCollectedCount = GarageCatalogueCount = list.Count;
-        BuildGrid(list.Count, p.cards.Count == 0 ? "No cards yet. Open the Starter Pack in Packs." : "No driver cards yet.",
-                  (i, pos) => DriverCard(_collectionGrid, list[i], pos),
+        BuildGrid(list.Count, p.cards.Count == 0 ? "No cards yet. Open the Starter Pack in Packs." : empty,
+                  (i, pos) => CollectionCard(_collectionGrid, list[i], pos),
                   uid => { _detail = p.Find(uid); if (_detail != null) ShowDetail(); });
     }
 
-    static List<CardInstance> DriverCards(MasterDraftProfile p)
+    static List<CardInstance> CardsOfType(MasterDraftProfile p, CardType type)
     {
         var list = new List<CardInstance>();
         if (p?.cards == null) return list;
-        foreach (var c in p.cards) if (c?.def != null && c.def.type == CardType.Driver) list.Add(c);
+        foreach (var c in p.cards) if (c?.def != null && c.def.type == type) list.Add(c);
         list.Sort((a, b) => b.def.overall != a.def.overall ? b.def.overall.CompareTo(a.def.overall)
             : string.CompareOrdinal(a.def.name, b.def.name) != 0 ? string.CompareOrdinal(a.def.name, b.def.name)
             : string.CompareOrdinal(a.uid, b.uid));
         return list;
     }
 
-    // A driver card on the collection grid: the card face (OVR, name, three best stats) in the grid's cell, on the
-    // design's drop shadow. The compact face, so the three stats stack under the name at this height.
-    RectTransform DriverCard(Transform parent, CardInstance card, Vector2 pos)
+    // A driver or crew chief card on the collection grid: the card face (OVR, name, stat lines) in the grid's cell,
+    // on the design's drop shadow. The compact face, so the stats stack under the name at this height.
+    RectTransform CollectionCard(Transform parent, CardInstance card, Vector2 pos)
     {
         Plate(parent, "Shadow_" + card.uid, CollectionStyle.Shadow, pos + new Vector2(CardShadow, -CardShadow), new Vector2(CardW, CardH));
         var face = MasterDraftCardView.Build(parent, card.def, new Vector2(CardW, CardH), compact: true);
@@ -576,7 +578,7 @@ public partial class MasterDraftUI
 
     void BuildCollectionFilters()
     {
-        // What to collect: Builds / Cars / Drivers / Teams / Numbers, where the design has its rarity tabs, 6 px apart.
+        // What to collect: Builds / Cars / Drivers / Crew Chiefs / Numbers, where the design has its rarity tabs, 6 px apart.
         float x = 2f;
         for (int t = 0; t < PaintCollection.TabCount; t++)
         {
@@ -587,9 +589,9 @@ public partial class MasterDraftUI
             x += rt.sizeDelta.x + 6f;
         }
 
-        // Right-aligned cyclers: Sort, and Rarity to its left. Builds has one build, and Drivers shows every driver
-        // card, so neither sorts or filters.
-        if (_garageTab == GarageTab.Builds || _garageTab == GarageTab.Drivers) return;
+        // Right-aligned cyclers: Sort, and Rarity to its left. Builds has one build, and Drivers / Crew Chiefs show
+        // every card of theirs, so none of them sorts or filters.
+        if (_garageTab == GarageTab.Builds || _garageTab == GarageTab.Drivers || _garageTab == GarageTab.CrewChiefs) return;
         var sort = Cycler(_content, "Sort", "Sort: " + CardCollection.SortName(_collectionSort), 600f);
         AddItem(sort, "cf.sort", () =>
         {

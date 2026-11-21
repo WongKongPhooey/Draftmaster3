@@ -30,9 +30,9 @@ TitleScreen ─MASTER DRAFT─▶ MasterDraft.unity ─ Home / Garage / Series /
                                                        └─ results ▸ Back to Master Draft ──▶ MasterDraft.unity
 ```
 
-### The Garage collects Builds, Cars, Drivers, Teams and Numbers (2026-11-14)
+### The Garage collects Builds, Cars, Drivers, Crew Chiefs and Numbers (2026-11-14)
 
-The Garage's top row is **Builds / Cars / Drivers / Teams / Numbers** (`GarageTab`), not rarity tabs. Rarity is a
+The Garage's top row is **Builds / Cars / Drivers / Crew Chiefs / Numbers** (`GarageTab`), not rarity tabs. Rarity is a
 cycler on the right, next to Sort (and the carset Set, on Builds).
 
 * **Cars** are paint schemes, each named after a fictional primary sponsor: `Assets/Resources/MasterDraft/Paints.json`
@@ -47,7 +47,10 @@ cycler on the right, next to Sort (and the carset Set, on Builds).
 * **Drivers (2026-11-21):** every driver card in the collection — each copy its own card — on the scrolling
   five-across grid, best OVR first, as card faces (`MasterDraftCardView`, compact face). No Sort/Rarity cyclers.
   The header reads "n collected". Confirm opens the card's Detail (Make Active / Bench); Back returns to the card.
-* **Teams, Numbers:** "coming soon".
+* **Crew Chiefs (2026-11-21, replaced the Teams tab):** every crew chief card in the collection, laid out exactly
+  like Drivers (each copy, best OVR first, compact card faces, no cyclers, "n collected"). Confirm opens the card's
+  Detail (Use This Chief).
+* **Numbers:** "coming soon".
 
 ### The Series tab is an overworld (2026-11-13)
 

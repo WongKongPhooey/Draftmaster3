@@ -125,8 +125,9 @@ public class GarageScreenTests
         Assert.AreEqual($"Best Build   OVR {build.Rating}", TextOf(Content.Find("Build/Heading")));
 
         // The tabs stay; Builds has nothing to sort or filter.
-        foreach (var t in new[] { "Builds", "Cars", "Drivers", "Teams", "Numbers" })
+        foreach (var t in new[] { "Builds", "Cars", "Drivers", "Crew Chiefs", "Numbers" })
             Assert.IsNotNull(Content.Find("GarageTab_" + t), t + " tab");
+        Assert.IsNull(Content.Find("GarageTab_Teams"), "Crew Chiefs replaced the Teams tab");
         Assert.IsNull(Content.Find("Cycler_Sort"));
         Assert.IsNull(Content.Find("Cycler_Rarity"));
         Assert.IsNull(Grid, "no card grid on Builds");
@@ -186,6 +187,60 @@ public class GarageScreenTests
         Assert.AreEqual(0, Get<IReadOnlyList<string>>("GarageCardIds").Count);
         Assert.IsNull(Grid);
         Assert.IsTrue(Content.GetComponentsInChildren<TMP_Text>().Any(t => t.text == "No driver cards yet."));
+    }
+
+    [Test]
+    public void CrewChiefs_ShowsEveryCrewChiefCardInTheCollection()
+    {
+        var profile = TestProfile(0);
+        var chiefs = new List<CardInstance>();
+        for (int i = 0; i < 6; i++) chiefs.Add(AddCard(profile, CardType.CrewChief, 55 + i * 4, "Chief " + i));
+        chiefs.Add(AddCard(profile, CardType.CrewChief, 55, "Chief 0"));   // a second copy of the worst one
+        AddCard(profile, CardType.Driver, 99, "Not A Chief");
+        AddCard(profile, CardType.Car, 99, "Not A Chief Either");
+        Call("BuildOffline", profile, TestCatalogue());
+        Call("SetGarageTab", GarageTab.CrewChiefs);
+
+        // Every crew chief card, each copy, best OVR first; nothing else.
+        var expected = chiefs.OrderByDescending(c => c.def.overall).ThenBy(c => c.def.name, StringComparer.Ordinal)
+                             .ThenBy(c => c.uid, StringComparer.Ordinal).Select(c => c.uid).ToList();
+        CollectionAssert.AreEqual(expected, Get<IReadOnlyList<string>>("GarageCardIds").ToList());
+        Assert.AreEqual(7, Get<int>("GarageFilteredCount"));
+        Assert.AreEqual(7, Get<int>("GarageCollectedCount"));
+
+        Assert.IsNotNull(Grid, "crew chief cards sit on the collection grid");
+        foreach (var c in chiefs)
+            Assert.AreEqual(c.def.name, TextOf(Grid.Find("Card_" + c.uid + "/Inner/Name")), c.uid);
+        Assert.IsNull(Content.Find("Cycler_Sort"), "Crew Chiefs shows every card: nothing to sort");
+        Assert.IsNull(Content.Find("Cycler_Rarity"), "nor filter");
+    }
+
+    [Test]
+    public void CrewChiefs_NoCrewChiefCardsSaysSo()
+    {
+        var profile = TestProfile(0);
+        AddCard(profile, CardType.Driver, 70, "Only Driver");
+        Call("BuildOffline", profile, TestCatalogue());
+        Call("SetGarageTab", GarageTab.CrewChiefs);
+
+        Assert.AreEqual(0, Get<IReadOnlyList<string>>("GarageCardIds").Count);
+        Assert.IsNull(Grid);
+        Assert.IsTrue(Content.GetComponentsInChildren<TMP_Text>().Any(t => t.text == "No crew chief cards yet."));
+    }
+
+    [Test]
+    public void Cars_TabRowClearsTheCyclers()
+    {
+        // "Crew Chiefs" is the longest tab caption: the row must still end left of the Rarity cycler.
+        var profile = TestProfile(0);
+        Call("BuildOffline", profile, TestCatalogue());
+        Call("SetGarageTab", GarageTab.Cars);
+
+        var last = (RectTransform)Content.Find("GarageTab_Numbers");
+        var rarity = (RectTransform)Content.Find("Cycler_Rarity");
+        Assert.IsNotNull(last);
+        Assert.IsNotNull(rarity);
+        Assert.Less(last.anchoredPosition.x + last.sizeDelta.x, rarity.anchoredPosition.x);
     }
 
     [Test]

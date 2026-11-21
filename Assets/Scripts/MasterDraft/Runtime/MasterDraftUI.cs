@@ -1368,7 +1368,7 @@ public partial class MasterDraftUI : MonoBehaviour
     void CloseDetail()
     {
         _overlay = _detailReturn == Overlay.Detail ? Overlay.None : _detailReturn;
-        // Back onto the card it was opened from on the Garage's Drivers grid (its focus keys are "car." + uid).
+        // Back onto the card it was opened from on the Garage's Drivers / Crew Chiefs grid (focus keys "car." + uid).
         if (_overlay == Overlay.None && _tab == Tab.Garage && _detail != null) _lastFocusKey = "car." + _detail.uid;
         Rebuild();
     }
@@ -1723,6 +1723,8 @@ public partial class MasterDraftUI : MonoBehaviour
             _subtitle.text = $"{PaintCollection.Collected(Paints, P.paints)} / {Paints.Count} collected";
         else if (collection && _garageTab == GarageTab.Drivers)
             _subtitle.text = $"{P.CountOf(CardType.Driver)} collected";
+        else if (collection && _garageTab == GarageTab.CrewChiefs)
+            _subtitle.text = $"{P.CountOf(CardType.CrewChief)} collected";
         float titleW = Mathf.Ceil(_title.GetPreferredValues(_title.text).x);
         float subtitleW = _subtitle.text.Length > 0 ? Mathf.Ceil(_subtitle.GetPreferredValues(_subtitle.text).x) : 0f;
         _subtitle.rectTransform.anchoredPosition = new Vector2(20f + titleW + 12f, -12f);
