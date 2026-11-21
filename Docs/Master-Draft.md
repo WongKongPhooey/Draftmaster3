@@ -40,8 +40,14 @@ cycler on the right, next to Sort (and the carset Set, on Builds).
   (`cup26livery9blank.png`, the `alt1` blanks too). `sponsor` is empty until named; the card reads "No. 9 paint"
   until then. `rarity` is the DM2 star rating of the same number in DM2's newest Cup carset that has it
   (`rarityFrom`, "cup24_9"); #35 and #40 had none and are Common. The profile's `paints` list holds the ids collected.
-  Nothing awards a paint yet. `Draftmaster > Master Draft > Give Every Paint (Offline Profile)` (not in Play Mode)
-  fills the list for testing.
+  **Alt paints come out of packs (2026-11-21):** each car card a pack deals has a one-in-six chance
+  (`PackGenerator.AltPaintOneIn`, its own RNG stream so a seed's cards don't change) of wearing one of the
+  catalogue's alternate paints (`alt > 0`). That card is **shiny** (`CardDefinition.Shiny`, with `paint` /
+  `paintLivery` / `paintName`): `MasterDraftCardView` shows the paint's livery and "ALT", and
+  `MasterDraftCardShine` gives it a holo frame, a sweeping sheen and twinkling glitter; the pack reveal holds on it
+  and calls out "Shiny Alt Paint!". Opening it adds the paint to `profile.paints` (a duplicate is just the card).
+  Only alt paints are awarded this way. `Draftmaster > Master Draft > Give Every Paint (Offline Profile)` (not in
+  Play Mode) fills the list for testing. Coverage: `MasterDraftAltPaintTests` (headless), `PackOpeningScreenTests.Shiny_*`.
 * **Builds (2026-11-21):** the player's **five builds** (`profile.builds`, Core `Garage/Builds.cs` — `DraftBuild` +
   `BuildRules`). Each is a driver, car and crew chief card from the collection plus a car number, kept for a kind of
   track: a new profile has **Short Tracks, Speedways, Superspeedways, Road Courses, Dirt** (the five `TrackKind`s,

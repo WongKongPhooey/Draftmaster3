@@ -17,8 +17,9 @@ using UnityEngine.UI;
 //  * Dealing — the cards rise into rows face down, showing a playing-card back (procedural: cream border, red
 //    lattice, the 3 medallion).
 //  * Flipping — the cards turn over one at a time, left to right, each a stepped flip on its vertical axis; an
-//    Epic or Legendary pull holds a beat longer and gets a call-out. Each face landing gets the title logo's metal
-//    crunch (TitleAudio) — not a skip, which turns the rest over silently.
+//    Epic or Legendary pull holds a beat longer and gets a call-out, and so does a shiny car (an alt paint, which
+//    glitters: MasterDraftCardShine). Each face landing gets the title logo's metal crunch (TitleAudio) — not a
+//    skip, which turns the rest over silently.
 //  * Revealed — every card face up and pickable (opens the card's detail), Done, and Open Another for a bought pack.
 // Confirm, a tap, R / pad North or Esc during the animation skips straight to Revealed (the cards are already in the
 // collection: the pack was bought and saved before the screen opened).
@@ -84,6 +85,7 @@ public partial class MasterDraftUI
         public CanvasGroup group;
         public GameObject back, face;
         public Rarity rarity;
+        public bool shiny;   // a car card in an alt paint (CardDefinition.Shiny)
     }
 
     // ------------------------------------------------------------------ what the screen shows (EditMode tests)
@@ -227,7 +229,8 @@ public partial class MasterDraftUI
         for (int i = 0; i < n; i++)
         {
             _flipStarts[i] = t;
-            t += FlipInterval + (_reveal[i].def.rarity >= Rarity.Epic ? BigPullHold : 0f);
+            var def = _reveal[i].def;
+            t += FlipInterval + (def.rarity >= Rarity.Epic || def.Shiny ? BigPullHold : 0f);
         }
         _flipEnd = n == 0 ? 0f : _flipStarts[n - 1] + 2f * FlipHalf;
     }
@@ -267,6 +270,7 @@ public partial class MasterDraftUI
     {
         int faceUp = 0;
         Rarity latest = Rarity.Common, best = Rarity.Common;
+        bool latestShiny = false, anyShiny = false;
         for (int i = 0; i < _packCards.Count; i++)
         {
             var card = _packCards[i];
@@ -306,6 +310,8 @@ public partial class MasterDraftUI
             {
                 faceUp++;
                 latest = card.rarity;
+                latestShiny = card.shiny;
+                anyShiny |= card.shiny;
                 if (card.rarity > best) best = card.rarity;
             }
         }
@@ -315,8 +321,16 @@ public partial class MasterDraftUI
         if (_packCaption != null)
         {
             // The call-out while a big pull is the newest card face up, and over the finished pack.
+            // A shiny (alt paint) card outshines rarity: its call-out while it's the newest face, and over the
+            // finished pack.
             Rarity? pulled = _packStage == PackStage.Revealed ? best : faceUp > 0 ? latest : (Rarity?)null;
-            if (pulled.HasValue && pulled.Value >= Rarity.Epic)
+            bool shiny = _packStage == PackStage.Revealed ? anyShiny : faceUp > 0 && latestShiny;
+            if (shiny)
+            {
+                _packCaption.text = "Shiny Alt Paint!";
+                _packCaption.color = MasterDraftCardShine.CalloutColour;
+            }
+            else if (pulled.HasValue && pulled.Value >= Rarity.Epic)
             {
                 _packCaption.text = $"{CardText.RarityName(pulled.Value)} Pull!";
                 _packCaption.color = MasterDraftCardView.RarityColour(pulled.Value);
@@ -580,7 +594,7 @@ public partial class MasterDraftUI
             var view = new PackCardView
             {
                 slot = slot, home = home, group = slot.GetComponent<CanvasGroup>(),
-                back = back.gameObject, face = face.gameObject, rarity = def.rarity,
+                back = back.gameObject, face = face.gameObject, rarity = def.rarity, shiny = def.Shiny,
             };
             _packCards.Add(view);
 

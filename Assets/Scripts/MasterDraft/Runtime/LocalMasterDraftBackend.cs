@@ -24,6 +24,7 @@ public class LocalMasterDraftBackend : IMasterDraftBackend
     readonly CardCatalog _catalog;
     MasterDraftProfile _profile;
     CarCatalog _cars;
+    PaintCatalog _paints;
     bool _saveBlocked;   // the old file couldn't be backed up: never overwrite it
 
     public LocalMasterDraftBackend(CardCatalog catalog, string path = null)
@@ -43,6 +44,21 @@ public class LocalMasterDraftBackend : IMasterDraftBackend
             _cars = text == null ? null : CarCatalog.FromJson(text.text);
             if (_cars == null) Debug.LogWarning($"[MasterDraft] No car catalogue at Resources/{CarCatalog.ResourcePath}.");
             return _cars;
+        }
+    }
+
+    // The paint catalogue (Resources/MasterDraft/Paints.json), loaded on first use; null if it isn't there. Packs
+    // draw their alt paints (the shiny car cards) from it.
+    public PaintCatalog Paints
+    {
+        get
+        {
+            if (_paints != null) return _paints;
+            MasterDraftJsonInstaller.Install();
+            var text = Resources.Load<TextAsset>(PaintCatalog.ResourcePath);
+            _paints = text == null ? null : PaintCatalog.FromJson(text.text);
+            if (_paints == null) Debug.LogWarning($"[MasterDraft] No paint catalogue at Resources/{PaintCatalog.ResourcePath}.");
+            return _paints;
         }
     }
 
@@ -114,10 +130,10 @@ public class LocalMasterDraftBackend : IMasterDraftBackend
         return Task.CompletedTask;
     }
 
-    public Task<DraftResult> ClaimStarterPack() => Run(p => ProfileOps.ClaimStarter(p, _catalog));
+    public Task<DraftResult> ClaimStarterPack() => Run(p => ProfileOps.ClaimStarter(p, _catalog, Paints));
 
     public Task<DraftResult> BuyAndOpenPack(PackKind kind) =>
-        kind == PackKind.Starter ? ClaimStarterPack() : Run(p => ProfileOps.BuyStandardPack(p, _catalog));
+        kind == PackKind.Starter ? ClaimStarterPack() : Run(p => ProfileOps.BuyStandardPack(p, _catalog, Paints));
 
     public Task<DraftResult> AwardRace(int position) =>
         Run(p => ProfileOps.AwardRace(p, position));

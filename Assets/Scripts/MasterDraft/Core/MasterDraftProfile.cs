@@ -294,10 +294,12 @@ namespace Draftmaster.MasterDraft
     // saves; before online launch the same rules move into Cloud Code so a client can't award itself cards.
     public static class ProfileOps
     {
-        public static DraftResult ClaimStarter(MasterDraftProfile profile, CardCatalog catalog)
+        // paints (optional, both packs): the paint catalogue. With it, a car card can come out wearing an alt paint
+        // (PackGenerator.AltPaintOneIn), and that paint joins the Garage's Cars tab (profile.paints).
+        public static DraftResult ClaimStarter(MasterDraftProfile profile, CardCatalog catalog, PaintCatalog paints = null)
         {
             if (profile.starterClaimed) return DraftResult.Fail("The Starter Pack has already been opened.");
-            var result = Open(profile, catalog, PackKind.Starter);
+            var result = Open(profile, catalog, PackKind.Starter, paints);
             profile.starterClaimed = true;
 
             // A brand-new player gets a team built for them, so GO RACE works straight away.
@@ -308,22 +310,26 @@ namespace Draftmaster.MasterDraft
             return result;
         }
 
-        public static DraftResult BuyStandardPack(MasterDraftProfile profile, CardCatalog catalog)
+        public static DraftResult BuyStandardPack(MasterDraftProfile profile, CardCatalog catalog, PaintCatalog paints = null)
         {
             int price = Economy.PriceOf(PackKind.Standard);
             if (profile.coins < price)
                 return DraftResult.Fail($"A Standard Pack costs {price} coins — you have {profile.coins}.");
             profile.coins -= price;
-            return Open(profile, catalog, PackKind.Standard);
+            return Open(profile, catalog, PackKind.Standard, paints);
         }
 
-        static DraftResult Open(MasterDraftProfile profile, CardCatalog catalog, PackKind kind)
+        static DraftResult Open(MasterDraftProfile profile, CardCatalog catalog, PackKind kind, PaintCatalog paints)
         {
-            var defs = PackGenerator.Open(kind, catalog, profile.NextPackSeed());
+            var defs = PackGenerator.Open(kind, catalog, profile.NextPackSeed(), paints);
             PackGenerator.SortForReveal(defs);
             profile.packsOpened++;
             var result = new DraftResult { ok = true };
-            foreach (var d in defs) result.cards.Add(profile.Add(d));
+            foreach (var d in defs)
+            {
+                result.cards.Add(profile.Add(d));
+                if (d.Shiny) PaintCollection.Award(profile.paints, paints, d.paint);   // a duplicate is just the card
+            }
             result.coins = profile.coins;
             return result;
         }

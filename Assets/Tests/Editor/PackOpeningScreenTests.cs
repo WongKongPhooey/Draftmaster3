@@ -177,4 +177,71 @@ public class PackOpeningScreenTests
             Assert.IsTrue(slot.Find("Card").gameObject.activeSelf);
         }
     }
+
+    // ------------------------------------------------------------------ shiny (alt paint) cars
+
+    static readonly Type ShineType = Type.GetType("MasterDraftCardShine, Assembly-CSharp", throwOnError: true);
+
+    // The test pack with card 4 swapped for a car in the #21 alt paint (a livery that ships in Resources).
+    static List<CardInstance> ShinyPack()
+    {
+        var cards = TestPack();
+        cards[4] = new CardInstance("uid4", new CardDefinition
+        {
+            id = "CAR-CHV-1", type = CardType.Car, name = "Chevrolet Camaro Pro", overall = 74, rarity = Rarity.Rare,
+            power = 78, handling = 73, draft = 73, reliability = 78,
+            paint = "cup26_21_alt1", paintLivery = "cup26livery21blankalt1", paintName = "No. 21 alt paint",
+        });
+        return cards;
+    }
+
+    [Test]
+    public void Shiny_AnAltPaintCarGlittersAndGetsACallout()
+    {
+        Call("BuildOfflinePack", TestProfile(), ShinyPack(), PackKind.Standard);
+        Call("ConfirmPack");
+        bool sawCallout = false;
+        for (int step = 0; step < 600 && Stage != "Revealed"; step++)
+        {
+            Call("AdvancePack", 0.02f);
+            var caption = Find("Caption");   // none until the cards are dealt
+            if (caption != null && caption.GetComponent<TMPro.TMP_Text>().text == "Shiny Alt Paint!") sawCallout = true;
+        }
+        Assert.AreEqual("Revealed", Stage);
+        Assert.IsTrue(sawCallout, "the shiny car gets a call-out as it turns over");
+        Assert.AreEqual("Shiny Alt Paint!", Find("Caption").GetComponent<TMPro.TMP_Text>().text, "and over the opened pack");
+
+        // Only the alt paint card shines.
+        for (int i = 0; i < 6; i++)
+        {
+            var face = Find("PackCard" + i).Find("Card");
+            Assert.AreEqual(i == 4, face.GetComponent(ShineType) != null, $"card {i}");
+        }
+
+        var shiny = Find("PackCard4").Find("Card");
+        var shine = shiny.GetComponent(ShineType);
+        Assert.IsNotNull(shiny.Find("Inner/Livery"), "the alt paint is shown on the card");
+        Assert.AreEqual("ALT", shiny.Find("Inner/Type").GetComponent<TMPro.TMP_Text>().text);
+        Assert.IsNotNull(shiny.Find("Inner/Sheen"), "a sheen layer");
+        Assert.IsNotNull(shiny.Find("Inner/Sparkle0"), "glitter");
+
+        // Run its clock: the frame steps through the holo colours, the sheen sweeps, the glitter twinkles.
+        var tick = ShineType.GetMethod("Tick");
+        var frameColour = ShineType.GetProperty("FrameColour");
+        var sheenShowing = ShineType.GetProperty("SheenShowing");
+        var sparklesShowing = ShineType.GetProperty("SparklesShowing");
+        var colours = new HashSet<Color>();
+        bool sheenOn = false, sheenOff = false;
+        int maxSparkles = 0;
+        for (int i = 0; i < 300; i++)
+        {
+            tick.Invoke(shine, new object[] { 0.02f });
+            colours.Add((Color)frameColour.GetValue(shine));
+            if ((bool)sheenShowing.GetValue(shine)) sheenOn = true; else sheenOff = true;
+            maxSparkles = Math.Max(maxSparkles, (int)sparklesShowing.GetValue(shine));
+        }
+        Assert.GreaterOrEqual(colours.Count, 4, "holo frame cycles");
+        Assert.IsTrue(sheenOn && sheenOff, "the sheen comes and goes");
+        Assert.Greater(maxSparkles, 0, "glitter twinkles");
+    }
 }

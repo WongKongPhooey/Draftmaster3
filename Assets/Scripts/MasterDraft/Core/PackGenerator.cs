@@ -27,10 +27,46 @@ namespace Draftmaster.MasterDraft
 
         public static string NameOf(PackKind kind) => kind == PackKind.Starter ? "Starter Pack" : "Standard Pack";
 
-        public static List<CardDefinition> Open(PackKind kind, CardCatalog catalog, long seed)
+        // One car card in this many comes out wearing an alternate paint — a shiny card. A Standard pack holds a
+        // car about one time in four a slot, so roughly one Standard pack in four has a shiny in it.
+        public const int AltPaintOneIn = 6;
+
+        // The alt paints roll on their own stream, so a seed's cards are the same with or without a paint catalogue.
+        const long AltPaintSalt = 0x416C745061696E74L;   // "AltPaint"
+
+        // paints (optional): the paint catalogue the alt paints are drawn from. Null = no alt paints.
+        public static List<CardDefinition> Open(PackKind kind, CardCatalog catalog, long seed, PaintCatalog paints = null)
         {
             var rng = new DraftRng(seed);
-            return kind == PackKind.Starter ? Starter(catalog, rng) : Standard(catalog, rng);
+            var cards = kind == PackKind.Starter ? Starter(catalog, rng) : Standard(catalog, rng);
+            PaintAlts(cards, paints, new DraftRng(seed ^ AltPaintSalt));
+            return cards;
+        }
+
+        // The alternate paints in a catalogue (alt > 0), catalogue order.
+        public static List<PaintDef> AltPaints(PaintCatalog paints)
+        {
+            var alts = new List<PaintDef>();
+            if (paints == null) return alts;
+            foreach (var p in paints.Paints)
+                if (p.alt > 0) alts.Add(p);
+            return alts;
+        }
+
+        // Each car card rolls once: one in AltPaintOneIn wears an alt paint, picked evenly. The cards are the
+        // catalogue's clones, so painting one never touches the catalogue.
+        static void PaintAlts(List<CardDefinition> cards, PaintCatalog paints, DraftRng rng)
+        {
+            var alts = AltPaints(paints);
+            if (alts.Count == 0) return;
+            foreach (var c in cards)
+            {
+                if (c.type != CardType.Car || rng.Next(AltPaintOneIn) != 0) continue;
+                var p = rng.Pick(alts);
+                c.paint = p.id;
+                c.paintLivery = p.livery;
+                c.paintName = p.DisplayName;
+            }
         }
 
         static List<CardDefinition> Starter(CardCatalog catalog, DraftRng rng)

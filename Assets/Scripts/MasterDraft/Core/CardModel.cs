@@ -48,6 +48,16 @@ namespace Draftmaster.MasterDraft
         // --- Crew chief (0-100) ---
         public int pitSpeed, strategy, setup;
 
+        // --- A car card wearing an alternate paint (PackGenerator.AltPaintOneIn) ---
+        // The pack's shiny pull: the PaintDef id ("cup26_21_alt1"), its Resources livery sprite
+        // ("cup26livery21blankalt1") and its name as it was pulled ("No. 21 alt paint"). Empty on every other card.
+        public string paint;
+        public string paintLivery;
+        public string paintName;
+
+        // Drawn shiny (holo frame, sheen, glitter) by MasterDraftCardView.
+        public bool Shiny => type == CardType.Car && !string.IsNullOrEmpty(paint);
+
         public int Aptitude(TrackKind kind) => kind switch
         {
             TrackKind.ShortTrack => shortTracks,

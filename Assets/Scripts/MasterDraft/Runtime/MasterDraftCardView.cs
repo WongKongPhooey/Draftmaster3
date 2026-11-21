@@ -9,6 +9,10 @@ using UnityEngine.UI;
 // ART HOOK: if a sprite exists at Resources/MasterDraft/Cards/<artKey> (CardDefinition.artKey, e.g.
 // "driver_12", "car_FRD_2"), it is drawn in the portrait box behind the name. Drop art in
 // and it appears; nothing else changes.
+//
+// SHINY: a car card wearing an alternate paint (CardDefinition.Shiny — a pack's alt paint pull) shows the paint's
+// livery between the name and the stats, reads ALT where the type goes, and carries MasterDraftCardShine: a holo
+// frame, a sweeping sheen and twinkling glitter.
 public static class MasterDraftCardView
 {
     public const string ArtFolder = "MasterDraft/Cards/";
@@ -73,7 +77,8 @@ public static class MasterDraftCardView
                        $"Aggression {d.aggression}   Awareness {d.awareness}\n" +
                        $"Tyre Management {d.tyreManagement}";
             case CardType.Car:
-                return $"Power {d.power}   Handling {d.handling}\nDraft {d.draft}   Reliability {d.reliability}";
+                return (d.Shiny ? $"Alt paint: {d.paintName}\n" : "") +
+                       $"Power {d.power}   Handling {d.handling}\nDraft {d.draft}   Reliability {d.reliability}";
             default:
                 return $"Pit Speed {d.pitSpeed}   Strategy {d.strategy}\nSetup {d.setup}";
         }
@@ -89,7 +94,8 @@ public static class MasterDraftCardView
         var rt = (RectTransform)root.transform;
         rt.sizeDelta = size;
         var frame = root.GetComponent<Image>();
-        frame.color = faceDown || d == null ? (t != null ? t.plateLight : Color.grey) : RarityColour(d.rarity);
+        frame.color = faceDown || d == null ? (t != null ? t.plateLight : Color.grey)
+                    : d.Shiny ? MasterDraftCardShine.Holo[0] : RarityColour(d.rarity);
 
         var inner = Box(rt, "Inner", t != null ? t.plateDeep : Color.black, 3f);
 
@@ -123,7 +129,7 @@ public static class MasterDraftCardView
         var ovr = IronOvalUI.Label(inner, "OVR", d.overall.ToString(), IronOvalUI.Role.Header, RarityColour(d.rarity));
         TopLeft(ovr.rectTransform, new Vector2(pad, -pad), new Vector2(40f, 18f));
 
-        var type = IronOvalUI.Label(inner, "Type", TypeShort(d.type), IronOvalUI.Role.Data, t != null ? t.textDim : Color.grey);
+        var type = IronOvalUI.Label(inner, "Type", d.Shiny ? "ALT" : TypeShort(d.type), IronOvalUI.Role.Data, t != null ? t.textDim : Color.grey);
         TopLeft(type.rectTransform, new Vector2(size.x - 6f - 40f - pad, -pad), new Vector2(40f, 18f));
         type.alignment = TextAlignmentOptions.TopRight;
 
@@ -172,10 +178,51 @@ public static class MasterDraftCardView
             stat.textWrappingMode = TextWrappingModes.Normal;
             stat.overflowMode = TextOverflowModes.Ellipsis;
 
-            var rarity = IronOvalUI.Label(inner, "Rarity", CardText.RarityName(d.rarity), IronOvalUI.Role.Data, RarityColour(d.rarity));
+            var rarity = IronOvalUI.Label(inner, "Rarity", CardText.RarityName(d.rarity) + (d.Shiny ? "  Alt Paint" : ""),
+                                          IronOvalUI.Role.Data, RarityColour(d.rarity));
             BottomLeft(rarity.rectTransform, new Vector2(pad, pad), new Vector2(size.x - 6f - 2 * pad, 16f));
         }
+
+        if (d.Shiny)
+        {
+            if (art == null) ShinyLivery(inner, d, name, size, small, pad);
+            MasterDraftCardShine.Add(rt, frame, inner, type, root.GetInstanceID());
+        }
         return rt;
+    }
+
+    // The alt paint itself, centred in the gap between the name and the stats: whole-pixel scale where it fits, else
+    // shrunk to fit. A small card's name drops to one line to make the room.
+    static void ShinyLivery(RectTransform inner, CardDefinition d, TMP_Text name, Vector2 size, bool small, float pad)
+    {
+        var sprite = string.IsNullOrEmpty(d.paintLivery) ? null : Resources.Load<Sprite>(d.paintLivery);
+        if (sprite == null) return;
+
+        float innerW = size.x - 6f, innerH = size.y - 6f;
+        float nameH = 36f;
+        if (small)
+        {
+            nameH = Mathf.Ceil(name.GetPreferredValues("A").y);
+            name.rectTransform.sizeDelta = new Vector2(name.rectTransform.sizeDelta.x, nameH);
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            name.overflowMode = TextOverflowModes.Ellipsis;
+        }
+        float top = innerH - (pad + 20f + nameH) - 2f;
+        float bottom = small ? pad + 20f : pad + 16f + 36f;   // over the stat line(s)
+        float bandH = top - bottom, bandW = innerW - 2f * pad;
+        if (bandH < 8f) return;
+
+        float k = Mathf.Min(bandH / sprite.rect.height, bandW / sprite.rect.width);
+        if (k >= 1f) k = Mathf.Floor(k);
+        float w = Mathf.Round(sprite.rect.width * k), h = Mathf.Round(sprite.rect.height * k);
+
+        var img = new GameObject("Livery", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        img.transform.SetParent(inner, false);
+        img.sprite = sprite;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        BottomLeft(img.rectTransform, new Vector2(Mathf.Round((innerW - w) / 2f), Mathf.Round(bottom + (bandH - h) / 2f)),
+                   new Vector2(w, h));
     }
 
     // A filled child rect inset from its parent.
