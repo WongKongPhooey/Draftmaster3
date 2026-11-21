@@ -12,7 +12,8 @@ using UnityEngine.SceneManagement;
 //    laps, the garage car picked (or the car the chapter hands over), the chapter's AI level and the class step.
 //    A moment (start at lap N, a set field order) runs as a race over the laps it has left from the green; see
 //    ChallengeRace for what RaceScene can't stage yet.
-//  * Launch (Go Race, the card mode until it retires): a Quick Race with the action hand and team effects.
+//  * Launch (Go Race, the card mode until it retires): a Quick Race where the car and crew chief cards trim
+//    the player's car and pit stops.
 //
 // The race reads which track, which driver and whether the session is live from the career's own PlayerPrefs
 // keys, so those are parked first (OneOffRacePrefs) and put back when the Master Draft menu or the title screen
