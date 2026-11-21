@@ -15,7 +15,10 @@ using Draftmaster.Controls;
 // The prompt is only offered from the driving seat, for the reason the tow is: its key (P) is the phone's on foot.
 // A driver out of the car gets back in to head in — the car keeps its "Your car" marker the whole time.
 //
-// Added by RaceDirector.EndRace to its own GameObject, so it dies with the race scene.
+// A one-off race (single race, Master Draft) has no END RACE: its results panel offers VICTORY LAP to the winner
+// instead, which runs the same thing, and heading back reopens the results (the onPutAway callback).
+//
+// Added by RaceDirector to its own GameObject, so it dies with the race scene.
 public class WinnerVictoryLap : MonoBehaviour
 {
     static WinnerVictoryLap _instance;
@@ -28,18 +31,21 @@ public class WinnerVictoryLap : MonoBehaviour
     const string HintId = "victorylap";
 
     PitLaneStart _pits;
+    System.Action _onPutAway;
     bool _offering;
     bool _done;
 
     // Put the winner's car on the line and hand it to them. False when this scene cannot do it (no on-foot body,
     // no start/finish, no box to come back to) — END RACE then puts the race away as it always did.
-    public static bool Begin(GameObject host, PitLaneStart pits)
+    // onPutAway runs once the car is back in its box after "Head back to the pits".
+    public static bool Begin(GameObject host, PitLaneStart pits, System.Action onPutAway = null)
     {
         if (host == null || pits == null || !pits.StartVictoryLap()) return false;
 
         var lap = host.GetComponent<WinnerVictoryLap>();
         if (lap == null) lap = host.AddComponent<WinnerVictoryLap>();
         lap._pits = pits;
+        lap._onPutAway = onPutAway;
         lap._done = false;
         lap.enabled = true;
         _instance = lap;
@@ -96,6 +102,9 @@ public class WinnerVictoryLap : MonoBehaviour
         {
             Finish();
             if (_pits != null) _pits.EndRaceInBox();
+            var putAway = _onPutAway;
+            _onPutAway = null;
+            putAway?.Invoke();
         }, outSeconds: 0.5f, holdSeconds: 0.7f);
     }
 

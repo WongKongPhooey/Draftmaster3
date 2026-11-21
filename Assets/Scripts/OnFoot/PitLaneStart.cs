@@ -1072,7 +1072,9 @@ public class PitLaneStart : MonoBehaviour
         // Race day: the setup was settled at the race plan on race morning, in the motorhome. The pit box
         // only offers the panel in practice and qualifying — here the car runs the plan as agreed (or, when
         // the player never sat down for it, whatever the crew last had on it).
-        bool raceDay = GameSession.CareerActive && RaceWeekend.Current == RaceWeekend.Session.Race;
+        // A race winner getting back in on the victory lap is in the same boat, whatever the mode: the race is run.
+        bool raceDay = (GameSession.CareerActive && RaceWeekend.Current == RaceWeekend.Session.Race)
+                       || WinnerVictoryLap.Active;
 
         // Back in the same car after a tow or a climb-out: the chief has had his say, but practice and
         // qualifying are where the setup gets worked on, so the sheet comes up again. Only what is changed
@@ -1225,10 +1227,11 @@ public class PitLaneStart : MonoBehaviour
         // ran on through the crash, the tow and the whole repair.
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
 
-        // No on-foot body in this mode: the car is back in its box, the crew go to work on it, and the
-        // driver never gets out. Controls stay off while the crew work and come back on the far side of
+        // No on-foot body in this mode (a one-off race's winner only has one for the victory lap, and the tow
+        // stands down for that): the car is back in its box, the crew go to work on it, and the driver never
+        // gets out. Controls stay off while the crew work and come back on the far side of
         // the repair (PitCrewRepair hands the car back), the same as the car they would have climbed into.
-        if (_player == null)
+        if (_player == null || !GameSession.OnFootAllowed)
         {
             PitCrewRepair.Begin(car, handBackWhenDone: true);
             return true;
@@ -1423,6 +1426,23 @@ public class PitLaneStart : MonoBehaviour
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
         _stoppedInBoxSince = -1f;
 
+        // A one-off race's winner, back from the victory lap: that mode keeps its driver in the seat, so the body
+        // the lap lent them is put away again and the car sits in its box with them in it (controls off).
+        if (_player != null && !GameSession.OnFootAllowed)
+        {
+            ParkedCarPin.Hold(car);
+            ShowPrompt(false);
+            ControlHints.Hide("entercar");
+            ControlHints.Hide(ExitHintId);
+            _offeringExit = false;
+            _player.SetActive(false);
+            if (_camFollow != null) _camFollow.target = car.transform;
+            _orthoTarget = drivingOrthoSize;
+            _entered = true;
+            SetPhase(EntryPhase.Driving);
+            return true;
+        }
+
         // No on-foot body (a single race), or already indoors in the motorhome: the car is put away, and the
         // driver is left where they are.
         var rv = RVInterior.Current;
@@ -1442,13 +1462,24 @@ public class PitLaneStart : MonoBehaviour
     // first, as EndRaceInBox does. A driver who had already climbed out is put back in the seat. False — and nothing
     // touched — when there is no on-foot body to get out with, no start/finish to put the car on, or no box to bring
     // it back to: EndRaceInBox is then the whole of END RACE, as before.
+    //
+    // A one-off race (single race, Master Draft) never put a body on the ground, so the winner is given one here,
+    // put away in the seat until they climb out: the victory lap is the one time that mode has anybody on foot.
     public bool StartVictoryLap()
     {
-        if (car == null || _player == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return false;
+        if (car == null || !_boxKnown || Coop.IsGuest) return false;
+        if (_player == null && (GameSession.OnFootAllowed || onFootPrefab == null)) return false;
         if (_challengeDrive || _phase == EntryPhase.Setup || _phase == EntryPhase.Briefing) return false;
         if (!TryStartFinishPose(out Vector3 linePos, out float lineHeadingDeg)) return false;
         var rv = RVInterior.Current;
         if (!IsDriving && rv != null && rv.IsInside) return false;
+
+        // The one-off race's driver, stood up for the first time and straight back in the car.
+        if (_player == null)
+        {
+            SpawnPlayer(car.transform.position);
+            _player.SetActive(false);
+        }
 
         var drive = DriveModeController.Current;
         if (drive != null && !drive.IsDriving) drive.SetDriving(true);
@@ -1514,7 +1545,9 @@ public class PitLaneStart : MonoBehaviour
 
     bool CanClimbOut()
     {
-        if (!IsDriving || car == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return Idle();
+        // A one-off race has nobody on foot, bar its winner on the victory lap (StartVictoryLap gave them a body).
+        bool onFoot = GameSession.OnFootAllowed || (WinnerVictoryLap.Active && _player != null);
+        if (!IsDriving || car == null || !_boxKnown || !onFoot || Coop.IsGuest) return Idle();
         if (RacePauseMenu.IsPaused || ScreenFade.Busy) return Idle();
 
         // Somebody else is driving it: the broadcast cut or the crew chief's headset hands the car to the AI.

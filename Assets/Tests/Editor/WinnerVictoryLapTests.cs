@@ -163,6 +163,69 @@ public class WinnerVictoryLapTests
         }
     }
 
+    // A single race (or Master Draft) never stood a body up. The winner is lent one for the lap — made from the
+    // scene's on-foot prefab and put away in the seat — so they can climb out on the track.
+    [Test]
+    public void AOneOffRaceWinnerIsGivenABodyKeptInTheSeat()
+    {
+        ModeField.SetValue(null, Enum.Parse(Runtime("GameSession+Mode"), "SingleRace"));
+        var template = new GameObject("OnFootTemplate");
+        template.AddComponent<Rigidbody2D>();
+        GameObject spawned = null;
+        try
+        {
+            using (var rig = new Rig(driving: true))
+            {
+                SetField(rig.Start, "_player", null);
+                SetField(rig.Start, "onFootPrefab", template);
+
+                Assert.IsTrue(rig.StartVictoryLap());
+                spawned = (GameObject)rig.Start.GetType()
+                    .GetField("_player", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(rig.Start);
+                Assert.IsNotNull(spawned, "a body to climb out with");
+                Assert.IsFalse(spawned.activeSelf, "kept in the seat until they get out");
+                Assert.IsTrue(rig.IsDriving);
+                Assert.IsTrue(((Behaviour)rig.Car).enabled, "the controller is live");
+                Assert.AreEqual(20f + LineDistance, rig.CarGo.transform.position.y, 0.05f, "on the start/finish line");
+            }
+        }
+        finally
+        {
+            if (spawned != null) UnityEngine.Object.DestroyImmediate(spawned);
+            UnityEngine.Object.DestroyImmediate(template);
+        }
+    }
+
+    [Test]
+    public void AOneOffRaceWithNoOnFootPrefabRefusesAndLeavesTheCarAlone()
+    {
+        ModeField.SetValue(null, Enum.Parse(Runtime("GameSession+Mode"), "SingleRace"));
+        using (var rig = new Rig(driving: true))
+        {
+            SetField(rig.Start, "_player", null);
+            Assert.IsFalse(rig.StartVictoryLap());
+            Assert.AreEqual(-50f, rig.CarGo.transform.position.x, 0.01f, "not moved");
+            Assert.IsFalse(((Behaviour)rig.Car).enabled, "not handed over");
+        }
+    }
+
+    // Heading back in a one-off race: the car goes in its box and the borrowed body is put away again — the driver
+    // is sat in the car, as that mode always has them, not stood in the pit lane.
+    [Test]
+    public void AOneOffRaceHeadingBackPutsTheDriverBackInTheParkedCar()
+    {
+        ModeField.SetValue(null, Enum.Parse(Runtime("GameSession+Mode"), "SingleRace"));
+        using (var rig = new Rig(driving: false))
+        {
+            rig.PlayerGo.SetActive(true);
+            Assert.IsTrue((bool)rig.Start.GetType().GetMethod("EndRaceInBox").Invoke(rig.Start, null));
+            Assert.IsFalse(rig.PlayerGo.activeSelf, "the body is put away");
+            Assert.IsTrue(rig.IsDriving, "sat in the car");
+            Assert.IsFalse(((Behaviour)rig.Car).enabled, "with the controls off");
+            Assert.AreEqual(-50f, rig.CarGo.transform.position.x, 0.05f, "in the box");
+        }
+    }
+
     [Test]
     public void BeginWithoutAPitLaneStartRefuses()
     {
@@ -171,7 +234,7 @@ public class WinnerVictoryLapTests
         {
             Type lapType = Runtime("WinnerVictoryLap");
             var begin = lapType.GetMethod("Begin");
-            Assert.IsFalse((bool)begin.Invoke(null, new object[] { host, null }));
+            Assert.IsFalse((bool)begin.Invoke(null, new object[] { host, null, null }));
             Assert.IsNull(host.GetComponent(lapType));
             Assert.IsFalse((bool)lapType.GetProperty("Active").GetValue(null));
         }

@@ -105,6 +105,7 @@ public class RaceDirector : MonoBehaviour
     float _greenTime = -1f;
     float _checkeredTime;
     bool _panelHidden;
+    bool _victoryLapTaken;   // a one-off race's winner has had (or been refused) the victory lap
     int _scheduledLaps = -1;
     bool _overtimePending;
     bool _overtimeRun;
@@ -563,6 +564,18 @@ public class RaceDirector : MonoBehaviour
         if (racePitIn != null) racePitIn.enabled = false;
 
         var start = FindFirstObjectByType<PitLaneStart>();
+        ParkFieldInBoxes(start);
+
+        // A winner gets the empty circuit first: their car goes onto the start/finish line instead of the box,
+        // and the race is put away when they choose to head back (WinnerVictoryLap). The road is called either way.
+        if (start != null && !(PlayerWon && WinnerVictoryLap.Begin(gameObject, start))) start.EndRaceInBox();
+        WeekendObjectiveHUD.CallTheRoad();
+    }
+
+    // Every car still out on its cool-down lap or rolling down pit road is parked in its box on the spot —
+    // all but the player's, which is the caller's business.
+    static void ParkFieldInBoxes(PitLaneStart start)
+    {
         var playerCar = start != null && start.car != null ? start.car.transform : null;
         foreach (var pit in FindObjectsByType<PitStopController>(FindObjectsSortMode.None))
         {
@@ -571,11 +584,35 @@ public class RaceDirector : MonoBehaviour
             if (spline == null || !spline.isActiveAndEnabled) continue;   // the player's car, or not racing
             pit.ParkInBoxNow();
         }
+    }
 
-        // A winner gets the empty circuit first: their car goes onto the start/finish line instead of the box,
-        // and the race is put away when they choose to head back (WinnerVictoryLap). The road is called either way.
-        if (start != null && !(PlayerWon && WinnerVictoryLap.Begin(gameObject, start))) start.EndRaceInBox();
-        WeekendObjectiveHUD.CallTheRoad();
+    // A one-off race (single race, Master Draft) has no END RACE to hand the winner the circuit, so its results
+    // panel offers VICTORY LAP: the field is parked, the winner's car goes onto the start/finish line with the
+    // controls live (donuts for the crowd, or out of the car for a walk on the track), and "Head back to the pits"
+    // puts the car in its box and brings the results back up — still on Results, so Race Again and Quit to Title
+    // are where they were, and the folded panel's Results button opens them at any time during the lap.
+    void TakeVictoryLap()
+    {
+        if (_victoryLapTaken) return;
+        _victoryLapTaken = true;   // one go; a refusal takes the button away too
+
+        var start = FindFirstObjectByType<PitLaneStart>();
+        if (start == null || !WinnerVictoryLap.Begin(gameObject, start, () => _panelHidden = false)) return;
+
+        var racePitIn = GetComponent<RaceEndPitIn>();
+        if (racePitIn != null) racePitIn.enabled = false;
+        ParkFieldInBoxes(start);
+        _panelHidden = true;
+    }
+
+    // The one-off race's VICTORY LAP row, for its winner, once. Moves ry past itself when drawn.
+    bool VictoryLapOffered => GameSession.IsOneOffRace && PlayerWon && !_victoryLapTaken;
+
+    void VictoryLapButton(float rx, ref float ry, float railW, float bh)
+    {
+        if (!VictoryLapOffered) return;
+        if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "Victory Lap")) TakeVictoryLap();
+        ry += bh + PixelGUI.Px(4f);
     }
 
     // The single-race exits. Each waits for a phone turned upright for the swing camera to come back round
@@ -684,7 +721,7 @@ public class RaceDirector : MonoBehaviour
         float bh = PixelGUI.MenuButtonH;
         float railH = PixelGUI.Px(20f) + (GameSession.CareerActive
             ? PixelGUI.Px(94f) + (bh + PixelGUI.Px(4f))
-            : 3f * (bh + PixelGUI.Px(4f)));
+            : (VictoryLapOffered ? 4f : 3f) * (bh + PixelGUI.Px(4f)));
         float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(174f),
                                                       PixelGUI.Handheld ? railH : 0f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
@@ -809,6 +846,7 @@ public class RaceDirector : MonoBehaviour
             GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), MasterDraftRaceHost.ResultLine, coins);
             coins.normal.textColor = coinsPrev;
             ry += PixelGUI.Px(18f);
+            VictoryLapButton(rx, ref ry, railW, bh);
             if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "Back to Master Draft"))
                 MasterDraftRaceHost.ReturnToMenu();
             ry += bh + PixelGUI.Px(4f);
@@ -821,6 +859,7 @@ public class RaceDirector : MonoBehaviour
         if (!GameSession.CareerActive)
         {
             float sbh = bh;
+            VictoryLapButton(rx, ref ry, railW, sbh);
             if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "Race Again"))
                 RaceAgain();
             ry += sbh + PixelGUI.Px(4f);
