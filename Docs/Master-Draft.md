@@ -120,7 +120,7 @@ change when the career database ages its drivers.
 
 **Card art hook**: drop a sprite at `Resources/MasterDraft/Cards/<artKey>` (`driver_<id>`,
 `car_<MAKE>_<trim>`, `chief_<slug>`) and `MasterDraftCardView` draws it on the card.
-Until then cards are procedural: rarity-coloured frame, OVR, type, name, two stat lines.
+Until then cards are procedural: rarity-coloured frame, OVR, type, name, stat lines — a driver card prints their three highest stats (track aptitudes and craft), at least one always Short Track, Speedway, Superspeedway or Road Course (`CardText.DriverFaceStats`); cars and crew chiefs two lines.
 
 ### Packs
 

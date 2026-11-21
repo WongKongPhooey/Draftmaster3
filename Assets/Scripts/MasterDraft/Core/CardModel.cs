@@ -108,5 +108,80 @@ namespace Draftmaster.MasterDraft
         {
             TrackKind.ShortTrack, TrackKind.Speedway, TrackKind.Superspeedway, TrackKind.RoadCourse, TrackKind.DirtCourse,
         };
+
+        // The four track types a driver card face always shows at least one of. Dirt is a stat, but not one
+        // of these.
+        public static bool IsHeadlineTrackKind(TrackKind k) =>
+            k == TrackKind.ShortTrack || k == TrackKind.Speedway || k == TrackKind.Superspeedway || k == TrackKind.RoadCourse;
+
+        // How many stats a driver card face prints.
+        public const int DriverFaceStatCount = 3;
+
+        // One stat as a card face prints it ("SSW 18").
+        public readonly struct FaceStat
+        {
+            public readonly string label;
+            public readonly int value;
+            public readonly bool headlineTrack;   // Short Track, Speedway, Superspeedway or Road Course
+
+            public FaceStat(string label, int value, bool headlineTrack)
+            {
+                this.label = label;
+                this.value = value;
+                this.headlineTrack = headlineTrack;
+            }
+
+            public override string ToString() => $"{label} {value}";
+        }
+
+        // Every driver stat in face order: track aptitudes first, then craft. Ties on the face resolve to
+        // whichever comes first here, so an even split favours a track type.
+        static FaceStat[] DriverStats(CardDefinition d)
+        {
+            var list = new FaceStat[AllTrackKinds.Length + 5];
+            int n = 0;
+            foreach (var k in AllTrackKinds)
+                list[n++] = new FaceStat(TrackKindShort(k), d.Aptitude(k), IsHeadlineTrackKind(k));
+            list[n++] = new FaceStat("QUA", d.qualifying, false);
+            list[n++] = new FaceStat("CON", d.consistency, false);
+            list[n++] = new FaceStat("AGG", d.aggression, false);
+            list[n++] = new FaceStat("AWR", d.awareness, false);
+            list[n++] = new FaceStat("TYR", d.tyreManagement, false);
+            return list;
+        }
+
+        // The driver's three highest stats (track aptitudes and craft alike), best first. At least one is
+        // always Short Track, Speedway, Superspeedway or Road Course: when the top three hold none of those,
+        // the third gives way to the best of them.
+        public static FaceStat[] DriverFaceStats(CardDefinition d)
+        {
+            if (d == null) return new FaceStat[0];
+
+            // Stable sort, highest first.
+            var all = DriverStats(d);
+            for (int i = 1; i < all.Length; i++)
+            {
+                var x = all[i];
+                int j = i - 1;
+                while (j >= 0 && all[j].value < x.value) { all[j + 1] = all[j]; j--; }
+                all[j + 1] = x;
+            }
+
+            var top = new FaceStat[DriverFaceStatCount];
+            bool hasHeadline = false;
+            for (int i = 0; i < top.Length; i++)
+            {
+                top[i] = all[i];
+                hasHeadline |= all[i].headlineTrack;
+            }
+            if (!hasHeadline)
+            {
+                // Sorted, so the first headline stat past the top three is the best of them, and no higher
+                // than the slot it takes: the face stays in order.
+                for (int i = top.Length; i < all.Length; i++)
+                    if (all[i].headlineTrack) { top[top.Length - 1] = all[i]; break; }
+            }
+            return top;
+        }
     }
 }

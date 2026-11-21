@@ -13,6 +13,10 @@ public static class MasterDraftCardView
 {
     public const string ArtFolder = "MasterDraft/Cards/";
 
+    // Small driver cards stack three stat lines; this pulls them 2px closer at the Data size (TMP line
+    // spacing is in hundredths of an em: 12.5 at 16px = 2px).
+    const float SmallStatLineSpacing = -12.5f;
+
     public static readonly Color EpicPurple = new Color32(0xa0, 0x6c, 0xe8, 0xff);
 
     public static Color RarityColour(Rarity r)
@@ -34,27 +38,19 @@ public static class MasterDraftCardView
         _ => "CC",
     };
 
-    // The two stat lines a card face has room for.
+    // The stat lines a card face prints. A driver gets their three highest stats, one per line
+    // (CardText.DriverFaceStats — at least one is always a Short Track / Speedway / Superspeedway / Road
+    // Course aptitude); cars and crew chiefs get two lines.
     public static string[] StatLines(CardDefinition d)
     {
         switch (d.type)
         {
             case CardType.Driver:
             {
-                // The driver's two best track types, then qualifying pace.
-                TrackKind best = TrackKind.ShortTrack, second = TrackKind.Speedway;
-                int b = -1, s = -1;
-                foreach (var k in CardText.AllTrackKinds)
-                {
-                    int a = d.Aptitude(k);
-                    if (a > b) { second = best; s = b; best = k; b = a; }
-                    else if (a > s) { second = k; s = a; }
-                }
-                return new[]
-                {
-                    $"{CardText.TrackKindShort(best)} {b}  {CardText.TrackKindShort(second)} {s}",
-                    $"QUA {d.qualifying}  CON {d.consistency}",
-                };
+                var stats = CardText.DriverFaceStats(d);
+                var lines = new string[stats.Length];
+                for (int i = 0; i < stats.Length; i++) lines[i] = stats[i].ToString();
+                return lines;
             }
             case CardType.Car:
                 return new[] { $"PWR {d.power}  HND {d.handling}", $"DRF {d.draft}  REL {d.reliability}" };
@@ -136,7 +132,30 @@ public static class MasterDraftCardView
         name.overflowMode = TextOverflowModes.Ellipsis;
 
         var lines = StatLines(d);
-        if (small)
+        if (small && d.type == CardType.Driver)
+        {
+            // All three stats, stacked at the bottom with the lines pulled 2px closer (caps and digits only,
+            // so nothing collides); the name takes what is left above them — two lines on every small size
+            // in use (74x90 the tightest), one with an ellipsis if a card is ever smaller.
+            float innerH = size.y - 6f;
+            string body = string.Join("\n", lines);
+            var stat = IronOvalUI.Label(inner, "Stats", body, IronOvalUI.Role.Data, t != null ? t.textDim : Color.grey);
+            stat.lineSpacing = SmallStatLineSpacing;
+            stat.textWrappingMode = TextWrappingModes.NoWrap;
+            stat.overflowMode = TextOverflowModes.Overflow;
+            stat.alignment = TextAlignmentOptions.BottomLeft;
+            float statsH = Mathf.Round(stat.GetPreferredValues(body).y);
+            const float statsBottom = 3f;
+            BottomLeft(stat.rectTransform, new Vector2(pad, statsBottom), new Vector2(size.x - 6f - 2 * pad, statsH));
+
+            float line = name.GetPreferredValues("A").y;
+            float statsTop = innerH - statsBottom - statsH;
+            float nameTop = Mathf.Clamp(statsTop - Mathf.Ceil(2f * line), pad + Mathf.Round(line), pad + 20f);
+            TopLeft(name.rectTransform, new Vector2(pad, -nameTop),
+                    new Vector2(size.x - 6f - 2 * pad, Mathf.Min(36f, statsTop - nameTop)));
+            name.textWrappingMode = TextWrappingModes.Normal;   // TopLeft resets it
+        }
+        else if (small)
         {
             string body = lines[0];
             var stat = IronOvalUI.Label(inner, "Stats", body, IronOvalUI.Role.Data, t != null ? t.textDim : Color.grey);
