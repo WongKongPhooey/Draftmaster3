@@ -17,7 +17,8 @@ using UnityEngine.UI;
 //  * Dealing — the cards rise into rows face down, showing a playing-card back (procedural: cream border, red
 //    lattice, the 3 medallion).
 //  * Flipping — the cards turn over one at a time, left to right, each a stepped flip on its vertical axis; an
-//    Epic or Legendary pull holds a beat longer and gets a call-out.
+//    Epic or Legendary pull holds a beat longer and gets a call-out. Each face landing gets the title logo's metal
+//    crunch (TitleAudio) — not a skip, which turns the rest over silently.
 //  * Revealed — every card face up and pickable (opens the card's detail), Done, and Open Another for a bought pack.
 // Confirm, a tap, R / pad North or Esc during the animation skips straight to Revealed (the cards are already in the
 // collection: the pack was bought and saved before the screen opened).
@@ -63,7 +64,12 @@ public partial class MasterDraftUI
     float _packTime;
     string _packNote = "";
     float[] _flipStarts = new float[0];
+    bool[] _flipCrunched = new bool[0];
     float _flipEnd;
+
+    // The title logo's crunch, built on first use (play only) on a child of this object, so the reverb filter
+    // treats nothing else.
+    AudioSource _crunchVoice, _crunchSub;
 
     // The layer and what the animation moves; rebuilt with the rest of the screen.
     RectTransform _packLayer, _packBody, _packFlash;
@@ -86,6 +92,8 @@ public partial class MasterDraftUI
     public int PackCardCount => _reveal.Count;
     // Cards showing their face right now (a card mid-flip counts once its face is up).
     public int PackCardsFaceUp { get; private set; }
+    // Crunches played for cards turning over in this pack (counted in EditMode too, where nothing is heard).
+    public int PackCrunches { get; private set; }
 
     // Show a pack's opening against a profile with no session (EditMode tests): the cards are already "bought".
     public void BuildOfflinePack(MasterDraftProfile profile, List<CardInstance> cards, PackKind kind)
@@ -114,6 +122,9 @@ public partial class MasterDraftUI
         _packNote = note ?? "";
         _packStage = PackStage.Sealed;
         _packTime = 0f;
+        _flipStarts = new float[0];
+        _flipCrunched = new bool[0];
+        PackCrunches = 0;
         _overlay = Overlay.Reveal;
         _lastFocusKey = "pack.done";
         Rebuild();
@@ -211,6 +222,7 @@ public partial class MasterDraftUI
     {
         int n = _reveal.Count;
         _flipStarts = new float[n];
+        _flipCrunched = new bool[n];
         float t = FlipLead;
         for (int i = 0; i < n; i++)
         {
@@ -277,6 +289,11 @@ public partial class MasterDraftUI
                     if (t < FlipHalf) scaleX = 1f - (s + 1f) / FlipSteps;     // back narrows to an edge
                     else { face = true; scaleX = (s + 1f) / FlipSteps; }       // face opens out
                 }
+                if (face && i < _flipCrunched.Length && !_flipCrunched[i])
+                {
+                    _flipCrunched[i] = true;
+                    FlipCrunch();
+                }
             }
             else if (_packStage == PackStage.Revealed) face = true;
 
@@ -310,6 +327,36 @@ public partial class MasterDraftUI
                 _packCaption.color = PackStyle.Cream;
             }
         }
+    }
+
+    // A card's face has just turned up: the title logo's crunch, at the title's pitch, sub and reverb.
+    void FlipCrunch()
+    {
+        PackCrunches++;
+        if (!Application.isPlaying) return;
+        if (_crunchVoice == null)
+        {
+            var clip = Resources.Load<AudioClip>(TitleAudio.CrunchClip);
+            if (clip == null) return;
+            var host = new GameObject("PackFlipCrunch");
+            host.transform.SetParent(transform, false);
+            _crunchVoice = CrunchVoice(host, clip, TitleAudio.CrunchPitch);
+            _crunchSub = CrunchVoice(host, clip, TitleAudio.CrunchPitch * 0.5f);
+            TitleAudio.AddCrunchReverb(host, TitleAudio.CrunchReverbSeconds);
+            TitleAudio.EnsureListener();
+        }
+        _crunchVoice.PlayOneShot(_crunchVoice.clip, TitleAudio.CrunchVolume * SoundVolumes.Effects);
+        _crunchSub.PlayOneShot(_crunchSub.clip, TitleAudio.CrunchSubVolume * SoundVolumes.Effects);
+    }
+
+    static AudioSource CrunchVoice(GameObject host, AudioClip clip, float pitch)
+    {
+        var a = host.AddComponent<AudioSource>();
+        a.clip = clip;
+        a.playOnAwake = false;
+        a.spatialBlend = 0f;    // a menu sound, not a sound in the world
+        a.pitch = pitch;
+        return a;
     }
 
     // ------------------------------------------------------------------ the screen

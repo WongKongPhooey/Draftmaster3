@@ -29,15 +29,14 @@ public class TitleLogoIntro : MonoBehaviour
              "covered ~98% of the distance by 0.55, so the crunch lands on the visible stop, not the tail.")]
     [Range(0f, 1f)] public float lockAt = 0.55f;
     [Tooltip("Volume of the crunch as each word locks in.")]
-    [Range(0f, 1f)] public float crunchVolume = 0.9f;
+    [Range(0f, 1f)] public float crunchVolume = TitleAudio.CrunchVolume;
     [Tooltip("A second copy of the crunch an octave down under each hit — the weight of it.")]
-    [Range(0f, 1f)] public float subVolume = 0.7f;
+    [Range(0f, 1f)] public float subVolume = TitleAudio.CrunchSubVolume;
     [Tooltip("Seconds the metal rings on after each hit (the reverb tail).")]
-    [Range(0.1f, 4f)] public float reverbSeconds = 1.3f;
+    [Range(0.1f, 4f)] public float reverbSeconds = TitleAudio.CrunchReverbSeconds;
 
-    const string CrunchClip = "Audio/metal-crunch";
     [Tooltip("Pitch of every crunch, pitched down from the recording for weight. All three words hit the same.")]
-    [Range(0.3f, 1.5f)] public float crunchPitch = 0.74f;
+    [Range(0.3f, 1.5f)] public float crunchPitch = TitleAudio.CrunchPitch;
     // One source per word: a one-shot follows its source's pitch while it plays, and the words land a third
     // of a second apart, so a shared source would bend the last crunch's tail.
     readonly AudioSource[] _audio = new AudioSource[3];
@@ -106,7 +105,7 @@ public class TitleLogoIntro : MonoBehaviour
             if (_tagline == null) _tagline = tag.gameObject.AddComponent<CanvasGroup>();
         }
 
-        _crunch = Resources.Load<AudioClip>(CrunchClip);
+        _crunch = Resources.Load<AudioClip>(TitleAudio.CrunchClip);
         if (_crunch != null)
         {
             for (int i = 0; i < _audio.Length; i++)
@@ -115,22 +114,7 @@ public class TitleLogoIntro : MonoBehaviour
                 _sub[i] = Voice(crunchPitch * 0.5f);
             }
 
-            // A short, bright, metallic room on every hit (the filter treats every source on this object): the
-            // tail is what makes a slam sound like it happened somewhere big rather than in a box.
-            var verb = gameObject.AddComponent<AudioReverbFilter>();
-            verb.reverbPreset = AudioReverbPreset.User;
-            verb.dryLevel = 0f;
-            verb.room = -400f;
-            verb.roomHF = -300f;
-            verb.roomLF = 0f;
-            verb.decayTime = reverbSeconds;
-            verb.decayHFRatio = 0.7f;
-            verb.reflectionsLevel = -200f;
-            verb.reflectionsDelay = 0.012f;
-            verb.reverbLevel = 0f;
-            verb.reverbDelay = 0.02f;
-            verb.diffusion = 100f;
-            verb.density = 100f;
+            TitleAudio.AddCrunchReverb(gameObject, reverbSeconds);
         }
         TitleAudio.EnsureListener();
 

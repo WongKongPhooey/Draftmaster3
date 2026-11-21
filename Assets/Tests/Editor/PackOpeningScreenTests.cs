@@ -41,6 +41,7 @@ public class PackOpeningScreenTests
 
     string Stage => Get<string>("PackStageName");
     int FaceUp => Get<int>("PackCardsFaceUp");
+    int Crunches => Get<int>("PackCrunches");
     Transform Layer => _go.transform.Find("Canvas/PackOpening");
 
     Transform Find(string name)
@@ -132,6 +133,7 @@ public class PackOpeningScreenTests
             Call("AdvancePack", 0.02f);
             if (Stage == "Revealed") break;
             int up = FaceUp;
+            Assert.AreEqual(up, Crunches, "a crunch as each card's face turns up, the title logo's sound");
             Assert.GreaterOrEqual(up, last, "cards never turn back over");
             Assert.LessOrEqual(up - last, 1, "one card at a time");
             last = up;
@@ -151,6 +153,7 @@ public class PackOpeningScreenTests
 
         Assert.AreEqual("Revealed", Stage);
         Assert.AreEqual(6, FaceUp);
+        Assert.AreEqual(6, Crunches, "one crunch per card, no more");
         for (int i = 0; i < 6; i++) Assert.IsTrue(flipped[i], $"card {i} turned over (scaled about its centre)");
         Assert.IsTrue(sawEpicCallout, "the Epic gets a call-out");
         Assert.IsNotNull(Find("Button_pack.done"), "Done once the pack is open");
@@ -166,6 +169,7 @@ public class PackOpeningScreenTests
         Call("ConfirmPack");                 // skip
         Assert.AreEqual("Revealed", Stage);
         Assert.AreEqual(6, FaceUp);
+        Assert.AreEqual(0, Crunches, "a skip turns the cards over silently");
         for (int i = 0; i < 6; i++)
         {
             var slot = Find("PackCard" + i);
