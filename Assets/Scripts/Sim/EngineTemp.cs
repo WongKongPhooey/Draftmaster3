@@ -74,22 +74,24 @@ namespace Draftmaster.Sim
             return c * lat;
         }
 
-        // °C per second for a grille this covered (the most any car ahead covers it) at this speed share.
-        public static float Rate(float cover, float speedShare)
+        // °C per second for a grille this covered (the most any car ahead covers it) at this speed share, with this
+        // much grille tape on (GrilleTape; the default half-taped grille is the model as described above).
+        public static float Rate(float cover, float speedShare, float tape = GrilleTape.Default)
         {
             cover = Mathf.Clamp01(cover);
             speedShare = Mathf.Clamp01(speedShare);
+            float hold = GrilleTape.HoldCover(tape);
             float heat = 0f, clean = 0f;
-            if (cover > HoldCover) heat = (cover - HoldCover) / (1f - HoldCover);
-            else clean = (HoldCover - cover) / HoldCover;   // cooling goes with the share of the grille in clean air
+            if (cover > hold) heat = (cover - hold) / (1f - hold);
+            else clean = (hold - cover) / hold;   // cooling goes with the share of the grille in clean air
             // Heat goes with the work; a slow engine cools whatever is in front of it.
             float cool = Mathf.Clamp01(clean + (1f - speedShare));
-            return HeatRate * speedShare * heat - CoolRate * cool;
+            return HeatRate * GrilleTape.HeatScale(tape) * speedShare * heat - CoolRate * cool;
         }
 
         // One step of the engine's temperature, held between NormalC and MaxC.
-        public static float Step(float tempC, float cover, float speedShare, float dt)
-            => Mathf.Clamp(tempC + Rate(cover, speedShare) * dt, NormalC, MaxC);
+        public static float Step(float tempC, float cover, float speedShare, float dt, float tape = GrilleTape.Default)
+            => Mathf.Clamp(tempC + Rate(cover, speedShare, tape) * dt, NormalC, MaxC);
 
         // 0 at or under OverheatC, 1 at MaxC.
         public static float Overheat01(float tempC) => Mathf.Clamp01((tempC - OverheatC) / (MaxC - OverheatC));
@@ -99,5 +101,65 @@ namespace Draftmaster.Sim
 
         // The gauge: 0 at normal running, 1 at overheating.
         public static float Gauge01(float tempC) => Mathf.Clamp01((tempC - NormalC) / (OverheatC - NormalC));
+    }
+
+    // Grille tape, the setup sheet's Tape slider (CarSetup.tape): how much of the radiator opening is taped over.
+    // More tape is less drag and a little more straight-line speed, but less air through the radiator, so the engine
+    // heats sooner and quicker in someone's wake (EngineTemp). In clean air the radiator still gets enough.
+    //
+    //   *   0%  no tape: the engine never overheats, but the open grille costs some straight-line speed.
+    //   *  50%  the default, and the car EngineTemp describes (and every AI car runs).
+    //   *  80%  a qualifying run: alone on the track, in clean air, so worth the speed.
+    //   * 100%  fastest in a straight line, and overheats very quickly anywhere but clean air.
+    public static class GrilleTape
+    {
+        public const float Default = 0.5f;
+        public const float Qualifying = 0.8f;
+
+        // Heating rate in a wake against the default tape: (tape / Default)², so 0 with no tape, 1 at half, 4 fully
+        // taped (bumper to bumper at pack speed it overheats in ~22 s, not ~90).
+        public const float MaxHeatScale = 4f;
+        // How much of the grille the car ahead must cover before the engine heats (EngineTemp.HoldCover at the
+        // default tape). Fully taped it heats with the car ahead about two car lengths up the road - anything short of
+        // clean air.
+        public const float FullTapeHoldCover = 0.15f;
+
+        // Top speed against the default tape: an open grille gives up 2% (~4 mph at Daytona), a fully taped one gains 1%.
+        public const float NoTapeTopSpeedLoss = 0.02f;
+        public const float FullTapeTopSpeedGain = 0.01f;
+
+        public static float Clamp(float tape) => Mathf.Clamp01(tape);
+
+        public static float HeatScale(float tape)
+        {
+            float q = Clamp(tape) / Default;
+            return Mathf.Min(MaxHeatScale, q * q);
+        }
+
+        public static float HoldCover(float tape)
+        {
+            float over = Mathf.Clamp01((Clamp(tape) - Default) / (1f - Default));
+            return Mathf.Lerp(EngineTemp.HoldCover, FullTapeHoldCover, over);
+        }
+
+        public static float TopSpeedFactor(float tape)
+        {
+            tape = Clamp(tape);
+            if (tape <= Default) return 1f - NoTapeTopSpeedLoss * (Default - tape) / Default;
+            return 1f + FullTapeTopSpeedGain * (tape - Default) / (1f - Default);
+        }
+
+        public static string Label(float tape) => $"{Mathf.RoundToInt(Clamp(tape) * 100f)}%";
+
+        // One line for the setup sheet under the slider.
+        public static string Note(float tape)
+        {
+            tape = Clamp(tape);
+            if (tape < 0.15f) return "No tape: never runs hot, but slow on the straights.";
+            if (tape < 0.4f) return "Light tape: runs cool, a touch slower on the straights.";
+            if (tape < 0.65f) return "Half taped: race trim, runs warm in a pack.";
+            if (tape < 0.9f) return "Heavy tape: quick, cooks in traffic. Qualifying trim.";
+            return "Fully taped: fastest, overheats quick out of clean air.";
+        }
     }
 }

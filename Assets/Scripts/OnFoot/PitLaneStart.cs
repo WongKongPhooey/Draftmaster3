@@ -1102,7 +1102,7 @@ public class PitLaneStart : MonoBehaviour
 
     // A completed stop in practice or qualifying: the car is held in the box with the controls off while the
     // driver works on the setup, and handed back on CONFIRM. The crew have just fitted tyres and fuel, so the
-    // whole setup goes on — compound, and the tank filled to the chosen load rather than brimmed.
+    // whole setup goes on — a fresh set, and the tank filled to the chosen load rather than brimmed.
     void OnPitServiced(PlayerVehicleController serviced)
     {
         if (serviced == null || serviced != car || !showSetupPanel || _challengeDrive || _player == null) return;

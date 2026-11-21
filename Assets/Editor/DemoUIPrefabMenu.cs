@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Builds the two demo-flow Canvas prefabs into Assets/Resources/UI/ so the runtime can Instantiate them:
-//   CarSetupPanel — the crew chief's "how do you want the car?" panel (tyres / fuel / balance / steering)
+//   CarSetupPanel — the crew chief's "how do you want the car?" panel (tape / fuel / balance / steering)
 //   ControlHint   — the bottom-of-screen "LEFT SHIFT — Run" teaching prompt
 //
 // Same approach as the RV interior builder: a menu item lays the prefab out once, after which it's a normal
@@ -11,7 +11,7 @@ using UnityEngine.UI;
 // rebuild only when you want the stock layout back.
 //
 // The binder scripts (CarSetupPanelUI / ControlHintUI) find their parts by path, so keep the names if you
-// rearrange: Panel/Title, Panel/Tyres/SoftButton, Panel/Fuel/Slider, Panel/KeyBadge/Key, etc.
+// rearrange: Panel/Title, Panel/Tape/Slider, Panel/Fuel/Slider, Panel/KeyBadge/Key, etc.
 public static class DemoUIPrefabMenu
 {
     const string Folder = "Assets/Resources/UI";
@@ -22,7 +22,6 @@ public static class DemoUIPrefabMenu
     static readonly Color Backdrop = new Color(0f, 0f, 0f, 0.72f);
     static readonly Color PanelBg = new Color(0.075f, 0.082f, 0.098f, 0.97f);
     static readonly Color Accent = new Color(0.16f, 0.55f, 0.95f, 1f);
-    static readonly Color Idle = new Color(0.18f, 0.18f, 0.2f, 1f);
     static readonly Color Ink = new Color(0.95f, 0.95f, 0.96f, 1f);
     static readonly Color Muted = new Color(0.62f, 0.63f, 0.66f, 1f);
 
@@ -54,19 +53,17 @@ public static class DemoUIPrefabMenu
         var subtitle = NewText("Subtitle", panel.transform, "Chief's waiting on your call", 18, BodyFont, Muted, TextAnchor.MiddleLeft);
         TopLeft(subtitle.rectTransform, 46f, -84f, 500f, 28f);
 
-        // --- Tyres
-        var tyres = NewGroup("Tyres", panel.transform);
-        TopLeft(tyres, 0f, -140f, 780f, 130f);
-        var tyreLabel = NewText("Label", tyres, "Tyres", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
-        TopLeft(tyreLabel.rectTransform, 46f, -8f, 240f, 36f);
-
-        var soft = NewButton("SoftButton", tyres, "Soft", Accent, Ink);
-        TopLeft(soft.GetComponent<RectTransform>(), 260f, -4f, 200f, 60f);
-        var hard = NewButton("HardButton", tyres, "Hard", Idle, Muted);
-        TopLeft(hard.GetComponent<RectTransform>(), 480f, -4f, 200f, 60f);
-
-        var note = NewText("Note", tyres, "Softs: more grip, gone sooner.", 17, BodyFont, Muted, TextAnchor.MiddleLeft);
-        TopLeft(note.rectTransform, 262f, -68f, 460f, 32f);
+        // --- Grille tape (0..20 = 0..100% in 5% steps; CarSetupPanelUI sets the range)
+        var tape = NewGroup("Tape", panel.transform);
+        TopLeft(tape, 0f, -140f, 780f, 130f);
+        var tapeLabel = NewText("Label", tape, "Tape", 20, HeadingFont, Muted, TextAnchor.MiddleLeft);
+        TopLeft(tapeLabel.rectTransform, 46f, -10f, 240f, 36f);
+        var tapeSlider = NewSlider("Slider", tape, 0f, 20f, 10f, true);
+        TopLeft(tapeSlider.GetComponent<RectTransform>(), 260f, -18f, 340f, 24f);
+        var tapeValue = NewText("Value", tape, "50%", 24, HeadingFont, Ink, TextAnchor.MiddleRight);
+        TopLeft(tapeValue.rectTransform, 620f, -10f, 110f, 36f);
+        var tapeNote = NewText("Note", tape, Draftmaster.Sim.GrilleTape.Note(Draftmaster.Sim.GrilleTape.Default), 15, BodyFont, Muted, TextAnchor.MiddleLeft);
+        TopLeft(tapeNote.rectTransform, 262f, -52f, 460f, 28f);
 
         // --- Fuel
         var fuel = NewGroup("Fuel", panel.transform);

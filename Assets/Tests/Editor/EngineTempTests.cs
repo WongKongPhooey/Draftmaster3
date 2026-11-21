@@ -108,4 +108,76 @@ public class EngineTempTests
         Assert.AreEqual(0f, EngineTemp.Gauge01(EngineTemp.NormalC), 1e-6f);
         Assert.AreEqual(1f, EngineTemp.Gauge01(EngineTemp.OverheatC), 1e-6f);
     }
+
+    // ------------------------------------------------------------------ grille tape (the setup sheet's Tape slider)
+
+    static float SecondsToReach(float fromC, float toC, float cover, float speedShare, float tape)
+    {
+        float t = fromC, s = 0f;
+        while (s < 1000f)
+        {
+            if (t >= toC) return s;
+            t = EngineTemp.Step(t, cover, speedShare, Dt, tape);
+            s += Dt;
+        }
+        return float.PositiveInfinity;
+    }
+
+    [Test]
+    public void HalfTapedIsTheStockCar()
+    {
+        Assert.AreEqual(0.5f, GrilleTape.Default, 1e-6f);
+        foreach (float cover in new[] { 0f, 0.2f, 0.5f, 0.8f, 1f })
+            foreach (float share in new[] { 0.3f, 1f })
+                Assert.AreEqual(EngineTemp.Rate(cover, share), EngineTemp.Rate(cover, share, GrilleTape.Default), 1e-6f);
+        Assert.AreEqual(1f, GrilleTape.TopSpeedFactor(GrilleTape.Default), 1e-6f);
+        Assert.AreEqual("50%", GrilleTape.Label(GrilleTape.Default));
+    }
+
+    [Test]
+    public void NoTapeNeverOverheats_ButLosesStraightLineSpeed()
+    {
+        foreach (float cover in new[] { 0f, 0.5f, 0.8f, 1f })
+            Assert.LessOrEqual(EngineTemp.Rate(cover, 1f, 0f), 0f, $"cover {cover}: an untaped engine heated");
+        // Bumper to bumper at pack speed for the whole 1000 s window and it never gets off normal running.
+        Assert.IsTrue(float.IsPositiveInfinity(SecondsToReach(EngineTemp.NormalC, EngineTemp.NormalC + 0.1f, 1f, 1f, 0f)));
+        Assert.Less(GrilleTape.TopSpeedFactor(0f), 1f);
+        Assert.AreEqual(1f - GrilleTape.NoTapeTopSpeedLoss, GrilleTape.TopSpeedFactor(0f), 1e-6f);
+    }
+
+    [Test]
+    public void FullTapeOverheatsVeryQuicklyOutOfCleanAir()
+    {
+        float push = EngineTemp.Cover(Centre(0f), 0f);
+        float stock = SecondsToReach(EngineTemp.NormalC, EngineTemp.OverheatC, push, 1f, GrilleTape.Default);
+        float taped = SecondsToReach(EngineTemp.NormalC, EngineTemp.OverheatC, push, 1f, 1f);
+        Assert.Less(taped, stock / 3f, $"fully taped overheated in {taped:0} s against the stock {stock:0} s");
+        Assert.Less(taped / DaytonaLapSeconds, 0.6f, $"fully taped overheated in {taped / DaytonaLapSeconds:0.00} laps");
+
+        // Two car lengths back the stock car cools; fully taped it is still heating - anything short of clean air.
+        float twoBack = EngineTemp.Cover(Centre(2f), 0f);
+        Assert.Less(EngineTemp.Rate(twoBack, 1f), 0f);
+        Assert.Greater(EngineTemp.Rate(twoBack, 1f, 1f), 0f);
+
+        // In clean air it still cools as well as any.
+        Assert.AreEqual(-EngineTemp.CoolRate, EngineTemp.Rate(0f, 1f, 1f), 1e-5f);
+    }
+
+    [Test]
+    public void MoreTapeIsMoreSpeed_QualifyingTapeIsWorthItAlone()
+    {
+        float last = 0f;
+        for (int i = 0; i <= 20; i++)
+        {
+            float f = GrilleTape.TopSpeedFactor(i / 20f);
+            Assert.Greater(f, last, $"tape {i * 5}%: no faster than {(i - 1) * 5}%");
+            last = f;
+        }
+        Assert.Greater(GrilleTape.TopSpeedFactor(GrilleTape.Qualifying), 1f);
+        // A qualifying run is alone on the track: in clean air the taped engine cools, never heats.
+        Assert.Less(EngineTemp.Rate(0f, 1f, GrilleTape.Qualifying), 0f);
+        // And more tape heats quicker in a wake.
+        float push = EngineTemp.Cover(Centre(0f), 0f);
+        Assert.Greater(EngineTemp.Rate(push, 1f, GrilleTape.Qualifying), EngineTemp.Rate(push, 1f));
+    }
 }

@@ -2,10 +2,10 @@ using Draftmaster.Data;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The choices the driver makes before rolling out: rubber, fuel load, handling balance and steering ratio.
+// The choices the driver makes before rolling out: grille tape, fuel load, handling balance and steering ratio.
 // Authored by the pre-race setup panel (CarSetupPanelUI), applied to the car's own components — there is no
 // separate "setup" system to keep in sync, each field just writes the thing that already models it:
-//   compound → TireModel.SetCompound (grip / wear / warm-up)
+//   tape     → PlayerVehicleController.grilleTape (engine heat out of clean air vs straight-line speed; GrilleTape)
 //   fuel     → FuelTank.fuelLitres   (mass, and the engine cuts when dry)
 //   balance  → PlayerVehicleController.understeerBias (front/rear grip split)
 //   steering → PlayerVehicleController.steeringRatio  (1:8 = the car as it always steered; see SteeringRatio)
@@ -24,7 +24,8 @@ public class CarSetup
     public const float NeutralBias = 0.05f;
     public const float BalanceSwing = 0.15f;
 
-    public TireModel.Compound compound = TireModel.Compound.Soft;
+    [Tooltip("Grille tape 0..1 (GrilleTape). 0.5 = default; more = faster on the straights but overheats sooner out of clean air (0.8 suits a qualifying run); 0 = never overheats, slower on the straights.")]
+    [Range(0f, 1f)] public float tape = GrilleTape.Default;
     [Range(MinFuel, MaxFuel)] public float fuelLitres = 12f;
     [Tooltip("-1 = full oversteer (loose, rotates), 0 = as the team left it, +1 = full understeer (stable, pushes).")]
     [Range(-1f, 1f)] public float balance = 0f;
@@ -35,6 +36,8 @@ public class CarSetup
     public float UndersteerBias => NeutralBias + balance * BalanceSwing;
 
     public string SteeringRatioLabel => SteeringRatio.Label(steeringRatio);
+
+    public string TapeLabel => GrilleTape.Label(tape);
 
     // Human-readable balance for the panel label.
     public string BalanceLabel
@@ -51,7 +54,7 @@ public class CarSetup
 
     public CarSetup Clone() => new CarSetup
     {
-        compound = compound, fuelLitres = fuelLitres, balance = balance, steeringRatio = steeringRatio,
+        tape = tape, fuelLitres = fuelLitres, balance = balance, steeringRatio = steeringRatio,
     };
 
     // Push the setup onto a car. Adds a FuelTank if the car hasn't got one (only the crew-chief HUD did that
@@ -60,9 +63,10 @@ public class CarSetup
     {
         if (car == null) return;
 
+        // A fresh set of tyres on the car it rolls out in.
         var tires = car.GetComponent<TireModel>();
         if (tires == null) tires = car.AddComponent<TireModel>();
-        tires.SetCompound(compound);
+        tires.PitReset();
 
         var tank = car.GetComponent<FuelTank>();
         if (tank == null) tank = car.AddComponent<FuelTank>();
@@ -74,23 +78,18 @@ public class CarSetup
         {
             pvc.understeerBias = UndersteerBias;
             pvc.steeringRatio = SteeringRatio.Clamp(steeringRatio);
+            pvc.grilleTape = GrilleTape.Clamp(tape);
         }
     }
 
     // Push only what the driver changed against `before` (what the panel opened on) onto a car that has been
     // run on. The car sat in its box after a tow is as worn and as light as it came in, and re-applying the
-    // whole setup would hand it a fresh set and a full load for crashing. Rules in SetupAdjustment.
+    // whole setup would hand it a fresh set and a full load for crashing. Rules in SetupAdjustment; the tyres stay
+    // on, the tape, balance and steering are settings and always apply.
     public void ApplyChangesTo(GameObject car, CarSetup before)
     {
         if (car == null) return;
         if (before == null) { ApplyTo(car); return; }
-
-        if (SetupAdjustment.FitsNewTyres((int)before.compound, (int)compound))
-        {
-            var tires = car.GetComponent<TireModel>();
-            if (tires == null) tires = car.AddComponent<TireModel>();
-            tires.SetCompound(compound);
-        }
 
         if (SetupAdjustment.ChangesFuel(before.fuelLitres, fuelLitres))
         {
@@ -105,10 +104,11 @@ public class CarSetup
         {
             pvc.understeerBias = UndersteerBias;
             pvc.steeringRatio = SteeringRatio.Clamp(steeringRatio);
+            pvc.grilleTape = GrilleTape.Clamp(tape);
         }
     }
 
-    const string KeyCompound = "setup.compound";
+    const string KeyTape = "setup.tape";
     const string KeyFuel = "setup.fuel";
     const string KeyBalance = "setup.balance";
     // The steering ratio is remembered per kind of track, not once: what suits Daytona's long banked turns
@@ -126,7 +126,7 @@ public class CarSetup
 
     public void Save()
     {
-        PlayerPrefs.SetInt(KeyCompound, (int)compound);
+        PlayerPrefs.SetFloat(KeyTape, GrilleTape.Clamp(tape));
         PlayerPrefs.SetFloat(KeyFuel, fuelLitres);
         PlayerPrefs.SetFloat(KeyBalance, balance);
         PlayerPrefs.SetFloat(SteeringKey(CurrentIsRoadCourse), SteeringRatio.Clamp(steeringRatio));
@@ -138,7 +138,7 @@ public class CarSetup
         bool road = CurrentIsRoadCourse;
         return new CarSetup
         {
-            compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyCompound, (int)TireModel.Compound.Soft),
+            tape = GrilleTape.Clamp(PlayerPrefs.GetFloat(KeyTape, GrilleTape.Default)),
             fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyFuel, 12f), MinFuel, MaxFuel),
             balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyBalance, 0f), -1f, 1f),
             steeringRatio = LoadSteering(SteeringKey(road), road),
@@ -151,7 +151,7 @@ public class CarSetup
     // above, so a session driven after it (a truck driver's Friday qualifying) cannot quietly change the race
     // car. Stamped with the weekend it was made for: last week's plan is not this week's.
     const string KeyPlanWeekend = "raceplan.weekend";
-    const string KeyPlanCompound = "raceplan.compound";
+    const string KeyPlanTape = "raceplan.tape";
     const string KeyPlanFuel = "raceplan.fuel";
     const string KeyPlanBalance = "raceplan.balance";
     const string KeyPlanSteering = "raceplan.steering";
@@ -159,7 +159,7 @@ public class CarSetup
     public void SaveAsRacePlan(int weekendId)
     {
         PlayerPrefs.SetInt(KeyPlanWeekend, weekendId);
-        PlayerPrefs.SetInt(KeyPlanCompound, (int)compound);
+        PlayerPrefs.SetFloat(KeyPlanTape, GrilleTape.Clamp(tape));
         PlayerPrefs.SetFloat(KeyPlanFuel, fuelLitres);
         PlayerPrefs.SetFloat(KeyPlanBalance, balance);
         PlayerPrefs.SetFloat(KeyPlanSteering, SteeringRatio.Clamp(steeringRatio));
@@ -172,7 +172,7 @@ public class CarSetup
         if (!PlayerPrefs.HasKey(KeyPlanWeekend) || PlayerPrefs.GetInt(KeyPlanWeekend) != weekendId) return null;
         return new CarSetup
         {
-            compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyPlanCompound, (int)TireModel.Compound.Soft),
+            tape = GrilleTape.Clamp(PlayerPrefs.GetFloat(KeyPlanTape, GrilleTape.Default)),
             fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanFuel, MaxFuel), MinFuel, MaxFuel),
             balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanBalance, 0f), -1f, 1f),
             // A plan saved before the ratio existed opens on the track's default.
@@ -195,7 +195,7 @@ public class CarSetup
     public static void ClearRacePlan()
     {
         PlayerPrefs.DeleteKey(KeyPlanWeekend);
-        PlayerPrefs.DeleteKey(KeyPlanCompound);
+        PlayerPrefs.DeleteKey(KeyPlanTape);
         PlayerPrefs.DeleteKey(KeyPlanFuel);
         PlayerPrefs.DeleteKey(KeyPlanBalance);
         PlayerPrefs.DeleteKey(KeyPlanSteering);

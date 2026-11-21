@@ -91,7 +91,7 @@ public class RacePlanTests
 
     // ------------------------------------------------------------------ the stored plan (Assembly-CSharp)
 
-    static readonly string[] PlanKeys = { "raceplan.weekend", "raceplan.compound", "raceplan.fuel", "raceplan.balance" };
+    static readonly string[] PlanKeys = { "raceplan.weekend", "raceplan.tape", "raceplan.fuel", "raceplan.balance" };
 
     [Test]
     public void RacePlanIsStoredForItsOwnWeekendOnly()
@@ -106,7 +106,7 @@ public class RacePlanTests
         // Leave whatever the developer's own career had stored exactly as it was.
         bool had = PlayerPrefs.HasKey(PlanKeys[0]);
         int w = PlayerPrefs.GetInt(PlanKeys[0]);
-        int c = PlayerPrefs.GetInt(PlanKeys[1]);
+        float c = PlayerPrefs.GetFloat(PlanKeys[1]);
         float f = PlayerPrefs.GetFloat(PlanKeys[2]);
         float b = PlayerPrefs.GetFloat(PlanKeys[3]);
         try
@@ -114,12 +114,14 @@ public class RacePlanTests
             var setup = Activator.CreateInstance(setupType);
             setupType.GetField("fuelLitres").SetValue(setup, 37f);   // inside CarSetup.MinFuel..MaxFuel (10-100 L)
             setupType.GetField("balance").SetValue(setup, -0.5f);
+            setupType.GetField("tape").SetValue(setup, 0.8f);         // a qualifying-style grille tape
             save.Invoke(setup, new object[] { 424242 });
 
             var back = load.Invoke(null, new object[] { 424242 });
             Assert.IsNotNull(back, "The plan saved for this weekend did not come back.");
             Assert.AreEqual(37f, (float)setupType.GetField("fuelLitres").GetValue(back), 0.001f);
             Assert.AreEqual(-0.5f, (float)setupType.GetField("balance").GetValue(back), 0.001f);
+            Assert.AreEqual(0.8f, (float)setupType.GetField("tape").GetValue(back), 0.001f);
 
             Assert.IsNull(load.Invoke(null, new object[] { 424243 }), "Last weekend's race plan leaked into this one.");
         }
@@ -128,7 +130,7 @@ public class RacePlanTests
             if (had)
             {
                 PlayerPrefs.SetInt(PlanKeys[0], w);
-                PlayerPrefs.SetInt(PlanKeys[1], c);
+                PlayerPrefs.SetFloat(PlanKeys[1], c);
                 PlayerPrefs.SetFloat(PlanKeys[2], f);
                 PlayerPrefs.SetFloat(PlanKeys[3], b);
             }

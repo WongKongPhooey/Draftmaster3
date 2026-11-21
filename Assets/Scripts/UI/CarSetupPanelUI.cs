@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 // Thin binder for the authored pre-race setup panel (Assets/Resources/UI/CarSetupPanel.prefab).
 //
-// The crew chief asks how you want the car; this is the answer. Four choices — compound, fuel load, balance,
+// The crew chief asks how you want the car; this is the answer. Four choices — grille tape, fuel load, balance,
 // steering ratio —
 // then CONFIRM hands a CarSetup back to whoever opened it (PitLaneStart), which applies it and lets the driver go.
 // Layout, fonts and colours are authored in the prefab; this script only reflects state and reports the result.
@@ -15,9 +15,9 @@ public class CarSetupPanelUI : MonoBehaviour
 
     [Header("Authored children (auto-wired)")]
     public Text titleText;
-    public Button softButton;
-    public Button hardButton;
-    public Text compoundNoteText;
+    public Slider tapeSlider;
+    public Text tapeValueText;
+    public Text tapeNoteText;
     public Slider fuelSlider;
     public Text fuelValueText;
     public Slider balanceSlider;
@@ -25,16 +25,6 @@ public class CarSetupPanelUI : MonoBehaviour
     public Slider steeringSlider;
     public Text steeringValueText;
     public Button confirmButton;
-
-    [Header("Selection colours")]
-    public Color selectedColor = new Color(0.16f, 0.55f, 0.95f);
-    public Color unselectedColor = new Color(0.18f, 0.18f, 0.2f);
-    public Color selectedTextColor = Color.white;
-    public Color unselectedTextColor = new Color(0.75f, 0.75f, 0.78f);
-
-    [Tooltip("Note shown under the tyre buttons for each compound.")]
-    public string softNote = "Softs: more grip, gone sooner.";
-    public string hardNote = "Hards: a touch slower, they'll last.";
 
     CarSetup _setup;
     Action<CarSetup> _onConfirm;
@@ -97,7 +87,7 @@ public class CarSetupPanelUI : MonoBehaviour
         IsOpen = true;
         _openFrame = Time.frameCount;
 
-        // The driving scenes hide the pointer; the panel needs it back to click tyres and drag sliders.
+        // The driving scenes hide the pointer; the panel needs it back to drag the sliders.
         _prevCursorLock = Cursor.lockState;
         _prevCursorVisible = Cursor.visible;
         Cursor.lockState = CursorLockMode.None;
@@ -105,13 +95,20 @@ public class CarSetupPanelUI : MonoBehaviour
 
         ResolveRefs();
         // Every screen's button height and caption (UIButton), whatever the prefab was last restyled to.
-        IronOvalUI.StandardiseButton(softButton);
-        IronOvalUI.StandardiseButton(hardButton);
         IronOvalUI.StandardiseButton(confirmButton);
 
-        if (softButton != null) { softButton.onClick.RemoveAllListeners(); softButton.onClick.AddListener(() => SetCompound(TireModel.Compound.Soft)); }
-        if (hardButton != null) { hardButton.onClick.RemoveAllListeners(); hardButton.onClick.AddListener(() => SetCompound(TireModel.Compound.Hard)); }
         if (confirmButton != null) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
+
+        // Grille tape in 5% steps (0..20 on the slider).
+        if (tapeSlider != null)
+        {
+            tapeSlider.minValue = 0f;
+            tapeSlider.maxValue = TapeSteps;
+            tapeSlider.wholeNumbers = true;
+            tapeSlider.SetValueWithoutNotify(Mathf.Round(Draftmaster.Sim.GrilleTape.Clamp(_setup.tape) * TapeSteps));
+            tapeSlider.onValueChanged.RemoveAllListeners();
+            tapeSlider.onValueChanged.AddListener(v => { _setup.tape = v / TapeSteps; Refresh(); });
+        }
 
         if (fuelSlider != null)
         {
@@ -159,11 +156,7 @@ public class CarSetupPanelUI : MonoBehaviour
         if (gp != null && gp.buttonSouth.wasPressedThisFrame) Confirm();
     }
 
-    void SetCompound(TireModel.Compound c)
-    {
-        _setup.compound = c;
-        Refresh();
-    }
+    const float TapeSteps = 20f;
 
     void Confirm()
     {
@@ -180,31 +173,20 @@ public class CarSetupPanelUI : MonoBehaviour
 
     void Refresh()
     {
-        bool soft = _setup.compound == TireModel.Compound.Soft;
-        Tint(softButton, soft);
-        Tint(hardButton, !soft);
-        if (compoundNoteText != null) compoundNoteText.text = soft ? softNote : hardNote;
+        if (tapeValueText != null) tapeValueText.text = _setup.TapeLabel;
+        if (tapeNoteText != null) tapeNoteText.text = Draftmaster.Sim.GrilleTape.Note(_setup.tape);
         if (fuelValueText != null) fuelValueText.text = $"{Mathf.RoundToInt(_setup.fuelLitres)} L";
         if (balanceValueText != null) balanceValueText.text = _setup.BalanceLabel;
         if (steeringValueText != null) steeringValueText.text = _setup.SteeringRatioLabel;
-    }
-
-    void Tint(Button b, bool selected)
-    {
-        if (b == null) return;
-        var img = b.GetComponent<Image>();
-        if (img != null) img.color = selected ? selectedColor : unselectedColor;
-        var label = b.GetComponentInChildren<Text>();
-        if (label != null) label.color = selected ? selectedTextColor : unselectedTextColor;
     }
 
     // Locate the authored parts by path, so the prefab can be rearranged without re-wiring every field by hand.
     void ResolveRefs()
     {
         if (titleText == null) titleText = Find<Text>("Panel/Title");
-        if (softButton == null) softButton = Find<Button>("Panel/Tyres/SoftButton");
-        if (hardButton == null) hardButton = Find<Button>("Panel/Tyres/HardButton");
-        if (compoundNoteText == null) compoundNoteText = Find<Text>("Panel/Tyres/Note");
+        if (tapeSlider == null) tapeSlider = Find<Slider>("Panel/Tape/Slider");
+        if (tapeValueText == null) tapeValueText = Find<Text>("Panel/Tape/Value");
+        if (tapeNoteText == null) tapeNoteText = Find<Text>("Panel/Tape/Note");
         if (fuelSlider == null) fuelSlider = Find<Slider>("Panel/Fuel/Slider");
         if (fuelValueText == null) fuelValueText = Find<Text>("Panel/Fuel/Value");
         if (balanceSlider == null) balanceSlider = Find<Slider>("Panel/Balance/Slider");

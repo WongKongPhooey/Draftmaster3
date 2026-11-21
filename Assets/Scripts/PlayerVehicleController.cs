@@ -212,6 +212,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Header("Engine Temperature")]
     [Tooltip("Engine temperature (Draftmaster.Sim.EngineTemp): nose to tail on the car ahead the radiator gets no air and the engine heats - about two laps of pushing at pack speed overheats it and it loses power. About 0.75 of a car length back holds the temperature; more room, or an empty lane, cools it; so does going slower (a caution).")]
     public bool enableEngineTemp = true;
+    [Tooltip("Grille tape, 0..1 (Draftmaster.Sim.GrilleTape; the setup sheet's Tape slider). 0.5 = the default car. More tape = a little more straight-line speed but the engine overheats sooner and quicker out of clean air; 0 = never overheats but slower on the straights.")]
+    [Range(0f, 1f)] public float grilleTape = Draftmaster.Sim.GrilleTape.Default;
 
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
@@ -774,7 +776,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             RadiatorCover = ComputeRadiatorCover();
             float heatRefMps = TrackConditions.PlateMph > 0f ? TrackConditions.PlateMph / 2.237f : Draftmaster.Sim.EngineTemp.ReferenceMps;
             EngineTempC = Draftmaster.Sim.EngineTemp.Step(EngineTempC, RadiatorCover,
-                Draftmaster.Sim.EngineTemp.SpeedShare(speedNow, heatRefMps), dt);
+                Draftmaster.Sim.EngineTemp.SpeedShare(speedNow, heatRefMps), dt, grilleTape);
         }
         else ResetEngineTemp();
         float enginePower = Draftmaster.Sim.EngineTemp.PowerFactor(EngineTempC);
@@ -808,7 +810,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         topMps *= cardPowerScale;
         // An overheated engine makes less power and runs out of breath sooner.
         topMps *= Draftmaster.Sim.EngineTemp.TopSpeedFactor(EngineTempC);
-        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * enginePower * throttleIn;
+        // Grille tape: an open grille drags (lower ceiling); a taped one runs a little past it, with the accel curve
+        // stretched to match so the raised ceiling can be reached (as aiStretch does).
+        float tapeSpeed = Draftmaster.Sim.GrilleTape.TopSpeedFactor(grilleTape);
+        topMps *= tapeSpeed;
+        float accel = SampleAccel(_vx / (aiStretch * Mathf.Max(1f, tapeSpeed))) * TrackConditions.EffectivePower * aiPower * pkgSpeed * cardPowerScale * enginePower * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
         if (tow > 0f) accel += vehicleInfo.draftingTowAccel * towWorth * cardDraftScale * TrackConditions.DraftScale * throttleIn;
