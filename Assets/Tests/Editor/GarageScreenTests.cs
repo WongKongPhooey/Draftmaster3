@@ -148,6 +148,47 @@ public class GarageScreenTests
     }
 
     [Test]
+    public void Drivers_ShowsEveryDriverCardInTheCollection()
+    {
+        var profile = TestProfile(0);
+        var drivers = new List<CardInstance>();
+        for (int i = 0; i < 11; i++) drivers.Add(AddCard(profile, CardType.Driver, 60 + i * 3, "Driver " + i));
+        drivers.Add(AddCard(profile, CardType.Driver, 60 + 10 * 3, "Driver 10"));   // a second copy of the best one
+        AddCard(profile, CardType.Car, 99, "Not A Driver");
+        AddCard(profile, CardType.CrewChief, 99, "Not A Driver Either");
+        Call("BuildOffline", profile, TestCatalogue());
+        Call("SetGarageTab", GarageTab.Drivers);
+
+        // Every driver card, each copy, best OVR first; nothing else.
+        var expected = drivers.OrderByDescending(c => c.def.overall).ThenBy(c => c.def.name, StringComparer.Ordinal)
+                              .ThenBy(c => c.uid, StringComparer.Ordinal).Select(c => c.uid).ToList();
+        CollectionAssert.AreEqual(expected, Get<IReadOnlyList<string>>("GarageCardIds").ToList());
+        Assert.AreEqual(12, Get<int>("GarageFilteredCount"));
+        Assert.AreEqual(12, Get<int>("GarageCollectedCount"));
+        Assert.AreEqual(3, Get<int>("GarageRowCount"));
+        Assert.AreEqual(12, Get<int>("GarageCardsShown"), "two whole rows and the peeking third");
+
+        Assert.IsNotNull(Grid, "driver cards sit on the collection grid");
+        foreach (var c in drivers)
+            Assert.AreEqual(c.def.name, TextOf(Grid.Find("Card_" + c.uid + "/Inner/Name")), c.uid);
+        Assert.IsNull(Content.Find("Cycler_Sort"), "Drivers shows every card: nothing to sort");
+        Assert.IsNull(Content.Find("Cycler_Rarity"), "nor filter");
+    }
+
+    [Test]
+    public void Drivers_NoDriverCardsSaysSo()
+    {
+        var profile = TestProfile(0);
+        AddCard(profile, CardType.Car, 70, "Only Car");
+        Call("BuildOffline", profile, TestCatalogue());
+        Call("SetGarageTab", GarageTab.Drivers);
+
+        Assert.AreEqual(0, Get<IReadOnlyList<string>>("GarageCardIds").Count);
+        Assert.IsNull(Grid);
+        Assert.IsTrue(Content.GetComponentsInChildren<TMP_Text>().Any(t => t.text == "No driver cards yet."));
+    }
+
+    [Test]
     public void CarDetail_UpgradeSpendsGearsAndCoins()
     {
         var cars = TestCatalogue();

@@ -79,8 +79,9 @@ public static class MasterDraftCardView
         }
     }
 
-    // Builds a card at `size` under `parent`. faceDown draws the back only (pack opening).
-    public static RectTransform Build(Transform parent, CardDefinition d, Vector2 size, bool faceDown = false)
+    // Builds a card at `size` under `parent`. faceDown draws the back only (pack opening). compact picks the small
+    // face (stats stacked under the name, no rarity line) whatever the size; by default cards under 100 px wide get it.
+    public static RectTransform Build(Transform parent, CardDefinition d, Vector2 size, bool faceDown = false, bool? compact = null)
     {
         var t = PixelUITheme.Instance;
         var root = new GameObject("Card", typeof(RectTransform), typeof(Image));
@@ -100,7 +101,7 @@ public static class MasterDraftCardView
             return rt;
         }
 
-        bool small = size.x < 100f;
+        bool small = compact ?? size.x < 100f;
         float pad = 6f;
 
         // Art hook — behind the text, top half.

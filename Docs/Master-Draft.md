@@ -44,7 +44,10 @@ cycler on the right, next to Sort (and the carset Set, on Builds).
   fills the list for testing.
 * **Builds** shows the old garage cards (the DM2 cars the series race, with classes, gears and Card Detail) until
   builds are defined.
-* **Drivers, Teams, Numbers:** "coming soon".
+* **Drivers (2026-11-21):** every driver card in the collection — each copy its own card — on the scrolling
+  five-across grid, best OVR first, as card faces (`MasterDraftCardView`, compact face). No Sort/Rarity cyclers.
+  The header reads "n collected". Confirm opens the card's Detail (Make Active / Bench); Back returns to the card.
+* **Teams, Numbers:** "coming soon".
 
 ### The Series tab is an overworld (2026-11-13)
 

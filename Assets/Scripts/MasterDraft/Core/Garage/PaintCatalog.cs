@@ -77,8 +77,8 @@ namespace Draftmaster.MasterDraft
     }
 
     // The Garage's tabs (MasterDraftUI.Collection.cs). Builds holds one build — the highest rated driver, car and
-    // crew chief card in the collection (TeamRules.BestBuild); Cars is the paint collection; Drivers, Teams and
-    // Numbers are still to come.
+    // crew chief card in the collection (TeamRules.BestBuild); Cars is the paint collection; Drivers is every
+    // driver card in the collection; Teams and Numbers are still to come.
     public enum GarageTab
     {
         Builds = 0,
