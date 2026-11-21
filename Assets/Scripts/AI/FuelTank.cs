@@ -89,7 +89,26 @@ public class FuelTank : MonoBehaviour
         // A jump (a re-seed, a team switch, a tow back to the pits) is not driving.
         if (moved > 20f) return;
         float throttle = _pvc != null && _pvc.enabled ? _pvc.ThrottleInput : kinematicThrottle;
+        float before = fuelLitres;
         BurnDistance(throttle, moved);
+        LogPlayerBurn(before - fuelLitres, moved);
+    }
+
+    // The player's tank every 10 s of a race: what it holds and what it burnt, green or caution, model or kinematic.
+    // Josh saw it hold steady under a caution (Daytona, 2026-11-21) - this says from the phone's log whether it did.
+    float _logBurnt, _logMetres, _logNext = -1f;
+    void LogPlayerBurn(float burnt, float metres)
+    {
+        if (_pvc == null || _pvc != PlayerVehicleController.Local) return;
+        _logBurnt += burnt;
+        _logMetres += metres;
+        if (_logNext < 0f) _logNext = Time.time + 10f;
+        if (Time.time < _logNext) return;
+        _logNext = Time.time + 10f;
+        Debug.Log($"[Fuel] {fuelLitres:0.0} L, burnt {_logBurnt:0.00} L over {_logMetres:0} m in 10 s " +
+                  $"({(RaceStart.IsCaution ? "caution" : "green")}, {(_pvc.enabled ? "model" : "kinematic")}, " +
+                  $"{LitresPerLapFull:0.0} L/lap flat out)");
+        _logBurnt = _logMetres = 0f;
     }
 
     // Practice and qualifying: there is no race to plan against, so the player's car burns by the clock at the

@@ -519,8 +519,30 @@ public class FormationController : MonoBehaviour
             return;
         }
 
+        // Run dry: no engine, so nobody drives it round behind the safety car. The queue drove a dry car kinematically
+        // at the pace like any other (the player's Auto car, Daytona, 2026-11-21: round and round on an empty tank).
+        // It goes back to its own model, where the engine is cut (PlayerVehicleController.FuelDry), and coasts to a
+        // stop: the restart order drops it (CautionLineup), the player is offered the tow (StrandedTow), an AI car
+        // breaks down and is retired (AIRetirement).
+        if (caution && _pvc != null && _pvc.FuelDry && !_spline.IsOnPit)
+        {
+            if (!_pvc.enabled)
+            {
+                Vector3 seed = _spline.track != null
+                    ? _spline.track.transform.TransformPoint(new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f))
+                    : transform.position;
+                _pvc.SeedPose(new Vector2(seed.x, seed.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
+                _pvc.enabled = true;
+                if (_input != null) _input.enabled = true;
+                else _spline.externalMotionController = true;
+                Debug.Log($"[Fuel] {name} ran dry under the caution at {_spline.DistanceOnTrack:0} m - coasting to a stop");
+            }
+            HasPlan = false;
+            return;
+        }
+
         float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
-        bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
+        bool closingUp =FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
         _planner.Settings = closingUp && !_spline.usePitLane ? CloseUpPack()
                           : caution && !doubled && !_spline.usePitLane && _cautionCapMph > cruise + cautionSingleFileMph
                               ? CautionApproachPack()   // still driving on round to the train

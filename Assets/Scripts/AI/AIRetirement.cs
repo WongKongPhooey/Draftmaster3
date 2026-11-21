@@ -110,7 +110,8 @@ public class AIRetirement : MonoBehaviour
     float _waitHeading;
     bool _waitBehindWall;
     float _waitingSince;
-    int _layerMask;     // layers the car is drawn on; a camera that culls them all cannot see it
+    bool _waitSinceCaution;   // retired under a caution as too damaged to restart: moved at the green at the latest
+    int _layerMask;    // layers the car is drawn on; a camera that culls them all cannot see it
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
@@ -150,7 +151,9 @@ public class AIRetirement : MonoBehaviour
 
         if (_waiting) { TickWaiting(); return; }
 
-        if (!InPlay()) { _stoppedSince = -1f; return; }
+        // Driven round in the caution's queue: model and controls off, the queue moving it (FormationController).
+        bool queued = RaceStart.IsCaution && !_car.enabled && (_input == null || !_input.enabled);
+        if (!InPlay(queued)) { _stoppedSince = -1f; return; }
 
         if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
 
@@ -164,15 +167,18 @@ public class AIRetirement : MonoBehaviour
         {
             BrokenDown = true;
             Debug.Log($"[AIRetire] {name} too damaged to restart (damage {_bodywork.DamageLevel:0.00}) - retiring under the caution");
-            BeginRetire();
+            if (BeginRetire() && _waiting) _waitSinceCaution = true;
             return;
         }
+        if (queued) return;   // the rest is for a car on its own model
 
         // A car in the pit lane is about to be repaired, not broken down; it breaks down where it is out on track,
         // on its own dynamic model — not while a caution's formation queue is driving it kinematically.
+        // Out of fuel is the same: no engine (PlayerVehicleController.FuelDry).
         if (!BrokenDown && !_spline.IsOnPit && _bodywork != null && _input != null && _input.enabled
-            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
-                                           FrontCrush(), breakdownFrontCrush))
+            && (_car.FuelDry
+                || AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
+                                               FrontCrush(), breakdownFrontCrush)))
             BreakDown();
 
         float now = Time.fixedTime;
@@ -184,10 +190,12 @@ public class AIRetirement : MonoBehaviour
     }
 
     // The race is on, this is an AI car in it, and it has not taken the flag.
-    bool InPlay()
+    // `queued`: under a caution, with the queue driving it (model off) - still in play (AIRetirementRule.Watched).
+    bool InPlay(bool queued)
     {
-        if (!RaceStart.IsRunning || RaceWeekend.IsPracticeLike) return false;
-        if (!_car.isActiveAndEnabled || PlayerVehicleController.IsHuman(_car) || IsTrackedAsPlayer()) return false;
+        if (RaceWeekend.IsPracticeLike) return false;
+        if (!AIRetirementRule.Watched(RaceStart.IsRunning, _car.gameObject.activeInHierarchy, _car.enabled, queued)) return false;
+        if (PlayerVehicleController.IsHuman(_car) || IsTrackedAsPlayer()) return false;
         return !RaceDirector.TookChequer(transform);
     }
 
@@ -235,7 +243,8 @@ public class AIRetirement : MonoBehaviour
         // kinematically and drive it round behind the safety car instead of leaving it to be retired.
         var formation = GetComponent<FormationController>();
         if (formation != null) formation.enabled = false;
-        string why = _bodywork.WheelsOff > 0 ? $"{_bodywork.WheelsOff} wheel(s) off, " : "";
+        string why = _car.FuelDry ? "out of fuel, " : "";
+        if (_bodywork.WheelsOff > 0) why += $"{_bodywork.WheelsOff} wheel(s) off, ";
         float crush = FrontCrush();
         if (breakdownFrontCrush > 0f && crush >= breakdownFrontCrush) why += $"nose in {crush:0.00} m, ";
         Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
@@ -280,6 +289,7 @@ public class AIRetirement : MonoBehaviour
             || (!BrokenDown && (_car.SpeedMph > stoppedBelowMph || _input == null || !_input.enabled)))
         {
             _waiting = false;
+            _waitSinceCaution = false;
             _retiring.Remove(transform);
             _takenSpots.Remove(_waitSpot);
             _stoppedSince = -1f;
@@ -289,10 +299,12 @@ public class AIRetirement : MonoBehaviour
         float radius = CarSize().magnitude * 0.5f;
         bool carSeen = InShot(transform.position, radius);
         bool spotSeen = InShot(new Vector3(_waitSpot.x, _waitSpot.y, transform.position.z), radius);
-        if (!AIRetirementRule.MoveOutOfSight(carSeen, spotSeen, Time.fixedTime - _waitingSince, forceMoveAfterSeconds))
+        bool forRestart = AIRetirementRule.MoveForRestart(BrokenDown, _waitSinceCaution, RaceStart.IsCaution);
+        if (!forRestart && !AIRetirementRule.MoveOutOfSight(carSeen, spotSeen, Time.fixedTime - _waitingSince, forceMoveAfterSeconds))
             return;
 
         _waiting = false;
+        _waitSinceCaution = false;
         _retiring.Remove(transform);
         Retire(_waitSpot, _waitHeading, _waitBehindWall, carSeen || spotSeen);
     }

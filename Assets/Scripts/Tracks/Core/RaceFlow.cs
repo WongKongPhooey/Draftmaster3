@@ -20,6 +20,12 @@ namespace Draftmaster.Tracks
 
         public static readonly TrackFilter[] Filters = { TrackFilter.All, TrackFilter.Road, TrackFilter.Oval, TrackFilter.Dirt };
 
+        // The venues built to race - package authored, AI tuned and play-tested. Every other track shows greyed out
+        // on the SINGLE RACE grid and can't be picked (Josh, 2026-11-21). Martinsville is the next to join.
+        static readonly HashSet<string> AuthoredTracks = new HashSet<string> { "WatkinsGlen", "Daytona", "FortWorth" };
+        public static bool IsAuthored(string trackId) => trackId != null && AuthoredTracks.Contains(trackId);
+        public const string NotBuiltNote = "COMING SOON";
+
         // Temporary circuits laid out on public roads. Everything else that turns both ways is a road course.
         static readonly HashSet<string> StreetCircuits = new HashSet<string> { "Chicago", "SanDiego" };
 

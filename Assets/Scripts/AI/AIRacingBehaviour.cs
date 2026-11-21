@@ -208,6 +208,11 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Player's Lane (legacy lane controls)")]
     [Tooltip("Where the player's lane choice is not an oval lane (road courses, ovals without the lane AI), the left and right lanes sit this far (m) either side of the car's racing line, inside the AI's bounds. The middle lane is the racing line itself. On a superspeedway the lanes are the pack's own grooves.")]
     public float playerLaneOffset = 3.2f;
+    [Tooltip("Daylight (m) the player's car needs bumper to bumper, ahead and behind, to move into a lane. The player " +
+             "takes any gap the car fits in (Josh, 2026-11-21); the AI's own lane changes keep their wider margins.")]
+    public float playerLaneDaylight = 0.4f;
+    [Tooltip("The player's lane change runs this much quicker sideways than the AI's would (speed and acceleration).")]
+    public float playerLaneSpeedScale = 1.3f;
     public const int NoPlayerLane = int.MinValue;
     // The lane the player has picked for this car - -1 left, 0 middle, +1 right (Draftmaster.Controls.LaneSelect) - or
     // NoPlayerLane, when the brain decides where across the road to be. Set by DriveModeController while the
@@ -347,6 +352,7 @@ public class AIRacingBehaviour : MonoBehaviour
     float _smoothedTactical;
     float _tacticalVelocity;
     bool _alongsidePinned;           // AlongsideWallClamp held the target back from a car alongside this step
+    bool _playerLaneMove;            // this step the player's lane pick sets the target (player's Auto car only)
     float _alongsidePinnedToward;    // ...and which way it was held back from (+1/-1)
     // The pass under way, in lanes: who is being passed, which lane we are passing in, and for how long.
     SplineDriver _passCar;
@@ -1101,12 +1107,14 @@ public class AIRacingBehaviour : MonoBehaviour
         // Not off a start or restart in a pack, though: the field holds the formation it lined up in until it is up to
         // speed, and the player's Auto car heading straight for its picked lane at the green (to 5.25 m from 1.73 in
         // two seconds) was the one car moving across it - Daytona, P31, contact one second after the green (2026-11-21).
+        _playerLaneMove = false;
         if (HasPlayerLane && !_spline.IsOnPit && !(wantOvertake && _passAroundStopped)
             && !(Pack && !underYellow && RestartSettling(_greenSeconds))
             && TryPlayerLaneLateral(playerLane, out float playerLaneLat))
         {
             desiredTactical = playerLaneLat - _spline.UntacticalLateral;
             _commitTimer = 0f;
+            _playerLaneMove = true;
         }
 
         _alongsidePinned = false;
@@ -1299,6 +1307,11 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             lateralSpeed = Mathf.Max(lateralSpeed, packLateralSpeed);
             lateralAccel = Mathf.Max(lateralAccel, packLateralAccel);
+        }
+        if (_playerLaneMove)
+        {
+            lateralSpeed *= playerLaneSpeedScale;
+            lateralAccel *= playerLaneSpeedScale;
         }
         float wantVelocity = Mathf.Sign(diff) * Mathf.Min(lateralSpeed, Mathf.Sqrt(2f * lateralAccel * Mathf.Abs(diff)));
         _tacticalVelocity = Mathf.MoveTowards(_tacticalVelocity, wantVelocity, lateralAccel * dt);
@@ -1512,8 +1525,13 @@ public class AIRacingBehaviour : MonoBehaviour
 
     void WallFrom(float gap, float otherLat, float closingFromBehindMps, float here, float gapNeeded, ref float lo, ref float hi)
     {
-        float behind = alongsideLength + 1.5f + Mathf.Max(0f, closingFromBehindMps) * 0.5f;
-        if (gap > alongsideLength + 1.5f || gap < -behind) return;
+        float ahead = alongsideLength + 1.5f;
+        float behind = ahead + Mathf.Max(0f, closingFromBehindMps) * 0.5f;
+        // The player's own lane pick: only a car actually in the way blocks it - one overlapping us, or within
+        // playerLaneDaylight of either bumper. A car-sized hole is enough (Josh, 2026-11-21: "always make the move if
+        // there is sufficient space, even if there's barely any gap").
+        if (_playerLaneMove) ahead = behind = CarLength + playerLaneDaylight;
+        if (gap > ahead || gap < -behind) return;
         float side = otherLat - here;
         if (Mathf.Abs(side) > gapNeeded * 2.5f) return;   // well clear: a lane or more between us
         if (Mathf.Abs(side) < 0.3f) return;   // on top of each other: no side to keep to - the contact response sorts it

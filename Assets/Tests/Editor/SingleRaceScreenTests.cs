@@ -123,6 +123,18 @@ public class SingleRaceScreenTests
     }
 
     [Test]
+    public void AnUnbuiltTrackIsGreyedAndCannotBePicked()
+    {
+        int unbuilt = -1;
+        for (int i = 0; i < Get<int>("TileCount"); i++)
+            if (Text(Find("Tile_" + i).Find("Place")) == Draftmaster.Tracks.RaceFlow.NotBuiltNote) { unbuilt = i; break; }
+        Assert.GreaterOrEqual(unbuilt, 3, "The three built venues come first, then the greyed-out rest.");
+        Call("TapTile", unbuilt);
+        Call("TapTile", unbuilt);
+        Assert.AreEqual("Track", Step, "An unbuilt track moved on to the series.");
+    }
+
+    [Test]
     public void SeriesThenCarThenBack()
     {
         Call("ConfirmSelection");

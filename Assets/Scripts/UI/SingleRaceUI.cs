@@ -139,6 +139,7 @@ public class SingleRaceUI : MonoBehaviour
         public float nameX;
         public bool hovered;
         public bool open = true;  // series: has a field
+        public bool unbuilt;      // track: not built yet (RaceFlow.IsAuthored) - greyed out
     }
 
     // ------------------------------------------------------------------ what the screen shows (tests)
@@ -265,9 +266,13 @@ public class SingleRaceUI : MonoBehaviour
     void FilterTracks()
     {
         _tracks.Clear();
-        foreach (var t in _allTracks)
-            if (RaceFlow.Passes(_filter, TagOf(t))) _tracks.Add(t);
-        _index = Mathf.Max(0, _tracks.FindIndex(t => t.Name == _trackId));
+        // The built venues first, then the rest - greyed out (RaceFlow.IsAuthored).
+        foreach (bool built in new[] { true, false })
+            foreach (var t in _allTracks)
+                if (RaceFlow.IsAuthored(t.Name) == built && RaceFlow.Passes(_filter, TagOf(t))) _tracks.Add(t);
+        int at = _tracks.FindIndex(t => t.Name == _trackId && RaceFlow.IsAuthored(t.Name));
+        if (at < 0) at = _tracks.FindIndex(t => RaceFlow.IsAuthored(t.Name));
+        _index = Mathf.Max(0, at);
     }
 
     void EnterStep(Step step)
@@ -342,6 +347,11 @@ public class SingleRaceUI : MonoBehaviour
         {
             case Step.Track:
                 if (_tracks.Count == 0) { SetStatus("No tracks under this filter."); return; }
+                if (!RaceFlow.IsAuthored(_tracks[_index].Name))
+                {
+                    SetStatus($"{_tracks[_index].DisplayName} is coming soon - pick Watkins Glen, Daytona or Texas.");
+                    return;
+                }
                 _trackId = _tracks[_index].Name;
                 EnterStep(Step.Series);
                 break;
@@ -779,7 +789,8 @@ public class SingleRaceUI : MonoBehaviour
 
         NameRow(t, pad, pad + artH + gap, inner, track.DisplayName);
         t.sub = Mono(t.rect, "Place", "", Pal.Slate);
-        t.sub.text = Fit(t.sub, RaceFlow.Place(track.Name, track.Country), inner);
+        t.sub.text = Fit(t.sub, RaceFlow.IsAuthored(track.Name) ? RaceFlow.Place(track.Name, track.Country) : RaceFlow.NotBuiltNote, inner);
+        t.unbuilt = !RaceFlow.IsAuthored(track.Name);
         Place(t.sub.rectTransform, pad, pad + artH + gap + Row + gap, inner, Row);
         return t;
     }
@@ -930,6 +941,20 @@ public class SingleRaceUI : MonoBehaviour
                 t.tag.color = sel ? Pal.Gold : Pal.Slate;
                 t.chip.color = sel ? Pal.Cream : Pal.Sand;
                 if (t.layout != null && t.idleArt != null) t.layout.texture = sel ? t.selectedArt : t.idleArt;
+                if (t.unbuilt)
+                {
+                    // Not built yet: greyed out. The cursor can still rest on it; it can't be picked.
+                    t.fill.color = Pal.ChipOff;
+                    t.ring.color = sel ? Pal.Slate : Pal.Line;
+                    t.name.color = Pal.Slate;
+                    t.tag.color = t.chip.color = Pal.Line;
+                    if (t.sub != null) t.sub.color = Pal.Slate;
+                    if (t.layout != null)
+                    {
+                        t.layout.texture = t.idleArt;
+                        t.layout.color = new Color(1f, 1f, 1f, 0.25f);
+                    }
+                }
                 break;
             case Step.Series:
                 t.tag.color = sel ? Pal.Gold : Pal.Slate;

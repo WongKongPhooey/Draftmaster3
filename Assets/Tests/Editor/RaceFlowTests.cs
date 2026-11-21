@@ -75,4 +75,13 @@ public class RaceFlowTests
         Assert.AreEqual(3, RaceFlow.ScaleFactor(2400, 1080, true));
         Assert.AreEqual(1, RaceFlow.ScaleFactor(500, 300, false));
     }
+
+    [Test]
+    public void OnlyTheBuiltVenuesCanBePicked()
+    {
+        foreach (var id in new[] { "WatkinsGlen", "Daytona", "FortWorth" })
+            Assert.IsTrue(RaceFlow.IsAuthored(id), id);
+        foreach (var id in new[] { "Martinsville", "Talladega", "Phoenix", "", null })
+            Assert.IsFalse(RaceFlow.IsAuthored(id), id ?? "null");
+    }
 }

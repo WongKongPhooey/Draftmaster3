@@ -7,8 +7,9 @@ namespace Draftmaster.Sim
     //
     //   * a car that stops - any speed under StopMps, for any length of time, out on the track - is dropped from the
     //     queue; it holds no place at all while it is stopped and crawling;
-    //   * once it is back up to RejoinMps it joins the BACK of the queue (two cars getting going again join in the order
-    //     they reach that speed);
+    //   * once it is back up to RejoinMps it takes whatever place it is in on the road, as a car leaving pit road does:
+    //     the field lands in the order it comes out of the crash and gets going again (Josh, 2026-11-21 - it used to go
+    //     to the BACK, which was wrong; a damaged car still ends up there, as it pits at the first chance);
     //   * a car that pits loses its place in the queue the moment it is on pit road, and when it leaves pit road it
     //     simply takes whatever place it is in on the road: in front of the first car in the queue it is ahead of by
     //     race distance (laps and all), behind every car it is not. A stop on pit road is a pit stop, not a stop.
@@ -44,8 +45,8 @@ namespace Draftmaster.Sim
         // How many cars are on pit road right now (out of the queue until they leave it).
         public int OnPitCount => _onPit.Count;
 
-        // Stopped under this caution: dropped, or back at the tail it rejoined at. A pit exit clears it - that car has
-        // its place by where it is on the road, so nobody is due to pass it.
+        // Stopped under this caution and not going again yet. Getting going (or a pit exit) clears it - the car has its
+        // place by where it is on the road, so nobody is due to pass it.
         public bool IsCaught(int id) => _caught.Contains(id);
 
         // The running order at the flag, leader first: the queue.
@@ -106,13 +107,14 @@ namespace Draftmaster.Sim
             {
                 if (speedMps < RejoinMps) return;
                 _dropped.Remove(id);
-                _queue.Add(id);   // back up to speed: the back of the queue
+                _caught.Remove(id);   // placed by the road: nobody behind it is due past
+                Insert(id, raceDistance);   // back up to speed: wherever it is on the road
                 return;
             }
 
             bool queued = _queue.Contains(id);
             if (speedMps < StopMps) { Drop(id); return; }
-            if (!queued && speedMps >= RejoinMps) _queue.Add(id);   // a car the flag never saw, up to speed: the back
+            if (!queued && speedMps >= RejoinMps) Insert(id, raceDistance);   // a car the flag never saw, up to speed: where it is
         }
 
         // In front of the first car in the queue it is ahead of on the road (race distance), else at the back.

@@ -21,6 +21,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public void ApplyContact(Vector2 worldMtv, Vector2 contactPoint, float severity)
     {
         transform.position += new Vector3(worldMtv.x, worldMtv.y, 0f);
+        // Merging (a caution or a takeover latched the car where it was) with the merge carrying the path into the wall
+        // that just pushed it back: the merge bias rides on top of the road-bounds clamp, so for its whole run the path
+        // lay behind the wall face, the wall held the car at the face and it ground along it taking a dent a step - the
+        // player's Auto car, picked up by the caution against the outside wall after a spin, lost three wheels that way
+        // (Daytona, 2026-11-21). Re-latched from where the wall put it, the merge runs from the face back onto the road.
+        if (!externalMotionController && !_onPit && _mergeLength > 0f && _mergeOnPit == _onPit)
+        {
+            float push = Vector2.Dot(worldMtv, _lastWorldRight);
+            float bias = MergeBiasAt(_distance);
+            if (push * bias < 0f) BeginMerge(bias + push, 0f, noOvershoot: true);
+        }
         NudgeOffsets(worldMtv, severity);
     }
 
@@ -857,6 +868,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // the car makes no lane changes of its own - no passes, no side-by-side splits - and moves into this lane when the
     // corner and the room allow. None = the lane AI decides.
     [System.NonSerialized] public Draftmaster.Tracks.OvalLanes.Lane forcedOvalLane = Draftmaster.Tracks.OvalLanes.Lane.None;
+    [Tooltip("The player's own lane pick (forcedOvalLane) goes into any gap with this much room (m, centre to centre) to the " +
+             "nearest car in the lane ahead and behind: a car length and a little daylight. The AI's lane changes keep the " +
+             "train's room rules (OvalPass.TargetLaneClear).")]
+    public float playerLaneRoomMetres = 5.6f;
+    [Tooltip("The player's lane move runs this much quicker sideways than an AI move (speed and acceleration).")]
+    public float playerLaneSpeedScale = 1.3f;
+    bool _laneMoveByPlayer;   // the move under way is the player's pick, not one of the lane AI's
     // This step the brain is steering round a stopped car (AIRacingBehaviour). The lane train then leaves stopped
     // cars to the brain's own stop-short cap instead of braking for one the car is already steering out from behind.
     [System.NonSerialized] public bool avoidingStopped;
@@ -1203,8 +1221,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             float d = CentreDistanceOnTrack;
             float spacing = Mathf.Abs(LaneLateralAt(ovalLane, d) - LaneLateralAt(_laneFrom, d));
             // The room closing while the car is still mostly in its own lane: turn back, the same smooth way.
+            if (_laneMoveByPlayer)
+            {
+                spec.maxLateralSpeed *= playerLaneSpeedScale;
+                spec.lateralAccel *= playerLaneSpeedScale;
+            }
             if (!_laneAborting && !_laneSplit && Draftmaster.Sim.LaneChange.CanAbort(spec, _laneP, _laneRate, spacing)
-                && !OvalPass.TargetLaneClear(this, ovalLane, 0f, spec.abortShare))   // 0: a train gap ahead, not the pass
+                && !(_laneMoveByPlayer ? PlayerLaneHasRoom(ovalLane)
+                                       : OvalPass.TargetLaneClear(this, ovalLane, 0f, spec.abortShare)))   // 0: a train gap ahead, not the pass
             {
                 var back = _laneFrom;
                 _laneFrom = ovalLane;
@@ -1303,9 +1327,33 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             float v = OvalTrain.SpeedOf(this);
             if (!CornerAllowsLaneChange(v, Draftmaster.Sim.LaneChange.MoveDuration(spec, spacing), spec.maxCornerAccel)) return;
-            if (!OvalPass.TargetLaneClear(this, target, 0f, spec.abortShare)) return;
+            if (!PlayerLaneHasRoom(target)) return;
         }
         BeginLaneMove(target, null, false);
+        _laneMoveByPlayer = true;
+    }
+
+    // The player's pick: room for the car in `target` - nobody in that lane's line within playerLaneRoomMetres ahead or
+    // behind (centre to centre). Any gap the car fits is enough; the AI's own moves use OvalPass.TargetLaneClear.
+    bool PlayerLaneHasRoom(Draftmaster.Tracks.OvalLanes.Lane target)
+    {
+        float len = TrackLength;
+        if (len <= 0f) return false;
+        float myD = CentreDistanceOnTrack;
+        float targetLat = LaneLateralAt(target, myD);
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == this || !d.isActiveAndEnabled || d.IsOnPit) continue;
+            if (System.Math.Abs(d.TrackLength - len) > 0.5f) continue;
+            bool inTarget = d.LaneFollowing && (d.ovalLane == target || (d.LaneChanging && d._laneFrom == target))
+                            || Mathf.Abs(d.CarLateral - targetLat) < OvalTrain.CorridorWidth;
+            if (!inTarget) continue;
+            float along = Mathf.Repeat(d.CentreDistanceOnTrack - myD + len * 0.5f, len) - len * 0.5f;
+            if (Mathf.Abs(along) < playerLaneRoomMetres) return false;
+        }
+        return true;
     }
 
     void BeginLaneMove(Draftmaster.Tracks.OvalLanes.Lane target, SplineDriver passing, bool split)
@@ -1316,6 +1364,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _laneRate = 0f;
         _laneAborting = false;
         _laneSplit = split;
+        _laneMoveByPlayer = false;
         if (passing != null) { _pairPassing = passing; _pairPassTimer = 0f; }
         else if (target == Draftmaster.Tracks.OvalLanes.Lane.Ideal) _pairPassing = null;
         LaneChanging = true;

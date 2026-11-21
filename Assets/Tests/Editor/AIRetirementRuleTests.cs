@@ -128,4 +128,25 @@ public class AIRetirementRuleTests
         Assert.IsFalse(AIRetirementRule.BrokenDown(0.23f, 0.6f, 0, true, 0.9f, 0f), "0 leaves the nose out of it");
         Assert.IsTrue(AIRetirementRule.BrokenDown(0.7f, 0.6f, 0, true, 0f, 0.25f), "the damage figure still counts");
     }
+
+    [Test]
+    public void ACarTheCautionQueueDrivesIsStillCheckedForDamage()
+    {
+        // Daytona, 2026-11-21: the queue switches the car's model off, and "model off" read as "not in play", so cars
+        // wrecked past the breakdown line rode round under the caution and broke down at the green.
+        Assert.IsTrue(AIRetirementRule.Watched(true, true, false, true), "kinematic in the caution queue");
+        Assert.IsTrue(AIRetirementRule.Watched(true, true, true, false), "on its own model");
+        Assert.IsFalse(AIRetirementRule.Watched(true, true, false, false), "model off and not queued: parked, retired");
+        Assert.IsFalse(AIRetirementRule.Watched(false, true, true, false), "race not running");
+        Assert.IsFalse(AIRetirementRule.Watched(true, false, false, true), "not in the scene");
+    }
+
+    [Test]
+    public void ABrokenCarStillWaitingAtTheGreenIsMovedThen()
+    {
+        Assert.IsTrue(AIRetirementRule.MoveForRestart(true, true, false), "the green came with it still on the road");
+        Assert.IsFalse(AIRetirementRule.MoveForRestart(true, true, true), "still under the caution: wait for the camera");
+        Assert.IsFalse(AIRetirementRule.MoveForRestart(true, false, false), "not one retired under a caution");
+        Assert.IsFalse(AIRetirementRule.MoveForRestart(false, true, false), "not broken");
+    }
 }

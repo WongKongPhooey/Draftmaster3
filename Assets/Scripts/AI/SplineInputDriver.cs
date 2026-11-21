@@ -122,6 +122,11 @@ public class SplineInputDriver : MonoBehaviour
     public float flatOutBrakeGain = 0.06f;    // was 0.12 - lift first, at 190 mph drag sheds a few m/s in a couple of seconds
     [Tooltip("Flat out: this far over its target (m/s) the car brakes as hard as it can.")]
     public float flatOutPanicMps = 12f;
+    [Tooltip("Flat out: past this far over its target (m/s) the car brakes for real on top of the gentle lift - " +
+             "flatOutHardGain per m/s more. The gentle ramp alone gave 0.1 brake to a car closing 4.5-5 m/s on one that " +
+             "had pulled out of the line, and it ran into it: three Daytona big ones in a row (2026-11-21).")]
+    public float flatOutHardOverMps = 4f;
+    public float flatOutHardGain = 0.2f;
 
     [Header("Slide Catch")]
     [Tooltip("Body slip angle (deg) where the slide response starts: throttle tapers and steering starts aiming the VELOCITY vector at the path (countersteer) instead of winding more lock onto a nose that's already pointing the wrong way.")]
@@ -166,6 +171,8 @@ public class SplineInputDriver : MonoBehaviour
     public float packSteerCapFullMph = 180f;
     [Tooltip("Fastest the steering input may swing (full scale per second) at that speed on a pack track.")]
     public float packSteerSlewPerSec = 1.5f;
+    [Tooltip("packSteerSlewPerSec is multiplied by this while the driver is catching a hit (Impact Upset).")]
+    public float packUpsetSlewScale = 3f;
     float _packSteer;
     bool _hasPackSteer;
 
@@ -453,9 +460,11 @@ public class SplineInputDriver : MonoBehaviour
                 float sf = Mathf.Clamp01(speed / Mathf.Max(1f, packSteerCapFullMph * 0.44704f));
                 float cap = Mathf.Lerp(1f, packHighSpeedSteerCap, sf);
                 steerInput = Mathf.Clamp(steerInput, -cap, cap);
+                // Catching a hit wants quicker hands than holding a line: the slow slew put the answer to a bump a
+                // quarter-second behind the yaw, and it landed as the car was already swinging back.
+                float slew = Mathf.Lerp(20f, packSteerSlewPerSec, sf) * (_upset > 0f ? packUpsetSlewScale : 1f);
                 if (_hasPackSteer)
-                    steerInput = Mathf.MoveTowards(_packSteer, steerInput,
-                        Mathf.Lerp(20f, packSteerSlewPerSec, sf) * Time.fixedDeltaTime);
+                    steerInput = Mathf.MoveTowards(_packSteer, steerInput, slew * Time.fixedDeltaTime);
             }
             _packSteer = steerInput;
             _hasPackSteer = true;
@@ -511,6 +520,9 @@ public class SplineInputDriver : MonoBehaviour
             // flatOutPanicMps over - something stopped or spinning ahead.
             float over = -speedError;
             brake = over >= flatOutPanicMps ? 1f : Mathf.Clamp01((over - flatOutBrakeMargin) * flatOutBrakeGain);
+            if (over > flatOutHardOverMps)
+                brake = Mathf.Max(brake, Mathf.Clamp01((flatOutHardOverMps - flatOutBrakeMargin) * flatOutBrakeGain
+                                                       + (over - flatOutHardOverMps) * flatOutHardGain));
             brake *= 1f - slideBrakeCut * slideCut01;
         }
         // An oval lane train (SplineDriver.TrainActive): where the gap to the car ahead allows less than the speed
@@ -552,7 +564,14 @@ public class SplineInputDriver : MonoBehaviour
         if (_car.IsSpinSliding) { throttle = 0f; brake = 1f; }
 
         // Still reacting to a hit: the driver hasn't moved their hands or feet yet.
-        if (holding) { steerInput = _heldSteer; throttle = _heldThrottle; brake = _heldBrake; }
+        if (holding)
+        {
+            steerInput = _heldSteer; throttle = _heldThrottle; brake = _heldBrake;
+            // The pack slew runs on from the wheel the driver is actually holding. It used to run on toward the
+            // computed steer under the hold, so the hold ended in a step straight to the cap (0.01 -> 0.40 at 190 mph,
+            // Bell, Daytona, 2026-11-21) and the slide it started was past catching.
+            _packSteer = steerInput;
+        }
 
         _car.SetInput(steerInput, throttle, brake);
 

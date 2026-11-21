@@ -102,6 +102,20 @@ namespace Draftmaster.Sim
             return forceAfter > 0f && waited >= forceAfter;
         }
 
+        // Whether the retirement checks look at a car this step: the race is running and the car is in the scene, and
+        // either its own model drives it or a caution's queue does. Under a caution FormationController switches the
+        // car's model off and drives it kinematically - which is exactly the car the "too damaged to restart" check is
+        // for. Reading "model off" as "not in play" skipped that check every caution, so wrecked cars rode round in
+        // the queue and broke down in the middle of the restarting pack (Daytona, 2026-11-21: damage 1.00, a wheel off
+        // and a crushed nose, all at the green).
+        public static bool Watched(bool raceRunning, bool active, bool modelOn, bool queuedUnderCaution) =>
+            raceRunning && active && (modelOn || queuedUnderCaution);
+
+        // Whether a broken car still waiting out of shot to be moved, since the caution it was retired under, goes now
+        // whoever is looking: the restart has come, and left on the road it breaks down in the middle of the pack.
+        public static bool MoveForRestart(bool brokenDown, bool waitingSinceCaution, bool underCaution) =>
+            brokenDown && waitingSinceCaution && !underCaution;
+
         // Index of the centreline sample nearest `point`; -1 for an empty list.
         public static int NearestIndex(Vector2 point, IReadOnlyList<Vector2> centres)
         {

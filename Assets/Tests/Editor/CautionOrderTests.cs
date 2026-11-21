@@ -4,8 +4,9 @@ using Draftmaster.Sim;
 using NUnit.Framework;
 
 // The restart order under a full-course caution (CautionOrder, run by CautionLineup): the running order at the flag;
-// a car that stops is dropped from it and joins the back once it is back up to 30 mph; a car that pits loses its place
-// and takes whatever place it is in on the road when it leaves pit road.
+// a car that stops is dropped from it and, once it is back up to 30 mph, takes whatever place it is in on the road (the
+// field lands in the order it comes out of the crash - Josh, 2026-11-21); a car that pits loses its place and takes
+// whatever place it is in on the road when it leaves pit road.
 public class CautionOrderTests
 {
     const float Racing = 60f;      // m/s - well above the rejoin speed
@@ -58,17 +59,20 @@ public class CautionOrderTests
     }
 
     [Test]
-    public void BackUpToThirtyMph_AStoppedCarJoinsTheBackOfTheQueue_InTheOrderTheyGetGoing()
+    public void BackUpToThirtyMph_AStoppedCarTakesItsPlaceOnTheRoad_NotTheBack()
     {
         var o = new CautionOrder();
         o.Freeze(new[] { 1, 2, 3, 4, 5 });
+        o.Observe(2, false, Racing, 1500);   // through the crash
+        o.Observe(4, false, Racing, 1200);
+        o.Observe(5, false, Racing, 900);    // still behind it
         o.Observe(1, false, Stopped, 1000);
         o.Observe(3, false, Stopped, 980);
-        o.Observe(3, false, Racing, 990);   // 3 gets going first...
-        o.Observe(1, false, Racing, 1010);  // ...then the old leader
-        CollectionAssert.AreEqual(new[] { 2, 4, 5, 3, 1 }, o.Queue);
-        Assert.IsTrue(o.IsCaught(1), "a car back from a stop is due behind - it lets the field by");
-        Assert.IsTrue(o.Behind(1, 5));
+        o.Observe(3, false, Racing, 990);    // 3 gets going: behind 2 and 4, ahead of 5
+        o.Observe(1, false, Racing, 1010);   // then the old leader, just ahead of 3
+        CollectionAssert.AreEqual(new[] { 2, 4, 1, 3, 5 }, o.Queue);
+        Assert.IsFalse(o.IsCaught(1), "placed by the road - nobody behind it is due past");
+        Assert.IsTrue(o.Behind(5, 3));
     }
 
     [Test]
@@ -180,12 +184,14 @@ public class CautionOrderTests
     }
 
     [Test]
-    public void ACarTheFreezeNeverSawJoinsTheBackOnceItIsUpToSpeed()
+    public void ACarTheFreezeNeverSawTakesItsPlaceOnTheRoadOnceItIsUpToSpeed()
     {
         var o = new CautionOrder();
         o.Freeze(new[] { 1, 2 });
+        o.Observe(1, false, Racing, 3500);
+        o.Observe(2, false, Racing, 2500);
         o.Observe(7, false, Racing, 3000);
-        CollectionAssert.AreEqual(new[] { 1, 2, 7 }, o.Queue);
+        CollectionAssert.AreEqual(new[] { 1, 7, 2 }, o.Queue);
     }
 
     [Test]
@@ -278,7 +284,7 @@ public class CautionOrderTests
         Assert.AreEqual(3, slots.SlotOf(4));
         Assert.AreEqual(4, slots.SlotOf(5));
 
-        // Back up to speed: the back of the queue, and the next slot at the tail.
+        // Back up to speed (nobody else seen on the road here: the tail), and the next slot at the tail.
         o.Observe(2, false, Racing, 1000);
         slots.Update(o.Queue);
         Assert.AreEqual(5, slots.SlotOf(2));

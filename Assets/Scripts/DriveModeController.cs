@@ -474,6 +474,10 @@ public class DriveModeController : MonoBehaviour
         string label = "PIT";
         if (autoShown && !_driving && playerCar != null && RaceStart.IsRunning && !RaceWeekend.IsPracticeLike)
         {
+            // Lanes put the car on Auto on the grid, before GridSpawner has published the player's pit box, and the one
+            // try at fitting the pit brain then gave up for the race: no pit brain, so no PIT button however low the
+            // tank ran (Daytona, 2026-11-21). Tried again until it sticks; once fitted this returns at once.
+            EnsureAutoPitBrain();
             var tank = playerCar.GetComponent<FuelTank>();
             var pit = playerCar.GetComponent<PitStopController>();
             if (tank != null && pit != null && !pit.IsPitting && tank.fuelLitres < pitButtonFuelLitres)
