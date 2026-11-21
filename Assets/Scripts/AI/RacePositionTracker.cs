@@ -64,6 +64,8 @@ public class RacePositionTracker : MonoBehaviour
     public int PlayerPosition => _playerEntry != null ? _playerEntry.position : 0;
     // The local player's lap count (goes up each time they cross the start/finish line); -1 with no player car.
     public int PlayerLap => _playerEntry != null ? _playerEntry.lap : -1;
+    // The local player's car; null with no player car.
+    public Transform PlayerTransform => _playerEntry != null ? _playerEntry.tf : null;
     public int PositionOf(SplineDriver d)
     {
         if (d == null) return 0;

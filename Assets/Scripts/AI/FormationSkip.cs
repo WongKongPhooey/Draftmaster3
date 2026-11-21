@@ -17,7 +17,8 @@ using UnityEngine.InputSystem;
 // The same skip covers the laps behind the safety car under a full-course caution (FullCourseCaution), offered once
 // the safety car has picked up the leader (SafetyCar.PickingUp off) and the player has crossed the start/finish line
 // since the caution came out. It fast-forwards through the pits-open lap (on Auto the AI makes the pit call) and
-// stops in the same place: the field closing up for the restart, pit road shut.
+// stops in the same place: the field closing up for the restart, pit road shut. If the race ends under that caution
+// there is no restart to stop at, so it stops as the player takes the chequered flag (RaceDirector.TookChequer).
 //
 // Press again to stop skipping. Taking the wheel back (Auto off) stops it too. Single player only: a co-op guest
 // cannot be fast-forwarded by the host's clock. Added by FormationDirector at Start, so no scene wiring.
@@ -47,11 +48,11 @@ public class FormationSkip : MonoBehaviour
     // Is the skip on offer? On the formation lap, before the field starts closing up; or under a caution once the
     // safety car has the leader and the player has crossed the line since it came out, until the field closes up
     // for the restart. Either way only with the AI driving the player's car and the player sat in it rather than
-    // out on foot.
+    // out on foot, and never once the player has taken the chequered flag (a race that ends under caution).
     public static bool Offered(bool multiplayer, RaceStart.Phase phase, bool fieldClosingUp, bool auto, bool onFoot,
-                               bool leaderCaught, bool playerCrossedLine)
+                               bool leaderCaught, bool playerCrossedLine, bool playerFinished = false)
     {
-        if (multiplayer || fieldClosingUp || !auto || onFoot) return false;
+        if (multiplayer || fieldClosingUp || !auto || onFoot || playerFinished) return false;
         if (phase == RaceStart.Phase.Formation) return true;
         return phase == RaceStart.Phase.Caution && leaderCaught && playerCrossedLine;
     }
@@ -63,7 +64,7 @@ public class FormationSkip : MonoBehaviour
         var director = FormationDirector.Instance;
         bool closingUp = director != null && director.FieldClosingUp;
         var phase = RaceStart.Current;
-        bool leaderCaught = false, crossed = false;
+        bool leaderCaught = false, crossed = false, finished = false;
         if (phase == RaceStart.Phase.Caution)
         {
             var sc = director != null ? director.SafetyCarInstance : null;
@@ -74,8 +75,11 @@ public class FormationSkip : MonoBehaviour
             var rt = RacePositionTracker.Instance;
             int lap = rt != null ? rt.PlayerLap : -1;
             crossed = _cautionStartLap >= 0 && lap > _cautionStartLap;
+            // The race ended under this caution: no restart close-up is coming, so the line is where it stops.
+            finished = rt != null && RaceDirector.TookChequer(rt.PlayerTransform);
         }
-        return Offered(GameSession.IsMultiplayer, phase, closingUp, auto, PadInput.OnFoot, leaderCaught, crossed);
+        return Offered(GameSession.IsMultiplayer, phase, closingUp, auto, PadInput.OnFoot, leaderCaught, crossed,
+                       finished);
     }
 
     // Notes the player's lap as a caution comes out (or as soon as their car is known in one), and forgets it after.
