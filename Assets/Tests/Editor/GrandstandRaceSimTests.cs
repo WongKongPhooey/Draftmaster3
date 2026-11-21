@@ -435,7 +435,8 @@ public class GrandstandRaceSimTests
     }
 
     // watched: null = the player's field's racecraft, else RaceAsWatchedField(dynamicModel: watched).
-    ApexResult RunDynamic(string trackId, int cars, float seconds, bool? watched, Dictionary<string, object> racingOverrides = null)
+    ApexResult RunDynamic(string trackId, int cars, float seconds, bool? watched, Dictionary<string, object> racingOverrides = null,
+                          Action<float, Component, Component[], Component[]> onStep = null, Start startOverride = null)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Resources/TrackPackages/{trackId}.prefab");
         Assert.IsNotNull(prefab, $"no track package for {trackId}");
@@ -462,7 +463,7 @@ public class GrandstandRaceSimTests
         var racingType = Runtime("AIRacingBehaviour");
         var pvcType = Runtime("PlayerVehicleController");
         var inputType = Runtime("SplineInputDriver");
-        var start = new Start();
+        var start = startOverride ?? new Start();
         UnityEngine.Random.InitState(11);
         var splines = new Component[cars];
         var racers = new Component[cars];
@@ -586,6 +587,7 @@ public class GrandstandRaceSimTests
                 pvcStep.Invoke(pvcs[i], null);
                 splineStep.Invoke(splines[i], null);
             }
+            onStep?.Invoke((step + 1) * dt, track, splines, pvcs);
             for (int i = 0; i < cars; i++)
             {
                 float d = (float)distProp.GetValue(splines[i]);
@@ -666,6 +668,113 @@ public class GrandstandRaceSimTests
         LogApex("kinematic watched racecraft (before)", RunDynamic("WatkinsGlen", 16, 170f, false));
         Despawn();
         LogApex("dynamic watched racecraft", RunDynamic("WatkinsGlen", 16, 170f, true));
+    }
+
+    // ---- The watched Daytona start -------------------------------------------------------------------------------
+    //
+    // Watching a Truck race at Daytona from the stand, the field crashed the moment it appeared and then pulled away a
+    // row at a time. Bodies overlapping (no Physics2D here, so an overlap is a crash in the game) and the spread of the
+    // field over the opening seconds.
+
+    public class StartResult
+    {
+        public int overlapPairs;          // distinct car pairs whose bodies overlapped
+        public int overlapsFirst3s;       // of those, first seen inside 3 s
+        public float spreadAt0, spreadAt5, spreadAt10;   // metres from the leader to the last car
+        public float minSpeedMph5;        // slowest car 5 s in
+        public readonly System.Text.StringBuilder detail = new System.Text.StringBuilder();
+    }
+
+    StartResult RunWatchedStart(string trackId, int cars, float seconds, Start start = null)
+    {
+        var r = new StartResult();
+        var splineType = Runtime("SplineDriver");
+        var pvcType = Runtime("PlayerVehicleController");
+        var trackType = Runtime("TrackBuilder");
+        var nearest = trackType.GetMethod("NearestCenterlineDistance");
+        System.Reflection.MethodInfo sampleAt = null;
+        foreach (var m in trackType.GetMethods())
+            if (m.Name == "SampleAt" && m.GetParameters().Length == 2) { sampleAt = m; break; }
+        var speedProp = pvcType.GetProperty("SpeedMps");
+        var seen = new HashSet<long>();
+        float lap = 0f;
+        float[] prog = null, lastCd = null;
+        float nextLog = 0f;
+
+        RunDynamic(trackId, cars, seconds, true, null, (t, track, splines, pvcs) =>
+        {
+            int n = splines.Length;
+            if (lap <= 0f)
+            {
+                var samples = (System.Collections.IList)trackType.GetMethod("SampleCenterline").Invoke(track, null);
+                lap = (float)samples[samples.Count - 1].GetType().GetField("distance").GetValue(samples[samples.Count - 1]);
+            }
+            var cd = new float[n]; var lat = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 pos = splines[i].transform.position;
+                cd[i] = (float)nearest.Invoke(track, new object[] { pos });
+                var sample = sampleAt.Invoke(track, new object[] { cd[i], null });
+                var smt = sample.GetType();
+                Vector2 sp = (Vector2)smt.GetField("position").GetValue(sample);
+                Vector2 tg = (Vector2)smt.GetField("tangent").GetValue(sample);
+                Vector2 local = track.transform.InverseTransformPoint(pos);
+                lat[i] = Vector2.Dot(local - sp, new Vector2(tg.y, -tg.x));
+            }
+            if (prog == null)
+            {
+                prog = new float[n]; lastCd = new float[n];
+                for (int i = 0; i < n; i++) { prog[i] = Wrap(cd[i] - cd[0] + lap * 0.5f, lap) - lap * 0.5f; lastCd[i] = cd[i]; }
+            }
+            for (int i = 0; i < n; i++)
+            {
+                float moved = Wrap(cd[i] - lastCd[i], lap);
+                if (moved > lap * 0.5f) moved -= lap;
+                prog[i] += moved; lastCd[i] = cd[i];
+            }
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++)
+                {
+                    float dd = Mathf.Abs(prog[i] - prog[j]);
+                    if (dd >= 4.8f || Mathf.Abs(lat[i] - lat[j]) >= 2.0f) continue;
+                    long key = i * 1000L + j;
+                    if (!seen.Add(key)) continue;
+                    r.overlapPairs++;
+                    if (t < 3f) r.overlapsFirst3s++;
+                    r.detail.AppendLine($"  OVERLAP t{t:0.00} car{i:D2}/car{j:D2} gap {prog[i] - prog[j]:0.0} m lat {lat[i]:0.0}/{lat[j]:0.0} " +
+                                        $"{(float)speedProp.GetValue(pvcs[i]) * 2.237f:0}/{(float)speedProp.GetValue(pvcs[j]) * 2.237f:0} mph");
+                }
+
+            float lead = float.MinValue, last = float.MaxValue, minMph = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                lead = Mathf.Max(lead, prog[i]); last = Mathf.Min(last, prog[i]);
+                minMph = Mathf.Min(minMph, (float)speedProp.GetValue(pvcs[i]) * 2.237f);
+            }
+            float spread = lead - last;
+            if (Mathf.Abs(t - 0.02f) < 0.011f) r.spreadAt0 = spread;
+            if (Mathf.Abs(t - 5f) < 0.011f) { r.spreadAt5 = spread; r.minSpeedMph5 = minMph; }
+            if (Mathf.Abs(t - 10f) < 0.011f) r.spreadAt10 = spread;
+            if (t + 1e-4f >= nextLog)
+            {
+                nextLog += t < 4f ? 0.5f : 2f;
+                var line = new System.Text.StringBuilder($"  t{t:0.0} spread {spread:0} m:");
+                for (int i = 0; i < n; i++)
+                    line.Append($" [{i}] {prog[i] - lead:0}/{lat[i]:0.0}/{(float)speedProp.GetValue(pvcs[i]) * 2.237f:0}");
+                r.detail.AppendLine(line.ToString());
+            }
+        }, start);
+        return r;
+    }
+
+    [Explicit("Diagnostic: the watched race's rolling start at Daytona on the dynamic model.")]
+    [Test]
+    public void WatchedStart_Daytona()
+    {
+        var r = RunWatchedStart("Daytona", 43, 20f);
+        Debug.Log($"[GrandstandRaceSim] Daytona watched start: overlapping pairs {r.overlapPairs} ({r.overlapsFirst3s} in the first 3 s); " +
+                  $"spread {r.spreadAt0:0} -> {r.spreadAt5:0} (5 s) -> {r.spreadAt10:0} m (10 s); slowest car at 5 s {r.minSpeedMph5:0} mph" +
+                  $"{Environment.NewLine}{r.detail}");
     }
 
     static void Call(object target, string method)

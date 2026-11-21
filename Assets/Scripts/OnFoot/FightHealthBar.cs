@@ -1,43 +1,60 @@
-using TMPro;
 using UnityEngine;
 using Draftmaster.Fights;
 
-// The composure bar that floats over a fighter's head for the length of a scrap. Built the same way as
-// SpeechBubble — an independent world-space object made of SpriteRenderers plus a TextMeshPro name, rather
-// than a world-space Canvas — because the spline scenes render through the 3D URP renderer where a Canvas
-// needs wiring and a font asset, and because the fighter's own transform rotates as they turn to face each
-// other (a parented bar would spin with them).
+// A fighter's composure bar for the length of a scrap, drawn the way a fighting game draws it: across the top
+// of the screen, the player's on the left and the rival's on the right, either side of the objective recall
+// tab (WeekendObjectiveHUD.DrawRecallTab) that sits at the top centre. Each bar is anchored at its outer edge
+// and drains toward the centre, so the damage on both sides piles up in the middle where the eye already is.
 //
-// Art comes from the shared PixelUITheme bar sprites when the kit is installed, so a fight bar matches the
-// menus; without it, a flat procedural plate is used.
+// The fill is a fixed green-to-yellow gradient — green at the centre end, the part a hit takes first, yellow
+// at the outer edge — so a fighter running low is visibly down to the yellow. When a chunk is taken the
+// green drops at once and the lost chunk shows red, holds for a beat so the hit reads, then drains away.
+//
+// IMGUI through PixelGUI, like the other on-foot HUD pieces, so it sizes off the same kit-pixel scale as the
+// tab it sits beside on every screen, phone included.
 public class FightHealthBar : MonoBehaviour
 {
-    [Tooltip("Bar width in world metres. The on-foot characters are ~0.6m tall, so this is deliberately wider than the body — it reads as UI, not as a prop.")]
-    public float width = 1.1f;
-    [Tooltip("Bar height in world metres.")]
-    public float height = 0.13f;
-    [Tooltip("World metres above the fighter's position the bar floats.")]
-    public float headHeight = 0.95f;
-    [Tooltip("How far toward the camera the bar sits, so the opaque ground plane can't depth-cull it.")]
-    public float zLift = 0.6f;
-    [Tooltip("Seconds the fill takes to catch up to a change — a hit reads as a drain rather than a jump.")]
-    public float drainSeconds = 0.25f;
-    [Tooltip("Name text size in world metres.")]
-    public float nameSize = 0.16f;
+    [Tooltip("Longest a bar may be, in kit pixels (the HUD is laid out on a 640x360 grid).")]
+    public float maxWidthKitPx = 220f;
+    [Tooltip("Height of the coloured part of the bar, in kit pixels.")]
+    public float heightKitPx = 9f;
+    [Tooltip("Kit pixels from the top of the screen to the bar's frame.")]
+    public float topKitPx = 6f;
+    [Tooltip("Kit pixels kept clear either side of the screen centre, for the recall tab.")]
+    public float centreGapKitPx = 26f;
+    [Tooltip("Kit pixels kept clear at the screen's outer edge.")]
+    public float edgeMarginKitPx = 8f;
+    [Tooltip("Seconds the red 'just lost' chunk holds before it starts draining.")]
+    public float redHoldSeconds = 0.5f;
+    [Tooltip("Seconds the red chunk would take to drain a full bar.")]
+    public float redDrainSeconds = 0.6f;
+    [Tooltip("Colour at the centre end of the bar — the full-health end.")]
+    public Color fullColour = new Color(0.30f, 0.86f, 0.32f);
+    [Tooltip("Colour at the outer end of the bar — what is left when a fighter is nearly done.")]
+    public Color lowColour = new Color(1f, 0.88f, 0.22f);
+    [Tooltip("The chunk a hit has just taken.")]
+    public Color damageColour = new Color(0.86f, 0.16f, 0.14f);
 
     Fighter _fighter;
-    SpriteRenderer _track, _fill;
-    TextMeshPro _nameLabel;
-    float _shown = 1f, _target = 1f;
-    float _nameScale = 1f;
+    bool _left;
+    float _target = 1f;   // composure right now
+    float _trail = 1f;    // where the red chunk reaches to
+    float _holdUntil;
+    Texture2D _gradient;
+    Color _builtFull, _builtLow;
+    GUIStyle _nameStyle;
 
-    public static FightHealthBar Attach(Fighter fighter)
+    // The player's bar goes on the left, everybody else's on the right.
+    public static FightHealthBar Attach(Fighter fighter) =>
+        Attach(fighter, fighter != null && fighter.isPlayerControlled);
+
+    public static FightHealthBar Attach(Fighter fighter, bool leftSide)
     {
         if (fighter == null) return null;
         var go = new GameObject($"FightHealthBar ({fighter.displayName})");
         var bar = go.AddComponent<FightHealthBar>();
         bar._fighter = fighter;
-        bar.Build();
+        bar._left = leftSide;
         bar.SetFraction(FightRules.HealthFraction(fighter.Health), true);
         fighter.HealthChanged += bar.OnHealthChanged;
         return bar;
@@ -52,6 +69,7 @@ public class FightHealthBar : MonoBehaviour
     void OnDestroy()
     {
         if (_fighter != null) _fighter.HealthChanged -= OnHealthChanged;
+        if (_gradient != null) Destroy(_gradient);
     }
 
     void OnHealthChanged(Fighter fighter, float health, float max)
@@ -59,138 +77,121 @@ public class FightHealthBar : MonoBehaviour
 
     public void SetFraction(float fraction, bool instant)
     {
-        _target = Mathf.Clamp01(fraction);
-        if (instant) _shown = _target;
-    }
-
-    void Build()
-    {
-        var theme = PixelUITheme.Instance;
-
-        _track = MakeBar("Track", theme != null ? theme.barTrack : null,
-                         theme != null ? theme.plateDeep : new Color(0.06f, 0.07f, 0.1f, 0.95f), 70);
-        _fill = MakeBar("Fill", theme != null ? theme.barGold : null,
-                        theme != null ? theme.gold : new Color(1f, 0.83f, 0.42f, 1f), 71);
-
-        var nameGo = new GameObject("Name");
-        nameGo.transform.SetParent(transform, false);
-        _nameLabel = nameGo.AddComponent<TextMeshPro>();
-        if (theme != null && theme.body != null)
+        fraction = Mathf.Clamp01(fraction);
+        if (instant || fraction >= _trail)
         {
-            _nameLabel.font = theme.body;
-            if (theme.body.material != null) _nameLabel.fontSharedMaterial = theme.body.material;
+            // A reset or a recovery: no damage to show.
+            _target = _trail = fraction;
+            return;
         }
-        _nameLabel.alignment = TextAlignmentOptions.Center;
-        _nameLabel.enableWordWrapping = false;
-        _nameLabel.color = theme != null ? theme.text : Color.white;
-        _nameLabel.text = _fighter != null ? _fighter.displayName : "";
-        var nameRenderer = nameGo.GetComponent<MeshRenderer>();
-        nameRenderer.sortingLayerName = "Vehicles";
-        nameRenderer.sortingOrder = 72;
-        _nameScale = FitToMetres(_nameLabel, nameSize);
-        _nameLabel.rectTransform.sizeDelta = _nameLabel.GetPreferredValues();
-        nameGo.transform.localPosition = new Vector3(0f, height * 0.5f + nameSize * 0.7f, -0.02f);
+        // A hit. The red runs from the new value up to wherever the last red chunk still reached, so a
+        // combo stacks into one long red stretch, and the hold restarts on each blow.
+        _target = fraction;
+        _holdUntil = Time.unscaledTime + redHoldSeconds;
     }
 
-    SpriteRenderer MakeBar(string name, Sprite sprite, Color color, int order)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(transform, false);
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite != null ? sprite : PlateSprite();
-        sr.color = color;
-        sr.sortingLayerName = "Vehicles";
-        sr.sortingOrder = order;
-        // Sliced draw needs a 9-slice border; without one the renderer ignores `size` and draws the sprite
-        // at its native (tiny) world size, exactly as SpeechBubble has to guard against.
-        sr.drawMode = sr.sprite != null && sr.sprite.border.sqrMagnitude > 0f
-            ? SpriteDrawMode.Sliced
-            : SpriteDrawMode.Simple;
-        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-        if (sh == null) sh = Shader.Find("Sprites/Default");
-        if (sh != null) sr.sharedMaterial = new Material(sh);
-        return sr;
-    }
-
-    void LateUpdate()
+    void Update()
     {
         if (_fighter == null) { Destroy(gameObject); return; }
-
-        transform.position = _fighter.transform.position + Vector3.up * headHeight + Vector3.back * zLift;
-        transform.rotation = Quaternion.identity;   // never inherit the fighter's facing spin
-
-        _shown = drainSeconds <= 0f
-            ? _target
-            : Mathf.MoveTowards(_shown, _target, Time.deltaTime / drainSeconds);
-
-        Size(_track, width, height, 0f);
-        // The fill shrinks from the left edge, so it slides left rather than shrinking about its centre.
-        float fillWidth = Mathf.Max(0.0001f, width * _shown);
-        Size(_fill, fillWidth, height, -(width - fillWidth) * 0.5f);
-        _fill.color = FillColor(_shown);
-        _fill.enabled = _shown > 0.001f;
-    }
-
-    void Size(SpriteRenderer sr, float w, float h, float xOffset)
-    {
-        if (sr == null) return;
-        sr.transform.localPosition = new Vector3(xOffset, 0f, sr == _fill ? -0.01f : 0f);
-        if (sr.drawMode == SpriteDrawMode.Sliced)
+        if (_trail > _target && Time.unscaledTime >= _holdUntil)
         {
-            sr.size = new Vector2(w, h);
-            sr.transform.localScale = Vector3.one;
-        }
-        else
-        {
-            var s = sr.sprite;
-            float nw = s != null ? s.rect.width / s.pixelsPerUnit : 1f;
-            float nh = s != null ? s.rect.height / s.pixelsPerUnit : 1f;
-            sr.transform.localScale = new Vector3(nw > 0.0001f ? w / nw : 1f, nh > 0.0001f ? h / nh : 1f, 1f);
+            float rate = redDrainSeconds > 0f ? Time.unscaledDeltaTime / redDrainSeconds : 1f;
+            _trail = Mathf.MoveTowards(_trail, _target, rate);
         }
     }
 
-    // Gold while composed, amber as it goes, red when they're nearly done — the same status ramp the
-    // rest of the UI uses, so "this fight is nearly over" reads at a glance.
-    static Color FillColor(float fraction)
+    void OnGUI()
     {
-        var theme = PixelUITheme.Instance;
-        if (fraction > 0.5f) return theme != null ? theme.gold : new Color(1f, 0.83f, 0.42f);
-        if (fraction > 0.25f) return theme != null ? theme.caution : new Color(0.91f, 0.55f, 0.18f);
-        return theme != null ? theme.danger : new Color(0.9f, 0.28f, 0.3f);
+        if (Event.current.type != EventType.Repaint) return;
+        if (_fighter == null || RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
+
+        float centre = Screen.width * 0.5f;
+        float gap = PixelGUI.Px(centreGapKitPx);
+        float border = PixelGUI.Px(1f);
+        float width = Mathf.Round(Mathf.Min(PixelGUI.Px(maxWidthKitPx), centre - gap - PixelGUI.Px(edgeMarginKitPx)));
+        float height = PixelGUI.Px(heightKitPx);
+        if (width <= border * 4f) return;
+
+        // The coloured area; the frame is drawn around it.
+        float x = _left ? Mathf.Round(centre - gap - width) : Mathf.Round(centre + gap);
+        var inner = new Rect(x, PixelGUI.Px(topKitPx) + border * 2f, width, height);
+
+        // Frame: an ink outline, a gold rim, the deep plate as the empty track.
+        PixelGUI.Fill(Grow(inner, border * 2f), PixelGUI.Ink);
+        PixelGUI.Fill(Grow(inner, border), PixelGUI.Gold);
+        PixelGUI.Fill(inner, PixelGUI.PlateDeep);
+
+        // Both bars are anchored at the outer edge. The red chunk sits just past the fill, toward the centre.
+        PixelGUI.Fill(Span(inner, 0f, _trail), damageColour);
+        DrawGradient(Span(inner, 0f, _target), _target);
+
+        // A one-pixel highlight along the top of whatever is lit, for a bit of shine.
+        var lit = Span(inner, 0f, Mathf.Max(_target, _trail));
+        if (lit.width > 0f) PixelGUI.Fill(new Rect(lit.x, lit.y, lit.width, border), new Color(1f, 1f, 1f, 0.28f));
+
+        DrawName(inner, border);
     }
 
-    // Same measure-and-scale trick SpeechBubble uses: TMP's fontSize is not world metres, so render a probe
-    // at the font's native point size and scale by what it actually measured.
-    static float FitToMetres(TextMeshPro label, float metres)
+    // The part of the bar from `from` to `to` (0..1 measured from the outer edge).
+    Rect Span(Rect bar, float from, float to)
     {
-        float pointSize = label.font != null && label.font.faceInfo.pointSize > 0 ? label.font.faceInfo.pointSize : 16f;
-        label.fontSize = pointSize;
-
-        string previous = label.text;
-        label.text = "Ag";
-        label.ForceMeshUpdate();
-        float measured = label.GetPreferredValues().y;
-        label.text = previous;
-        label.ForceMeshUpdate();
-
-        float scale = measured > 0.0001f ? metres / measured : 1f;
-        label.transform.localScale = new Vector3(scale, scale, 1f);
-        return scale;
+        float a = Mathf.Round(bar.width * Mathf.Clamp01(from));
+        float b = Mathf.Round(bar.width * Mathf.Clamp01(to));
+        if (b <= a) return new Rect(bar.x, bar.y, 0f, bar.height);
+        return _left
+            ? new Rect(bar.x + a, bar.y, b - a, bar.height)
+            : new Rect(bar.xMax - b, bar.y, b - a, bar.height);
     }
 
-    // Flat 9-sliced white plate, used when the pixel UI kit isn't installed.
-    static Sprite _plate;
-    static Sprite PlateSprite()
+    static Rect Grow(Rect r, float by) => new Rect(r.x - by, r.y - by, r.width + by * 2f, r.height + by * 2f);
+
+    // The gradient is fixed to the bar, not squashed into the fill: the outer edge is always yellow and the
+    // centre end always green, so as the fill shrinks the green goes first.
+    void DrawGradient(Rect r, float fraction)
     {
-        if (_plate != null) return _plate;
-        int s = 16;
-        var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
-        var px = new Color32[s * s];
-        for (int i = 0; i < px.Length; i++) px[i] = new Color32(255, 255, 255, 255);
-        tex.SetPixels32(px); tex.Apply();
-        tex.filterMode = FilterMode.Point;
-        _plate = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), s,
-                               0, SpriteMeshType.FullRect, new Vector4(4, 4, 4, 4));
-        return _plate;
+        if (r.width <= 0f) return;
+        var tex = Gradient();
+        // Texture u runs yellow (0) to green (1); the fill covers u 0..fraction. The right bar's outer edge is
+        // its right-hand end, so its u runs the other way across the rect.
+        var uv = _left ? new Rect(0f, 0f, fraction, 1f) : new Rect(fraction, 0f, -fraction, 1f);
+        GUI.DrawTextureWithTexCoords(r, tex, uv);
+    }
+
+    Texture2D Gradient()
+    {
+        if (_gradient != null && _builtFull == fullColour && _builtLow == lowColour) return _gradient;
+        if (_gradient == null)
+        {
+            _gradient = new Texture2D(64, 1, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,   // stepped, so it stays pixel art at every scale
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+        }
+        for (int i = 0; i < _gradient.width; i++)
+            _gradient.SetPixel(i, 0, Color.Lerp(lowColour, fullColour, i / (float)(_gradient.width - 1)));
+        _gradient.Apply();
+        _builtFull = fullColour;
+        _builtLow = lowColour;
+        return _gradient;
+    }
+
+    // The driver's name under the bar, flush with its outer edge, with a hard ink drop shadow.
+    void DrawName(Rect bar, float border)
+    {
+        if (_nameStyle == null)
+            _nameStyle = new GUIStyle(PixelGUI.Label) { wordWrap = false, clipping = TextClipping.Overflow };
+        _nameStyle.alignment = _left ? TextAnchor.UpperLeft : TextAnchor.UpperRight;
+
+        string name = _fighter.displayName;
+        float h = _nameStyle.CalcSize(new GUIContent(name)).y;
+        var r = new Rect(bar.x, bar.yMax + border * 2f + PixelGUI.Px(3f), bar.width, h);
+
+        var colour = _nameStyle.normal.textColor;
+        _nameStyle.normal.textColor = PixelGUI.Ink;
+        GUI.Label(new Rect(r.x + border, r.y + border, r.width, r.height), name, _nameStyle);
+        _nameStyle.normal.textColor = colour;
+        GUI.Label(r, name, _nameStyle);
     }
 }

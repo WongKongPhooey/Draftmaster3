@@ -16,7 +16,7 @@ namespace Draftmaster.MasterDraft
         public int cardsConverted;      // every card in the collection
         public int commons, rares, epics, legendaries;
         public int coinsFromCards;      // Economy.CardTradeIn summed over the collection
-        public int teamCards;           // how many of them were in the team (driver, car, chief, bench, deck)
+        public int teamCards;           // how many of them were in the team (driver, car, chief, bench)
         public int listingsCancelled;   // trade listings the player had up
         public string starterCar = "";  // the car the conversion gave (empty if the garage already had cars)
         public string backupFile = "";  // where the old file was kept; set by the backend that wrote it
@@ -95,7 +95,6 @@ namespace Draftmaster.MasterDraft
             foreach (var uid in new[] { team.activeDriver, team.car, team.crewChief })
                 if (!string.IsNullOrEmpty(uid)) set.Add(uid);
             if (team.bench != null) foreach (var uid in team.bench) if (!string.IsNullOrEmpty(uid)) set.Add(uid);
-            if (team.actionDeck != null) foreach (var uid in team.actionDeck) if (!string.IsNullOrEmpty(uid)) set.Add(uid);
             return set;
         }
     }

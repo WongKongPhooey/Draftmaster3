@@ -3,7 +3,7 @@ using UnityEngine;
 
 // The other player's name, on a small tag above their head.
 //
-// Built the same way SpeechBubble and FightHealthBar are — an independent world-space object made of a
+// Built the same way SpeechBubble is — an independent world-space object made of a
 // SpriteRenderer plate plus a TextMeshPro label, not a world-space Canvas — for the two reasons those give:
 // the spline scenes render through the 3D URP renderer, where a Canvas needs wiring and a font asset before
 // it draws at all; and the body this sits over rotates to face where it is walking, so a parented tag would
@@ -91,7 +91,7 @@ public class CoopNameTag : MonoBehaviour
                    : theme != null ? theme.window : null;
         _plate.sprite = themed != null && themed.border.sqrMagnitude > 0f ? themed : PlateSprite();
         // Sliced draw needs a 9-slice border; without one the renderer ignores `size` and draws the sprite
-        // at its native (tiny) world size — the trap SpeechBubble and FightHealthBar both guard against.
+        // at its native (tiny) world size — the trap SpeechBubble also guards against.
         _plate.drawMode = _plate.sprite != null && _plate.sprite.border.sqrMagnitude > 0f
             ? SpriteDrawMode.Sliced
             : SpriteDrawMode.Simple;
@@ -171,7 +171,7 @@ public class CoopNameTag : MonoBehaviour
         if (sh != null) sr.sharedMaterial = new Material(sh);
     }
 
-    // Same measure-and-scale trick SpeechBubble and FightHealthBar use: TMP's fontSize is not world metres,
+    // Same measure-and-scale trick SpeechBubble uses: TMP's fontSize is not world metres,
     // so render a probe at the font's native point size and scale by what it actually measured.
     static float FitToMetres(TextMeshPro label, float metres)
     {

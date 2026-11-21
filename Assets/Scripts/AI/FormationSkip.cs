@@ -106,7 +106,7 @@ public class FormationSkip : MonoBehaviour
         {
             var kb = Keyboard.current;
             if (kb != null && skipKey != Key.None && kb[skipKey].wasPressedThisFrame) asked = true;
-            if (!PadClash() && PadInput.PressedDriving(PadBindings.SkipPaceLap)) asked = true;
+            if (PadInput.PressedDriving(PadBindings.SkipPaceLap)) asked = true;
         }
         if (asked && offered) SetSkipping(!_skipping);
         if (_skipping && !offered) SetSkipping(false);   // closing up, green, or the player took the wheel
@@ -122,10 +122,6 @@ public class FormationSkip : MonoBehaviour
             }
         }
     }
-
-    // A Master Draft race has Next card on the skip's pad button. Its hand is empty on the pace lap, but under a
-    // caution it can hold cards: there the skip is the key or the prompt only.
-    static bool PadClash() => GameSession.IsMasterDraft && RaceStart.IsCaution;
 
     void SetSkipping(bool on)
     {
@@ -159,7 +155,7 @@ public class FormationSkip : MonoBehaviour
         string text = _skipping ? $"Skipping {what} · back to normal speed" : $"Skip {what}";
         string key = skipKey != Key.None ? skipKey.ToString() : null;
         _icons.Clear();
-        if (InputGlyphs.UsingGamepad && !PadClash())
+        if (InputGlyphs.UsingGamepad)
         {
             var icon = InputGlyphs.Icon(PadBindings.SkipPaceLap);
             if (icon != null) _icons.Add(icon);

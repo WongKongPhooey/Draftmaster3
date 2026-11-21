@@ -119,8 +119,8 @@ public class LocalMasterDraftBackend : IMasterDraftBackend
     public Task<DraftResult> BuyAndOpenPack(PackKind kind) =>
         kind == PackKind.Starter ? ClaimStarterPack() : Run(p => ProfileOps.BuyStandardPack(p, _catalog));
 
-    public Task<DraftResult> AwardRace(int position, int cardsPlayed) =>
-        Run(p => ProfileOps.AwardRace(p, position, cardsPlayed));
+    public Task<DraftResult> AwardRace(int position) =>
+        Run(p => ProfileOps.AwardRace(p, position));
 
     public Task<List<TradeOffer>> ListTradeOffers()
     {

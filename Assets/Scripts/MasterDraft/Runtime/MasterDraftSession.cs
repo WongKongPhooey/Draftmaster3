@@ -50,7 +50,6 @@ public class MasterDraftSession : MonoBehaviour
         public string trackId;
         public int position;      // 1-based; 0 = did not finish
         public int fieldSize;
-        public int cardsPlayed;
         public int coinsAwarded;
     }
 

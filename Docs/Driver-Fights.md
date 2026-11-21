@@ -13,7 +13,7 @@ runs out of it simply stops swinging.
 2. If the pair's `DriverRelationships` score is at or below `RivalThreshold` (-30), they greet you with an
    argument instead of small talk (`RivalDriverNPC.rivalLines`).
 3. When the argument runs out, a `DialogueChoiceUI` panel offers **Square up to them** / **Let it go**.
-4. Squaring up starts a `DriverFight`: a composure bar appears over each character's head, both square up for
+4. Squaring up starts a `DriverFight`: composure bars appear across the top of the screen, fighting-game style (player left, rival right, either side of the objective tab, names underneath), both square up for
    a beat, then it's live.
 5. **The very first fight of a save** stops there for a moment: a `TutorialPopup` names the shove button for
    the device in the player's hands and the fight is held still behind it (see below).
@@ -104,7 +104,7 @@ overwrites a feud earned on track, and it logs the driver's name and distance fr
 | `Assets/Scripts/OnFoot/RivalFightAI.cs` | The rival's brain — holds fighting distance, circles, swings on an aggression-driven timer. |
 | `Assets/Scripts/OnFoot/DriverFight.cs` | The director: starts the fight, reads the player's attack input, leashes them to the fight, calls the break-up, applies the fallout. |
 | `Assets/Scripts/OnFoot/FightPeacemaker.cs` | A bystander who runs in, wedges between the pair, and marches one of them away — body against their back, along whichever nearby direction has open ground (not into a motorhome or the fence), and away from the other escort's route. |
-| `Assets/Scripts/OnFoot/FightHealthBar.cs` | The world-space composure bar over each fighter's head. |
+| `Assets/Scripts/OnFoot/FightHealthBar.cs` | Screen-space composure bars (IMGUI via PixelGUI): player left, rival right of the top-centre recall tab; green-to-yellow gradient, a hit leaves a red chunk that holds then drains. |
 | `Assets/Scripts/OnFoot/RivalDriverNPC.cs` | The dialogue: argument lines, the square-up choice, and the hand-off into `DriverFight`. |
 | `Assets/Scripts/OnFoot/FightMotion.cs` | Shared move/turn/animate helpers, so Animator rigs and paper-doll rigs are driven the same way. |
 | `Assets/Scripts/OnFoot/FightTestRivals.cs` | Seeds the test rivalries described above. |

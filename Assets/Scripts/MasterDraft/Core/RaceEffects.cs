@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Draftmaster.MasterDraft
 {
@@ -38,63 +37,5 @@ namespace Draftmaster.MasterDraft
             chief == null ? 1f : 1f - Unit(chief.strategy, ChiefNeutral, ChiefRange) * FuelSwing;
         public static float TyreWearScale(CardDefinition chief) =>
             chief == null ? 1f : 1f - Unit(chief.setup, ChiefNeutral, ChiefRange) * WearSwing;
-    }
-
-    // The action cards in play: timed boosts with a clock, plus the one-shot "next pit stop" flag. Times are
-    // whatever clock the caller uses (race seconds). Playing a timed card that is already running restarts its
-    // clock rather than stacking it.
-    public sealed class ActiveEffects
-    {
-        readonly Dictionary<ActionEffect, (float until, float magnitude)> _timed = new();
-
-        // Perfect Pit Stop: waiting for the next stop to use it.
-        public bool PerfectPitPending { get; private set; }
-        public float PerfectPitScale { get; private set; } = 1f;
-
-        // Starts what a played card does over time. Returns false for instant effects (the caller applies
-        // those itself — tyres, bodywork) so the caller knows nothing is running.
-        public bool Start(ActionSpec spec, float now)
-        {
-            if (spec == null) return false;
-            if (spec.Effect == ActionEffect.PerfectPitStop)
-            {
-                PerfectPitPending = true;
-                PerfectPitScale = Math.Max(0.05f, spec.Magnitude);
-                return true;
-            }
-            if (spec.Seconds <= 0f) return false;
-            _timed[spec.Effect] = (now + spec.Seconds, spec.Magnitude);
-            return true;
-        }
-
-        public void PitStopUsed()
-        {
-            PerfectPitPending = false;
-            PerfectPitScale = 1f;
-        }
-
-        public bool IsActive(ActionEffect e, float now) => _timed.TryGetValue(e, out var t) && now < t.until;
-
-        public float Remaining(ActionEffect e, float now) =>
-            _timed.TryGetValue(e, out var t) ? Math.Max(0f, t.until - now) : 0f;
-
-        float Magnitude(ActionEffect e, float now) => IsActive(e, now) ? _timed[e].magnitude : 0f;
-
-        // Push To Pass: +magnitude engine power.
-        public float PowerScale(float now) => 1f + Magnitude(ActionEffect.PushToPass, now);
-
-        // Slipstream: draft strength multiplied by magnitude.
-        public float DraftScale(float now) => IsActive(ActionEffect.Slipstream, now) ? _timed[ActionEffect.Slipstream].magnitude : 1f;
-
-        // Fuel Saver: burn cut by magnitude.
-        public float FuelBurnScale(float now) => 1f - Magnitude(ActionEffect.FuelSaver, now);
-
-        // Pit service time while a Perfect Pit Stop is waiting.
-        public float PitTimeScale => PerfectPitPending ? PerfectPitScale : 1f;
-
-        public IEnumerable<ActionEffect> Running(float now)
-        {
-            foreach (var kv in _timed) if (now < kv.Value.until) yield return kv.Key;
-        }
     }
 }

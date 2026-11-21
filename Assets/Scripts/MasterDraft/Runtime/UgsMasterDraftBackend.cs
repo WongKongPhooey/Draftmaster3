@@ -110,13 +110,13 @@ public class UgsMasterDraftBackend : IMasterDraftBackend
         return _local.BuyAndOpenPack(kind);
     }
 
-    public Task<DraftResult> AwardRace(int position, int cardsPlayed)
+    public Task<DraftResult> AwardRace(int position)
     {
 #if MASTERDRAFT_UGS
         // TODO(UGS Cloud Code): an offline race result is self-reported, so cap and rate-limit it server-side;
         // an online race should be reported by the host/server, not the player.
 #endif
-        return _local.AwardRace(position, cardsPlayed);
+        return _local.AwardRace(position);
     }
 
     public Task<List<TradeOffer>> ListTradeOffers()

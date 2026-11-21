@@ -244,13 +244,21 @@ public class IronOvalRaceHUD : MonoBehaviour
         cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
         // Fuel left in the tank. A car without a FuelTank reads full, as a car without a TireModel reads
-        // fresh rubber. The last fifth turns alarm red — time to pit.
+        // fresh rubber.
         label.normal.textColor = PixelGUI.Gold;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Fuel", label);
+        // The litres beside the word: a practice load (CarSetup, 1-20 L) is only a cell or two of the 100 L tank,
+        // and the number is what visibly counts down.
+        string fuelCaption = _fuel != null ? $"Fuel {Mathf.CeilToInt(_fuel.fuelLitres)} L" : "Fuel";
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), fuelCaption, label);
         cy += PixelGUI.LineH;
         float fuel = _fuel != null ? _fuel.Fraction : 1f;
-        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), Mathf.RoundToInt(fuel * 10f), 10,
-                       fuel > 0.2f ? PixelGUI.Gold : PixelGUI.Danger);
+        // A cell stays lit while any of its tenth is left, so the last one goes out when the tank is dry.
+        int fuelCells = Mathf.Clamp(Mathf.CeilToInt(fuel * 10f - 1e-3f), 0, 10);
+        // Alarm red: the last fifth of a race tank; in practice and qualifying, where a load is a few litres of
+        // the 100 L tank from the start, the last 3 L.
+        bool fuelLow = _fuel != null && !_fuel.Planned ? _fuel.fuelLitres <= 3f : fuel <= 0.2f;
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), fuelCells, 10,
+                       fuelLow ? PixelGUI.Danger : PixelGUI.Gold);
         cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
         // Engine temperature (EngineTemp): empty at normal running, full at overheating. Amber once it runs hot -

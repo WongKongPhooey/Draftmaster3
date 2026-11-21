@@ -76,8 +76,8 @@ namespace Draftmaster.MasterDraft
         public bool Contains(string id) => Get(id) != null;
     }
 
-    // The Garage's tabs (MasterDraftUI.Collection.cs). Builds holds the cars the series race today (the DM2 garage
-    // cards, with classes and gears) until builds are defined; Cars is the paint collection; Drivers, Teams and
+    // The Garage's tabs (MasterDraftUI.Collection.cs). Builds holds one build — the highest rated driver, car and
+    // crew chief card in the collection (TeamRules.BestBuild); Cars is the paint collection; Drivers, Teams and
     // Numbers are still to come.
     public enum GarageTab
     {

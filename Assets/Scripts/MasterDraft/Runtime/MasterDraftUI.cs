@@ -207,8 +207,7 @@ public partial class MasterDraftUI : MonoBehaviour
         string shortcut = _overlay == Overlay.Reveal ? "Reveal All"
             : _overlay == Overlay.CarDetail ? "Upgrade"
             : _overlay != Overlay.None ? ""
-            : _tab == Tab.MyTeam ? "Auto Pick"
-            : _tab == Tab.Garage && _garageTab == GarageTab.Builds ? "Upgrade" : "";
+            : _tab == Tab.MyTeam ? "Auto Pick" : "";
         if (InputGlyphs.UsingGamepad)
             return $"D-Pad  Move     {InputGlyphs.PadName(PadBindings.Confirm)}  Select     {InputGlyphs.PadName(PadBindings.Back)}  Back" +
                    $"     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  Screen" +
@@ -285,14 +284,13 @@ public partial class MasterDraftUI : MonoBehaviour
     }
 
     // The screen's one extra button: Reveal All while opening a pack, Auto Pick on My Team, Upgrade in the
-    // Garage (the focused card on the grid, the open car in its detail).
+    // Garage (the open car in its detail).
     void Shortcut()
     {
         if (_busy) return;
         if (_overlay == Overlay.Reveal) { RevealAll(); return; }
         if (_tab == Tab.MyTeam && _overlay == Overlay.None) AutoPick();
         if (_overlay == Overlay.CarDetail) UpgradeSelectedCar();
-        if (_tab == Tab.Garage && _overlay == Overlay.None) UpgradeFocusedCard();
     }
 
     void Confirm()
@@ -1115,7 +1113,7 @@ public partial class MasterDraftUI : MonoBehaviour
             $"Coins  {p.coins}",
             $"Cards  {p.cards.Count}",
             $"  Drivers {p.CountOf(CardType.Driver)}  Cars {p.CountOf(CardType.Car)}",
-            $"  Chiefs {p.CountOf(CardType.CrewChief)}  Actions {p.CountOf(CardType.Action)}",
+            $"  Chiefs {p.CountOf(CardType.CrewChief)}",
             $"Team OVR  {TeamRules.Rating(p.team, p)}",
             $"Races  {p.racesRun}   Wins  {p.wins}",
             $"Server  {S.Backend.Name}",
@@ -1158,7 +1156,7 @@ public partial class MasterDraftUI : MonoBehaviour
                  () => OpenPack(PackKind.Standard));
 
         string about =
-            "The Starter Pack is free, once. It guarantees a driver, a car, a crew chief and five action cards — a team that can race.\n\n" +
+            "The Starter Pack is free, once. It guarantees two drivers, a car and a crew chief — a team that can race.\n\n" +
             $"A Standard Pack holds {PackGenerator.StandardSize} cards, the last one Rare or better.\n\n" +
             $"You have {p.coins} coins. Races pay coins by finishing position.";
         Text(_content, about, IronOvalUI.Role.Data, T.textDim, new Vector2(330f, 0f), new Vector2(270f, 230f), wrap: true);
@@ -1208,7 +1206,7 @@ public partial class MasterDraftUI : MonoBehaviour
 
     static readonly (CardType type, string label)[] Filters =
     {
-        (CardType.Driver, "Drivers"), (CardType.Car, "Cars"), (CardType.CrewChief, "Chiefs"), (CardType.Action, "Actions"),
+        (CardType.Driver, "Drivers"), (CardType.Car, "Cars"), (CardType.CrewChief, "Chiefs"),
     };
     const int TeamCols = 5, TeamRows = 2;
 
@@ -1224,7 +1222,7 @@ public partial class MasterDraftUI : MonoBehaviour
         RowItem(_content, "slot.bench", $"Bench  {team.bench.Count}/{TeamRules.MaxBench}", new Vector2(0f, y), new Vector2(196f, 18f), () => Filter(CardType.Driver)); y -= 21f;
         RowItem(_content, "slot.car", $"Car  {Name(team.car)}", new Vector2(0f, y), new Vector2(196f, 18f), () => Filter(CardType.Car)); y -= 21f;
         RowItem(_content, "slot.chief", $"Chief  {Name(team.crewChief)}", new Vector2(0f, y), new Vector2(196f, 18f), () => Filter(CardType.CrewChief)); y -= 21f;
-        RowItem(_content, "slot.deck", $"Deck  {team.actionDeck.Count}/{TeamRules.MaxDeck}", new Vector2(0f, y), new Vector2(196f, 18f), () => Filter(CardType.Action)); y -= 23f;
+        y -= 2f;
         ButtonItem(_content, "slot.auto", "Auto Pick", new Vector2(0f, y), 96f, AutoPick);
         Text(_content, $"OVR  {TeamRules.Rating(team, p)}", IronOvalUI.Role.Data, T.gold, new Vector2(108f, y - 5f), new Vector2(88f, 16f)); y -= 30f;
 
@@ -1409,18 +1407,6 @@ public partial class MasterDraftUI : MonoBehaviour
                 case CardType.CrewChief:
                     ButtonItem(_content, "d.use", "Use This Chief", new Vector2(x, y), 150f, () => { team.crewChief = card.uid; SaveTeam(); }, team.crewChief != card.uid); x += 156f;
                     break;
-                case CardType.Action:
-                    bool inDeck = team.actionDeck.Contains(card.uid);
-                    if (inDeck)
-                        ButtonItem(_content, "d.deck", "Take Out of Deck", new Vector2(x, y), 160f, () => { team.actionDeck.Remove(card.uid); SaveTeam(); });
-                    else
-                    {
-                        int copies = team.actionDeck.Count(uid => P.Find(uid)?.def.id == d.id);
-                        bool can = ActionCatalog.IsPlayable(d.effect) && copies < TeamRules.MaxCopiesPerAction && team.actionDeck.Count < TeamRules.MaxDeck;
-                        ButtonItem(_content, "d.deck", "Add to Deck", new Vector2(x, y), 130f, () => { team.actionDeck.Add(card.uid); SaveTeam(); }, can);
-                    }
-                    x += 166f;
-                    break;
             }
         }
         ButtonItem(_content, "d.close", "Close", new Vector2(Mathf.Max(x, 170f), y), 90f, CloseDetail);
@@ -1433,7 +1419,6 @@ public partial class MasterDraftUI : MonoBehaviour
         if (team.bench.Contains(card.uid)) return "On the bench";
         if (team.car == card.uid) return "Your car";
         if (team.crewChief == card.uid) return "Your crew chief";
-        if (team.actionDeck.Contains(card.uid)) return "In your action deck";
         if (TradeRules.IsListed(P, card.uid)) return "Listed for trade";
         return "";
     }
@@ -1666,7 +1651,6 @@ public partial class MasterDraftUI : MonoBehaviour
         {
             TrackCatalog.DisplayName(r.trackId),
             finish,
-            $"Cards played  {r.cardsPlayed}",
             $"Coins earned  +{r.coinsAwarded}",
             $"Coins now  {P.coins}",
         };
@@ -1733,9 +1717,7 @@ public partial class MasterDraftUI : MonoBehaviour
         bool collection = _tab == Tab.Garage && (_overlay == Overlay.None || _overlay == Overlay.CarDetail) && P != null;
         _title.text = collection ? "Card Collection" : "Master Draft";
         _subtitle.text = "";
-        if (collection && _garageTab == GarageTab.Builds && Cars != null)
-            _subtitle.text = $"{CardCollection.Collected(Cars, P.garage)} / {Cars.Count} collected";
-        else if (collection && _garageTab == GarageTab.Cars && Paints != null)
+        if (collection && _garageTab == GarageTab.Cars && Paints != null)
             _subtitle.text = $"{PaintCollection.Collected(Paints, P.paints)} / {Paints.Count} collected";
         float titleW = Mathf.Ceil(_title.GetPreferredValues(_title.text).x);
         float subtitleW = _subtitle.text.Length > 0 ? Mathf.Ceil(_subtitle.GetPreferredValues(_subtitle.text).x) : 0f;

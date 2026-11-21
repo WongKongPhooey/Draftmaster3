@@ -11,9 +11,9 @@ using Object = UnityEngine.Object;
 
 // The Master Draft Garage tab, the Card Collection screen (MasterDraftUI.Collection, to the Draftmaster3_UI_Unity
 // design's Collection_PC), built in the editor against a test profile: no session, no backend, no scene —
-// MasterDraftUI.BuildOffline. Checks it builds without errors, the grid shows the right cards (owned first with
-// class letters and gears, "?" cards for the rest, filters, scrolling) and the car detail's upgrade spends gears
-// and coins. The ordering and gears rules themselves are MasterDraftCollectionTests (Core, headless).
+// MasterDraftUI.BuildOffline. Checks it builds without errors, the Builds tab shows the one build (the highest rated
+// driver, car and crew chief card) and the car detail's upgrade spends gears and coins. The build and gears rules
+// themselves are MasterDraftRulesTests / MasterDraftCollectionTests (Core, headless).
 //
 // Not named MasterDraft*Tests on purpose: those files are compiled engine-free into Tools/HeadlessTests, and
 // this one needs Unity. MasterDraftUI lives in Assembly-CSharp, which an asmdef can't reference, so it is
@@ -50,15 +50,6 @@ public class GarageScreenTests
 
     Transform Content => _go.transform.Find("Canvas/Content");
     Transform Grid => _go.transform.Find("Canvas/CollectionViewport/Grid");
-
-    // Every card built (the rows on screen, the peeking one and the drag buffer below), in grid order.
-    List<Transform> Cards() => Grid == null
-        ? new List<Transform>()
-        : Grid.Cast<Transform>().Where(t => t.name.StartsWith("Card_", StringComparison.Ordinal)).ToList();
-
-    Transform Card(string id) => Grid == null ? null : Grid.Find("Card_" + id);
-
-    static bool IsLocked(Transform card) => card.Find("Locked") != null;
 
     static string TextOf(Transform t) => t == null ? null : t.GetComponent<TMP_Text>()?.text;
 
@@ -104,104 +95,56 @@ public class GarageScreenTests
 
     // ---- tests
 
+    static CardInstance AddCard(MasterDraftProfile p, CardType type, int overall, string name) =>
+        p.Add(new CardDefinition { id = name, type = type, name = name, overall = overall });
+
+    Transform BuildSlot(CardType type) => Content.Find("Build/Slot_" + type);
+
+    string SlotCardName(CardType type) => TextOf(BuildSlot(type)?.Find("Card/Inner/Name"));
+
     [Test]
-    public void Collection_OwnedFirstWithClassLettersAndQuestionMarkCards()
+    public void Builds_ShowsOneBuildOfTheHighestRatedCards()
     {
-        var cars = TestCatalogue();
-        // 5 = Rare class 2 (D), 17 = Rare class 0 holding the 10 gears that unlock it, 0 = Common class 6 (S).
-        var profile = TestProfile(0, new OwnedCar("tst01_5", 2, 3), new OwnedCar("tst02_17", 0, 10), new OwnedCar("tst01_0", 6, 0));
-        Call("BuildOffline", profile, cars);
+        var profile = TestProfile(0);
+        AddCard(profile, CardType.Driver, 71, "Slow Driver");
+        AddCard(profile, CardType.Driver, 88, "Fast Driver");
+        AddCard(profile, CardType.Car, 80, "Good Car");
+        AddCard(profile, CardType.Car, 64, "Bad Car");
+        AddCard(profile, CardType.CrewChief, 59, "Chief B");
+        AddCard(profile, CardType.CrewChief, 77, "Chief A");
+        Call("BuildOffline", profile, TestCatalogue());
 
-        Assert.AreEqual(20, Get<int>("GarageFilteredCount"));
-        Assert.AreEqual(3, Get<int>("GarageOwnedCount"));
-        Assert.AreEqual(17, Get<int>("GarageLockedCount"));
-        Assert.AreEqual(3, Get<int>("GarageCollectedCount"));
-        Assert.AreEqual(20, Get<int>("GarageCatalogueCount"));
-        Assert.AreEqual(4, Get<int>("GarageRowCount"));
-        Assert.AreEqual(15, Get<int>("GarageCardsShown"), "two whole rows and the peeking third");
+        Assert.AreEqual(1, Content.Cast<Transform>().Count(t => t.name == "Build"), "exactly one build");
+        Assert.AreEqual("Fast Driver", SlotCardName(CardType.Driver));
+        Assert.AreEqual("Good Car", SlotCardName(CardType.Car));
+        Assert.AreEqual("Chief A", SlotCardName(CardType.CrewChief));
 
-        var texts = _go.GetComponentsInChildren<TMP_Text>(true).Select(t => t.text).ToList();
-        CollectionAssert.Contains(texts, "Card Collection");
-        CollectionAssert.Contains(texts, "3 / 20 collected");
+        var build = Get<CardBuild>("GarageBuild");
+        Assert.IsTrue(build.Complete);
+        Assert.AreEqual(TeamRules.Rating(build.driver.def, build.car.def, build.crewChief.def), build.Rating);
+        Assert.AreEqual($"Best Build   OVR {build.Rating}", TextOf(Content.Find("Build/Heading")));
 
-        var cards = Cards();
-        Assert.AreEqual(20, cards.Count, "rows 0-2 and the row below for a drag");
-        CollectionAssert.AreEqual(new[] { "Card_tst01_5", "Card_tst02_17", "Card_tst01_0" }, cards.Take(3).Select(t => t.name),
-                                  "owned first, by rarity then class");
-        Assert.IsTrue(cards.Skip(3).All(IsLocked), "the rest are cards still to collect");
-        Assert.IsFalse(cards.Take(3).Any(IsLocked));
-
-        Assert.AreEqual("Class D", TextOf(Card("tst01_5").Find("Body/Class/Text")));
-        Assert.AreEqual("Class R", TextOf(Card("tst02_17").Find("Body/Class/Text")));
-        Assert.AreEqual("Class S", TextOf(Card("tst01_0").Find("Body/Class/Text")));
-        Assert.AreEqual("3/35 Gears", TextOf(Card("tst01_5").Find("Body/Gears")));
-        Assert.AreEqual("10/10 Ready", TextOf(Card("tst02_17").Find("Body/Gears")));
-        Assert.AreEqual("Max Class", TextOf(Card("tst01_0").Find("Body/Gears")));
-        Assert.IsNotNull(Card("tst02_17").Find("Up"), "class 0 to class 1 is free: ready and affordable");
-        Assert.IsNull(Card("tst01_5").Find("Up"));
-        Assert.IsNull(Card("tst01_0").Find("Up"));
-
-        // What-to-collect tabs and the three cyclers along the top (Set on Builds only).
+        // The tabs stay; Builds has nothing to sort or filter.
         foreach (var t in new[] { "Builds", "Cars", "Drivers", "Teams", "Numbers" })
             Assert.IsNotNull(Content.Find("GarageTab_" + t), t + " tab");
-        Assert.IsNotNull(Content.Find("Cycler_Sort"));
-        Assert.IsNotNull(Content.Find("Cycler_Rarity"));
-        Assert.IsNotNull(Content.Find("Cycler_Set"));
+        Assert.IsNull(Content.Find("Cycler_Sort"));
+        Assert.IsNull(Content.Find("Cycler_Rarity"));
+        Assert.IsNull(Grid, "no card grid on Builds");
     }
 
     [Test]
-    public void Collection_FiltersSortAndScroll()
+    public void Builds_EmptySlotsShowACardBack()
     {
-        var cars = TestCatalogue();
-        var profile = TestProfile(0, new OwnedCar("tst01_3", 0, 10));
-        Call("BuildOffline", profile, cars);
+        var profile = TestProfile(0);
+        AddCard(profile, CardType.Driver, 70, "Only Driver");
+        Call("BuildOffline", profile, TestCatalogue());
 
-        Call("SetCollectionFilter", 4, null);   // i % 4 == 3: 3, 7, 11, 15, 19
-        Assert.AreEqual(5, Get<int>("GarageFilteredCount"));
-        Assert.AreEqual(1, Get<int>("GarageOwnedCount"));
-        Assert.AreEqual(5, Cards().Count);
-        Assert.AreEqual(1, Get<int>("GarageCollectedCount"), "the header counts the whole catalogue");
-        Assert.AreEqual(20, Get<int>("GarageCatalogueCount"));
-
-        Call("SetCollectionFilter", 0, "tst02");
-        Assert.AreEqual(8, Get<int>("GarageFilteredCount"));
-        Assert.AreEqual(0, Get<int>("GarageOwnedCount"));
-        Assert.IsTrue(Cards().All(t => t.name.StartsWith("Card_tst02_", StringComparison.Ordinal)));
-
-        Call("SetCollectionFilter", 1, "tst02");   // 12, 16
-        Assert.AreEqual(2, Get<int>("GarageFilteredCount"));
-        Call("SetCollectionFilter", 2, "tst01");   // 1, 5, 9
-        Assert.AreEqual(3, Get<int>("GarageFilteredCount"));
-        Call("SetCollectionFilter", 4, "tst02");   // 15, 19
-        Assert.AreEqual(2, Get<int>("GarageFilteredCount"));
-
-        Call("SetCollectionFilter", 0, null);
-        Assert.AreEqual(20, Get<int>("GarageFilteredCount"));
-
-        Call("SetCollectionSort", CollectionSort.Number);
-        var list = Get<IReadOnlyList<CarDef>>("GarageList");
-        Assert.AreEqual("tst01_3", list[0].id, "owned first");
-        Assert.AreEqual("tst01_0", list[1].id, "then catalogue order");
-
-        // 4 rows, 2 on screen: scrolls 0-2, clamped.
-        Call("ScrollCollection", 2);
-        Assert.AreEqual(2, Get<int>("GarageScroll"));
-        Assert.AreEqual(10, Get<int>("GarageCardsShown"), "the last two rows, nothing below to peek");
-        Call("ScrollCollection", 9);
-        Assert.AreEqual(2, Get<int>("GarageScroll"));
-        Call("SetCollectionFilter", 4, null);
-        Assert.AreEqual(0, Get<int>("GarageScroll"), "a filter change goes back to the top");
-    }
-
-    [Test]
-    public void Collection_EmptyFilterShowsNoCards()
-    {
-        var cars = TestCatalogue();
-        Call("BuildOffline", TestProfile(0), cars);
-        Call("SetCollectionFilter", 1, "nosuchset");
-        Assert.AreEqual(0, Get<int>("GarageFilteredCount"));
-        Assert.AreEqual(0, Cards().Count);
-        Assert.AreEqual(0, Get<int>("GarageCardsShown"));
+        Assert.AreEqual("Only Driver", SlotCardName(CardType.Driver));
+        Assert.IsNull(SlotCardName(CardType.Car), "no car card: a card back, no name");
+        Assert.AreEqual("No Car card yet", TextOf(BuildSlot(CardType.Car).Find("Label")));
+        Assert.AreEqual("No Crew Chief card yet", TextOf(BuildSlot(CardType.CrewChief).Find("Label")));
+        Assert.IsFalse(Get<CardBuild>("GarageBuild").Complete);
+        Assert.AreEqual("Best Build", TextOf(Content.Find("Build/Heading")));
     }
 
     [Test]
@@ -211,7 +154,6 @@ public class GarageScreenTests
         var car = new OwnedCar("tst01_2", 1, 25);   // class 1 needs 20 gears and 10,000 coins
         var profile = TestProfile(CarProgression.UpgradeCost(1), car);
         Call("BuildOffline", profile, cars);
-        Assert.IsNotNull(Card("tst01_2").Find("Up"), "ready and affordable: the UP tag");
 
         Call("SelectGarageCar", "tst01_2");
         Assert.IsTrue(Get<bool>("GarageDetailOpen"));
@@ -244,9 +186,6 @@ public class GarageScreenTests
         Call("CloseCarDetail");
         Assert.IsFalse(Get<bool>("GarageDetailOpen"));
         Assert.IsNull(Detail, "closing takes the layer down");
-        Assert.AreEqual("100/35 Ready", TextOf(Card("tst01_2").Find("Body/Gears")));
-        Assert.AreEqual("Class D", TextOf(Card("tst01_2").Find("Body/Class/Text")));
-        Assert.IsNull(Card("tst01_2").Find("Up"), "ready but the coins aren't there");
 
         // A locked car: no upgrade, no change to the selected car.
         Call("SelectGarageCar", "tst02_19");
@@ -307,7 +246,7 @@ public class GarageScreenTests
     }
 
     [Test]
-    public void Collection_RealCatalogue_EveryLiveryLoadsAndEveryRowBuilds()
+    public void RealCatalogue_EveryLiveryLoads()
     {
         Type.GetType("MasterDraftJsonInstaller, Assembly-CSharp", throwOnError: true)
             .GetMethod("Install", BindingFlags.Public | BindingFlags.Static).Invoke(null, null);
@@ -319,32 +258,5 @@ public class GarageScreenTests
 
         var missing = cars.Cars.Where(c => Resources.Load<Sprite>(c.livery) == null).Select(c => c.id).ToList();
         Assert.IsEmpty(missing, "catalogue cars with no livery sprite: " + string.Join(", ", missing.Take(20)));
-
-        var profile = MasterDraftProfile.New("garage-test", "Tester", cars);
-        Assert.AreEqual(1, profile.garage.Count);
-        Call("BuildOffline", profile, null);   // null: the screen loads the catalogue itself
-
-        Assert.AreEqual(cars.Count, Get<int>("GarageFilteredCount"));
-        Assert.AreEqual(1, Get<int>("GarageOwnedCount"));
-        Assert.AreEqual(cars.Count - 1, Get<int>("GarageLockedCount"));
-        int rows = Get<int>("GarageRowCount");
-        Assert.AreEqual((cars.Count + 4) / 5, rows);
-
-        var owned = Card(profile.garage[0].id);
-        Assert.IsNotNull(owned, "the starter car is the first card");
-        Assert.IsNotNull(owned.Find("Body/Slot/Livery").GetComponent<Image>().sprite, "starter car's livery");
-
-        var seen = new HashSet<string>();
-        for (int scroll = 0; scroll <= rows - 2; scroll++)
-        {
-            Call("ScrollCollection", scroll);
-            Assert.AreEqual(scroll, Get<int>("GarageScroll"));
-            foreach (var t in Cards()) seen.Add(t.name);
-        }
-        Assert.AreEqual(cars.Count, seen.Count, "scrolling top to bottom shows every car");
-
-        var set = cars.Carsets[0];
-        Call("SetCollectionFilter", 0, set.id);
-        Assert.AreEqual(cars.InCarset(set.id).Count, Get<int>("GarageFilteredCount"));
     }
 }

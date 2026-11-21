@@ -61,8 +61,8 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   reaches it.
 * **MASTER DRAFT** opens `Assets/Scenes/MasterDraft.unity` (`MasterDraftUI`) — the collectible-card mode:
   Home, Go Race, My Team, Packs, Trades. A free Starter Pack builds a first team; Go Race hands a Quick
-  Race to `RaceScene` in `GameSession.Mode.MasterDraft` (a one-off race like SINGLE RACE, plus a hand of
-  action cards drawn at each start/finish crossing), and the results screen leads back. Offline in v1
+  Race to `RaceScene` in `GameSession.Mode.MasterDraft` (a one-off race like SINGLE RACE, with the team's
+  car and crew chief cards trimming the car and pit stops), and the results screen leads back. Offline in v1
   (`MasterDraftOnline.Enabled = false`, profile in `masterdraft.json`, never the career DB). Rebuild the
   scene with `Draftmaster > Master Draft > Build Master Draft Scene`; the title row is wired by
   `Draftmaster > UI > Add MASTER DRAFT Row To Title Screen`. Full guide: `Docs/Master-Draft.md`.
@@ -683,8 +683,7 @@ and `PadBindingsTests` fails if two shortcuts land on one button in the same con
 | `V` | B | Drive / Auto toggle — AI drives your car, camera stays on it; watch other cars as crew chief (pad: from the seat only) |
 | `A` `D` / `←` `→` | Left stick | **Lane controls** (OPTIONS > AI Drivers > Controls: *Lanes*, Draftmaster 2's scheme, `LegacyLaneControls`): the car goes onto Auto once rolling off pit road (or on the grid) and each press moves it one lane — inside / middle (ideal) / outside on ovals, left / middle / right of the racing line on road courses, the pack grooves at the plate tracks. V / the AUTO button takes the car back (tap a pedal), and the lanes then leave it with you until you go back on Auto; phone shows `<` `>` and the lane in the Auto slot. `DriveModeController` → `AIRacingBehaviour.playerLane` / `SplineDriver.forcedOvalLane` |
 | `L` | Y | Pit limiter (car) |
-| `N` | View | Skip the pace lap — only on Auto during the formation lap: fast-forwards (`FormationSkip`, 8x) until the safety car peels off and the field closes up for the start, then back to normal speed. Under a full-course caution the same skip ("Skip the caution") appears once the safety car has picked up the leader and the player has crossed the start/finish line since the flag, and runs to the restart close-up (pit road shut). Press again to stop; taking the wheel stops it too. Also a tappable prompt along the bottom (in a Master Draft race under a caution, `N` / the prompt only — the pad button is Next card) |
-| `1`-`5` | View steps, A plays | Master Draft race only: play an action card from the hand strip (tap it on a phone) |
+| `N` | View | Skip the pace lap — only on Auto during the formation lap: fast-forwards (`FormationSkip`, 8x) until the safety car peels off and the field closes up for the start, then back to normal speed. Under a full-course caution the same skip ("Skip the caution") appears once the safety car has picked up the leader and the player has crossed the start/finish line since the flag, and runs to the restart close-up (pit road shut). Press again to stop; taking the wheel stops it too. Also a tappable prompt along the bottom |
 
 Prompts follow the device touched last, not the one plugged in: world-space keycaps (`InputPromptGlyph`),
 the bottom-of-screen hint plate and every panel's key tab swap to the pad's button icon

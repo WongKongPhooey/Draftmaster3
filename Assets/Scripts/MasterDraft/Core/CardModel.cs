@@ -2,7 +2,9 @@ using System;
 
 namespace Draftmaster.MasterDraft
 {
-    public enum CardType { Driver = 0, Car = 1, CrewChief = 2, Action = 3 }
+    // 3 was Action (the action cards, removed 2026-11-20). Saved cards of type 3 are dropped on load
+    // (MasterDraftProfile.RestoreLists); never reuse the number.
+    public enum CardType { Driver = 0, Car = 1, CrewChief = 2 }
 
     // Ordered weakest to strongest: comparisons (rarity >= Rare) rely on it.
     public enum Rarity { Common = 0, Rare = 1, Epic = 2, Legendary = 3 }
@@ -11,31 +13,17 @@ namespace Draftmaster.MasterDraft
     // the sqlite models, so it keeps its own copy.
     public enum TrackKind { ShortTrack = 0, Speedway = 1, Superspeedway = 2, RoadCourse = 3, DirtCourse = 4 }
 
-    // What an action card does when played. Appended only — serialised by number in saved profiles.
-    public enum ActionEffect
-    {
-        None = 0,
-        PerfectPitStop = 1,
-        PushToPass = 2,
-        FreshRubber = 3,
-        Slipstream = 4,
-        QuickRepair = 5,
-        RocketRestart = 6,
-        SpottersEye = 7,
-        FuelSaver = 8,
-    }
-
     // What a card IS. A copy in somebody's collection (CardInstance) carries its own snapshot of this, the
     // way a printed card keeps the stats it was printed with when the real driver has a bad season — so a
     // collection never changes under the player when the career database ages its drivers.
     //
-    // One flat class for all four types (JsonUtility has no polymorphism); fields that don't apply to a type
+    // One flat class for all three types (JsonUtility has no polymorphism); fields that don't apply to a type
     // stay zero. Stats are on the card scale: driver aptitudes 0-20 (the Driver table's own scale),
     // everything else 0-100.
     [Serializable]
     public class CardDefinition
     {
-        public string id;          // definition id, e.g. "DRV-12", "CAR-FRD-2", "CC-mike-hutchins", "ACT-PushToPass"
+        public string id;          // definition id, e.g. "DRV-12", "CAR-FRD-2", "CC-mike-hutchins"
         public CardType type;
         public Rarity rarity;
         public string name;
@@ -59,10 +47,6 @@ namespace Draftmaster.MasterDraft
 
         // --- Crew chief (0-100) ---
         public int pitSpeed, strategy, setup;
-
-        // --- Action ---
-        public ActionEffect effect;
-        public string rules;
 
         public int Aptitude(TrackKind kind) => kind switch
         {
@@ -93,9 +77,11 @@ namespace Draftmaster.MasterDraft
         {
             CardType.Driver => "Driver",
             CardType.Car => "Car",
-            CardType.CrewChief => "Crew Chief",
-            _ => "Action",
+            _ => "Crew Chief",
         };
+
+        // A type this version knows. Old saves can hold retired types (3 = Action).
+        public static bool IsKnown(CardType t) => t == CardType.Driver || t == CardType.Car || t == CardType.CrewChief;
 
         public static string RarityName(Rarity r) => r.ToString();
 

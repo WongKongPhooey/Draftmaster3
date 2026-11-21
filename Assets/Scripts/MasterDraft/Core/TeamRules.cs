@@ -11,7 +11,6 @@ namespace Draftmaster.MasterDraft
         public List<string> bench = new();
         public string car = "";
         public string crewChief = "";
-        public List<string> actionDeck = new();
 
         public IEnumerable<string> Drivers()
         {
@@ -21,7 +20,7 @@ namespace Draftmaster.MasterDraft
 
         public bool Uses(string uid) =>
             !string.IsNullOrEmpty(uid)
-            && (uid == activeDriver || uid == car || uid == crewChief || bench.Contains(uid) || actionDeck.Contains(uid));
+            && (uid == activeDriver || uid == car || uid == crewChief || bench.Contains(uid));
 
         // Drops a uid from every slot (used when a card leaves the collection in a trade).
         public void Remove(string uid)
@@ -30,17 +29,25 @@ namespace Draftmaster.MasterDraft
             if (car == uid) car = "";
             if (crewChief == uid) crewChief = "";
             bench.RemoveAll(x => x == uid);
-            actionDeck.RemoveAll(x => x == uid);
         }
+    }
+
+    // The Garage's one build: the highest rated driver, car and crew chief card in the collection
+    // (TeamRules.BestBuild). A slot is null while the collection has no card of that type.
+    public sealed class CardBuild
+    {
+        public CardInstance driver, car, crewChief;
+
+        public bool Complete => driver != null && car != null && crewChief != null;
+
+        // Same weighting as the team's OVR (TeamRules.Rating); 0 until every slot is filled.
+        public int Rating => Complete ? TeamRules.Rating(driver.def, car.def, crewChief.def) : 0;
     }
 
     public static class TeamRules
     {
         public const int MaxDrivers = 5;          // active + bench
         public const int MaxBench = MaxDrivers - 1;
-        public const int MinDeck = 5;
-        public const int MaxDeck = 15;
-        public const int MaxCopiesPerAction = 2;
 
         // Every reason the team can't race, in plain words. Empty = legal.
         public static List<string> Validate(MasterDraftTeam team, MasterDraftProfile profile)
@@ -65,24 +72,6 @@ namespace Draftmaster.MasterDraft
             CheckSlot(team.car, CardType.Car, "car");
             CheckSlot(team.crewChief, CardType.CrewChief, "crew chief");
 
-            if (team.actionDeck.Count < MinDeck)
-                problems.Add($"Action deck needs at least {MinDeck} cards ({team.actionDeck.Count} picked).");
-            if (team.actionDeck.Count > MaxDeck)
-                problems.Add($"Action deck holds {MaxDeck} cards at most ({team.actionDeck.Count} picked).");
-
-            var copies = new Dictionary<string, int>();
-            foreach (var uid in team.actionDeck)
-            {
-                CheckSlot(uid, CardType.Action, "action card");
-                var card = profile?.Find(uid);
-                if (card == null || card.def.type != CardType.Action) continue;
-                copies.TryGetValue(card.def.id, out int n);
-                copies[card.def.id] = n + 1;
-                if (n + 1 == MaxCopiesPerAction + 1)
-                    problems.Add($"No more than {MaxCopiesPerAction} copies of {card.def.name} in a deck.");
-                if (!ActionCatalog.IsPlayable(card.def.effect))
-                    problems.Add($"{card.def.name} can't be played yet — take it out of the deck.");
-            }
             return problems;
         }
 
@@ -96,7 +85,28 @@ namespace Draftmaster.MasterDraft
             var c = profile.Find(team.car);
             var cc = profile.Find(team.crewChief);
             if (d == null || c == null || cc == null) return 0;
-            return (int)Math.Round(d.def.overall * 0.5 + c.def.overall * 0.25 + cc.def.overall * 0.25);
+            return Rating(d.def, c.def, cc.def);
+        }
+
+        public static int Rating(CardDefinition driver, CardDefinition car, CardDefinition chief) =>
+            (int)Math.Round(driver.overall * 0.5 + car.overall * 0.25 + chief.overall * 0.25);
+
+        // The highest rated card of each type in the collection (ties: the earlier uid). Rebuilt from the
+        // collection every time, so it follows every pack and trade.
+        public static CardBuild BestBuild(MasterDraftProfile profile)
+        {
+            var build = new CardBuild();
+            if (profile?.cards == null) return build;
+            build.driver = BestOf(profile, CardType.Driver);
+            build.car = BestOf(profile, CardType.Car);
+            build.crewChief = BestOf(profile, CardType.CrewChief);
+            return build;
+        }
+
+        public static CardInstance BestOf(MasterDraftProfile profile, CardType type)
+        {
+            var list = Best(profile, type);
+            return list.Count > 0 ? list[0] : null;
         }
 
         // The team driver with the best aptitude for this kind of track; ties go to the higher OVR. Null when
@@ -125,8 +135,7 @@ namespace Draftmaster.MasterDraft
             return list;
         }
 
-        // Fills a team from the collection: best drivers, best car, best chief, and as many action cards as
-        // fit the deck rules (best first). Used after the Starter Pack so a new player can race at once, and
+        // Fills a team from the collection: best drivers, best car, best chief. Used after the Starter Pack so a new player can race at once, and
         // by My Team's AUTO button. Never produces an illegal team out of a collection that allows a legal
         // one.
         public static MasterDraftTeam AutoBuild(MasterDraftProfile profile)
@@ -141,23 +150,13 @@ namespace Draftmaster.MasterDraft
             var chiefs = Best(profile, CardType.CrewChief);
             if (chiefs.Count > 0) team.crewChief = chiefs[0].uid;
 
-            var copies = new Dictionary<string, int>();
-            foreach (var a in Best(profile, CardType.Action))
-            {
-                if (team.actionDeck.Count >= MaxDeck) break;
-                if (!ActionCatalog.IsPlayable(a.def.effect)) continue;
-                copies.TryGetValue(a.def.id, out int n);
-                if (n >= MaxCopiesPerAction) continue;
-                copies[a.def.id] = n + 1;
-                team.actionDeck.Add(a.uid);
-            }
             return team;
         }
 
         static List<CardInstance> Best(MasterDraftProfile profile, CardType type)
         {
             var list = new List<CardInstance>();
-            foreach (var c in profile.cards) if (c.def.type == type) list.Add(c);
+            foreach (var c in profile.cards) if (c?.def != null && c.def.type == type) list.Add(c);
             list.Sort((a, b) => b.def.overall != a.def.overall
                 ? b.def.overall.CompareTo(a.def.overall)
                 : string.CompareOrdinal(a.uid, b.uid));

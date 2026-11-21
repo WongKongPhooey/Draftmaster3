@@ -167,7 +167,7 @@ public class MasterDraftProfileTests
         Assert.AreEqual(1, m.epics);
         Assert.AreEqual(1, m.legendaries);
         Assert.AreEqual(V1CardValue, m.coinsFromCards);
-        Assert.AreEqual(4, m.teamCards, "driver, car, chief and one deck card");
+        Assert.AreEqual(3, m.teamCards, "driver, car and chief (an old action deck no longer counts)");
         Assert.AreEqual(1, m.listingsCancelled);
         Assert.AreEqual(StarterCars.Ids[0], m.starterCar);
         Assert.IsFalse(m.acknowledged);

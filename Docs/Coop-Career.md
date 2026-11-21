@@ -268,7 +268,7 @@ explicitly **not** supported — the guest returns to the title screen if the ho
 ### Name tags *(implemented)*
 
 `Assets/Scripts/Multiplayer/CoopNameTag.cs` — the other player's name on a small plate over their head.
-Built the way `SpeechBubble` and `FightHealthBar` are (a world-space `SpriteRenderer` plus a `TextMeshPro`
+Built the way `SpeechBubble` is (a world-space `SpriteRenderer` plus a `TextMeshPro`
 in the pixel kit's face, not a Canvas): the spline scenes render through the 3D URP renderer, where a
 world-space Canvas needs wiring and a font asset before it draws at all. The tag is a **free-standing
 object**, not a child of the body — the puppet rotates to face where it is walking, so a parented tag

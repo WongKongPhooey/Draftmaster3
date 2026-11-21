@@ -57,15 +57,22 @@ public class FuelTank : MonoBehaviour
     void FixedUpdate()
     {
         var rd = RaceDirector.Instance;
-        bool race = rd != null && rd.isActiveAndEnabled && rd.raceLaps > 0 && RaceStart.IsRunning
-                    && !RaceWeekend.IsPracticeLike;
+        bool raceSession = rd != null && rd.isActiveAndEnabled && rd.raceLaps > 0 && !RaceWeekend.IsPracticeLike;
+        bool race = raceSession && RaceStart.IsRunning;
         Vector2 pos = transform.position;
         float moved = _hasLastPos ? (pos - _lastPos).magnitude : 0f;
         _lastPos = pos;
         _hasLastPos = true;
-        if (!race) return;
+        // On the grid and the formation lap of a race the car is already brimmed, as it will be at the green —
+        // otherwise the HUD shows the setup's practice fuel load (12 L, one bar) until the lights go.
+        if (raceSession && !race && !Planned) { FillFull(); return; }
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_spline == null) _spline = GetComponent<SplineDriver>();
+        if (!race)
+        {
+            BurnInPractice(moved);
+            return;
+        }
         if (!Planned)
         {
             float lap = _spline != null && _spline.TrackLength > 0f ? _spline.TrackLength
@@ -80,6 +87,20 @@ public class FuelTank : MonoBehaviour
         if (moved > 20f) return;
         float throttle = _pvc != null && _pvc.enabled ? _pvc.ThrottleInput : kinematicThrottle;
         BurnDistance(throttle, moved);
+    }
+
+    // Practice and qualifying: there is no race to plan against, so the player's car burns by the clock at the
+    // tank's own rates (litresPerSecAtFull, idleBurn - Consume) whenever it is rolling - the setup's fuel load
+    // (1-20 L) is a few laps' worth, and the HUD gauge drains with it. The player's car only: an AI stint has no
+    // fuel stop in it, and an AI car run dry would sit out on the circuit.
+    void BurnInPractice(float moved)
+    {
+        if (!RaceWeekend.IsPracticeLike || _pvc == null || _pvc != PlayerVehicleController.Local) return;
+        float dt = Time.fixedDeltaTime;
+        // Parked (in the box, on the grid) burns nothing; a jump (re-seed, tow back to the pits) is not driving.
+        if (dt <= 0f || moved < 0.01f || moved > 20f) return;
+        float throttle = _pvc.enabled ? _pvc.ThrottleInput : kinematicThrottle;
+        Consume(throttle, moved / dt, dt);
     }
 
     // Burn for metres driven at this throttle (planned races only).

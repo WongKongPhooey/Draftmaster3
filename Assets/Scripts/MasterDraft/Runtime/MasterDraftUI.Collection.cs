@@ -15,9 +15,10 @@ using UnityEngine.UI;
 //    holds out of everything it could.
 //  * Tabs BUILDS / CARS / DRIVERS / TEAMS / NUMBERS where the design has its rarity tabs (Josh, 2026-11-14): what
 //    there is to collect. Cars = the paint schemes in Paints.json (Core PaintCatalog), named after their sponsors;
-//    Builds = the DM2 garage cards the series race today (classes and gears), until builds are defined; Drivers,
-//    Teams and Numbers are still to come. On the right, cyclers: "SORT: RARITY" (Rarity / Class / Number),
-//    "RARITY: ALL" (DM2's 1-4 stars, in the design's rarity colours) and, on Builds, the old garage's carset "SET".
+//    Builds = one build, the highest rated driver, car and crew chief card in the collection (TeamRules.BestBuild,
+//    Josh 2026-11-20 — the DM2 garage car grid that was here is in git history); Drivers, Teams and Numbers are
+//    still to come. On the right, on Cars, cyclers: "SORT: RARITY" (Rarity / Class / Number) and "RARITY: ALL"
+//    (DM2's 1-4 stars, in the design's rarity colours).
 //  * Cards five across, two rows and the top of a third, scrolling: rarity frame and plate, the class badge where
 //    the design has LV1-LV6 (R for Rookie, then D, C, B, A, S — CardCollection.ClassLetter), the number, the
 //    livery on the hatched slot, the driver, the rarity and the gears bar ("9/50 Gears"; full and green, "Ready",
@@ -75,11 +76,10 @@ public partial class MasterDraftUI
 
     GarageTab _garageTab = GarageTab.Cars;
     int _collectionRarity;                      // 0 = all
-    string _collectionSet;                      // null = every carset
+    string _collectionSet;                      // null = every carset (no tab filters by carset today)
     CollectionSort _collectionSort = CollectionSort.Rarity;
     int _collectionScroll;                      // first whole row on screen
     float _collectionDrag;                      // touch drag in progress, kit px (up = positive)
-    List<CarDef> _collectionList = new();       // Builds: the cards in order
     List<string> _collectionIds = new();        // either tab: the card ids in order (focus keys "car." + id)
     PaintCatalog _paintsOverride, _paintsLoaded;
     RectTransform _collectionViewport, _collectionGrid;
@@ -140,7 +140,7 @@ public partial class MasterDraftUI
     public int GarageCardsShown { get; private set; }      // cards on screen, the peeking row included
     public string GarageSelectedCar => _garageCar;
     public bool GarageDetailOpen => _overlay == Overlay.CarDetail;
-    public IReadOnlyList<CarDef> GarageList => _collectionList;
+    public CardBuild GarageBuild { get; private set; }   // what the Builds tab shows
     public GarageTab GarageTabShown => _garageTab;
     public IReadOnlyList<string> GarageCardIds => _collectionIds;
 
@@ -171,7 +171,6 @@ public partial class MasterDraftUI
         _garageTab = tab;
         _collectionScroll = 0;
         _collectionDrag = 0f;
-        if (tab != GarageTab.Builds) _collectionSet = null;   // the carset filter is a Builds thing
         if (_content != null) Rebuild();
     }
 
@@ -237,16 +236,6 @@ public partial class MasterDraftUI
         UpgradeCheck.NeedCoins => $"The next class costs {CarProgression.UpgradeCost(car.carClass):N0} coins, you have {coins:N0}.",
         _ => "",
     };
-
-    // R / pad North on the grid: upgrade the focused card.
-    void UpgradeFocusedCard()
-    {
-        if (_garageTab != GarageTab.Builds) return;
-        string key = FocusKey;
-        if (key == null || !key.StartsWith("car.", StringComparison.Ordinal)) return;
-        _garageCar = key.Substring(4);
-        UpgradeSelectedCar();
-    }
 
     // ------------------------------------------------------------------ layout and input hooks (MasterDraftUI.cs)
 
@@ -325,13 +314,13 @@ public partial class MasterDraftUI
         var cars = Cars;
         GarageFilteredCount = GarageOwnedCount = GarageLockedCount = GarageRowCount = 0;
         GarageCollectedCount = GarageCatalogueCount = 0;
-        _collectionList = new List<CarDef>();
         _collectionIds = new List<string>();
-        BuildCollectionFilters(cars);
+        GarageBuild = null;
+        BuildCollectionFilters();
 
         switch (_garageTab)
         {
-            case GarageTab.Builds: BuildBuildsGrid(p, cars); break;
+            case GarageTab.Builds: BuildBestBuild(p); break;
             case GarageTab.Cars: BuildPaintsGrid(p); break;
             default:
                 Text(_content, $"{PaintCollection.TabName(_garageTab)}: coming soon.", IronOvalUI.Role.Data, CollectionStyle.Meta,
@@ -340,24 +329,61 @@ public partial class MasterDraftUI
         }
     }
 
-    // Builds: the DM2 garage cards (what the series race), with their classes and gears.
-    void BuildBuildsGrid(MasterDraftProfile p, CarCatalog cars)
+    // Builds: the one build — the highest rated driver, car and crew chief card in the collection, side by side
+    // as card faces under their slot names, with the build's OVR. An empty slot shows a card back until a pack
+    // brings one.
+    static readonly (CardType type, string label)[] BuildSlots =
     {
-        GarageCollectedCount = CardCollection.Collected(cars, p.garage);
-        GarageCatalogueCount = cars?.Count ?? 0;
-        if (cars == null || cars.Count == 0)
+        (CardType.Driver, "Driver"), (CardType.Car, "Car"), (CardType.CrewChief, "Crew Chief"),
+    };
+    const float BuildCardW = 140f, BuildCardH = 182f, BuildCardGap = 24f;
+
+    void BuildBestBuild(MasterDraftProfile p)
+    {
+        var build = TeamRules.BestBuild(p);
+        GarageBuild = build;
+        int filled = 0;
+        foreach (var slot in BuildSlots) if (SlotCard(build, slot.type) != null) filled++;
+        GarageFilteredCount = GarageOwnedCount = filled;
+        GarageCollectedCount = filled;
+        GarageCatalogueCount = BuildSlots.Length;
+
+        var root = Plate(_content, "Build", Color.clear, new Vector2(0f, CollectionTop), new Vector2(600f, CollectionContentSize.y + CollectionTop));
+        string heading = build.Complete ? $"Best Build   OVR {build.Rating}" : "Best Build";
+        var head = Text(root, heading, IronOvalUI.Role.Header, T.gold, new Vector2(0f, -4f), new Vector2(600f, 20f));
+        head.name = "Heading";
+        head.alignment = TextAlignmentOptions.Top;
+
+        float total = BuildSlots.Length * BuildCardW + (BuildSlots.Length - 1) * BuildCardGap;
+        float x0 = Mathf.Round((600f - total) / 2f);
+        for (int i = 0; i < BuildSlots.Length; i++)
         {
-            Text(_content, $"No car catalogue (Resources/{CarCatalog.ResourcePath}.json).", IronOvalUI.Role.Body, T.danger,
-                 new Vector2(0f, CollectionTop - 10f), new Vector2(600f, 20f));
-            return;
+            var (type, label) = BuildSlots[i];
+            var card = SlotCard(build, type);
+            float x = x0 + i * (BuildCardW + BuildCardGap);
+            var slot = Plate(root, "Slot_" + type, Color.clear, new Vector2(x, -30f), new Vector2(BuildCardW, BuildCardH + 16f));
+            var caption = Small(slot, card != null ? label : $"No {label} card yet", CollectionStyle.Meta, Vector2.zero,
+                                new Vector2(BuildCardW, 10f), tracked: true);
+            caption.name = "Label";
+            caption.alignment = TextAlignmentOptions.Top;
+            var face = MasterDraftCardView.Build(slot, card?.def, new Vector2(BuildCardW, BuildCardH), faceDown: card == null);
+            TopLeft(face, new Vector2(0f, -14f), new Vector2(BuildCardW, BuildCardH));
         }
-        _collectionList = CardCollection.List(cars, p.garage, _collectionRarity, _collectionSet, _collectionSort);
-        var list = _collectionList;
-        foreach (var c in list) { _collectionIds.Add(c.id); if (p.Owns(c.id)) GarageOwnedCount++; }
-        BuildGrid(list.Count, "No cars match these filters.",
-                  (i, pos) => CollectionCard(_collectionGrid, list[i], p.Car(list[i].id), pos),
-                  id => SelectGarageCar(id));
+
+        if (!build.Complete)
+        {
+            var hint = Small(root, "Open packs to fill every slot.", CollectionStyle.Meta,
+                             new Vector2(0f, -30f - BuildCardH - 22f), new Vector2(600f, 10f));
+            hint.alignment = TextAlignmentOptions.Top;
+        }
     }
+
+    static CardInstance SlotCard(CardBuild build, CardType type) => type switch
+    {
+        CardType.Driver => build.driver,
+        CardType.Car => build.car,
+        _ => build.crewChief,
+    };
 
     // Cars: the paint schemes (Paints.json), collected ones first.
     void BuildPaintsGrid(MasterDraftProfile p)
@@ -511,7 +537,7 @@ public partial class MasterDraftUI
 
     // ------------------------------------------------------------------ filter row
 
-    void BuildCollectionFilters(CarCatalog cars)
+    void BuildCollectionFilters()
     {
         // What to collect: Builds / Cars / Drivers / Teams / Numbers, where the design has its rarity tabs, 6 px apart.
         float x = 2f;
@@ -523,9 +549,9 @@ public partial class MasterDraftUI
             AddItem(rt, "cf.t" + t, () => { _lastFocusKey = "cf.t" + (int)tab; SetGarageTab(tab); });
             x += rt.sizeDelta.x + 6f;
         }
-        float tabsEnd = x + 8f;
 
-        // Right-aligned cyclers: Sort, Rarity to its left, and on Builds the carset to its left (when there's room).
+        // Right-aligned cyclers: Sort, and Rarity to its left. Builds has one build, so nothing to sort or filter.
+        if (_garageTab == GarageTab.Builds) return;
         var sort = Cycler(_content, "Sort", "Sort: " + CardCollection.SortName(_collectionSort), 600f);
         AddItem(sort, "cf.sort", () =>
         {
@@ -539,25 +565,6 @@ public partial class MasterDraftUI
             _lastFocusKey = "cf.rarity";
             SetCollectionFilter((_collectionRarity + 1) % (CarCatalog.MaxRarity + 1), _collectionSet);
         });
-        if (_garageTab != GarageTab.Builds || cars == null) return;
-        string setName = _collectionSet == null ? "All" : cars.GetCarset(_collectionSet)?.name ?? _collectionSet;
-        var set = Cycler(_content, "Set", "Set: " + setName, rarity.anchoredPosition.x - 14f);
-        if (set.anchoredPosition.x < tabsEnd) { Discard(set.gameObject); return; }
-        AddItem(set, "cf.set", () =>
-        {
-            _lastFocusKey = "cf.set";
-            SetCollectionFilter(_collectionRarity, NextCarset(cars, _collectionSet));
-        });
-    }
-
-    static string NextCarset(CarCatalog cars, string current)
-    {
-        var sets = cars.Carsets;
-        if (sets.Count == 0) return null;
-        int i = -1;
-        for (int k = 0; k < sets.Count; k++)
-            if (string.Equals(sets[k].id, current, StringComparison.OrdinalIgnoreCase)) i = k;
-        return i + 1 >= sets.Count ? null : sets[i + 1].id;
     }
 
     // A filter tab: dark plate in a 2px frame (cream and a lighter plate when picked), caption in `colour`, tracked
@@ -589,97 +596,11 @@ public partial class MasterDraftUI
         return rt;
     }
 
-    // ------------------------------------------------------------------ a card
-
-    // One card as the design draws it. Owned: rarity frame and plate, class badge and number, livery on the hatch
-    // slot, driver, rarity (and carset), gears bar and caption, "UP" when the upgrade can be paid. Not owned: the
-    // dark "?" card with the rarity stripe, rarity and the carset it's in.
-    RectTransform CollectionCard(Transform parent, CarDef def, OwnedCar owned, Vector2 pos)
-    {
-        Plate(parent, "Shadow_" + def.id, CollectionStyle.Shadow, pos + new Vector2(CardShadow, -CardShadow), new Vector2(CardW, CardH));
-        Color rarity = CollectionStyle.RarityColour(def.rarity);
-        var card = Plate(parent, "Card_" + def.id, owned != null ? rarity : CollectionStyle.Edge, pos, new Vector2(CardW, CardH));
-        var body = Plate(card, "Body", owned != null ? CollectionStyle.BodyColour(def.rarity) : CollectionStyle.LockedBody,
-                         new Vector2(CardFrame, -CardFrame), new Vector2(CardBodyW, CardH - 2f * CardFrame));
-        float inner = CardBodyW - 10f;
-
-        if (owned == null)
-        {
-            body.name = "Locked";
-            Plate(body, "Stripe", rarity, new Vector2(5f, -5f), new Vector2(inner, 3f));
-            var slot = Plate(body, "Slot", CollectionStyle.LockedHatch, new Vector2(5f, -12f), new Vector2(inner, 58f));
-            Hatch(slot, CollectionStyle.LockedHatch);
-            var mark = Text(slot, "?", IronOvalUI.Role.BodyLarge, CollectionStyle.LockedMark, new Vector2(0f, -6f), new Vector2(inner, 50f));
-            mark.alignment = TextAlignmentOptions.Top;
-            Small(body, CardCollection.RarityName(def.rarity), rarity, new Vector2(5f, -76f), new Vector2(inner, 10f), tracked: true);
-            Small(body, "In: " + SetName(def), CollectionStyle.Meta, new Vector2(5f, -89f), new Vector2(inner, 10f))
-                .overflowMode = TextOverflowModes.Ellipsis;
-            return card;
-        }
-
-        var progress = CardCollection.Progress(owned, P.coins);
-
-        // Class badge (where the design has LV1-LV6) and the car number.
-        string badge = "Class " + CardCollection.ClassLetter(owned.carClass);
-        var badgeText = Small(body, badge, CollectionStyle.Ink, Vector2.zero, new Vector2(80f, 10f));
-        float badgeW = Mathf.Ceil(badgeText.GetPreferredValues(badge).x) + 5f;
-        var plate = Plate(body, "Class", rarity, new Vector2(5f, -5f), new Vector2(badgeW, 10f));
-        badgeText.transform.SetParent(plate, false);
-        TopLeft(badgeText.rectTransform, new Vector2(3f, 0f), new Vector2(badgeW, 10f));
-        var number = Small(body, "#" + def.number, CollectionStyle.Number, new Vector2(5f, -6f), new Vector2(inner, 10f));
-        number.alignment = TextAlignmentOptions.TopRight;
-
-        // Livery on the hatched slot, in a 1px frame.
-        var slotRt = Plate(body, "Slot", Color.white, new Vector2(5f, -18f), new Vector2(inner, 34f));
-        Hatch(slotRt, Color.white);
-        Frame(slotRt, CollectionStyle.Edge, 1f, 1f);
-        var sprite = Livery(def);
-        if (sprite != null)
-        {
-            var livery = Plate(slotRt, "Livery", Color.white, new Vector2((inner - 64f) / 2f, -1f), new Vector2(64f, 32f))
-                .GetComponent<Image>();
-            livery.sprite = sprite;
-            livery.preserveAspect = true;
-        }
-        else
-        {
-            var none = Small(slotRt, "[ Car ]", CollectionStyle.Meta, new Vector2(0f, -13f), new Vector2(inner, 10f));
-            none.alignment = TextAlignmentOptions.Top;
-        }
-
-        var name = Text(body, def.driver ?? def.id, IronOvalUI.Role.Data, CollectionStyle.Cream, new Vector2(5f, -54f), new Vector2(inner, 16f));
-        name.name = "Name";
-        name.overflowMode = TextOverflowModes.Ellipsis;
-
-        Small(body, CardCollection.RarityName(def.rarity), rarity, new Vector2(5f, -74f), new Vector2(inner, 10f), tracked: true);
-        var set = Small(body, SetName(def), CollectionStyle.Meta, new Vector2(5f, -74f), new Vector2(inner, 10f));
-        set.alignment = TextAlignmentOptions.TopRight;
-
-        // Gears bar: the rarity's colour, full green once the next class's gears are banked.
-        var bar = Plate(body, "GearsBar", CollectionStyle.Edge, new Vector2(5f, -85f), new Vector2(inner, 6f));
-        Frame(bar, CollectionStyle.Shadow, 1f, 1f);
-        float fill = progress.ready ? 1f : progress.fill;
-        if (fill > 0f)
-            Plate(bar, "Fill", progress.ready ? CollectionStyle.Ready : rarity, Vector2.zero, new Vector2(Mathf.Round(inner * fill), 6f));
-        var caption = Small(body, progress.caption, progress.ready ? CollectionStyle.Ready : CollectionStyle.Meta,
-                            new Vector2(5f, -94f), new Vector2(inner, 10f));
-        caption.name = "Gears";
-
-        if (progress.canUpgrade)
-        {
-            // "▲ UP" over the top-right corner: green plate in a 2px dark frame, the arrow drawn in pixels.
-            var up = Plate(card, "Up", CollectionStyle.Ready, new Vector2(CardFrame + 86f, -CardFrame + 7f), new Vector2(31f, 12f));
-            Frame(up, CollectionStyle.Shadow, 2f, 2f);
-            for (int i = 0; i < 3; i++)
-                Plate(up, "Arrow", CollectionStyle.Ink, new Vector2(4f + 2f - i, -4f - i), new Vector2(1f + 2f * i, 1f));
-            Small(up, "Up", CollectionStyle.Ink, new Vector2(11f, -1f), new Vector2(20f, 10f));
-        }
-        return card;
-    }
-
     string SetName(CarDef def) => Cars?.GetCarset(def.carset)?.name ?? def.carset;
 
-    // One paint (the Cars tab), on the same card as a Builds car: rarity frame and plate, rarity and number, the
+    // ------------------------------------------------------------------ a card
+
+    // One paint (the Cars tab), on the design's collection card: rarity frame and plate, rarity and number, the
     // paint on the hatched slot, its sponsor's name, and where its rarity came from. Not collected: the dark card
     // with the rarity stripe and the paint as a silhouette.
     RectTransform PaintCard(Transform parent, PaintDef def, bool owned, Vector2 pos)
@@ -697,7 +618,7 @@ public partial class MasterDraftUI
                            new Vector2(5f, owned ? -6f : -11f), new Vector2(inner, 10f));
         number.alignment = TextAlignmentOptions.TopRight;
 
-        // The paint on the hatched slot, 64x32 like the Builds cards; a dark silhouette until it's collected.
+        // The paint on the hatched slot, 64x32; a dark silhouette until it's collected.
         var slot = Plate(body, "Slot", owned ? Color.white : CollectionStyle.LockedHatch, new Vector2(5f, -24f), new Vector2(inner, 34f));
         Hatch(slot, owned ? Color.white : CollectionStyle.LockedHatch);
         Frame(slot, CollectionStyle.Edge, 1f, 1f);

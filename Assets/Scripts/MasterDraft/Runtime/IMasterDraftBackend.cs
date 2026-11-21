@@ -25,7 +25,7 @@ public interface IMasterDraftBackend
 
     Task<DraftResult> ClaimStarterPack();
     Task<DraftResult> BuyAndOpenPack(PackKind kind);
-    Task<DraftResult> AwardRace(int position, int cardsPlayed);
+    Task<DraftResult> AwardRace(int position);
 
     Task<List<TradeOffer>> ListTradeOffers();
     Task<DraftResult> ProposeTrade(string myCardUid, CardType wantType, Rarity wantMinRarity);

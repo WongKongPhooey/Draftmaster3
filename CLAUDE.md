@@ -96,9 +96,9 @@ Full guide: `Docs/Race-Weekend.md`.
 ## Master Draft (card mode)
 
 The title's **MASTER DRAFT** row opens `Assets/Scenes/MasterDraft.unity`: a collectible-card mode (packs,
-a team of driver / car / crew chief / action cards, trades) whose Quick Race runs `RaceScene` in
-`GameSession.Mode.MasterDraft` — a one-off race (`GameSession.IsOneOffRace`) where each start/finish
-crossing draws an action card into a hand the player plays during the race (`MasterDraftRaceHost`). Pure
+a team of driver / car / crew chief cards, trades) whose Quick Race runs `RaceScene` in
+`GameSession.Mode.MasterDraft` — a one-off race (`GameSession.IsOneOffRace`) where the car and crew chief
+cards trim the player's car and pit stops (`MasterDraftRaceHost`). Action cards were removed 2026-11-20. Pure
 rules in `Assets/Scripts/MasterDraft/Core/` (asmdef `Draftmaster.MasterDraft`), runtime in
 `Assets/Scripts/MasterDraft/Runtime/`. Online is built but off (`MasterDraftOnline.Enabled`); offline the
 profile is `persistentDataPath/masterdraft.json`, never the career DB. Full guide: `Docs/Master-Draft.md`.

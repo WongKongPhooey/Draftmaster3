@@ -188,6 +188,15 @@ public class CautionWatch : MonoBehaviour
             // drove into it at racing speed.
             bool inPits = InPits(tracker, e);
             bool stopped = e.speedMps <= stoppedMps && !inPits;
+            // Parked off the circuit with nobody driving it: not in this race. The player's own car sits in the
+            // paddock all weekend, engine off, and the tracker still lists it - at Daytona it is 55 m into the
+            // infield beside the front stretch, so a race watched from the stand flagged a wreck there, and the
+            // whole field swerved round it and braked into itself at the green.
+            if (stopped && ParkedOffCircuit(tracker, e))
+            {
+                _slowSince.Remove(e.tf); _wallHitAt.Remove(e.tf); _lastWreckAt.Remove(e.tf); _wrecking.Remove(e.tf);
+                continue;
+            }
             var here = new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) };
             bool stoppedLong = StoppedLongEnough(e.tf, stopped, now);
             if (stoppedLong) _incidents.Add(here);
@@ -304,6 +313,16 @@ public class CautionWatch : MonoBehaviour
             CautionAhead = false;
             DistanceToIncident = 0f;
         }
+    }
+
+    // No brain (SplineDriver) and no dynamic model (PlayerVehicleController) moving it, and not on the road or the
+    // pit lane. A wreck still has its controller on wherever it ends up, so this never hides a real one.
+    bool ParkedOffCircuit(RacePositionTracker tracker, RacePositionTracker.Entry e)
+    {
+        if (e.spline != null && e.spline.enabled) return false;
+        if (!_pvcOf.TryGetValue(e.tf, out var pvc)) _pvcOf[e.tf] = pvc = e.tf.GetComponent<PlayerVehicleController>();
+        if (pvc != null && pvc.enabled) return false;
+        return tracker.track != null && !tracker.track.IsOnSurface(e.tf.position, out _);
     }
 
     static bool InPits(RacePositionTracker tracker, RacePositionTracker.Entry e)

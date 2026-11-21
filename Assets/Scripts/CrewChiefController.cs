@@ -558,10 +558,14 @@ public class CrewChiefController : MonoBehaviour
     // kit's IMGUI half is — the same as the height match in landscape, the same size in the hand upright.
     // Returns the factor, set here rather than read back off the canvas, which CanvasScaler only updates
     // on its own Update.
+    //
+    // Measured off Screen, the surface the canvas actually draws to (what the Auto button's CanvasScaler reads),
+    // not UnityEngine.Device.Screen: in the editor with a Device Simulator open, Device.Screen reports the simulated
+    // phone (2960x1440) while the Game view renders 1920x1080, which drew the headset at x4 beside Auto's x3 —
+    // a third bigger than the button it stands under. On a device the two are the same.
     float FitCanvasToShortSide()
     {
-        float scale = DriveOrientation.CanvasScale(UnityEngine.Device.Screen.width, UnityEngine.Device.Screen.height,
-                                                   PixelUITheme.ReferenceHeight);
+        float scale = DriveOrientation.CanvasScale(Screen.width, Screen.height, PixelUITheme.ReferenceHeight);
         if (_scaler != null && !Mathf.Approximately(_scaler.scaleFactor, scale)) _scaler.scaleFactor = scale;
         return scale;
     }

@@ -4,7 +4,7 @@ using Draftmaster.MasterDraft;
 using NUnit.Framework;
 using UnityEngine;
 
-// Master Draft's pure rules (Assets/Scripts/MasterDraft/Core): packs, team legality, the in-race hand,
+// Master Draft's pure rules (Assets/Scripts/MasterDraft/Core): packs, team legality,
 // coin rewards and the saved profile. The catalogue is built from generated stand-ins, the same path the
 // game takes when the career database isn't ready.
 public class MasterDraftRulesTests
@@ -16,7 +16,7 @@ public class MasterDraftRulesTests
     // ------------------------------------------------------------------ packs
 
     [Test]
-    public void StarterPackAlwaysHasEveryCardTypeAndALegalDeck()
+    public void StarterPackAlwaysHasEveryCardType()
     {
         var catalog = Catalog();
         for (long seed = 0; seed < 1500; seed++)
@@ -25,11 +25,7 @@ public class MasterDraftRulesTests
             Assert.AreEqual(PackGenerator.StarterSize, cards.Count, $"seed {seed}: wrong size");
             foreach (CardType t in System.Enum.GetValues(typeof(CardType)))
                 Assert.IsTrue(cards.Any(c => c.type == t), $"seed {seed}: no {t} card");
-
-            // A starter on its own fields a legal deck: five actions, no more than two of any one.
-            var actions = cards.Where(c => c.type == CardType.Action).ToList();
-            Assert.GreaterOrEqual(actions.Count, TeamRules.MinDeck, $"seed {seed}: too few actions for a deck");
-            Assert.IsTrue(actions.All(a => ActionCatalog.IsPlayable(a.effect)), $"seed {seed}: unplayable action dropped");
+            Assert.IsTrue(cards.All(c => CardText.IsKnown(c.type)), $"seed {seed}: a card of a retired type");
         }
     }
 
@@ -53,8 +49,7 @@ public class MasterDraftRulesTests
             var cards = PackGenerator.Open(PackKind.Standard, catalog, seed);
             Assert.AreEqual(PackGenerator.StandardSize, cards.Count);
             Assert.IsTrue(cards.Any(c => c.rarity >= Rarity.Rare), $"seed {seed}: no Rare-or-better feature card");
-            Assert.IsTrue(cards.All(c => c.type != CardType.Action || ActionCatalog.IsPlayable(c.effect)),
-                          $"seed {seed}: a not-yet-implemented action dropped");
+            Assert.IsTrue(cards.All(c => CardText.IsKnown(c.type)), $"seed {seed}: a card of a retired type");
             foreach (var c in cards) counts[(int)c.rarity]++;
         }
 
@@ -63,20 +58,6 @@ public class MasterDraftRulesTests
         Assert.Greater(counts[(int)Rarity.Common], total * 0.35, "too few commons");
         Assert.Greater(counts[(int)Rarity.Legendary], 0, "no legendary in 2000 packs");
         Assert.Less(counts[(int)Rarity.Legendary], total * 0.08, "legendaries too common");
-    }
-
-    [Test]
-    public void UnimplementedActionsAreCataloguedButNeverDrop()
-    {
-        var catalog = Catalog();
-        foreach (var spec in ActionCatalog.All.Where(s => !s.Implemented))
-            Assert.IsNotNull(catalog.Find(ActionCatalog.DefinitionId(spec.Effect)), $"{spec.Name} missing from the catalogue");
-        var rng = new DraftRng(1);
-        for (int i = 0; i < 2000; i++)
-        {
-            var pick = catalog.Pick(CardType.Action, (Rarity)(i % 4), rng);
-            Assert.IsTrue(ActionCatalog.IsPlayable(pick.effect), $"{pick.name} is not playable but dropped");
-        }
     }
 
     [Test]
@@ -147,9 +128,6 @@ public class MasterDraftRulesTests
         var car = p.Add(catalog.Pick(CardType.Car, Rarity.Rare, rng));
         var cc = p.Add(catalog.Pick(CardType.CrewChief, Rarity.Rare, rng));
         var team = new MasterDraftTeam { activeDriver = d1.uid, car = car.uid, crewChief = cc.uid };
-        var playable = ActionCatalog.All.Where(s => s.Implemented).ToList();
-        for (int i = 0; i < TeamRules.MinDeck; i++)
-            team.actionDeck.Add(p.Add(ActionCatalog.Definition(playable[i % playable.Count])).uid);
         p.team = team;
         return (p, team);
     }
@@ -170,24 +148,6 @@ public class MasterDraftRulesTests
         team.car = "";
         StringAssert.Contains("car", string.Join(" ", TeamRules.Validate(team, p)));
 
-        (p, team) = LegalTeam();
-        team.actionDeck.RemoveAt(0);
-        StringAssert.Contains("at least", string.Join(" ", TeamRules.Validate(team, p)));
-
-        // Three copies of one action.
-        (p, team) = LegalTeam();
-        var push = ActionCatalog.Definition(ActionCatalog.Get(ActionEffect.PushToPass));
-        for (int i = 0; i < 3; i++) team.actionDeck.Add(p.Add(push).uid);
-        StringAssert.Contains("copies", string.Join(" ", TeamRules.Validate(team, p)));
-
-        // Too big a deck.
-        (p, team) = LegalTeam();
-        foreach (var spec in ActionCatalog.All.Where(s => s.Implemented))
-            for (int i = 0; i < 2; i++) team.actionDeck.Add(p.Add(ActionCatalog.Definition(spec)).uid);
-        if (team.actionDeck.Count <= TeamRules.MaxDeck)
-            while (team.actionDeck.Count <= TeamRules.MaxDeck) team.actionDeck.Add(team.actionDeck[0]);
-        StringAssert.Contains("at most", string.Join(" ", TeamRules.Validate(team, p)));
-
         // A car in the driver slot, and a card that isn't owned.
         (p, team) = LegalTeam();
         team.activeDriver = team.car;
@@ -205,6 +165,31 @@ public class MasterDraftRulesTests
     }
 
     [Test]
+    public void BestBuildTakesTheHighestRatedCardOfEachType()
+    {
+        var p = NewProfile();
+        Assert.IsFalse(TeamRules.BestBuild(p).Complete, "an empty collection has no build");
+        Assert.AreEqual(0, TeamRules.BestBuild(p).Rating);
+
+        p.Add(new CardDefinition { id = "d1", type = CardType.Driver, name = "D1", overall = 70 });
+        var d2 = p.Add(new CardDefinition { id = "d2", type = CardType.Driver, name = "D2", overall = 91 });
+        p.Add(new CardDefinition { id = "d3", type = CardType.Driver, name = "D3", overall = 91 });   // tie: earlier uid wins
+        var car = p.Add(new CardDefinition { id = "c1", type = CardType.Car, name = "C1", overall = 80 });
+        p.Add(new CardDefinition { id = "c2", type = CardType.Car, name = "C2", overall = 60 });
+        var build = TeamRules.BestBuild(p);
+        Assert.AreSame(d2, build.driver);
+        Assert.AreSame(car, build.car);
+        Assert.IsNull(build.crewChief);
+        Assert.IsFalse(build.Complete);
+
+        var chief = p.Add(new CardDefinition { id = "cc", type = CardType.CrewChief, name = "CC", overall = 50 });
+        build = TeamRules.BestBuild(p);
+        Assert.AreSame(chief, build.crewChief);
+        Assert.IsTrue(build.Complete);
+        Assert.AreEqual((int)System.Math.Round(91 * 0.5 + 80 * 0.25 + 50 * 0.25), build.Rating);
+    }
+
+    [Test]
     public void BestDriverForTrackUsesTheAptitude()
     {
         var p = NewProfile();
@@ -218,96 +203,19 @@ public class MasterDraftRulesTests
         Assert.IsNull(TeamRules.BestDriverFor(TrackKind.ShortTrack, new CardInstance[0]));
     }
 
-    // ------------------------------------------------------------------ race hand
-
-    static List<CardDefinition> Deck(int n)
-    {
-        var playable = ActionCatalog.All.Where(s => s.Implemented).ToList();
-        var deck = new List<CardDefinition>();
-        for (int i = 0; i < n; i++) deck.Add(ActionCatalog.Definition(playable[i % playable.Count]));
-        return deck;
-    }
-
-    [Test]
-    public void EachCrossingDrawsOneCardUpToTheHandCap()
-    {
-        var hand = new RaceHand(Deck(10), 1, openingHand: 0);
-        Assert.AreEqual(0, hand.Hand.Count);
-        for (int i = 1; i <= RaceHand.HandCap; i++)
-        {
-            Assert.IsNotNull(hand.OnStartFinishCrossed());
-            Assert.AreEqual(i, hand.Hand.Count);
-        }
-        // Full: the draw is skipped and the card stays in the deck.
-        int pile = hand.DrawPileCount;
-        Assert.IsNull(hand.OnStartFinishCrossed());
-        Assert.AreEqual(RaceHand.HandCap, hand.Hand.Count);
-        Assert.AreEqual(pile, hand.DrawPileCount);
-        Assert.AreEqual(RaceHand.HandCap + 1, hand.Crossings);
-    }
-
-    [Test]
-    public void OpeningHandIsDealtAtTheGreen()
-    {
-        var hand = new RaceHand(Deck(6), 3);
-        Assert.AreEqual(RaceHand.OpeningHand, hand.Hand.Count);
-    }
-
-    [Test]
-    public void PlayingRemovesFromHandAndDiscardsReshuffleWhenTheDeckRunsOut()
-    {
-        var hand = new RaceHand(Deck(5), 2, openingHand: 0);
-        for (int i = 0; i < 5; i++) hand.OnStartFinishCrossed();
-        Assert.AreEqual(0, hand.DrawPileCount);
-
-        var played = hand.Play(0);
-        Assert.IsNotNull(played);
-        Assert.AreEqual(4, hand.Hand.Count);
-        Assert.AreEqual(1, hand.DiscardCount);
-        Assert.AreEqual(1, hand.CardsPlayed);
-        Assert.IsNull(hand.Play(9), "a bad index played something");
-
-        // Deck empty: the next crossing shuffles the discard back in and draws it.
-        var drawn = hand.OnStartFinishCrossed();
-        Assert.AreSame(played, drawn);
-        Assert.AreEqual(0, hand.DiscardCount);
-        Assert.AreEqual(5, hand.Hand.Count);
-    }
-
-    [Test]
-    public void EmptyDeckNeverDraws()
-    {
-        var hand = new RaceHand(new List<CardDefinition>(), 1);
-        Assert.IsNull(hand.OnStartFinishCrossed());
-        Assert.AreEqual(0, hand.Hand.Count);
-    }
-
-    [Test]
-    public void UnplayableCardsStayInTheHand()
-    {
-        var spec = ActionCatalog.All.FirstOrDefault(s => !s.Implemented);
-        if (spec == null) Assert.Ignore("Every action is implemented.");
-        var hand = new RaceHand(new[] { ActionCatalog.Definition(spec) }, 1);
-        Assert.IsNull(hand.Play(0));
-        Assert.AreEqual(1, hand.Hand.Count);
-    }
-
     // ------------------------------------------------------------------ economy + profile
 
     [Test]
     public void CoinRewardsFollowTheFinish()
     {
-        Assert.AreEqual(Economy.WinnerCoins, Economy.ForFinish(1, 0));
-        Assert.AreEqual(Economy.WinnerCoins - Economy.CoinsLostPerPlace, Economy.ForFinish(2, 0));
-        Assert.AreEqual(Economy.MinimumFinishCoins, Economy.ForFinish(40, 0));
-        Assert.AreEqual(Economy.MinimumFinishCoins, Economy.ForFinish(0, 0), "DNF pays the minimum");
-        Assert.AreEqual(Economy.WinnerCoins + 3 * Economy.CoinsPerCardPlayed, Economy.ForFinish(1, 3));
-        Assert.AreEqual(Economy.WinnerCoins + Economy.MaxCardsPaid * Economy.CoinsPerCardPlayed, Economy.ForFinish(1, 99),
-                        "card bonus is capped");
+        Assert.AreEqual(Economy.WinnerCoins, Economy.ForFinish(1));
+        Assert.AreEqual(Economy.WinnerCoins - Economy.CoinsLostPerPlace, Economy.ForFinish(2));
+        Assert.AreEqual(Economy.MinimumFinishCoins, Economy.ForFinish(40));
+        Assert.AreEqual(Economy.MinimumFinishCoins, Economy.ForFinish(0), "DNF pays the minimum");
 
         var p = NewProfile();
         int before = p.coins;
-        var r = ProfileOps.AwardRace(p, 1, 2);
+        var r = ProfileOps.AwardRace(p, 1);
         Assert.AreEqual(before + r.awarded, p.coins);
         Assert.AreEqual(1, p.wins);
         Assert.AreEqual(1, p.racesRun);
@@ -327,13 +235,33 @@ public class MasterDraftRulesTests
         Assert.IsNotNull(back);
         Assert.AreEqual(p.ToJson(), back.ToJson());
         Assert.AreEqual(p.cards.Count, back.cards.Count);
-        Assert.AreEqual(p.team.actionDeck, back.team.actionDeck);
+        Assert.AreEqual(p.team.bench, back.team.bench);
         Assert.AreEqual(p.cards[0].def.name, back.cards[0].def.name);
         Assert.IsTrue(back.starterClaimed);
         Assert.AreEqual(MasterDraftProfile.CurrentSchema, back.schemaVersion);
 
         Assert.IsNull(MasterDraftProfile.FromJson(""));
         Assert.IsNull(MasterDraftProfile.FromJson("not json"));
+    }
+
+    [Test]
+    public void RetiredActionCardsLeaveTheCollectionOnLoad()
+    {
+        var catalog = Catalog();
+        var p = NewProfile("old-actions");
+        ProfileOps.ClaimStarter(p, catalog);
+        int kept = p.cards.Count;
+        // Type 3 was Action. A save from before the action cards were removed still holds some.
+        var action = p.Add(new CardDefinition { id = "ACT-PushToPass", type = (CardType)3, name = "Push To Pass" });
+        p.team.bench.Add(action.uid);
+        p.myListings.Add(new TradeOffer { id = "mine-" + action.uid, mine = true, myCardUid = action.uid });
+
+        var back = MasterDraftProfile.FromJson(p.ToJson());
+        Assert.AreEqual(kept, back.cards.Count);
+        Assert.IsNull(back.Find(action.uid));
+        Assert.IsFalse(back.team.Uses(action.uid));
+        Assert.IsEmpty(back.myListings);
+        Assert.IsEmpty(TeamRules.Validate(back.team, back));
     }
 
     // ------------------------------------------------------------------ trades
@@ -365,13 +293,12 @@ public class MasterDraftRulesTests
         var p = NewProfile("trader2");
         TradeRules.EnsureBotOffers(p, catalog);
         var offer = p.botOffers[0];
-        var wrongType = (CardType)(((int)offer.wantType + 1) % 4);
+        var wrongType = (CardType)(((int)offer.wantType + 1) % PackGenerator.TypeWeights.Length);
         var rng = new DraftRng(4);
         var wrong = p.Add(catalog.Pick(wrongType, Rarity.Legendary, rng));
         Assert.IsFalse(TradeRules.Accept(p, offer.id, wrong.uid).ok);
 
         var right = p.Add(catalog.Pick(offer.wantType, Rarity.Legendary, rng));
-        p.team.actionDeck.Add(right.uid);
         p.team.activeDriver = right.uid;
         Assert.IsFalse(TradeRules.Accept(p, offer.id, right.uid).ok, "traded away a card in the team");
         Assert.IsNotNull(p.Find(right.uid));
@@ -402,50 +329,5 @@ public class MasterDraftRulesTests
         // A better car is stronger: the Champion trim out-powers the Club trim of the same make.
         var cars = CardFactory.Cars().Where(c => c.manufacturer == "CHV").OrderBy(c => c.rarity).ToList();
         Assert.Greater(TeamEffects.PowerScale(cars.Last()), TeamEffects.PowerScale(cars.First()));
-    }
-
-    [Test]
-    public void TimedActionsRunForTheirSecondsAndDoNotStack()
-    {
-        var fx = new ActiveEffects();
-        var push = ActionCatalog.Get(ActionEffect.PushToPass);
-        Assert.IsTrue(fx.Start(push, 10f));
-        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(10f), 1e-5f);
-        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(10f + push.Seconds - 0.01f), 1e-5f);
-        Assert.AreEqual(1f, fx.PowerScale(10f + push.Seconds + 0.01f), 1e-5f);
-
-        // Played again while running: the clock restarts, the boost doesn't double.
-        fx.Start(push, 20f);
-        fx.Start(push, 21f);
-        Assert.AreEqual(1f + push.Magnitude, fx.PowerScale(22f), 1e-5f);
-        Assert.AreEqual(push.Seconds - 1f, fx.Remaining(ActionEffect.PushToPass, 22f), 1e-4f);
-
-        var slip = ActionCatalog.Get(ActionEffect.Slipstream);
-        fx.Start(slip, 0f);
-        Assert.AreEqual(slip.Magnitude, fx.DraftScale(1f), 1e-5f);
-        Assert.AreEqual(1f, fx.DraftScale(slip.Seconds + 1f), 1e-5f);
-
-        var fuel = ActionCatalog.Get(ActionEffect.FuelSaver);
-        fx.Start(fuel, 0f);
-        Assert.AreEqual(1f - fuel.Magnitude, fx.FuelBurnScale(1f), 1e-5f);
-
-        // Instant cards start nothing.
-        Assert.IsFalse(fx.Start(ActionCatalog.Get(ActionEffect.FreshRubber), 0f));
-        Assert.IsFalse(fx.Start(ActionCatalog.Get(ActionEffect.QuickRepair), 0f));
-    }
-
-    [Test]
-    public void PerfectPitStopWaitsForTheNextStop()
-    {
-        var fx = new ActiveEffects();
-        Assert.AreEqual(1f, fx.PitTimeScale);
-        var spec = ActionCatalog.Get(ActionEffect.PerfectPitStop);
-        fx.Start(spec, 0f);
-        Assert.IsTrue(fx.PerfectPitPending);
-        Assert.AreEqual(spec.Magnitude, fx.PitTimeScale, 1e-5f);
-        Assert.AreEqual(spec.Magnitude, fx.PitTimeScale, 1e-5f, "it lasts until a stop, not a clock");
-        fx.PitStopUsed();
-        Assert.IsFalse(fx.PerfectPitPending);
-        Assert.AreEqual(1f, fx.PitTimeScale);
     }
 }

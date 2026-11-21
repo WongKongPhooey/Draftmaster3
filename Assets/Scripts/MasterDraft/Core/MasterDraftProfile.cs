@@ -184,7 +184,6 @@ namespace Draftmaster.MasterDraft
             cards.RemoveAll(c => c == null || c.def == null || string.IsNullOrEmpty(c.uid));
             team ??= new MasterDraftTeam();
             team.bench ??= new List<string>();
-            team.actionDeck ??= new List<string>();
             myListings ??= new List<TradeOffer>();
             botOffers ??= new List<TradeOffer>();
             garage ??= new List<OwnedCar>();
@@ -202,6 +201,13 @@ namespace Draftmaster.MasterDraft
         void Sanitise(CarCatalog cars)
         {
             RestoreLists();
+            // Card types this version no longer has (the action cards, type 3) leave the collection and the team.
+            // After SchemaMigration, so a schema-1 save still has them valued into coins.
+            foreach (var c in cards)
+                if (!CardText.IsKnown(c.def.type)) team.Remove(c.uid);
+            cards.RemoveAll(c => !CardText.IsKnown(c.def.type));
+            myListings.RemoveAll(o => !CardText.IsKnown(o.wantType) || Find(o.myCardUid) == null);
+            botOffers.RemoveAll(o => o.giving == null || !CardText.IsKnown(o.giving.type) || !CardText.IsKnown(o.wantType));
             var seen = new HashSet<string>(StringComparer.Ordinal);
             garage.RemoveAll(c => c == null || string.IsNullOrEmpty(c.id) || !seen.Add(c.id));
             foreach (var c in garage) CarProgression.Sanitise(c);
@@ -239,8 +245,6 @@ namespace Draftmaster.MasterDraft
         public const int WinnerCoins = 500;
         public const int CoinsLostPerPlace = 25;
         public const int MinimumFinishCoins = 50;
-        public const int CoinsPerCardPlayed = 10;
-        public const int MaxCardsPaid = 10;
 
         // What a card is worth when a schema-1 collection converts to schema 2 (SchemaMigration), in the
         // schema-2 money scale: a DM2 race win pays 10,000 and class 1 -> 2 costs 10,000.
@@ -257,15 +261,11 @@ namespace Draftmaster.MasterDraft
             _ => CommonCardCoins,
         };
 
-        // position is 1-based; 0 or less = did not finish (paid the minimum). Card bonus capped.
-        public static int ForFinish(int position, int cardsPlayed)
-        {
-            int purse = position <= 0
+        // position is 1-based; 0 or less = did not finish (paid the minimum).
+        public static int ForFinish(int position) =>
+            position <= 0
                 ? MinimumFinishCoins
                 : Math.Max(MinimumFinishCoins, WinnerCoins - (position - 1) * CoinsLostPerPlace);
-            int cards = Math.Max(0, Math.Min(cardsPlayed, MaxCardsPaid));
-            return purse + cards * CoinsPerCardPlayed;
-        }
 
         public static int PriceOf(PackKind kind) => kind == PackKind.Starter ? 0 : StandardPackPrice;
     }
@@ -318,9 +318,9 @@ namespace Draftmaster.MasterDraft
             return result;
         }
 
-        public static DraftResult AwardRace(MasterDraftProfile profile, int position, int cardsPlayed)
+        public static DraftResult AwardRace(MasterDraftProfile profile, int position)
         {
-            int coins = Economy.ForFinish(position, cardsPlayed);
+            int coins = Economy.ForFinish(position);
             profile.coins += coins;
             profile.racesRun++;
             if (position == 1) profile.wins++;

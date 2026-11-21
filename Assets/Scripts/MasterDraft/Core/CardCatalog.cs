@@ -57,8 +57,6 @@ namespace Draftmaster.MasterDraft
                     }
             if (chiefCount == 0)
                 foreach (var c in CardFactory.GeneratedCrewChiefs()) Add(CardFactory.CrewChief(c));
-
-            foreach (var spec in ActionCatalog.All) Add(ActionCatalog.Definition(spec));
         }
 
         void Add(CardDefinition def)
@@ -66,8 +64,6 @@ namespace Draftmaster.MasterDraft
             if (_byId.ContainsKey(def.id)) return;
             _byId[def.id] = def;
             All.Add(def);
-            // Unplayable actions are catalogued but never drop.
-            if (def.type == CardType.Action && !ActionCatalog.IsPlayable(def.effect)) return;
             var key = (def.type, def.rarity);
             if (!_pools.TryGetValue(key, out var pool)) _pools[key] = pool = new List<CardDefinition>();
             pool.Add(def);

@@ -220,6 +220,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float apronSettleM = 40f;
     [Tooltip("Share of the move per second (0-1 of the blend) a car leaving the pits comes back up onto the racing line once it is on the back straight and clear.")]
     public float apronMergeBlendPerSec = 0.3f;
+    [Tooltip("Leaving the pits on an apron oval: the run (m) over which a car coming up off pit road rounds out onto the apron lane. The car comes off pit road early enough - still below the lane - to make that bend without crossing the lane, instead of where pit road crosses it already climbing towards the racing surface.")]
+    public float apronExitMergeM = 80f;
     [Tooltip("Longest (m) a car leaving the pits waits on the apron past the start of the back straight for a gap before it merges anyway.")]
     public float apronMergeMaxWaitM = 500f;
     [Tooltip("Seconds of closing speed a car coming from behind is given before the merge back up onto the racing surface is called clear.")]
@@ -310,15 +312,29 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
         }
 
-        // Pit exit onto the apron: the first point past the pit exit line where pit road has come up level with
-        // the apron lane, on the infield side. A lane that never does (it rejoins on the far side of the track,
-        // or out in the run-off) keeps the plain exit at the end of the lane.
+        // Pit exit onto the apron: past the pit exit line, where pit road climbing up out of the infield is close
+        // enough below the apron lane to round out onto it over apronExitMergeM without crossing it - or, failing
+        // that, where it has come up level with the lane. Leaving at the crossing itself, pit road is still
+        // climbing (~15 degrees at Daytona), and a car carried on at that slope swung up onto the racing surface
+        // before tucking back down under it. A lane that never comes up (it rejoins on the far side of the
+        // track, or out in the run-off) keeps the plain exit at the end of the lane.
         float from = Mathf.Max(track.track.PitExitLineDistance, _pitLength * 0.5f);
         float to = _pitLength * pitExitThreshold;
         for (float pd = from; pd <= to; pd += 2f)
         {
             if (!PitLaneAgainstMain(pd, out float md, out float lat, out float lane)) break;
-            if (lat * _apronInsideSide >= 0f && Mathf.Abs(lat) <= Mathf.Abs(lane) + 0.5f)
+            bool level = lat * _apronInsideSide >= 0f && Mathf.Abs(lat) <= Mathf.Abs(lane) + 0.5f;
+            bool roomToRoundOut = false;
+            float below = (lat - lane) * _apronInsideSide;   // + = further into the infield than the lane
+            if (lat * _apronInsideSide >= 0f && below > 0f
+                && PitLaneAgainstMain(pd - 1f, out float md0, out float lat0, out _)
+                && PitLaneAgainstMain(pd + 1f, out float md1, out float lat1, out _))
+            {
+                float run = Draftmaster.Tracks.OvalPitApron.Ahead(md0, md1, _mainLength);
+                float rise = run > 0.01f ? -(lat1 - lat0) / run * _apronInsideSide : 0f;   // + = climbing towards the lane
+                roomToRoundOut = rise > 1e-3f && MergeNoOvershootK * below / rise <= apronExitMergeM;
+            }
+            if (level || roomToRoundOut)
             {
                 _apronPitCutover = pd;
                 int n = _mainSamples.Count;
@@ -3041,7 +3057,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
         const float slopeProbe = 2f;
         float baseSlope = (MergeBaseLateralAt(_distance + slopeProbe) - MergeBaseLateralAt(_distance - slopeProbe)) / (2f * slopeProbe);
-        BeginMerge(actualLat - baseLat, arrivingSlope - baseSlope);
+        // Onto the apron lane, never past it: above the apron lane is the racing surface.
+        BeginMerge(actualLat - baseLat, arrivingSlope - baseSlope, noOvershoot: _apronExitBlend > 0f);
 
         _hasLineSmoothed = false; // reseed the line low-pass from the new lane's raw offset (no stale drag)
         if (hasFacing)
@@ -3084,14 +3101,23 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return baseLat;
     }
 
+    // The quintic run-out from `offset` arriving at `slope` towards the line stays on its own side of the line only
+    // while |slope| x length <= this x |offset| (near the end the offset term falls as 10u^3, the slope term as 4u^3,
+    // a little under 2.5 for margin). Longer than that, the curve carries on across the line and comes back.
+    const float MergeNoOvershootK = 2.4f;
+
     // Start a merge on the current lane from `offset` (m off its line) moving across it at `slope` (m per m).
-    void BeginMerge(float offset, float slope)
+    // noOvershoot: arriving heading towards the line, run the merge out short enough that it never crosses it.
+    void BeginMerge(float offset, float slope, bool noOvershoot = false)
     {
         // A sanity bound only: whatever is left over beyond it would be a teleport, and nothing real is this far off.
         offset = Mathf.Clamp(offset, -100f, 100f);
         float maxSlope = Mathf.Tan(Mathf.Clamp(pitMergeMaxAngleDeg, 1f, 45f) * Mathf.Deg2Rad);
         // The quintic run-out from a standing offset is steepest mid-way, at 1.875x the mean slope.
         float length = Mathf.Max(Mathf.Max(1f, pitMergeMinMetres), 1.875f * Mathf.Abs(offset) / maxSlope);
+        float s = Mathf.Clamp(slope, -1f, 1f);
+        if (noOvershoot && offset * s < 0f)
+            length = Mathf.Max(1f, Mathf.Min(length, MergeNoOvershootK * Mathf.Abs(offset) / Mathf.Abs(s)));
         _mergeFrom = offset;
         _mergeTangent = Mathf.Clamp(slope, -1f, 1f) * length;
         _mergeLength = length;

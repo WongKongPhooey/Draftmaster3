@@ -42,7 +42,7 @@ namespace Draftmaster.MasterDraft
                 var giving = catalog.Pick(giveType, giveRarity, rng);
                 if (giving == null) continue;
                 // Bots ask for the same rarity they give, of any type, at most one step down.
-                var wantType = (CardType)rng.Next(4);
+                var wantType = (CardType)rng.Next(PackGenerator.TypeWeights.Length);
                 var wantRarity = (Rarity)Math.Max(0, (int)giving.rarity - rng.Next(2));
                 profile.botOffers.Add(new TradeOffer
                 {

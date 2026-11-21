@@ -7,7 +7,7 @@ using UnityEngine.UI;
 // name and the stats that matter for that type. No art is needed.
 //
 // ART HOOK: if a sprite exists at Resources/MasterDraft/Cards/<artKey> (CardDefinition.artKey, e.g.
-// "driver_12", "car_FRD_2", "action_PushToPass"), it is drawn in the portrait box behind the name. Drop art in
+// "driver_12", "car_FRD_2"), it is drawn in the portrait box behind the name. Drop art in
 // and it appears; nothing else changes.
 public static class MasterDraftCardView
 {
@@ -31,8 +31,7 @@ public static class MasterDraftCardView
     {
         CardType.Driver => "DRV",
         CardType.Car => "CAR",
-        CardType.CrewChief => "CC",
-        _ => "ACT",
+        _ => "CC",
     };
 
     // The two stat lines a card face has room for.
@@ -59,10 +58,8 @@ public static class MasterDraftCardView
             }
             case CardType.Car:
                 return new[] { $"PWR {d.power}  HND {d.handling}", $"DRF {d.draft}  REL {d.reliability}" };
-            case CardType.CrewChief:
-                return new[] { $"PIT {d.pitSpeed}  STR {d.strategy}", $"SET {d.setup}" };
             default:
-                return new[] { d.rules ?? "" };
+                return new[] { $"PIT {d.pitSpeed}  STR {d.strategy}", $"SET {d.setup}" };
         }
     }
 
@@ -81,10 +78,8 @@ public static class MasterDraftCardView
                        $"Tyre Management {d.tyreManagement}";
             case CardType.Car:
                 return $"Power {d.power}   Handling {d.handling}\nDraft {d.draft}   Reliability {d.reliability}";
-            case CardType.CrewChief:
-                return $"Pit Speed {d.pitSpeed}   Strategy {d.strategy}\nSetup {d.setup}";
             default:
-                return d.rules ?? "";
+                return $"Pit Speed {d.pitSpeed}   Strategy {d.strategy}\nSetup {d.setup}";
         }
     }
 
@@ -143,7 +138,7 @@ public static class MasterDraftCardView
         var lines = StatLines(d);
         if (small)
         {
-            string body = d.type == CardType.Action ? CardText.RarityName(d.rarity) : lines[0];
+            string body = lines[0];
             var stat = IronOvalUI.Label(inner, "Stats", body, IronOvalUI.Role.Data, t != null ? t.textDim : Color.grey);
             BottomLeft(stat.rectTransform, new Vector2(pad, pad), new Vector2(size.x - 6f - 2 * pad, 18f));
             stat.overflowMode = TextOverflowModes.Ellipsis;

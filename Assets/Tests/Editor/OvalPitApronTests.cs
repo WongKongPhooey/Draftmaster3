@@ -456,8 +456,10 @@ public class OvalPitApronTests
             Assert.AreEqual(-1f, side, "Daytona runs anticlockwise: the infield is on the left.");
             Assert.That(backStraight > 3700f || (backStraight >= 0f && backStraight < 200f), $"back straight found at {backStraight:0}");
             Assert.GreaterOrEqual(exitMain, 0f, "The car never left pit road.");
-            Assert.That(minBelowAfterExit, Is.GreaterThan(half),
-                $"Between the pit exit and the back straight the car came up to {-minBelowAfterExit:0.0} m - onto the racing surface.\n{log}");
+            // The whole car, not just its centre: a car ~2 m wide with its centre a metre under the edge has its
+            // wheels on the racing surface - the swing up off pit road this used to make.
+            Assert.That(minBelowAfterExit, Is.GreaterThan(half + 1f),
+                $"Between the pit exit and the back straight the car came up to {-minBelowAfterExit:0.0} m - wheels on the racing surface (edge -{half}).\n{log}");
             Assert.IsTrue(merged, "The car never came back up onto the racing surface on the back straight.\n" + log);
             Assert.Less(maxSlip, 20f, "The car got out of shape.");
         }
