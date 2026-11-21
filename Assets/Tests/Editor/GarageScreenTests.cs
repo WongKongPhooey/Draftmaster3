@@ -103,7 +103,7 @@ public class GarageScreenTests
     string SlotCardName(CardType type) => TextOf(BuildSlot(type)?.Find("Card/Inner/Name"));
 
     [Test]
-    public void Builds_ShowsOneBuildOfTheHighestRatedCards()
+    public void Builds_ShowsFiveBuildsFilledFromTheBestCards()
     {
         var profile = TestProfile(0);
         AddCard(profile, CardType.Driver, 71, "Slow Driver");
@@ -114,7 +114,12 @@ public class GarageScreenTests
         AddCard(profile, CardType.CrewChief, 77, "Chief A");
         Call("BuildOffline", profile, TestCatalogue());
 
-        Assert.AreEqual(1, Content.Cast<Transform>().Count(t => t.name == "Build"), "exactly one build");
+        // One tab per build, a kind of track each.
+        Assert.AreEqual(BuildRules.MaxBuilds, profile.builds.Count);
+        string[] names = { "Short Tracks", "Speedways", "Superspeedways", "Road Courses", "Dirt" };
+        for (int i = 0; i < names.Length; i++)
+            Assert.AreEqual(names[i], TextOf(Content.Find($"Build/BuildTab_{i}/Text")), "tab " + i);
+
         Assert.AreEqual("Fast Driver", SlotCardName(CardType.Driver));
         Assert.AreEqual("Good Car", SlotCardName(CardType.Car));
         Assert.AreEqual("Chief A", SlotCardName(CardType.CrewChief));
@@ -122,7 +127,8 @@ public class GarageScreenTests
         var build = Get<CardBuild>("GarageBuild");
         Assert.IsTrue(build.Complete);
         Assert.AreEqual(TeamRules.Rating(build.driver.def, build.car.def, build.crewChief.def), build.Rating);
-        Assert.AreEqual($"Best Build   OVR {build.Rating}", TextOf(Content.Find("Build/Heading")));
+        Assert.AreEqual($"Short Tracks Build   OVR {build.Rating}", TextOf(Content.Find("Build/Heading")));
+        Assert.AreEqual("Driver's number", TextOf(Content.Find("Build/Slot_Number/Plate/Whose")));
 
         // The tabs stay; Builds has nothing to sort or filter.
         foreach (var t in new[] { "Builds", "Cars", "Drivers", "Crew Chiefs", "Numbers" })
@@ -145,7 +151,32 @@ public class GarageScreenTests
         Assert.AreEqual("No Car card yet", TextOf(BuildSlot(CardType.Car).Find("Label")));
         Assert.AreEqual("No Crew Chief card yet", TextOf(BuildSlot(CardType.CrewChief).Find("Label")));
         Assert.IsFalse(Get<CardBuild>("GarageBuild").Complete);
-        Assert.AreEqual("Best Build", TextOf(Content.Find("Build/Heading")));
+        Assert.AreEqual("Short Tracks Build", TextOf(Content.Find("Build/Heading")));
+    }
+
+    [Test]
+    public void Builds_PickABuildAndStepItsNumber()
+    {
+        var profile = TestProfile(0);
+        AddCard(profile, CardType.Driver, 70, "Only Driver").def.carNumber = 12;
+        Call("BuildOffline", profile, TestCatalogue());
+        Assert.AreEqual("#12", TextOf(Content.Find("Build/Slot_Number/Plate/Value")), "the driver card's number");
+
+        Call("PickBuild", 3);
+        Assert.AreEqual(3, Get<int>("GarageBuildIndex"));
+        Assert.AreEqual("Road Courses Build", TextOf(Content.Find("Build/Heading")));
+        Assert.AreEqual("Only Driver", SlotCardName(CardType.Driver), "every build is filled from the collection");
+
+        Call("StepBuildNumber", 1);
+        Assert.AreEqual(13, profile.builds[3].number);
+        Assert.AreEqual("#13", TextOf(Content.Find("Build/Slot_Number/Plate/Value")));
+        Assert.AreEqual("Picked", TextOf(Content.Find("Build/Slot_Number/Plate/Whose")));
+        Assert.AreEqual(BuildRules.DriversNumber, profile.builds[0].number, "the other builds keep theirs");
+
+        // Auto Fill puts it back to the driver's number.
+        Call("AutoFillBuild");
+        Assert.AreEqual(BuildRules.DriversNumber, profile.builds[3].number);
+        Assert.AreEqual("#12", TextOf(Content.Find("Build/Slot_Number/Plate/Value")));
     }
 
     [Test]

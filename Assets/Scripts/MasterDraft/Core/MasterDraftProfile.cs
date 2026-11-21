@@ -38,6 +38,7 @@ namespace Draftmaster.MasterDraft
         public List<ChallengeRecord> challengeRecords = new();
         public List<string> altPaints = new();                     // alternate livery sprites unlocked
         public List<string> paints = new();                        // PaintDef ids collected (the Garage's Cars tab)
+        public List<DraftBuild> builds = new();                    // the Garage's Builds tab, up to BuildRules.MaxBuilds
         public ProfileMigration migration = new();                 // what converting an older save did; empty if none
 
         // --- Schema 1: the card mode (retires in rework row 9) ---
@@ -61,6 +62,7 @@ namespace Draftmaster.MasterDraft
                 displayName = string.IsNullOrEmpty(displayName) ? "Player" : displayName,
             };
             StarterCars.Ensure(p, cars);
+            BuildRules.Ensure(p);
             return p;
         }
 
@@ -131,6 +133,7 @@ namespace Draftmaster.MasterDraft
             if (i < 0) return false;
             cards.RemoveAt(i);
             team.Remove(uid);
+            if (builds != null) foreach (var b in builds) b?.Remove(uid);
             return true;
         }
 
@@ -192,6 +195,7 @@ namespace Draftmaster.MasterDraft
             challengeRecords ??= new List<ChallengeRecord>();
             altPaints ??= new List<string>();
             paints ??= new List<string>();
+            builds ??= new List<DraftBuild>();
             migration ??= new ProfileMigration();
         }
 
@@ -229,6 +233,9 @@ namespace Draftmaster.MasterDraft
             if (coins < 0) coins = 0;
             if (racesRun < 0) racesRun = 0;
             if (wins < 0) wins = 0;
+
+            BuildRules.Sanitise(this);
+            BuildRules.Ensure(this);
 
             StarterCars.Ensure(this, cars);
             if (!Owns(selectedCar)) selectedCar = garage.Count > 0 ? garage[0].id : "";
@@ -295,6 +302,9 @@ namespace Draftmaster.MasterDraft
 
             // A brand-new player gets a team built for them, so GO RACE works straight away.
             if (string.IsNullOrEmpty(profile.team.activeDriver)) profile.team = TeamRules.AutoBuild(profile);
+            // And their builds, which had nothing to fill them with until now.
+            BuildRules.Ensure(profile);
+            BuildRules.FillEmpty(profile);
             return result;
         }
 

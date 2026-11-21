@@ -32,8 +32,8 @@ namespace Draftmaster.MasterDraft
         }
     }
 
-    // The Garage's one build: the highest rated driver, car and crew chief card in the collection
-    // (TeamRules.BestBuild). A slot is null while the collection has no card of that type.
+    // A build's three cards: the highest rated of each type in the collection (TeamRules.BestBuild), or one of the
+    // player's builds read off the collection (BuildRules.Resolve). A slot is null while it has no card.
     public sealed class CardBuild
     {
         public CardInstance driver, car, crewChief;

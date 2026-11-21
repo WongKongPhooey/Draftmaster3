@@ -42,8 +42,23 @@ cycler on the right, next to Sort (and the carset Set, on Builds).
   (`rarityFrom`, "cup24_9"); #35 and #40 had none and are Common. The profile's `paints` list holds the ids collected.
   Nothing awards a paint yet. `Draftmaster > Master Draft > Give Every Paint (Offline Profile)` (not in Play Mode)
   fills the list for testing.
-* **Builds** shows the old garage cards (the DM2 cars the series race, with classes, gears and Card Detail) until
-  builds are defined.
+* **Builds (2026-11-21):** the player's **five builds** (`profile.builds`, Core `Garage/Builds.cs` — `DraftBuild` +
+  `BuildRules`). Each is a driver, car and crew chief card from the collection plus a car number, kept for a kind of
+  track: a new profile has **Short Tracks, Speedways, Superspeedways, Road Courses, Dirt** (the five `TrackKind`s,
+  the driver aptitudes). A row of build tabs picks one; under it the three card slots and the number.
+  * Confirm on a card slot opens the picker — drivers sorted by aptitude for the build's track, then OVR; cars
+    and chiefs by OVR. One card may sit in several builds (they're alternatives).
+  * **Number**: follows the driver card's number until `<` / `>` pick one (0-99, wraps); confirm on the number
+    puts it back to the driver's. Numbers aren't collectible yet (the Numbers tab), so any number goes.
+  * **Auto Fill** (also R / pad North) = best driver for the track + best car + best chief, number back to the
+    driver's. **Track** moves the build round to the next kind of track (two of a kind are named "Road Courses 2").
+    **Clear** empties it.
+  * A missing build is created and auto-filled on load (an older save gets five filled from its cards); the
+    Starter Pack fills any empty build. A card that leaves the collection leaves every build.
+  * **Builds are not used by a race yet** — series and challenge rounds race DM2 garage cars, and the card-mode
+    Quick Race that read `profile.team` was removed. Picking the build that matches the venue's track type is
+    the obvious next hook (`MasterDraftRaceHost`).
+  * Coverage: `MasterDraftBuildsTests` (headless) and the `Builds_*` cases in `GarageScreenTests` (EditMode).
 * **Drivers (2026-11-21):** every driver card in the collection — each copy its own card — on the scrolling
   five-across grid, best OVR first, as card faces (`MasterDraftCardView`, compact face). No Sort/Rarity cyclers.
   The header reads "n collected". Confirm opens the card's Detail (Make Active / Bench); Back returns to the card.

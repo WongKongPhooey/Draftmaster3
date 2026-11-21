@@ -73,10 +73,11 @@ public partial class MasterDraftUI : MonoBehaviour
     int _page;
     CardInstance _detail;
 
-    // Picker (trades)
+    // Picker (trades, the Garage's builds)
     List<CardInstance> _pickList = new();
     string _pickTitle = "";
     Action<CardInstance> _onPick;
+    string _pickReturnKey;
     int _pickPage;
     CardInstance _listing;
 
@@ -207,7 +208,8 @@ public partial class MasterDraftUI : MonoBehaviour
         string shortcut = _overlay == Overlay.Reveal ? "Reveal All"
             : _overlay == Overlay.CarDetail ? "Upgrade"
             : _overlay != Overlay.None ? ""
-            : _tab == Tab.MyTeam ? "Auto Pick" : "";
+            : _tab == Tab.MyTeam ? "Auto Pick"
+            : _tab == Tab.Garage && _garageTab == GarageTab.Builds ? "Auto Fill" : "";
         if (InputGlyphs.UsingGamepad)
             return $"D-Pad  Move     {InputGlyphs.PadName(PadBindings.Confirm)}  Select     {InputGlyphs.PadName(PadBindings.Back)}  Back" +
                    $"     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  Screen" +
@@ -263,6 +265,8 @@ public partial class MasterDraftUI : MonoBehaviour
                 return;
             case Overlay.Picker:
             case Overlay.WantType:
+                if (_overlay == Overlay.Picker && _pickReturnKey != null) _lastFocusKey = _pickReturnKey;
+                _pickReturnKey = null;
                 _overlay = Overlay.None;
                 _listing = null;
                 Rebuild();
@@ -283,13 +287,14 @@ public partial class MasterDraftUI : MonoBehaviour
         else SetStatus($"{titleSceneName} isn't in the build settings.");
     }
 
-    // The screen's one extra button: Reveal All while opening a pack, Auto Pick on My Team, Upgrade in the
-    // Garage (the open car in its detail).
+    // The screen's one extra button: Reveal All while opening a pack, Auto Pick on My Team, Auto Fill on the
+    // Garage's Builds tab, Upgrade in the Garage (the open car in its detail).
     void Shortcut()
     {
         if (_busy) return;
         if (_overlay == Overlay.Reveal) { RevealAll(); return; }
         if (_tab == Tab.MyTeam && _overlay == Overlay.None) AutoPick();
+        if (_tab == Tab.Garage && _garageTab == GarageTab.Builds && _overlay == Overlay.None && P != null && P.cards.Count > 0) AutoFillBuild();
         if (_overlay == Overlay.CarDetail) UpgradeSelectedCar();
     }
 
@@ -1589,11 +1594,14 @@ public partial class MasterDraftUI : MonoBehaviour
 
     const int PickCols = 7, PickRows = 2;
 
-    void OpenPicker(string title, List<CardInstance> cards, Action<CardInstance> onPick)
+    // keepOrder: show the cards in the order given (the Garage's builds sort drivers by track aptitude) rather than
+    // best OVR first. returnKey: the item Back focuses again on the screen underneath.
+    void OpenPicker(string title, List<CardInstance> cards, Action<CardInstance> onPick, bool keepOrder = false, string returnKey = null)
     {
         _pickTitle = title;
-        _pickList = cards.OrderByDescending(c => c.def.overall).ToList();
+        _pickList = keepOrder ? cards.ToList() : cards.OrderByDescending(c => c.def.overall).ToList();
         _onPick = onPick;
+        _pickReturnKey = returnKey;
         _pickPage = 0;
         _overlay = Overlay.Picker;
         _lastFocusKey = null;
@@ -1725,6 +1733,8 @@ public partial class MasterDraftUI : MonoBehaviour
             _subtitle.text = $"{P.CountOf(CardType.Driver)} collected";
         else if (collection && _garageTab == GarageTab.CrewChiefs)
             _subtitle.text = $"{P.CountOf(CardType.CrewChief)} collected";
+        else if (collection && _garageTab == GarageTab.Builds)
+            _subtitle.text = $"{BuildRules.MaxBuilds} builds";
         float titleW = Mathf.Ceil(_title.GetPreferredValues(_title.text).x);
         float subtitleW = _subtitle.text.Length > 0 ? Mathf.Ceil(_subtitle.GetPreferredValues(_subtitle.text).x) : 0f;
         _subtitle.rectTransform.anchoredPosition = new Vector2(20f + titleW + 12f, -12f);

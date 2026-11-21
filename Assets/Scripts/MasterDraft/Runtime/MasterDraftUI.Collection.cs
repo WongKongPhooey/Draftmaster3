@@ -15,8 +15,9 @@ using UnityEngine.UI;
 //    holds out of everything it could.
 //  * Tabs BUILDS / CARS / DRIVERS / CREW CHIEFS / NUMBERS where the design has its rarity tabs (Josh, 2026-11-14):
 //    what there is to collect. Cars = the paint schemes in Paints.json (Core PaintCatalog), named after their sponsors;
-//    Builds = one build, the highest rated driver, car and crew chief card in the collection (TeamRules.BestBuild,
-//    Josh 2026-11-20 — the DM2 garage car grid that was here is in git history); Drivers = every driver card in
+//    Builds = the player's five builds, each a driver, car and crew chief card and a number, kept for a kind of
+//    track (BuildRules, Josh 2026-11-21 — before that one best build, and before that the DM2 garage car grid, both
+//    in git history); Drivers = every driver card in
 //    the collection, each copy, best OVR first, as card faces (MasterDraftCardView) — confirm opens the card's
 //    Detail (Make Active / Bench); Crew Chiefs (replaced Teams, 2026-11-21) = the same for every crew chief card —
 //    the Detail's Use This Chief; Numbers is still to come. On the right, on Cars, cyclers: "SORT: RARITY" (Rarity / Class / Number) and "RARITY: ALL"
@@ -322,7 +323,7 @@ public partial class MasterDraftUI
 
         switch (_garageTab)
         {
-            case GarageTab.Builds: BuildBestBuild(p); break;
+            case GarageTab.Builds: BuildBuilds(p); break;
             case GarageTab.Cars: BuildPaintsGrid(p); break;
             case GarageTab.Drivers: BuildCardsGrid(p, CardType.Driver, "No driver cards yet."); break;
             case GarageTab.CrewChiefs: BuildCardsGrid(p, CardType.CrewChief, "No crew chief cards yet."); break;
@@ -333,53 +334,194 @@ public partial class MasterDraftUI
         }
     }
 
-    // Builds: the one build — the highest rated driver, car and crew chief card in the collection, side by side
-    // as card faces under their slot names, with the build's OVR. An empty slot shows a card back until a pack
-    // brings one.
-    static readonly (CardType type, string label)[] BuildSlots =
-    {
-        (CardType.Driver, "Driver"), (CardType.Car, "Car"), (CardType.CrewChief, "Crew Chief"),
-    };
-    const float BuildCardW = 140f, BuildCardH = 182f, BuildCardGap = 24f;
+    // Builds (Josh 2026-11-21): up to five builds (Core BuildRules), each a driver, car and crew chief card and a car
+    // number, kept for a kind of track — Short Tracks, Speedways, Superspeedways, Road Courses and Dirt on a new
+    // profile. A row of build tabs picks one; under it the build's three cards and its number. Confirm on a card
+    // opens the picker (drivers best for the build's track first); < and > step the number, and confirm on the
+    // number puts it back to the driver card's own. Auto Fill takes the collection's best for the track, Track moves
+    // the build round to the next kind of track, Clear empties it. Every change saves the profile.
+    const float BuildCardW = 112f, BuildCardH = 146f, BuildCardGap = 20f, BuildTabW = 114f;
+    const float BuildSlotTop = -48f, BuildButtonsTop = -212f;
 
-    void BuildBestBuild(MasterDraftProfile p)
+    int _buildIndex;
+
+    public int GarageBuildIndex => _buildIndex;
+
+    // Show build `index` on the Builds tab.
+    public void PickBuild(int index)
     {
-        var build = TeamRules.BestBuild(p);
-        GarageBuild = build;
+        _buildIndex = Mathf.Clamp(index, 0, BuildRules.MaxBuilds - 1);
+        if (_content != null) Rebuild();
+    }
+
+    void BuildBuilds(MasterDraftProfile p)
+    {
+        BuildRules.Ensure(p);
+        _buildIndex = Mathf.Clamp(_buildIndex, 0, p.builds.Count - 1);
+        var build = p.builds[_buildIndex];
+        var cards = BuildRules.Resolve(build, p);
+        GarageBuild = cards;
         int filled = 0;
-        foreach (var slot in BuildSlots) if (SlotCard(build, slot.type) != null) filled++;
-        GarageFilteredCount = GarageOwnedCount = filled;
-        GarageCollectedCount = filled;
-        GarageCatalogueCount = BuildSlots.Length;
+        foreach (var type in BuildRules.SlotTypes) if (SlotCard(cards, type) != null) filled++;
+        GarageFilteredCount = GarageOwnedCount = GarageCollectedCount = filled;
+        GarageCatalogueCount = BuildRules.SlotTypes.Length;
 
         var root = Plate(_content, "Build", Color.clear, new Vector2(0f, CollectionTop), new Vector2(600f, CollectionContentSize.y + CollectionTop));
-        string heading = build.Complete ? $"Best Build   OVR {build.Rating}" : "Best Build";
-        var head = Text(root, heading, IronOvalUI.Role.Header, T.gold, new Vector2(0f, -4f), new Vector2(600f, 20f));
+
+        // The build tabs, spread across the width.
+        float gap = p.builds.Count > 1 ? (600f - p.builds.Count * BuildTabW) / (p.builds.Count - 1) : 0f;
+        for (int i = 0; i < p.builds.Count; i++)
+        {
+            int index = i;
+            var tab = FilterTab(root, "BuildTab_" + i, BuildRules.Name(p.builds, i), CollectionStyle.Cream, i == _buildIndex,
+                                new Vector2(Mathf.Round(i * (BuildTabW + gap)), -4f), BuildTabW);
+            AddItem(tab, "build." + i, () => { _lastFocusKey = "build." + index; PickBuild(index); });
+        }
+
+        string name = BuildRules.Name(p.builds, _buildIndex);
+        var head = Text(root, cards.Complete ? $"{name} Build   OVR {cards.Rating}" : $"{name} Build", IronOvalUI.Role.Header, T.gold,
+                        new Vector2(0f, -26f), new Vector2(600f, 20f));
         head.name = "Heading";
         head.alignment = TextAlignmentOptions.Top;
 
-        float total = BuildSlots.Length * BuildCardW + (BuildSlots.Length - 1) * BuildCardGap;
+        int slots = BuildRules.SlotTypes.Length + 1;   // the three cards and the number
+        float total = slots * BuildCardW + (slots - 1) * BuildCardGap;
         float x0 = Mathf.Round((600f - total) / 2f);
-        for (int i = 0; i < BuildSlots.Length; i++)
+        for (int i = 0; i < BuildRules.SlotTypes.Length; i++)
         {
-            var (type, label) = BuildSlots[i];
-            var card = SlotCard(build, type);
+            var type = BuildRules.SlotTypes[i];
+            var card = SlotCard(cards, type);
             float x = x0 + i * (BuildCardW + BuildCardGap);
-            var slot = Plate(root, "Slot_" + type, Color.clear, new Vector2(x, -30f), new Vector2(BuildCardW, BuildCardH + 16f));
-            var caption = Small(slot, card != null ? label : $"No {label} card yet", CollectionStyle.Meta, Vector2.zero,
-                                new Vector2(BuildCardW, 10f), tracked: true);
-            caption.name = "Label";
-            caption.alignment = TextAlignmentOptions.Top;
+            var slot = Plate(root, "Slot_" + type, Color.clear, new Vector2(x, BuildSlotTop), new Vector2(BuildCardW, BuildCardH + 14f));
+            string label = CardText.TypeName(type);
+            bool any = BuildRules.Choices(build, p, type).Count > 0;
+            string caption = card == null ? (any ? $"Pick a {label}" : $"No {label} card yet")
+                : type == CardType.Driver ? $"{label}  {CardText.TrackKindShort(build.track)} {card.def.Aptitude(build.track)}"
+                : label;
+            var text = Small(slot, caption, CollectionStyle.Meta, Vector2.zero, new Vector2(BuildCardW, 10f), tracked: true);
+            text.name = "Label";
+            text.alignment = TextAlignmentOptions.Top;
             var face = MasterDraftCardView.Build(slot, card?.def, new Vector2(BuildCardW, BuildCardH), faceDown: card == null);
             TopLeft(face, new Vector2(0f, -14f), new Vector2(BuildCardW, BuildCardH));
+            AddItem(face, "bslot." + (int)type, () => PickBuildCard(type), any);
         }
+        BuildNumberSlot(root, p, build, x0 + BuildRules.SlotTypes.Length * (BuildCardW + BuildCardGap));
 
-        if (!build.Complete)
+        // Auto Fill, Track, Clear, centred under the slots.
+        string track = "Track: " + BuildRules.TrackName(build.track);
+        const float autoW = 110f, clearW = 80f, gapX = 8f;
+        float trackW = Mathf.Max(170f, track.Length * 9f);
+        float bx = Mathf.Round((600f - (autoW + trackW + clearW + 2f * gapX)) / 2f);
+        ButtonItem(root, "build.auto", "Auto Fill", new Vector2(bx, BuildButtonsTop), autoW, AutoFillBuild, p.cards.Count > 0);
+        bx += autoW + gapX;
+        ButtonItem(root, "build.track", track, new Vector2(bx, BuildButtonsTop), trackW, NextBuildTrack);
+        bx += trackW + gapX;
+        ButtonItem(root, "build.clear", "Clear", new Vector2(bx, BuildButtonsTop), clearW, ClearBuild,
+                   !BuildRules.IsEmpty(build) || build.number != BuildRules.DriversNumber);
+    }
+
+    // The number: a card-sized plate with the number large, whose number it is under it, and < > to step it.
+    void BuildNumberSlot(RectTransform root, MasterDraftProfile p, DraftBuild build, float x)
+    {
+        var slot = Plate(root, "Slot_Number", Color.clear, new Vector2(x, BuildSlotTop), new Vector2(BuildCardW, BuildCardH + 14f));
+        var label = Small(slot, "Number", CollectionStyle.Meta, Vector2.zero, new Vector2(BuildCardW, 10f), tracked: true);
+        label.name = "Label";
+        label.alignment = TextAlignmentOptions.Top;
+
+        var plate = Plate(slot, "Plate", CollectionStyle.TabPlate, new Vector2(0f, -14f), new Vector2(BuildCardW, BuildCardH));
+        Frame(plate, CollectionStyle.Edge, 3f, 0f);
+        int number = BuildRules.Number(build, p);
+        var big = Text(plate, number >= 0 ? "#" + number : "#--", IronOvalUI.Role.Display,
+                       number >= 0 ? CollectionStyle.Number : CollectionStyle.Meta, new Vector2(0f, -30f), new Vector2(BuildCardW, 44f));
+        big.name = "Value";
+        big.alignment = TextAlignmentOptions.Top;
+        string whose = build.number >= 0 ? "Picked" : number >= 0 ? "Driver's number" : "No number";
+        var sub = Small(plate, whose, CollectionStyle.Meta, new Vector2(0f, -84f), new Vector2(BuildCardW, 10f));
+        sub.name = "Whose";
+        sub.alignment = TextAlignmentOptions.Top;
+        // Always enabled: a disabled item greys its text, and the number should stay readable.
+        AddItem(plate, "bnum", () => SetBuildNumber(BuildRules.DriversNumber));
+
+        ButtonItem(plate, "bnum.down", "<", new Vector2(8f, -BuildCardH + 34f), 30f, () => StepBuildNumber(-1));
+        ButtonItem(plate, "bnum.up", ">", new Vector2(BuildCardW - 38f, -BuildCardH + 34f), 30f, () => StepBuildNumber(1));
+    }
+
+    // The build the Builds tab is showing (Ensure first, so a profile made in code has its five).
+    DraftBuild ShownBuild
+    {
+        get
         {
-            var hint = Small(root, "Open packs to fill every slot.", CollectionStyle.Meta,
-                             new Vector2(0f, -30f - BuildCardH - 22f), new Vector2(600f, 10f));
-            hint.alignment = TextAlignmentOptions.Top;
+            var p = P;
+            if (p == null) return null;
+            BuildRules.Ensure(p);
+            return p.builds[Mathf.Clamp(_buildIndex, 0, p.builds.Count - 1)];
         }
+    }
+
+    // Open the picker on every card that fits the slot, best for the build's track first.
+    void PickBuildCard(CardType type)
+    {
+        var p = P;
+        var build = ShownBuild;
+        if (build == null) return;
+        string slotKey = "bslot." + (int)type;
+        string name = BuildRules.Name(p.builds, _buildIndex);
+        OpenPicker($"{name}: pick a {CardText.TypeName(type)}", BuildRules.Choices(build, p, type), card =>
+        {
+            _overlay = Overlay.None;
+            _lastFocusKey = slotKey;
+            if (BuildRules.Assign(build, p, type, card.uid)) SaveTeam($"{card.def.name} is in the {name} build.");
+            else Rebuild();
+        }, keepOrder: true, returnKey: slotKey);
+    }
+
+    // Auto Fill (also R / Y on the Builds tab): the collection's best for the shown build's track.
+    public void AutoFillBuild()
+    {
+        var p = P;
+        var build = ShownBuild;
+        if (build == null) return;
+        BuildRules.AutoFill(build, p);
+        _lastFocusKey = "build.auto";
+        SaveTeam($"{BuildRules.Name(p.builds, _buildIndex)} build filled from your best cards.");
+    }
+
+    void NextBuildTrack()
+    {
+        var p = P;
+        var build = ShownBuild;
+        if (build == null) return;
+        build.track = BuildRules.NextTrack(build.track);
+        _lastFocusKey = "build.track";
+        SaveTeam($"Now the {BuildRules.Name(p.builds, _buildIndex)} build.");
+    }
+
+    void ClearBuild()
+    {
+        var p = P;
+        var build = ShownBuild;
+        if (build == null) return;
+        BuildRules.Clear(build);
+        _lastFocusKey = "build.auto";
+        SaveTeam($"{BuildRules.Name(p.builds, _buildIndex)} build cleared.");
+    }
+
+    public void StepBuildNumber(int by)
+    {
+        var build = ShownBuild;
+        if (build == null) return;
+        BuildRules.StepNumber(build, P, by);
+        _lastFocusKey = by < 0 ? "bnum.down" : "bnum.up";
+        SaveTeam();
+    }
+
+    void SetBuildNumber(int number)
+    {
+        var build = ShownBuild;
+        if (build == null) return;
+        build.number = number;
+        _lastFocusKey = "bnum";
+        SaveTeam(number < 0 ? "Back to the driver's own number." : null);
     }
 
     static CardInstance SlotCard(CardBuild build, CardType type) => type switch
