@@ -13,20 +13,27 @@ namespace Draftmaster.Sim
     // Hubs are authored in sprite fractions, the same frame the safety cell is: x runs along the car from the nose
     // (0) to the tail (1) — the liveries lie nose at sprite x=0 — and y across it, door to door. The defaults are read
     // off the 64x32 liveries (12.8 px/m, so a 5 m x 2.5 m car): the tyres poke out of the body at pixels 5-15 (front)
-    // and 43-53 (rear) along its length. The outermost pixel row is the tyre, which is about 0.3 m wide; the wheel
-    // bolts onto the hub a little inboard of the tyre's middle, about 0.2 m in from the side of the body.
+    // and 43-53 (rear) along its length. A wheel is about 0.3 m wide (TyreWidth), and the hub - where it joins the
+    // axle - is inboard of all of it: a full wheel width in from the side of the body. So a dent has to fold the side
+    // in by more than a whole wheel before the axle is exposed; a pack rub that only creases the panel over the tyre
+    // leaves it on. (The first cut sat the hubs 0.2 m in, under the tyre, and a 3 m/s nudge at Daytona took a wheel
+    // off five seconds after the green, 2026-11-21.)
     //
     // Pure geometry, so it can be pinned in EditMode and headless.
     public static class WheelHubs
     {
         // Front-left, front-right, rear-left, rear-right — in sprite fractions (see the header). Which of y 0 and 1 is
         // "left" depends on how the car is turned; the names are only for reading logs.
+        public const float TyreWidth = 0.3f;     // metres
+        public const float BodyWidth = 2.5f;     // metres, the 32 px liveries at 12.8 px/m
+        const float Inset = TyreWidth / BodyWidth;
+
         public static readonly Vector2[] Default =
         {
-            new Vector2(0.17f, 0.08f),
-            new Vector2(0.17f, 0.92f),
-            new Vector2(0.76f, 0.08f),
-            new Vector2(0.76f, 0.92f),
+            new Vector2(0.17f, Inset),
+            new Vector2(0.17f, 1f - Inset),
+            new Vector2(0.76f, Inset),
+            new Vector2(0.76f, 1f - Inset),
         };
 
         public static string Name(int index) => index switch

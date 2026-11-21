@@ -24,6 +24,15 @@ namespace Draftmaster.Sim
         public static bool BrokenDown(float damage, float breakdownDamage, int wheelsOff, bool wheelOffBreaksDown) =>
             (wheelOffBreaksDown && wheelsOff > 0) || BrokenDown(damage, breakdownDamage);
 
+        // And the nose: a front end folded back `frontCrush` metres (VehicleDamage.EndCrush) has taken the radiator
+        // and the engine with it. The damage figure can't see that - it adds at most ~0.18 a hit, so one big head-on
+        // that smashed the front flat scored 0.23 and the car drove on (Bell, Daytona, 2026-11-21).
+        // A threshold of 0 or less leaves the nose out of it.
+        public static bool BrokenDown(float damage, float breakdownDamage, int wheelsOff, bool wheelOffBreaksDown,
+                                      float frontCrush, float breakdownFrontCrush) =>
+            (breakdownFrontCrush > 0f && frontCrush >= breakdownFrontCrush)
+            || BrokenDown(damage, breakdownDamage, wheelsOff, wheelOffBreaksDown);
+
         // Whether a car stopped for `stoppedFor` seconds (negative = moving) is retired now. A broken-down car goes
         // after `brokenWait`; one that could still drive only after the longer `stuckWait`.
         public static bool Retire(float stoppedFor, bool brokenDown, float brokenWait, float stuckWait)

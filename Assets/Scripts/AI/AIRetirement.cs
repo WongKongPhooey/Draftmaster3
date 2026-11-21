@@ -39,6 +39,10 @@ public class AIRetirement : MonoBehaviour
     [Tooltip("A car that has lost a wheel — its bodywork folded in past the point where the wheel joins the axle " +
              "(VehicleDamage.wheelHubs) — breaks down whatever its damage level.")]
     public bool breakdownOnWheelOff = true;
+    [Tooltip("Metres the nose can be folded back (VehicleDamage.EndCrush, the mean across the nose) before the car " +
+             "breaks down. One full-severity head-on folds ~0.26, bump drafting 0.02-0.04. The damage figure alone let a car with its front smashed flat drive on. " +
+             "0 = the nose doesn't count.")]
+    public float breakdownFrontCrush = 0.25f;
     [Tooltip("Brake (0..1) a broken-down car rolls to a stop on. Gentle: it is coasting off, not stopping for a wreck.")]
     [Range(0f, 1f)] public float breakdownBrake = 0.3f;
 
@@ -150,10 +154,25 @@ public class AIRetirement : MonoBehaviour
 
         if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
 
+        // Under a caution the queue drives every car kinematically, so the check below never sees it: a car wrecked
+        // past the breakdown line rode round behind the safety car and broke down the moment the restart handed it
+        // back its own model - in the middle of the restarting pack (Daytona, 2026-11-21: damage 1.00 and 0.86 at the
+        // green). It is finished, so it is taken out of the queue now and retired out of shot.
+        if (!BrokenDown && RaceStart.IsCaution && !_spline.IsOnPit && _bodywork != null && (_input == null || !_input.enabled)
+            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
+                                           FrontCrush(), breakdownFrontCrush))
+        {
+            BrokenDown = true;
+            Debug.Log($"[AIRetire] {name} too damaged to restart (damage {_bodywork.DamageLevel:0.00}) - retiring under the caution");
+            BeginRetire();
+            return;
+        }
+
         // A car in the pit lane is about to be repaired, not broken down; it breaks down where it is out on track,
         // on its own dynamic model — not while a caution's formation queue is driving it kinematically.
         if (!BrokenDown && !_spline.IsOnPit && _bodywork != null && _input != null && _input.enabled
-            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff))
+            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
+                                           FrontCrush(), breakdownFrontCrush))
             BreakDown();
 
         float now = Time.fixedTime;
@@ -199,6 +218,13 @@ public class AIRetirement : MonoBehaviour
         return true;
     }
 
+    float FrontCrush()
+    {
+        if (breakdownFrontCrush <= 0f || _bodywork == null) return 0f;
+        _bodywork.EndCrush(transform.right, out float front, out _);
+        return front;
+    }
+
     void BreakDown()
     {
         BrokenDown = true;
@@ -210,6 +236,8 @@ public class AIRetirement : MonoBehaviour
         var formation = GetComponent<FormationController>();
         if (formation != null) formation.enabled = false;
         string why = _bodywork.WheelsOff > 0 ? $"{_bodywork.WheelsOff} wheel(s) off, " : "";
+        float crush = FrontCrush();
+        if (breakdownFrontCrush > 0f && crush >= breakdownFrontCrush) why += $"nose in {crush:0.00} m, ";
         Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
     }
 
@@ -463,7 +491,7 @@ public class AIRetirement : MonoBehaviour
     Vector2 CarSize()
     {
         var col = GetComponent<VehicleCollision>();
-        Vector2 half = col != null ? col.halfExtents : new Vector2(1f, 2.4f);
+        Vector2 half = col != null ? col.halfExtents : new Vector2(1.25f, 2.5f);
         return new Vector2(half.y * 2f, half.x * 2f);
     }
 

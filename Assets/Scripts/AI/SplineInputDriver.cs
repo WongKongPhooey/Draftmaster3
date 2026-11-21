@@ -53,6 +53,14 @@ public class SplineInputDriver : MonoBehaviour
              "Off by default: a sweep (AILineDiagnostics) showed no gain there — that off is power oversteer, and " +
              "the term fades out in a slide by design.")]
     public float crossTrackGain = 0f;
+    [Tooltip("Cross-track gain used on superspeedways (pack racing) when crossTrackGain is 0. The banking pulls a car down the slope, most at " +
+             "the slow end - a start, a restart - and most in the steeper top groove: pure pursuit aims the nose and " +
+             "ignores that 1-2 deg of drift, so at Daytona's green the outside column slid 1.4 m down into the inside " +
+             "one with the wheel straight and wrecked the field (2026-11-21). 0 = off.")]
+    public float ovalCrossTrackGain = 0f;   // off: built on a banking-drift theory that turned out wrong, and suspected in a 190 mph tank-slapper (2026-11-21)
+    // Superspeedways only (AiPackRacing, off unless the track's tuning says so): AiLanes defaults on, so it also
+    // switched this on wherever no track tuning was applied, and a Watkins Glen wreck sim drove into the wreck.
+    float CrossTrackGain => crossTrackGain > 0f ? crossTrackGain : (TrackConditions.AiPackRacing ? ovalCrossTrackGain : 0f);
     [Tooltip("Speed softening (m/s) in the cross-track term, so it doesn't snap at a crawl.")]
     public float crossTrackSoftening = 5f;
     [Tooltip("Most the cross-track term may add to the wheel angle (deg).")]
@@ -109,9 +117,9 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Seconds of travel scanned ahead for the tightest radius feeding the grip governor — enough anticipation to lift before the corner, short enough not to crawl whole straights.")]
     public float gripScanTime = 0.7f;
     [Tooltip("Flat out (TrackConditions.AiFlatOut): how far over its target (m/s) a car runs before it touches the brake - below it, it only lifts.")]
-    public float flatOutBrakeMargin = 1.5f;
+    public float flatOutBrakeMargin = 3f;     // was 1.5: a draft line braked 0.3-0.4 for a 9 mph gap and the car behind ran into it (Daytona, 2026-11-21)
     [Tooltip("Flat out: brake per m/s over the margin (0.12 = half brake 4 m/s over).")]
-    public float flatOutBrakeGain = 0.12f;
+    public float flatOutBrakeGain = 0.06f;    // was 0.12 - lift first, at 190 mph drag sheds a few m/s in a couple of seconds
     [Tooltip("Flat out: this far over its target (m/s) the car brakes as hard as it can.")]
     public float flatOutPanicMps = 12f;
 
@@ -150,6 +158,16 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Seconds after reacting over which the catch returns to full strength, for a light and a total upset.")]
     public float upsetRecoverMin = 0.4f;
     public float upsetRecoverMax = 2f;
+
+    [Header("Pack Steering (superspeedways)")]
+    [Tooltip("Share of the steering input the AI may use at packSteerCapFullMph and over on a pack track (lerped in from 1 at a standstill).")]
+    [Range(0.05f, 1f)] public float packHighSpeedSteerCap = 0.4f;
+    [Tooltip("Speed (mph) at which packHighSpeedSteerCap applies in full.")]
+    public float packSteerCapFullMph = 180f;
+    [Tooltip("Fastest the steering input may swing (full scale per second) at that speed on a pack track.")]
+    public float packSteerSlewPerSec = 1.5f;
+    float _packSteer;
+    bool _hasPackSteer;
 
     SplineDriver _spline;
     PlayerVehicleController _car;
@@ -244,6 +262,7 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Laps in hand the driver wants on top of the laps left before it stops saving fuel.")]
     public float fuelSaveMarginLaps = 0.5f;
     FuelTank _fuelTank;
+    AIRacingBehaviour _racing;
 
     // The most throttle this car can use and still finish on the fuel it has (1 = no saving needed).
     float FuelThrottleCap()
@@ -251,6 +270,10 @@ public class SplineInputDriver : MonoBehaviour
         if (_fuelTank == null) _fuelTank = GetComponent<FuelTank>();
         if (_fuelTank == null || !_fuelTank.Planned) return 1f;
         if (TrackConditions.FuelRequiredStops > 0) return 1f;   // the pit stop makes the distance, not the lift
+        // Never while a pack is still forming off a start or restart: the player's Auto car on a 10 L load held 50%
+        // throttle from the green and the field behind ran into it (Daytona, 2026-11-21).
+        if (_racing == null) _racing = GetComponent<AIRacingBehaviour>();
+        if (TrackConditions.AiPackRacing && _racing != null && _racing.SettlingAfterGreen) return 1f;
         var rd = RaceDirector.Instance;
         float progress = RaceDirector.Progress01;
         if (rd == null || rd.raceLaps <= 0 || progress < 0f) return 1f;   // -1: race distance not known yet
@@ -366,7 +389,8 @@ public class SplineInputDriver : MonoBehaviour
             float crossDeg = 0f;
             LastCrossTrackMetres = 0f;
             bool haveOffset = false;
-            if ((crossTrackGain > 0f || wideLiftEndMetres > 0f) && !_recovering)
+            float xtGain = CrossTrackGain;
+            if ((xtGain > 0f || wideLiftEndMetres > 0f) && !_recovering)
             {
                 Vector2 p0 = _spline.PathPointAhead(0f), p1 = _spline.PathPointAhead(3f);
                 Vector3 w0 = _spline.track.transform.TransformPoint(new Vector3(p0.x, p0.y, 0f));
@@ -379,8 +403,8 @@ public class SplineInputDriver : MonoBehaviour
                     float offset = Vector2.Dot((Vector2)transform.position - (Vector2)w0, left);
                     LastCrossTrackMetres = offset;
                     haveOffset = true;
-                    if (crossTrackGain > 0f)
-                        crossDeg = -Mathf.Atan(crossTrackGain * offset / (speed + crossTrackSoftening)) * Mathf.Rad2Deg;
+                    if (xtGain > 0f)
+                        crossDeg = -Mathf.Atan(xtGain * offset / (speed + crossTrackSoftening)) * Mathf.Rad2Deg;
                     crossDeg = Mathf.Clamp(crossDeg, -crossTrackMaxDeg, crossTrackMaxDeg) * (1f - slide01);
                 }
             }
@@ -415,6 +439,22 @@ public class SplineInputDriver : MonoBehaviour
             // Hold against bent bodywork's pull (feed-forward), rather than letting the heading loop find it by
             // running a standing error — which on a heavily damaged car was metres off the line and then off.
             steerInput = Mathf.Clamp(steerInput + _car.DamagePullSteerInput, -1f, 1f);
+
+            // Superspeedway pack: at 190 mph the line wants half a degree of wheel, and the car's own speed scaling
+            // still left the AI ~6 deg, reached in a few hundredths of a second. A bump draft's nudge was answered
+            // -0.33, +0.25, then full lock, and the car turned down into the next lane (Daytona, 2026-11-21, twice).
+            // Here the wheel is capped and slewed at speed; a car that has actually spun (recovery) keeps all of it.
+            if (TrackConditions.AiPackRacing && !_recovering)
+            {
+                float sf = Mathf.Clamp01(speed / Mathf.Max(1f, packSteerCapFullMph * 0.44704f));
+                float cap = Mathf.Lerp(1f, packHighSpeedSteerCap, sf);
+                steerInput = Mathf.Clamp(steerInput, -cap, cap);
+                if (_hasPackSteer)
+                    steerInput = Mathf.MoveTowards(_packSteer, steerInput,
+                        Mathf.Lerp(20f, packSteerSlewPerSec, sf) * Time.fixedDeltaTime);
+            }
+            _packSteer = steerInput;
+            _hasPackSteer = true;
         }
 
         // --- Speed: throttle when under the commanded speed, brake when over.

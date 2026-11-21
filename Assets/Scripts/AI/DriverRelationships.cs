@@ -111,6 +111,7 @@ public static class DriverRelationships
     // AIRacingBehaviour announces a committed payback move here (for the feed, quests, and the ledger).
     public static void DeclarePayback(string attacker, string target)
     {
+        Debug.Log($"[Payback] {attacker} -> {target} (relationship {Get(attacker, target):0})");
         PaybackDeclared?.Invoke(attacker, target);
         RivalryFeed.Ensure();
         if (IsPlayerName(target)) PlayerStatsLedger.Increment("paybacks.against");
@@ -139,6 +140,26 @@ public static class DriverRelationships
             float v = _values.TryGetValue(key, out float c) ? c : PlayerPrefs.GetFloat(PrefPrefix + key, 0f);
             yield return (key.Substring(0, bar), key.Substring(bar + 1), v);
         }
+    }
+
+    // One-off: every grudge back to neutral, once per device (Josh, 2026-11-21). A day of Daytona start wrecks had piled
+    // contact blame into the table, and the grudges past PaybackThreshold had the field wrecking each other at the green.
+    const string ResetOnceKey = "relationships.reset.20261121";
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void ResetOnce()
+    {
+        if (PlayerPrefs.GetInt(ResetOnceKey, 0) == 1) return;
+        int pairs = 0, deep = 0;
+        foreach (var key in LoadIndex())
+        {
+            pairs++;
+            if (PlayerPrefs.GetFloat(PrefPrefix + key, 0f) <= PaybackThreshold) deep++;
+        }
+        ResetAll();
+        PlayerPrefs.SetInt(ResetOnceKey, 1);
+        PlayerPrefs.Save();
+        Debug.Log($"[Payback] relationships reset to neutral: {pairs} pairs cleared, {deep} were at payback level");
     }
 
     public static void ResetAll()

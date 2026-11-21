@@ -75,10 +75,12 @@ namespace Draftmaster.Sim
             public float CornerRadius;       // m: the tightest corner within the horizon (MaxValue = none)
             public float OffLineCost;        // how much of the off-line radius change a corner costs (0 = an oval's lanes)
 
+            // The car is its bodywork: 5 m x 2.5 m, the 64 x 32 px liveries at 12.8 px/m, which is also the size of
+            // its collider (VehicleCollision.fitToBodywork). AIRacingBehaviour hands over the real one per car.
             public static Settings Default => new Settings
             {
-                SlotWidth = 0.25f, Horizon = 3f, CarLength = 4.8f, CarWidth = 2f, SideGap = 0.4f,
-                PredictSeconds = 0.5f, FollowGap = 6.2f, CorridorFull = 2f, CorridorClear = 2.4f,
+                SlotWidth = 0.25f, Horizon = 3f, CarLength = 5f, CarWidth = 2.5f, SideGap = 0.4f,
+                PredictSeconds = 0.5f, FollowGap = 6.2f, CorridorFull = 2.5f, CorridorClear = 2.9f,
                 CloseDecel = 1.2f, TowMaxGap = 35f, TowHalfWidth = 2.5f, TowGain = 0.1f,
                 PushLateral = 1.4f, PushLinkGap = 9f, PushMaxChain = 8, PushGain = 0.03f,
                 BehindTimeToContact = 2f, BehindClear = 1.5f, MoveCost = 0.1f, Stickiness = 1f, LinePull = 0.15f,

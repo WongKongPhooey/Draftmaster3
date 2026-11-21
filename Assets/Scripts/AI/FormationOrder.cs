@@ -42,7 +42,7 @@ public static class FormationOrder
         for (int i = 0; i < _members.Count; i++)
         {
             var m = _members[i];
-            if (m == null || !m.FormationActive) continue;
+            if (Gone(m) || !m.FormationActive) continue;
             int g = m.GridPosition;
             if (g < grid && g > bestGrid) { bestGrid = g; best = m; }
         }
@@ -50,6 +50,10 @@ public static class FormationOrder
     }
 
     static int Parity(int g) => ((g % 2) + 2) % 2;
+
+    // A member is an interface, so `m == null` misses one Unity has destroyed: a car from the last race scene that
+    // never unregistered (a scene reload, RACE AGAIN, or the editor with domain reload off) still sits in the list.
+    static bool Gone(IFormationMember m) => m == null || (m is UnityEngine.Object o && o == null);
 
     // The member one ROW ahead of `grid` in a two-wide formation: the nearest member ahead in the SAME column
     // (same grid parity). Even-parity cars chain down to the safety car (its sentinel grid is even); odd-parity
@@ -67,7 +71,7 @@ public static class FormationOrder
         for (int i = 0; i < _members.Count; i++)
         {
             var m = _members[i];
-            if (m == null || !m.FormationActive) continue;
+            if (Gone(m) || !m.FormationActive) continue;
             if (excludeCar != null && m is UnityEngine.Component c && c != null && c.gameObject == excludeCar) continue;
             int g = m.GridPosition;
             if (g == SafetyCarGrid) safety = m;

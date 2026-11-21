@@ -137,7 +137,7 @@ public class AIRacingBehaviour : MonoBehaviour
 
     [Header("Pack Racing (superspeedways - TrackConditions.AiPackRacing)")]
     [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line: a car is 4.8 m long, so this is a bumper's width - bump-drafting distance.")]
-    public float packFollowGap = 6.2f;
+    public float packFollowGap = 7.2f;   // was 6.2: pushing at 1.4 m of bumper room turned into 3 m/s+ contacts that threw the pusher sideways into the next lane (Daytona, 2026-11-21). Still well inside the tow (35 m) and a push link (9 m).
     [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line through the corners: a few metres clear of its bumper, still well inside the tow (DraftAero.PushLinkGap). Bump drafting is for the straights - a car shoved along through a banked turn at full speed is the car that gets turned round, and that was most of the big ones at Daytona. Blended in from packFollowGap by packCornerRadius / packStraightRadius.")]
     public float packCornerFollowGap = 8.5f;
     [Tooltip("Driven-line radius (m) at or under which the road ahead is a corner, for packCornerFollowGap. Daytona's and Talladega's turns run ~300 m.")]
@@ -172,7 +172,7 @@ public class AIRacingBehaviour : MonoBehaviour
     public float packEmptyLaneMetres = 60f;
     [Tooltip("After the green (a start or a restart) a pack holds the two-wide formation it lined up in - no lane picks, no lane changes, no pull-outs - until it is up to this share of race speed, or restartSettleMaxSeconds have passed. Choosing lanes while still accelerating had every car changing its mind.")]
     [Range(0f, 1f)] public float restartSettleSpeedShare = 0.95f;
-    public float restartSettleMaxSeconds = 8f;
+    public float restartSettleMaxSeconds = 15f;   // 8 s let a Daytona field go while still well short of race speed
     [Tooltip("Off the pack tracks, after the green (a start or a restart) each car holds its side of the road - its share of the width between the AI's bounds, not an offset from the racing line - through the first corner, with no passes and no defending, then races. Without it the outside column turned straight across onto the line at the green and into the inside column.")]
     public bool holdStartSides = true;
     [Tooltip("The side-hold ends this long (s) after the green even if no corner has been completed.")]
@@ -189,6 +189,10 @@ public class AIRacingBehaviour : MonoBehaviour
     public bool grassToAvoid = true;
     [Tooltip("Fastest (mph) a car drives while it is going round a wreck on the grass.")]
     public float grassEscapeMaxMph = 30f;
+    [Tooltip("The grass is only taken by a car at or under this speed (mph). Eight cars went off onto Daytona's infield at " +
+             "160 mph and wrecked on it (2026-11-21); an Auto car round one wreck across the road needs it at ~110 mph " +
+             "(AutoStoppedCarSimTests).")]
+    public float grassEscapeEnterMph = 120f;
     [Tooltip("A car alongside is a wall: whatever the brain wants (a pass, a defence, back to the line, out of a lapper's way), it never aims closer to a car beside it than alongsideWallGap - and a car already closer holds where it is. Without it a car turned across into the one beside it whenever its plan said to.")]
     public bool alongsideIsWall = true;
     [Tooltip("Centre-to-centre lateral (m) a car keeps from one alongside. In a pack, a little under the lane spacing. " +
@@ -293,6 +297,8 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Rivalry / Payback")]
     [Tooltip("Allow this driver to deliberately wreck a rival when their relationship has fallen below DriverRelationships.PaybackThreshold (NASCAR Thunder style).")]
     public bool enablePayback = true;
+    [Tooltip("No payback within this many seconds of a green (a start or a restart), nor while the field is still getting up to speed.")]
+    public float paybackGraceSeconds = 30f;
     [Tooltip("Seconds between grudge scans for a nearby hated rival.")]
     public float paybackScanInterval = 1.5f;
     [Tooltip("Longitudinal range (m) within which a rival can be targeted.")]
@@ -337,8 +343,11 @@ public class AIRacingBehaviour : MonoBehaviour
     const float MphToMps = 1f / 2.237f;
 
     SplineDriver _spline;
+    VehicleCollision _collision;
     float _smoothedTactical;
     float _tacticalVelocity;
+    bool _alongsidePinned;           // AlongsideWallClamp held the target back from a car alongside this step
+    float _alongsidePinnedToward;    // ...and which way it was held back from (+1/-1)
     // The pass under way, in lanes: who is being passed, which lane we are passing in, and for how long.
     SplineDriver _passCar;
     int _passLane = -1;
@@ -402,6 +411,7 @@ public class AIRacingBehaviour : MonoBehaviour
     SplineDriver.CornerPhase _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
     int _startSideStage;   // 0 = not yet on a straight since the green, 1 = on one, 2 = into the first corner
     float _runOffHold;     // seconds the run-off stays open after an avoidance round a stopped car
+    bool _offPavement;     // out past the paved road and run-off, on the grass (grassToAvoid)
     float _grassHold;      // the same for the grass beside the road (grassToAvoid)
     bool _lastEscapeGrass; // the side EscapeSide last picked is out on the grass
     bool _escapeGrass;     // the way round the stopped car now being avoided is out on the grass
@@ -411,7 +421,10 @@ public class AIRacingBehaviour : MonoBehaviour
     // to "the wide side, away from the car" then drove the car into the rest of a pile-up that filled that side - the
     // second car round a wreck, held up by the first going round, turned into it (WreckEscapeGreenSimTests).
     bool _escapeWayBusy;   // the racing line's lateral last step (holding a line round a stopped car)
-    const float WreckBodyHalfLength = 2.4f, WreckBodyHalfWidth = 1f;   // a car's body (GridSpawner.collisionHalfExtents)
+    // A car's body - the same box every car collides as (VehicleCollision, fitted to the 5 x 2.5 m bodywork). These were
+    // the old 4.8 x 2 m box, so a wreck was walked past a quarter metre closer than its metal really reached.
+    float WreckBodyHalfLength => CarWidth > 0f && _collision != null ? _collision.halfExtents.y : 2.5f;
+    float WreckBodyHalfWidth => CarWidth * 0.5f;
     readonly System.Collections.Generic.List<FieldCar> _fieldCars = new System.Collections.Generic.List<FieldCar>(24);
     float _fieldTarget = float.NaN;
     readonly System.Collections.Generic.List<float> _fieldLanes = new System.Collections.Generic.List<float>(6);
@@ -537,6 +550,7 @@ public class AIRacingBehaviour : MonoBehaviour
             // Joined mid-race: long past the green, so no start hold, restart settle or start brake pad.
             _greenSeconds = _joinedRunning ? 3600f : 0f;
             _startSideShare = float.NaN;
+            _diagStartTarget = float.NaN; _diagNext = 0f;
             _startSideStage = 0;
             _startSidePrevPhase = SplineDriver.CornerPhase.Approach;
             if (holdStartSides && !_joinedRunning && !Pack && !_spline.IsOnPit && _spline.GetLateralBounds(out float sLo, out float sHi) && sHi - sLo > 1f)
@@ -594,7 +608,12 @@ public class AIRacingBehaviour : MonoBehaviour
         float stopShortCap = float.MaxValue;   // oval: the last-resort stop short of a stopped car still in our way
 
         // Rivalry: run down an active payback move; otherwise scan for a nearby hated rival on an interval.
-        if (enablePayback && !_spline.IsOnPit)
+        // Never off a start or restart: a grudge settled while the field is still two wide and getting up to speed walked
+        // a car across into its neighbour at Daytona's green, every race, near whoever it hated (2026-11-21). Clear of
+        // the green - up to speed and paybackGraceSeconds gone - the field is strung out enough to pick a moment.
+        bool paybackAllowed = _greenSeconds >= paybackGraceSeconds && !RestartSettling(_greenSeconds) && !underYellow;
+        if (!paybackAllowed && _paybackTimer > 0f) { _paybackTimer = 0f; _paybackRivalSpline = null; _paybackRivalObstacle = null; }
+        if (enablePayback && paybackAllowed && !_spline.IsOnPit)
         {
             if (_paybackTimer > 0f)
             {
@@ -1079,13 +1098,18 @@ public class AIRacingBehaviour : MonoBehaviour
         // The player's lane outranks everything the brain chose across the road - except driving round a stopped car,
         // which it still does on its own. Still never across a car alongside (the clamp below): the move waits until
         // there is room.
+        // Not off a start or restart in a pack, though: the field holds the formation it lined up in until it is up to
+        // speed, and the player's Auto car heading straight for its picked lane at the green (to 5.25 m from 1.73 in
+        // two seconds) was the one car moving across it - Daytona, P31, contact one second after the green (2026-11-21).
         if (HasPlayerLane && !_spline.IsOnPit && !(wantOvertake && _passAroundStopped)
+            && !(Pack && !underYellow && RestartSettling(_greenSeconds))
             && TryPlayerLaneLateral(playerLane, out float playerLaneLat))
         {
             desiredTactical = playerLaneLat - _spline.UntacticalLateral;
             _commitTimer = 0f;
         }
 
+        _alongsidePinned = false;
         if (alongsideIsWall && !PaybackActive && !_spline.IsOnPit)
             desiredTactical = AlongsideWallClamp(desiredTactical);
 
@@ -1137,6 +1161,8 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
         desiredTactical += Mathf.Clamp(repulse, -(sidewaysMaxPush + contactPush), sidewaysMaxPush + contactPush);
+
+        if (startDiag && Pack) StartDiag(desiredTactical, fieldOn, fieldLat, wantOvertake, repulse);
 
         if (contactScrub > 0f)
         {
@@ -1240,6 +1266,7 @@ public class AIRacingBehaviour : MonoBehaviour
         bool onGrass = _spline.allowGrass && _spline.GetBoundsAhead(0f, true, false, out float paveLo, out float paveHi)
                        && (_spline.LateralOnTrack < paveLo - 0.2f || _spline.LateralOnTrack > paveHi + 0.2f);
         _spline.allowGrass = grassToAvoid && !_spline.IsOnPit && (grassAvoid || _grassHold > 0f || onGrass);
+        _offPavement = onGrass;
 
         // Converge on the desired offset like a driver turning the wheel: accelerate into the move, carry no more
         // than maxLateralSpeed, and slow so as to arrive on the target rather than at full rate. Dead-zone
@@ -1280,6 +1307,15 @@ public class AIRacingBehaviour : MonoBehaviour
         if (diff != 0f && Mathf.Sign(move) == Mathf.Sign(diff) && Mathf.Abs(move) > Mathf.Abs(diff))
         {
             move = diff;
+            _tacticalVelocity = 0f;
+        }
+        // Pinned by a car alongside and on the target: arrived, not coasting. Coasting on here let the leftover lateral speed carry the
+        // car past a target pinned where it stood - which is what a car alongside pins it to (AlongsideWallClamp holds
+        // "here") - and each step's new "here" was a little closer: at Daytona's green a car ratcheted 1.8 m across
+        // into the door of the car beside it while its target said hold (2026-11-21).
+        else if (diff == 0f && _alongsidePinned && Mathf.Sign(_tacticalVelocity) == _alongsidePinnedToward)
+        {
+            move = 0f;
             _tacticalVelocity = 0f;
         }
         _smoothedTactical += move;
@@ -1379,7 +1415,10 @@ public class AIRacingBehaviour : MonoBehaviour
         // ...but never past a stopped car we have not yet got out from behind. The train leaves stopped cars to this
         // while the car is steering round one (SplineDriver.avoidingStopped), so it is the only brake for it then.
         speedCap = Mathf.Min(speedCap, stopShortCap);
-        if (_spline.allowGrass) speedCap = Mathf.Min(speedCap, grassEscapeMaxMph);
+        // The grass speed is for the grass. While the car is still on the road heading for it, the wreck itself is the
+        // brake (stopShortCap): capping it the moment the grass opened stood a car on its brakes from 197 mph in the
+        // middle of the Daytona pack, a hundred metres short of the wreck, and the cars behind ran into it (2026-11-21).
+        if (_spline.allowGrass && _offPavement) speedCap = Mathf.Min(speedCap, grassEscapeMaxMph);
 
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
@@ -1439,8 +1478,11 @@ public class AIRacingBehaviour : MonoBehaviour
         float here = _spline.LateralOnTrack;
         float baseLat = _spline.UntacticalLateral;
         float target = baseLat + desiredTactical;
-        float gap = TrackConditions.AiAlongsideGap > 0f ? TrackConditions.AiAlongsideGap : alongsideWallGap;
-        float gapNeeded = Pack ? Mathf.Min(gap, LaneSpacing * 0.9f) : gap;
+        float gap = (TrackConditions.AiAlongsideGap > 0f ? TrackConditions.AiAlongsideGap : alongsideWallGap) + ExtraWidth;
+        // In a pack the car beside us in the next lane is a wall a lane away: we hold our lane until it has gone. Kept at
+        // 0.9 of the spacing, a car could start a lane change toward one alongside, and at 190 mph the turn-in carried it
+        // the last half metre into its door (Daytona, 2026-11-21).
+        float gapNeeded = Pack ? LaneSpacing * 0.97f : gap;
         float myMps = _spline.CurrentMph * MphToMps;
         float hi = float.PositiveInfinity, lo = float.NegativeInfinity;
         var drivers = RaceField.Drivers;
@@ -1459,8 +1501,13 @@ public class AIRacingBehaviour : MonoBehaviour
             if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
             WallFrom(SignedGapTo(p.TrackDistance), p.TrackLateral, p.SpeedMph * MphToMps - myMps, here, gapNeeded, ref lo, ref hi);
         }
-        if (lo > hi) return here - baseLat;   // squeezed both sides: hold where we are
-        return Mathf.Clamp(target, lo, hi) - baseLat;
+        _alongsidePinned = false;
+        // Squeezed both sides: hold where we are - or in a pack, the middle of the two, since "where we are" is where the
+        // car has drifted to and holding it walked the car into one of them.
+        if (lo > hi) return (Pack ? (lo + hi) * 0.5f : here) - baseLat;
+        float clamped = Mathf.Clamp(target, lo, hi);
+        if (clamped != target) { _alongsidePinned = true; _alongsidePinnedToward = Mathf.Sign(target - clamped); }
+        return clamped - baseLat;
     }
 
     void WallFrom(float gap, float otherLat, float closingFromBehindMps, float here, float gapNeeded, ref float lo, ref float hi)
@@ -1470,17 +1517,38 @@ public class AIRacingBehaviour : MonoBehaviour
         float side = otherLat - here;
         if (Mathf.Abs(side) > gapNeeded * 2.5f) return;   // well clear: a lane or more between us
         if (Mathf.Abs(side) < 0.3f) return;   // on top of each other: no side to keep to - the contact response sorts it
-        if (side >= 0f) hi = Mathf.Min(hi, Mathf.Max(otherLat - gapNeeded, here));
+        // In line, not alongside: a car overlapping us across the road and more than a length up or down it is one we
+        // follow or lead. At Daytona's start the car a row behind in our own column (6.5 m back) counted as a wall the
+        // moment we drifted a few tenths off the column - with the real neighbour on the other side that "squeezed"
+        // us, the squeezed car held wherever it had drifted to, and drifted on into its neighbour (2026-11-21).
+        if (Mathf.Abs(side) < CarWidth && Mathf.Abs(gap) > CarLength) return;
+        // Already closer than the gap: off a pack track, hold where we are rather than lurch away. In a pack, "where we
+        // are" is where the car has drifted to - the brain follows the dynamic car - so holding it ratcheted a car down
+        // the banking into the door of the one beside it at Daytona's green, each step's drift becoming the new wall
+        // (2026-11-21). There the wall stays put and the car is steered back out to it.
+        if (Pack)
+        {
+            if (side >= 0f) hi = Mathf.Min(hi, otherLat - gapNeeded);
+            else lo = Mathf.Max(lo, otherLat + gapNeeded);
+        }
+        else if (side >= 0f) hi = Mathf.Min(hi, Mathf.Max(otherLat - gapNeeded, here));
         else lo = Mathf.Max(lo, Mathf.Min(otherLat + gapNeeded, here));
     }
 
     // Still getting up to speed off a start or restart: under restartSettleSpeedShare of the clean-air race speed here,
     // and inside restartSettleMaxSeconds of the green.
+    // Still getting up to speed off the last green (start or restart), for the throttle side (SplineInputDriver).
+    public bool SettlingAfterGreen => RestartSettling(_greenSeconds);
+
     bool RestartSettling(float sinceGreen)
     {
         if (sinceGreen < 0f || sinceGreen >= restartSettleMaxSeconds) return false;
-        float clean = Mathf.Max(0f, _spline.DesiredMph - _spline.aiSpeedBoostMph);
-        if (TrackConditions.PlateMph > 0f) clean = Mathf.Min(clean, TrackConditions.PlateMph);
+        // Race speed, not what the brain wants this instant: off the start that is still the launch ramp, and 95% of it
+        // was ~80 mph - the Daytona field broke formation two seconds after the green and went three wide (2026-11-21).
+        // On a plate track race speed is the plate.
+        float clean = TrackConditions.PlateMph > 0f
+            ? TrackConditions.PlateMph
+            : Mathf.Max(0f, _spline.DesiredMph - _spline.aiSpeedBoostMph);
         return _spline.CurrentMph < clean * restartSettleSpeedShare;
     }
 
@@ -1498,6 +1566,17 @@ public class AIRacingBehaviour : MonoBehaviour
         s.MoveCost = fieldMoveCost;
         s.Stickiness = fieldStickiness;
         s.SideGap = fieldSideGap;
+        // Plan round the cars as big as they really are: the collider is the bodywork (VehicleCollision), and a
+        // field that thought cars were 2 m wide parked them 2.4 m apart, a tenth of a metre inside each other.
+        if (_collision == null) _collision = GetComponent<VehicleCollision>();
+        if (_collision != null)
+        {
+            float width = _collision.halfExtents.x * 2f;
+            s.CarWidth = width;
+            s.CarLength = _collision.halfExtents.y * 2f;
+            s.CorridorClear = width + (s.CorridorClear - s.CorridorFull);
+            s.CorridorFull = width;
+        }
         float myMps = _spline.CurrentMph * MphToMps;
         if (Pack) { s.FollowGap = PackFollowGapHere(); s.CloseDecel = packCloseDecel; }
         else
@@ -1604,7 +1683,9 @@ public class AIRacingBehaviour : MonoBehaviour
     float _packGapAtDistance = float.NaN, _packGapCached;
     float PackFollowGapHere()
     {
-        float gap = PackFollowGapForRoad();
+        // The gaps were tuned bumper to bumper for a 4.8 m box; the box is now the 5 m bodywork, so the same metres
+        // centre to centre left 0.2 m less between bumpers and the bump draft turned into a shove (Daytona, 2026-11-21).
+        float gap = PackFollowGapForRoad() + ExtraLength;
         // A hot engine backs off the bumper into air that cools it (EngineTemp) - on the straights too.
         return EngineHot ? Mathf.Max(gap, packHotFollowGap) : gap;
     }
@@ -1902,7 +1983,7 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.GetBoundsAhead(ahead, false, out float roadLo, out float roadHi);
         // The last resort, out on the grass: where a car can stay all the way past the wreck, not only level with it.
         float grassLo = lo, grassHi = hi;
-        bool grass = grassToAvoid && _spline.GetBoundsOver(Mathf.Max(0f, ahead - 5f), ahead + 15f, true, true, out grassLo, out grassHi);
+        bool grass = grassToAvoid && _spline.CurrentMph <= grassEscapeEnterMph && _spline.GetBoundsOver(Mathf.Max(0f, ahead - 5f), ahead + 15f, true, true, out grassLo, out grassHi);
         if (!grass) { grassLo = lo; grassHi = hi; }
         bool bestGrass = false;
         float best = float.PositiveInfinity, pick = 0f;
@@ -1977,7 +2058,7 @@ public class AIRacingBehaviour : MonoBehaviour
     bool StartLaneClear(float from, float to)
     {
         float dir = Mathf.Sign(to - from);
-        float a = from + dir * 1.2f, b = to + dir * alongsideWallGap;
+        float a = from + dir * 1.2f, b = to + dir * (alongsideWallGap + ExtraWidth);
         float lo = Mathf.Min(a, b), hi = Mathf.Max(a, b);
         float behind = -(alongsideLength + 8f), ahead = overtakeClosingRange;
         var drivers = RaceField.Drivers;
@@ -2233,10 +2314,72 @@ public class AIRacingBehaviour : MonoBehaviour
 
     // Is a lane free for us to drive into: nobody in it from laneClearBehind behind us to laneClearAhead (plus a
     // second of closing speed) ahead? The human car counts too.
+    // This car's real width (its collider is its bodywork, VehicleCollision.fitToBodywork), and how much wider that is
+    // than the 2 m box every centre-to-centre gap here was tuned against - added on so the daylight stays as tuned.
+    float CarWidth
+    {
+        get
+        {
+            if (_collision == null) _collision = GetComponent<VehicleCollision>();
+            return _collision != null ? _collision.halfExtents.x * 2f : 2.5f;
+        }
+    }
+    float ExtraWidth => Mathf.Max(0f, CarWidth - 2f);
+    float CarLength
+    {
+        get
+        {
+            if (_collision == null) _collision = GetComponent<VehicleCollision>();
+            return _collision != null ? _collision.halfExtents.y * 2f : 5f;
+        }
+    }
+    float ExtraLength
+    {
+        get
+        {
+            if (_collision == null) _collision = GetComponent<VehicleCollision>();
+            return _collision != null ? Mathf.Max(0f, _collision.halfExtents.y * 2f - 4.8f) : 0.2f;
+        }
+    }
+
+    [Tooltip("Diagnostics: for 3 s after a pack start, log ([StartDiag]) any car whose lateral target moves off where it " +
+             "took the green, or whose car sits off its brain's line - with which part of the brain set the target.")]
+    public bool startDiag = true;
+    float _diagStartTarget = float.NaN, _diagNext;
+
+    void StartDiag(float desiredTactical, bool fieldOn, float fieldLat, bool wantOvertake, float repulse)
+    {
+        if (_greenSeconds > 3f || _greenSeconds < _diagNext) return;
+        _diagNext = _greenSeconds + 0.25f;
+        float target = _spline.UntacticalLateral + desiredTactical;
+        if (float.IsNaN(_diagStartTarget)) _diagStartTarget = target;
+        if (_input == null) _input = GetComponent<SplineInputDriver>();
+        float xt = _input != null ? _input.LastCrossTrackMetres : 0f;
+        if (Mathf.Abs(target - _diagStartTarget) < 0.5f && Mathf.Abs(xt) < 0.6f) return;
+        // The car alongside, as the brain sees it.
+        string side = "-";
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var o = drivers[i];
+            if (o == null || o == _spline) continue;
+            float g = LongitudinalGap(_spline, o);
+            if (Mathf.Abs(g) > alongsideLength) continue;
+            side = $"{o.name} lat {o.LateralOnTrack:0.00} gap {g:0.0}";
+            break;
+        }
+        Debug.Log($"[StartDiag] {name} t{_greenSeconds:0.00} brain {_spline.LateralOnTrack:0.00} line {_spline.UntacticalLateral:0.00} " +
+                  $"target {target:0.00} (green {_diagStartTarget:0.00}) xtrack {xt:0.00} field {(fieldOn ? fieldLat.ToString("0.00") : "off")} " +
+                  $"overtake {wantOvertake} payback {PaybackActive} repulse {repulse:0.00} mph {_spline.CurrentMph:0} | {side}");
+    }
+
     bool LaneClear(float laneLat)
     {
         float closing = Mathf.Max(0f, _spline.CurrentMph) * MphToMps * 0.1f;
-        float halfLane = laneSpacing * 0.75f;
+        // A car anywhere a car in that lane would touch holds it - not only one within a lane's half-width of its
+        // centre. Starting rows sit between the lanes (+-1.8 at Daytona, lanes at 0 and +-3.6), and a car 2.0 m off
+        // centre left lane 0 "clear" for the car beside it to move into its door at the green (2026-11-21).
+        float halfLane = Mathf.Max(laneSpacing * 0.75f, CarWidth + fieldSideGap);
         float aware = AIRatings.AwarenessMargin(awareness01);
         float laneClearBehind = this.laneClearBehind * aware, laneClearAhead = this.laneClearAhead * aware;
         var drivers = RaceField.Drivers;

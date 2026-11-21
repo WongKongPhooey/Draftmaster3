@@ -118,4 +118,14 @@ public class AIRetirementRuleTests
         Assert.AreEqual(1, AIRetirementRule.NearestIndex(new Vector2(11f, 3f), centres));
         Assert.AreEqual(-1, AIRetirementRule.NearestIndex(Vector2.zero, new List<Vector2>()));
     }
+
+    // Bell at Daytona, 2026-11-21: one head-on folded the front flat at damage 0.23 and the car drove on.
+    [Test]
+    public void ANoseCrushedPastTheRadiatorBreaksTheCarDownWhateverTheDamageFigure()
+    {
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.23f, 0.6f, 0, true, 0.27f, 0.25f));
+        Assert.IsFalse(AIRetirementRule.BrokenDown(0.23f, 0.6f, 0, true, 0.05f, 0.25f), "bump-draft dents are not a breakdown");
+        Assert.IsFalse(AIRetirementRule.BrokenDown(0.23f, 0.6f, 0, true, 0.9f, 0f), "0 leaves the nose out of it");
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.7f, 0.6f, 0, true, 0f, 0.25f), "the damage figure still counts");
+    }
 }

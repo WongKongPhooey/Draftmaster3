@@ -127,6 +127,38 @@ public class VehicleDamageWheelTests
         Assert.IsFalse(WheelOff(2) || WheelOff(3), "a head-on took a rear wheel");
     }
 
+    // Another car already `buried` metres inside our flank on the hub side when the contact registers: cars in a
+    // pack lean on each other, so the solver reads a real overlap from a closing speed that is barely a nudge.
+    void BuriedSideContact(float severity, float buried)
+    {
+        var current = (Vector3[])_type.GetProperty("CurrentVertices").GetValue(_body);
+        float face = float.MaxValue;
+        foreach (var v in current) face = Mathf.Min(face, v.y);
+        var striker = BodyDeform.Striker.Plane(new Vector2(0f, face + buried), Vector2.up);
+        var method = _type.GetMethod("OnImpact",
+            new[] { typeof(BodyDeform.Striker).MakeByRefType(), typeof(float), typeof(float) });
+        method.Invoke(_body, new object[] { striker, severity, BodyDeform.RigidPartner });
+    }
+
+    // Daytona 2026-11-21: a 3 m/s nudge took a wheel off five seconds after the green, the car stopped dead in the
+    // pack and the field piled into it. The hub is a full wheel width inside the body, so a fold that only reaches
+    // the tyre leaves the wheel on...
+    [Test]
+    public void AFoldShortOfAWheelWidthKeepsTheWheel()
+    {
+        BuriedSideContact(0.2f, 0.2f);
+        Assert.Greater((float)_type.GetProperty("DamageLevel").GetValue(_body), 0f, "the nudge never landed");
+        Assert.AreEqual(0, WheelsOff, "a fold that only reached the tyre took a wheel off");
+    }
+
+    // ...and one that crushes the side in past a whole wheel width takes it, however gently it got there.
+    [Test]
+    public void AFoldPastAWheelWidthTakesTheWheel()
+    {
+        BuriedSideContact(0.2f, 0.5f);
+        Assert.IsTrue(WheelOff(0), "the side is folded in past the hub and the wheel is still on");
+    }
+
     [Test]
     public void AFullRepairPutsTheWheelsBackOn()
     {

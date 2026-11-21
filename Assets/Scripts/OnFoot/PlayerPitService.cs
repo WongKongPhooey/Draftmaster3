@@ -149,7 +149,7 @@ public class PlayerPitService : MonoBehaviour
     Vector2 CarHalfExtents()
     {
         var vc = playerCar != null ? playerCar.GetComponent<VehicleCollision>() : null;
-        return vc != null ? vc.halfExtents : new Vector2(1.0f, 2.4f);
+        return vc != null ? vc.halfExtents : new Vector2(1.25f, 2.5f);
     }
 
     // On the pit ribbon or the box lane, and NOT on the racing surface. A plain distance from the pit centreline

@@ -112,13 +112,13 @@ public class RacePlanTests
         try
         {
             var setup = Activator.CreateInstance(setupType);
-            setupType.GetField("fuelLitres").SetValue(setup, 7f);
+            setupType.GetField("fuelLitres").SetValue(setup, 37f);   // inside CarSetup.MinFuel..MaxFuel (10-100 L)
             setupType.GetField("balance").SetValue(setup, -0.5f);
             save.Invoke(setup, new object[] { 424242 });
 
             var back = load.Invoke(null, new object[] { 424242 });
             Assert.IsNotNull(back, "The plan saved for this weekend did not come back.");
-            Assert.AreEqual(7f, (float)setupType.GetField("fuelLitres").GetValue(back), 0.001f);
+            Assert.AreEqual(37f, (float)setupType.GetField("fuelLitres").GetValue(back), 0.001f);
             Assert.AreEqual(-0.5f, (float)setupType.GetField("balance").GetValue(back), 0.001f);
 
             Assert.IsNull(load.Invoke(null, new object[] { 424243 }), "Last weekend's race plan leaked into this one.");

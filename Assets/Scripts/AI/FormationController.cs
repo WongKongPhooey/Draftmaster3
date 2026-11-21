@@ -148,6 +148,9 @@ public class FormationController : MonoBehaviour
     public float avoidHardDecelMphPerSec = 30f;
     [Tooltip("The human driver is assumed able to stop this many times harder than an AI car (a spin, a wall, a stamp on the brakes), so the AI leaves them more room.")]
     public float humanBrakeFactor = 1.5f;
+    // Not on the pace lap: at cruise behind the safety car a human's stop is no sharper than ours, and the margin left
+    // the car behind a driving player sitting well back of its row - closed up again the moment Auto took over.
+    float HumanBrakeFactorNow => RaceStart.Current == RaceStart.Phase.Formation ? 1f : Mathf.Max(1f, humanBrakeFactor);
     [Tooltip("A free car further than this (m) across from the pit centreline is on the track, not in the pit lane.")]
     public float pitLaneHalfWidth = 7f;
 
@@ -1308,7 +1311,7 @@ public class FormationController : MonoBehaviour
                 SpeedMph = Mathf.Max(0f, alongMph),
                 HalfLength = along,
                 HalfWidth = across,
-                BrakeMphPerSec = avoidHardDecelMphPerSec * Mathf.Max(1f, humanBrakeFactor),
+                BrakeMphPerSec = avoidHardDecelMphPerSec * HumanBrakeFactorNow,
                 IsPaceCar = false,
             });
         }
@@ -1375,7 +1378,7 @@ public class FormationController : MonoBehaviour
                 SpeedMph = Mathf.Max(0f, p.SpeedMph),
                 HalfLength = hl,
                 HalfWidth = Mathf.Max(hw, hl * 0.5f), // no road tangent to judge its yaw against here: be generous
-                BrakeMphPerSec = avoidHardDecelMphPerSec * Mathf.Max(1f, humanBrakeFactor),
+                BrakeMphPerSec = avoidHardDecelMphPerSec * HumanBrakeFactorNow,
                 IsPaceCar = false,
             });
         }

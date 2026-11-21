@@ -17,6 +17,10 @@ public class FuelTank : MonoBehaviour
     [Tooltip("Mass per litre (kg). Race fuel ≈ 0.75.")]
     public float kgPerLitre = 0.75f;
 
+    // The driver's setup put this load in (CarSetup.ApplyTo): the race starts on it rather than brimmed. Cars nobody
+    // set up - the AI field - still start the race full.
+    [System.NonSerialized] public bool loadChosen;
+
     public float FuelKg => Mathf.Max(0f, fuelLitres) * kgPerLitre;
     public float Fraction => capacityLitres > 0f ? Mathf.Clamp01(fuelLitres / capacityLitres) : 0f;
     public bool IsEmpty => fuelLitres <= 0.001f;
@@ -63,9 +67,9 @@ public class FuelTank : MonoBehaviour
         float moved = _hasLastPos ? (pos - _lastPos).magnitude : 0f;
         _lastPos = pos;
         _hasLastPos = true;
-        // On the grid and the formation lap of a race the car is already brimmed, as it will be at the green —
-        // otherwise the HUD shows the setup's practice fuel load (12 L, one bar) until the lights go.
-        if (raceSession && !race && !Planned) { FillFull(); return; }
+        // On the grid and the formation lap of a race the car already carries what it will start on: the driver's
+        // chosen load, or brimmed for a car nobody set up.
+        if (raceSession && !race && !Planned) { if (!loadChosen) FillFull(); return; }
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_spline == null) _spline = GetComponent<SplineDriver>();
         if (!race)
@@ -79,9 +83,8 @@ public class FuelTank : MonoBehaviour
                       : _pvc != null ? DraftAero.TrackLengthFor(_pvc.track) : 0f;
             if (lap <= 0f) return;
             PlanForRace(rd.raceLaps, lap);
-            // A race starts brimmed. The setup's fuel load (CarSetup, 12 L by default) is a practice and qualifying
-            // choice; left in the car it ran dry seven laps into a 60-lap race.
-            FillFull();
+            // A race starts on the load the driver chose in the setup (10-100 L); a car nobody set up starts brimmed.
+            if (!loadChosen) FillFull();
         }
         // A jump (a re-seed, a team switch, a tow back to the pits) is not driving.
         if (moved > 20f) return;

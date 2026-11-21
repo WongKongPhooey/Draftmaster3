@@ -533,7 +533,7 @@ public class PitStopController : MonoBehaviour
         get
         {
             if (_collision == null) _collision = GetComponent<VehicleCollision>();
-            return _collision != null ? _collision.halfExtents : new Vector2(1.0f, 2.4f);
+            return _collision != null ? _collision.halfExtents : new Vector2(1.25f, 2.5f);
         }
     }
 

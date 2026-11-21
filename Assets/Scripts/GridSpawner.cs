@@ -76,7 +76,7 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Add VehicleCollision to each spawned car for barrier + car-car contact.")]
     public bool addCollision = true;
     [Tooltip("Box collider half-extents (m). x = half-width, y = half-length.")]
-    public Vector2 collisionHalfExtents = new Vector2(1.0f, 2.4f);
+    public Vector2 collisionHalfExtents = new Vector2(1.25f, 2.5f);
     [Tooltip("Layers cars collide against (barriers + other vehicles).")]
     public LayerMask collisionMask = ~0;
 

@@ -41,7 +41,7 @@ public class PitChallengeRun : MonoBehaviour
     Vector3 _boxAcross;
     float _boxPitDistance;
     float _par;
-    Vector2 _carHalf = new Vector2(1.0f, 2.4f);   // x = half-width, y = half-length (VehicleCollision)
+    Vector2 _carHalf = new Vector2(1.25f, 2.5f);   // x = half-width, y = half-length (VehicleCollision)
 
     Phase _phase;
     float _phaseTime;

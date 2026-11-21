@@ -14,8 +14,10 @@ using UnityEngine;
 [System.Serializable]
 public class CarSetup
 {
-    public const float MinFuel = 1f;
-    public const float MaxFuel = 20f;
+    // An empty slider is a splash (10 L), a full one the whole 100 L tank (FuelTank.capacityLitres). The old 1-20 L
+    // range was a practice load, so a race refilled the car to 100 L whatever the driver chose (Josh, 2026-11-21).
+    public const float MinFuel = 10f;
+    public const float MaxFuel = 100f;
 
     // Balance maps onto the car's understeer bias. Neutral matches PlayerVehicleController's own default
     // (mildly stable), and the swing stays well inside its [-0.3, 0.3] range so no setting is undriveable.
@@ -65,6 +67,7 @@ public class CarSetup
         var tank = car.GetComponent<FuelTank>();
         if (tank == null) tank = car.AddComponent<FuelTank>();
         tank.fuelLitres = Mathf.Clamp(fuelLitres, 0f, tank.capacityLitres);
+        tank.loadChosen = true;   // the race starts on this, not brimmed
 
         var pvc = car.GetComponent<PlayerVehicleController>();
         if (pvc != null)
@@ -94,6 +97,7 @@ public class CarSetup
             var tank = car.GetComponent<FuelTank>();
             if (tank == null) tank = car.AddComponent<FuelTank>();
             tank.fuelLitres = Mathf.Clamp(fuelLitres, 0f, tank.capacityLitres);
+            tank.loadChosen = true;
         }
 
         var pvc = car.GetComponent<PlayerVehicleController>();
@@ -169,7 +173,7 @@ public class CarSetup
         return new CarSetup
         {
             compound = (TireModel.Compound)PlayerPrefs.GetInt(KeyPlanCompound, (int)TireModel.Compound.Soft),
-            fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanFuel, 12f), MinFuel, MaxFuel),
+            fuelLitres = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanFuel, MaxFuel), MinFuel, MaxFuel),
             balance = Mathf.Clamp(PlayerPrefs.GetFloat(KeyPlanBalance, 0f), -1f, 1f),
             // A plan saved before the ratio existed opens on the track's default.
             steeringRatio = LoadSteering(KeyPlanSteering, CurrentIsRoadCourse),
@@ -178,7 +182,15 @@ public class CarSetup
 
     // What the car runs in the race: the plan when there is one, otherwise whatever the crew left on it
     // from the last session the driver set up — the crew made the plan without them.
-    public static CarSetup ForRace(int weekendId) => LoadRacePlan(weekendId) ?? Load();
+    // With no plan the race opens on a full tank, not the practice load left in the pit-box setup.
+    public static CarSetup ForRace(int weekendId)
+    {
+        var plan = LoadRacePlan(weekendId);
+        if (plan != null) return plan;
+        var setup = Load();
+        setup.fuelLitres = MaxFuel;
+        return setup;
+    }
 
     public static void ClearRacePlan()
     {

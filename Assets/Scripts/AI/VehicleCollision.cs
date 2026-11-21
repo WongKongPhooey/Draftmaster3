@@ -7,8 +7,13 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D))]
 public class VehicleCollision : MonoBehaviour
 {
-    [Tooltip("Half-extents (m) of the car's box collider. x = half-width, y = half-length.")]
-    public Vector2 halfExtents = new Vector2(1.0f, 2.4f);
+    [Tooltip("Half-extents (m) of the car's box collider. x = half-width, y = half-length. Overridden by the " +
+             "bodywork's own size when fitToBodywork is on and the car has one.")]
+    public Vector2 halfExtents = new Vector2(1.25f, 2.5f);
+    [Tooltip("Size the box to the car's bodywork (VehicleDamage's sprite), so cars touch where the paint does. " +
+             "The old fixed 4.8 x 2.0 m box sat 0.25 m inside each side of the 5 x 2.5 m art, so two cars side by " +
+             "side were half a metre into each other before they made contact.")]
+    public bool fitToBodywork = true;
     [Tooltip("Layers treated as collidable (barriers + other vehicles).")]
     public LayerMask collisionMask = ~0;
     [Tooltip("Max colliders considered per step.")]
@@ -81,13 +86,15 @@ public class VehicleCollision : MonoBehaviour
 
         _box = GetComponent<BoxCollider2D>();
         if (_box == null) _box = gameObject.AddComponent<BoxCollider2D>();
-        // Car forward = local +X. halfExtents.x = half-width, halfExtents.y = half-length → length maps to X.
-        _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
         _baseOffset = _box.offset;
 
         _responder = PickResponder();
         _damage = GetComponentInChildren<IDamageable>();
         _bodywork = _damage as VehicleDamage;
+
+        FitToBodywork();
+        // Car forward = local +X. halfExtents.x = half-width, halfExtents.y = half-length → length maps to X.
+        _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
         _prevPos = transform.position;
     }
 
@@ -98,6 +105,7 @@ public class VehicleCollision : MonoBehaviour
     void ApplyBoxShape()
     {
         if (_box == null) return;
+        FitToBodywork();
         float length = halfExtents.y * 2f;
         float front = 0f, rear = 0f;
         if (colliderFollowsCrush && _bodywork != null)
@@ -134,6 +142,21 @@ public class VehicleCollision : MonoBehaviour
             }
         }
         return enabledNonSpline ?? enabledAny ?? fallback;
+    }
+
+    // The box is the bodywork's own footprint: the sprite the dents are folded into, in this transform's frame
+    // (the livery lies along the car, so sprite x is the length). Everything that reads halfExtents - grid
+    // spacing, pit boxes, retirement parking - then sees the car's real size too.
+    void FitToBodywork()
+    {
+        if (!fitToBodywork) return;
+        if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
+        if (_bodywork == null || _bodywork.sourceSprite == null) return;
+        Vector2 size = _bodywork.sourceSprite.bounds.size;
+        Vector3 bodyScale = _bodywork.transform.lossyScale, ownScale = transform.lossyScale;
+        float sx = Mathf.Abs(bodyScale.x) / Mathf.Max(1e-4f, Mathf.Abs(ownScale.x));
+        float sy = Mathf.Abs(bodyScale.y) / Mathf.Max(1e-4f, Mathf.Abs(ownScale.y));
+        halfExtents = new Vector2(size.y * sy * 0.5f, size.x * sx * 0.5f);
     }
 
     // Call after setting halfExtents at runtime (e.g. from GridSpawner) so the collider resizes.

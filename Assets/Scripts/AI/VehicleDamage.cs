@@ -464,11 +464,11 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         if (biasDen > 1e-6f) _biasAccum += (biasNum / biasDen) * Mathf.Clamp01(severity);
         DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
 
-        CheckWheels();
+        CheckWheels(severity, share, striker.shape);
     }
 
     // Any hub the folded outline no longer covers has lost its wheel. Latched until RepairFull.
-    void CheckWheels()
+    void CheckWheels(float severity, float share, BodyDeform.Shape by)
     {
         if (_hubLocal == null || _wheelOff == null || _current == null) return;
         int vx = gridX + 1, vy = gridY + 1;
@@ -480,7 +480,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
             Vector2 world = transform.TransformPoint(_hubLocal[i]);
             if (Application.isPlaying)
                 Debug.Log($"[Damage] {transform.root.name} lost its {WheelHubs.Name(i)} wheel " +
-                          $"(damage {DamageLevel:0.00}, {WheelsOff} off)");
+                          $"(damage {DamageLevel:0.00}, {WheelsOff} off; hit severity {severity:0.00}, share {share:0.00}, by {by})");
             WheelLost?.Invoke(i, world);
         }
     }
