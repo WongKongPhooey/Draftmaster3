@@ -92,7 +92,9 @@ public static class DraftAero
     }
 
     public const float PushLateral = 1.4f;     // |lateral delta| (m) for a car behind to count as in our line
-    public const float PushLinkGap = 9f;       // centre to centre (m): a car further back than this is not pushing
+    public const float PushLinkGap = 11f;      // centre to centre (m): a car further back than this is not pushing. Was 9: with the
+                                               // pack following at 7.4 m (8.7 in the turns) the line behind fell out of it and the
+                                               // car at the head of a train lost its push (Daytona, 2026-11-21).
     public const int PushMaxChain = 8;
     static readonly System.Collections.Generic.List<float> _chain = new System.Collections.Generic.List<float>(16);
 

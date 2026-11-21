@@ -261,6 +261,10 @@ public class SplineInputDriver : MonoBehaviour
     [Header("Fuel")]
     [Tooltip("Laps in hand the driver wants on top of the laps left before it stops saving fuel.")]
     public float fuelSaveMarginLaps = 0.5f;
+    [Tooltip("The least throttle a car saving fuel lifts to. Gentle (Josh, 2026-11-21): a car short of fuel saves what it " +
+             "can in the draft and, if it still will not make it, runs dry or pits (the Auto car's PIT button) - a car at " +
+             "half throttle in a 190 mph pack was a wreck waiting.")]
+    [Range(0.5f, 1f)] public float fuelSaveMinThrottle = 0.85f;
     FuelTank _fuelTank;
     AIRacingBehaviour _racing;
 
@@ -279,7 +283,7 @@ public class SplineInputDriver : MonoBehaviour
         if (rd == null || rd.raceLaps <= 0 || progress < 0f) return 1f;   // -1: race distance not known yet
         float lapsLeft = rd.raceLaps * (1f - progress);
         return Draftmaster.Sim.FuelPlan.ThrottleCapToFinish(_fuelTank.fuelLitres, lapsLeft, _fuelTank.LitresPerLapFull,
-                                                             fuelSaveMarginLaps);
+                                                             fuelSaveMarginLaps, fuelSaveMinThrottle);
     }
 
     float UpsetReaction(float u) => Mathf.Lerp(upsetReactionMin, upsetReactionMax, u);

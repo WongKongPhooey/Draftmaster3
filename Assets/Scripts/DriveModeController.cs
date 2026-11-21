@@ -396,8 +396,94 @@ public class DriveModeController : MonoBehaviour
         _hint.SetActive(false);
 
         _buttonRoot = rootGo;
+        BuildPitButton(canvas.transform, root);
         _buttonShowsDriving = !_driving;   // forces the first paint
         UpdateButton();
+    }
+
+    // ---- PIT button (Auto only) ----
+    // Auto saves fuel only gently (SplineInputDriver.fuelSaveMinThrottle), so a car short of it has to come in: under
+    // pitButtonFuelLitres, while Auto drives a race, a PIT button sits left of AUTO in the same style - amber border -
+    // and tapping it books the stop (PitStopController.RequestStop), taken at the next pit entry pit road allows.
+    [Header("Pit button (Auto)")]
+    [Tooltip("The PIT button shows while Auto drives a race with less than this much fuel (litres) in the tank.")]
+    public float pitButtonFuelLitres = 15f;
+    static readonly Vector2 PitButtonSize = new Vector2(44f, 26f);
+    static readonly Color PitAmber = new Color32(0xe0, 0xa8, 0x3a, 0xff);
+    GameObject _pitRoot;
+    TMP_Text _pitLabel;
+
+    void BuildPitButton(Transform canvas, RectTransform autoRoot)
+    {
+        float b = ButtonBorder;
+        var rootGo = new GameObject("PitButton", typeof(RectTransform));
+        rootGo.transform.SetParent(canvas, false);
+        var root = (RectTransform)rootGo.transform;
+        root.anchorMin = root.anchorMax = root.pivot = new Vector2(1f, 0f);
+        root.sizeDelta = PitButtonSize + new Vector2(b * 2f, b * 2f);
+        root.anchoredPosition = new Vector2(-buttonCorner.x - autoRoot.sizeDelta.x - 6f, buttonCorner.y);
+
+        foreach (var strip in new[] {
+                     (n: "BorderTop", a: new Vector2(0f, 1f), c: new Vector2(1f, 1f), lo: new Vector2(0f, -b), hi: Vector2.zero),
+                     (n: "BorderBottom", a: Vector2.zero, c: new Vector2(1f, 0f), lo: Vector2.zero, hi: new Vector2(0f, b)),
+                     (n: "BorderLeft", a: Vector2.zero, c: new Vector2(0f, 1f), lo: new Vector2(0f, b), hi: new Vector2(b, -b)),
+                     (n: "BorderRight", a: new Vector2(1f, 0f), c: Vector2.one, lo: new Vector2(-b, b), hi: new Vector2(0f, -b)) })
+        {
+            Strip(root, strip.n, strip.a, strip.c, strip.lo, strip.hi);
+            root.Find(strip.n).GetComponent<Image>().color = PitAmber;
+        }
+
+        var face = new GameObject("Face", typeof(RectTransform), typeof(Image), typeof(Button));
+        face.transform.SetParent(root, false);
+        var frt = (RectTransform)face.transform;
+        frt.anchorMin = Vector2.zero;
+        frt.anchorMax = Vector2.one;
+        frt.offsetMin = new Vector2(b, b);
+        frt.offsetMax = new Vector2(-b, -b);
+        var faceImg = face.GetComponent<Image>();
+        faceImg.color = ButtonPlate;
+        var button = face.GetComponent<Button>();
+        button.targetGraphic = faceImg;
+        button.onClick.AddListener(RequestAutoPit);
+
+        _pitLabel = IronOvalUI.Label(frt, "Label", "PIT", IronOvalUI.Role.HeaderSmall, DriveScoutStyle.Text);
+        _pitLabel.characterSpacing = SilkscreenTrack2Px;
+        _pitLabel.alignment = TextAlignmentOptions.Center;
+        _pitLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        var lrt = _pitLabel.rectTransform;
+        lrt.anchorMin = Vector2.zero;
+        lrt.anchorMax = Vector2.one;
+        lrt.offsetMin = lrt.offsetMax = Vector2.zero;
+
+        _pitRoot = rootGo;
+        _pitRoot.SetActive(false);
+    }
+
+    void RequestAutoPit()
+    {
+        var pit = playerCar != null ? playerCar.GetComponent<PitStopController>() : null;
+        if (pit != null) pit.RequestStop();
+    }
+
+    // Shown with the AUTO button, while the AI drives a race with the tank under pitButtonFuelLitres and a pit brain to
+    // take the stop. Once booked it reads "IN" and stays until the car is on pit road.
+    void UpdatePitButton(bool autoShown)
+    {
+        if (_pitRoot == null) return;
+        bool show = false;
+        string label = "PIT";
+        if (autoShown && !_driving && playerCar != null && RaceStart.IsRunning && !RaceWeekend.IsPracticeLike)
+        {
+            var tank = playerCar.GetComponent<FuelTank>();
+            var pit = playerCar.GetComponent<PitStopController>();
+            if (tank != null && pit != null && !pit.IsPitting && tank.fuelLitres < pitButtonFuelLitres)
+            {
+                show = true;
+                if (pit.StopRequested) label = "IN";
+            }
+        }
+        if (_pitRoot.activeSelf != show) _pitRoot.SetActive(show);
+        if (show && _pitLabel != null && _pitLabel.text != label) _pitLabel.text = label;
     }
 
     static void Strip(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
@@ -423,6 +509,7 @@ public class DriveModeController : MonoBehaviour
                     (PlayerVehicleController.Human != null || !_driving) &&
                     !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
         if (_buttonRoot.activeSelf != show) _buttonRoot.SetActive(show);
+        UpdatePitButton(show);
         bool hintShown = _handBack.Waiting || _laneActive;
         if (_hint != null)
         {

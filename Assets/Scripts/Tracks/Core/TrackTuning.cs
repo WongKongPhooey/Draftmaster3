@@ -117,7 +117,7 @@ namespace Draftmaster.Tracks
                         plateMph = 190f,
                         flatOut = true,
                         packRacing = true,
-                        pushScale = 1f,
+                        pushScale = 1.5f,          // was 1: the car at the head of a train could not keep its momentum (Josh, 2026-11-21)
                         packageGrip = 1f,          // the plate solves the turns' grip (RestrictorPlate)
                         packageYawInertia = OvalPackageYawInertia,
                         sideAwareness = 0.15f,     // three wide is normal; you hold your lane and trust the others to

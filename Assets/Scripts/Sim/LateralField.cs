@@ -82,7 +82,7 @@ namespace Draftmaster.Sim
                 SlotWidth = 0.25f, Horizon = 3f, CarLength = 5f, CarWidth = 2.5f, SideGap = 0.4f,
                 PredictSeconds = 0.5f, FollowGap = 6.2f, CorridorFull = 2.5f, CorridorClear = 2.9f,
                 CloseDecel = 1.2f, TowMaxGap = 35f, TowHalfWidth = 2.5f, TowGain = 0.1f,
-                PushLateral = 1.4f, PushLinkGap = 9f, PushMaxChain = 8, PushGain = 0.03f,
+                PushLateral = 1.4f, PushLinkGap = 11f, PushMaxChain = 8, PushGain = 0.03f,   // PushLinkGap as DraftAero.PushLinkGap
                 BehindTimeToContact = 2f, BehindClear = 1.5f, MoveCost = 0.1f, Stickiness = 1f, LinePull = 0.15f,
                 CornerRadius = float.MaxValue, OffLineCost = 0f,
             };

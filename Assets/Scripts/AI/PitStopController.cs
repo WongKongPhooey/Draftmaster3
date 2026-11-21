@@ -147,6 +147,11 @@ public class PitStopController : MonoBehaviour
     int BoxIndex => boxOverride >= 0 ? boxOverride : _spline.qualifyingPosition;
 
     public bool IsPitting => _state != State.Racing;
+
+    // The driver asked for a stop (the Auto car's PIT button, DriveModeController): taken at the next chance pit road
+    // allows, then cleared. Fuel and tyres as any stop; a caution's rules still apply.
+    public bool StopRequested { get; private set; }
+    public void RequestStop() { if (!IsPitting) StopRequested = true; }
     // The pit-road lane this car is driving down (PitLanes.BoxSide / FarSide), or -1 while it is not in one - in its
     // box, cutting in, or not on pit road at all. Other cars judge a -1 by where it is across the lane. A car pulling
     // out of its box already claims the lane it is pulling into, so the car in the next box sees it is taken.
@@ -201,6 +206,7 @@ public class PitStopController : MonoBehaviour
                 }
                 else if (WantsPit())
                 {
+                    StopRequested = false;
                     _state = State.HeadingToPit;
                     _forcedDone = true;
                     _cautionGate.CommittedToStop(RaceStart.IsCaution);
@@ -727,6 +733,8 @@ public class PitStopController : MonoBehaviour
         // ...and decided on the run in to the entry - a car a lap away when pit road opens would otherwise still be
         // heading in after it has shut, on the green-flag lap.
         if (caution && !NearPitEntry()) return false;
+
+        if (StopRequested) return true;
 
         // Demo guarantee: pit once a set time into the race even on fresh tyres, so stops are always visible —
         // but not in a race too short for a stop to make sense.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // NASCAR Thunder 2004-style driver relationships. Every driver pair carries a score from -100 (hated
 // enemy) to +100 (trusted ally), persisted across races in PlayerPrefs. Car-to-car contact drops the
@@ -11,6 +12,10 @@ using UnityEngine;
 // Identity is the car's DriverLabel name (the player car's label is set by TeamSwitchController /
 // falls back to RacePositionTracker.playerName), so scores survive between sessions as long as the
 // driver-name pool produces the same names.
+//
+// Only the career keeps them (GameSession.CareerActive). A single race - and Master Draft, and the lobby race - holds its
+// grudges for that race alone: every pair starts at 0, contact in the race still builds them, and nothing reaches
+// PlayerPrefs (Josh, 2026-11-21).
 public static class DriverRelationships
 {
     public const float Min = -100f;
@@ -36,6 +41,21 @@ public static class DriverRelationships
     static readonly Dictionary<string, float> _values = new();       // pairKey -> score (cache over PlayerPrefs)
     static readonly Dictionary<string, float> _pairContactTime = new();
     static HashSet<string> _index;                                    // all persisted pair keys
+    static readonly Dictionary<string, float> _raceOnly = new();     // pairKey -> score, outside the career; cleared each race
+
+    static bool Persist => GameSession.CareerActive;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void HookSceneLoads()
+    {
+        SceneManager.sceneLoaded -= ClearRaceOnly;
+        SceneManager.sceneLoaded += ClearRaceOnly;
+    }
+
+    static void ClearRaceOnly(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Single) _raceOnly.Clear();
+    }
 
     // (nameA, nameB, newValue, delta) — fired on every score change.
     public static event Action<string, string, float, float> Changed;
@@ -56,6 +76,7 @@ public static class DriverRelationships
     {
         string key = PairKey(a, b);
         if (key == null) return 0f;
+        if (!Persist) return _raceOnly.TryGetValue(key, out float r) ? r : 0f;
         if (_values.TryGetValue(key, out float v)) return v;
         v = PlayerPrefs.GetFloat(PrefPrefix + key, 0f);
         _values[key] = v;
@@ -120,7 +141,7 @@ public static class DriverRelationships
     // Time heals: pull every stored pair toward neutral by `amount`. Called once per race classification.
     public static void RegenTowardNeutral(float amount)
     {
-        if (amount <= 0f) return;
+        if (amount <= 0f || !Persist) return;   // outside the career nothing outlives the race to heal
         foreach (var key in LoadIndex())
         {
             float v = _values.TryGetValue(key, out float c) ? c : PlayerPrefs.GetFloat(PrefPrefix + key, 0f);
@@ -133,6 +154,15 @@ public static class DriverRelationships
     // Every persisted pair, for standings UI / quest checks. Names are the stored lower-case halves.
     public static IEnumerable<(string a, string b, float value)> AllPairs()
     {
+        if (!Persist)
+        {
+            foreach (var kv in _raceOnly)
+            {
+                int cut = kv.Key.IndexOf('|');
+                if (cut > 0) yield return (kv.Key.Substring(0, cut), kv.Key.Substring(cut + 1), kv.Value);
+            }
+            yield break;
+        }
         foreach (var key in LoadIndex())
         {
             int bar = key.IndexOf('|');
@@ -144,7 +174,8 @@ public static class DriverRelationships
 
     // One-off: every grudge back to neutral, once per device (Josh, 2026-11-21). A day of Daytona start wrecks had piled
     // contact blame into the table, and the grudges past PaybackThreshold had the field wrecking each other at the green.
-    const string ResetOnceKey = "relationships.reset.20261121";
+    // Run a second time ("b") the same day: single races still wrote to the table then, and had filled it again.
+    const string ResetOnceKey = "relationships.reset.20261121b";
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void ResetOnce()
@@ -168,6 +199,7 @@ public static class DriverRelationships
         PlayerPrefs.DeleteKey(IndexKey);
         PlayerPrefs.Save();
         _values.Clear();
+        _raceOnly.Clear();
         _index = null;
     }
 
@@ -237,6 +269,7 @@ public static class DriverRelationships
 
     static void Store(string key, float value)
     {
+        if (!Persist) { _raceOnly[key] = value; return; }
         _values[key] = value;
         PlayerPrefs.SetFloat(PrefPrefix + key, value);
         if (LoadIndex().Add(key))
