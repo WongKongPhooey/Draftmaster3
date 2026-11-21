@@ -93,6 +93,32 @@ public class SessionHudTests
         Assert.AreEqual(false, diag.GetValue(null), "F8 formation diagnostics should be closed");
     }
 
+    // A single race shows the setup sheet before the car heads out, so a panel's own default is what is on
+    // screen until then. The running order and the TEAM box used to default to up.
+    [Test]
+    public void FreshPanels_StartClosed()
+    {
+        Assert.AreEqual(false, Get(Make("LeaderboardUI"), "Visible"), "F2 running order should start hidden");
+        Assert.AreEqual(true, Get(Make("TeamSwitchController"), "Hidden"), "F3 TEAM box should start hidden");
+    }
+
+    [Test]
+    public void SceneLoad_ClosesEveryPanel()
+    {
+        var board = Make("LeaderboardUI");
+        Set(board, "Visible", true);
+        var team = Make("TeamSwitchController");
+        Set(team, "Hidden", false);
+
+        var hook = T("SessionHud").GetMethod("OnSceneLoaded", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.IsNotNull(hook, "SessionHud.OnSceneLoaded not found");
+        hook.Invoke(null, new object[] { default(UnityEngine.SceneManagement.Scene),
+                                         UnityEngine.SceneManagement.LoadSceneMode.Single });
+
+        Assert.AreEqual(false, Get(board, "Visible"));
+        Assert.AreEqual(true, Get(team, "Hidden"));
+    }
+
     [Test]
     public void HeadingOut_WithNoPanelsInTheScene_DoesNotThrow()
     {

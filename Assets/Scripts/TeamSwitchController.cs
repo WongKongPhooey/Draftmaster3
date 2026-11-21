@@ -52,7 +52,7 @@ public class TeamSwitchController : MonoBehaviour
     Button _close;                             // touch only: a phone has no F3 to put the box away
     RectTransform _panel;
     float _rosterTimer, _labelTimer;
-    bool _hidden;                              // toggleKey; the panel also hides itself in practice/qualifying
+    bool _hidden = true;                       // toggleKey (starts down); the panel also hides itself in practice/qualifying
 
     public GameObject CurrentCar => _current;
     public bool Hidden { get => _hidden; set => _hidden = value; }   // toggleKey's state; SessionHud sets it too

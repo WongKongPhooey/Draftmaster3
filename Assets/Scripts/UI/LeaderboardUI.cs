@@ -19,7 +19,7 @@ public class LeaderboardUI : MonoBehaviour
     public int compactRows = 12;
     [Tooltip("Hold this key to expand to the full field.")]
     public KeyCode expandKey = KeyCode.Tab;
-    [Tooltip("Press to show/hide the board. Persists across sessions.")]
+    [Tooltip("Press to show/hide the board. Every session starts with it hidden (SessionHud).")]
     public KeyCode toggleKey = KeyCode.F2;
     [Tooltip("Row height in UI pixels, before PixelGUI.Scale.")]
     public float rowHeight = 16f;
@@ -30,7 +30,7 @@ public class LeaderboardUI : MonoBehaviour
     [Tooltip("Top-left corner in UI pixels, before PixelGUI.Scale.")]
     public Vector2 origin = new Vector2(8f, 36f);
 
-    bool _visible = true;
+    bool _visible;
 
     // One drawn line, built either from the running order or from the timing rows.
     struct Row
@@ -45,18 +45,13 @@ public class LeaderboardUI : MonoBehaviour
     readonly List<Row> _rows = new();
     readonly List<LapTimingManager.CarTimes> _timing = new();
 
-    const string PrefKey = "hud.leaderboard";
-
-    void Awake() => _visible = PlayerPrefs.GetInt(PrefKey, 1) == 1;
-
-    // Set by SessionHud as the car heads out. Not written to the pref: that is the player's own F2 choice.
+    // Set by SessionHud on scene load and as the car heads out.
     public bool Visible { get => _visible; set => _visible = value; }
 
     void Update()
     {
         if (!LegacyKeys.Down(toggleKey) && !PadInput.PressedDriving(PadBindings.Leaderboard)) return;
         _visible = !_visible;
-        PlayerPrefs.SetInt(PrefKey, _visible ? 1 : 0);
     }
 
     bool _expandedByTap;

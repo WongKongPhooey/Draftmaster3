@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // The in-car HUD a session starts from.
 //
@@ -10,8 +11,24 @@ using UnityEngine;
 //
 // Called once per session, by PitLaneStart when the player first takes the car out — not on climbing back
 // in after a tow, when whatever they have opened since is theirs to keep.
+//
+// It also runs on every scene load. Heading out alone left a window: a single race opens the setup sheet
+// in the box before the car is handed over, and until CONFIRM the screen showed whatever the panels came
+// up as — the running order from its old F2 pref, the TEAM box, and any DontDestroyOnLoad panel (F5, F8,
+// F9…) still open from the last race. A scene now starts with every panel down.
 public static class SessionHud
 {
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void HookSceneLoads()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;   // statics survive a play-mode entry without domain reload
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    // sceneLoaded lands after the new scene's Awake/OnEnable and before its Start, so nothing draws a frame
+    // first.
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => HeadOut();
+
     public static void HeadOut()
     {
         foreach (var p in Object.FindObjectsByType<LapTimingManager>(FindObjectsSortMode.None)) p.showPlayerHud = false;      // F1
