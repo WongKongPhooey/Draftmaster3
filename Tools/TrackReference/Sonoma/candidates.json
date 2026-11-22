@@ -5,44 +5,175 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
-   "lengthM": 3783.0,
-   "lengthErrPct": -6.72,
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 380830038,834724051,1494191149,28825448,1494191149,505453048,28825444,505453048,28825444,505453048,116036857,834728156,505453048,380830038,505453048,913592144,1494191149,834724051,505454376); -0.12% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 4045.2,
+   "lengthErrPct": -0.26,
    "selfIntersects": false,
+   "counterTurnDeg": 553.2,
+   "flags": [],
    "builtFit": {
-    "rmsM": 147.46,
-    "p95M": 281.44,
-    "maxM": 296.44,
-    "scale": 0.95
+    "rmsM": 2.67,
+    "p95M": 4.64,
+    "maxM": 6.66,
+    "scale": 0.9869
    },
    "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    380830038,
+    505453048,
+    116036857,
+    505453048,
+    28825444,
+    505453048,
+    28825444,
+    505453048,
+    1494191149,
+    28825448,
+    1494191149,
+    834724051,
+    1494191149,
+    230287122,
+    834724051,
+    505454376
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Sonoma Raceway 93%"
+   ],
+   "lengthM": 4095.1,
+   "lengthErrPct": 0.98,
+   "selfIntersects": false,
+   "counterTurnDeg": 623.7,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 13.75,
+    "p95M": 38.24,
+    "maxM": 55.18,
+    "scale": 0.9769
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    834724051,
+    1494191149,
+    28825448,
+    1494191149,
+    505453048,
+    28825444,
+    505453048,
+    1382620983,
+    505453048,
+    28825444,
+    505453048,
+    116036857,
+    834728156,
+    505453048,
+    380830038,
+    505453048,
+    1494191150,
+    505454376,
+    1494191150,
+    913592144,
+    1494191149,
+    834724051,
+    230287122,
+    1494191149
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Sonoma Raceway 97%",
+    "Sonoma Raceway 2020 1%"
+   ],
+   "lengthM": 3920.1,
+   "lengthErrPct": -3.34,
+   "selfIntersects": false,
+   "counterTurnDeg": 534.7,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 9.98,
+    "p95M": 19.56,
+    "maxM": 40.02,
+    "scale": 0.9591
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    834724051,
+    1494191149,
+    28825448,
+    1494191149,
+    505453048,
+    28825444,
+    505453048,
+    116036857,
+    505453048,
+    380830038,
+    505453048,
+    913592144,
+    1494191149,
+    834724051,
+    230287122,
+    1494191149
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Sonoma Raceway 100%"
+   ],
+   "lengthM": 3803.5,
+   "lengthErrPct": -6.21,
+   "selfIntersects": false,
+   "counterTurnDeg": 586.1,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 21.97,
+    "p95M": 40.6,
+    "maxM": 90.74,
+    "scale": 0.95
+   },
+   "index": 3
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 147.46,
-  "p95M": 281.44,
-  "maxM": 296.44,
-  "refToBuiltMaxM": 308.71,
+  "rmsM": 2.67,
+  "p95M": 4.64,
+  "maxM": 6.66,
+  "refToBuiltMaxM": 7.09,
   "worstStretches": [
    {
-    "fromM": 2191,
-    "toM": 2289,
-    "meanM": 292.6
+    "fromM": 522,
+    "toM": 620,
+    "meanM": 5.0
    },
    {
-    "fromM": 2091,
-    "toM": 2189,
-    "meanM": 284.6
+    "fromM": 1280,
+    "toM": 1379,
+    "meanM": 4.7
    },
    {
-    "fromM": 2291,
-    "toM": 2389,
-    "meanM": 253.9
+    "fromM": 736,
+    "toM": 834,
+    "meanM": 4.3
    }
   ],
-  "scale": 0.95
+  "scale": 0.9869
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }

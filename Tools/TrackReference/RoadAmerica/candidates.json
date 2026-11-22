@@ -2,6 +2,127 @@
  "trackId": "RoadAmerica",
  "candidates": [
   {
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 122090268,122090289,122090263,122090270,122090297,122090282,122090251,122090243,122090296,122090295,122090286,122090276,122090239,122090248,122090265,110527567,122090298,122090284,122090272,122090275,122090240,122090260,122090258,122090299); -0.34% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 6492.6,
+   "lengthErrPct": -0.39,
+   "selfIntersects": false,
+   "counterTurnDeg": 449.1,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 1.19,
+    "p95M": 2.07,
+    "maxM": 3.5,
+    "scale": 0.9938
+   },
+   "index": 0
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    122090243,
+    122090296,
+    122090295,
+    122090286,
+    122090276,
+    122090239,
+    122090248,
+    122090265,
+    110527567,
+    122090298,
+    122090284,
+    122090272,
+    122090275,
+    122090240,
+    122090260,
+    122090258,
+    122090299,
+    122090268,
+    122090289,
+    122090263,
+    122090270,
+    122090297,
+    122090282,
+    122090251
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Road America Straight 19%",
+    "Road America 16%",
+    "Kettle Bottoms 12%",
+    "Moraine Sweep 10%"
+   ],
+   "lengthM": 6496.0,
+   "lengthErrPct": -0.34,
+   "selfIntersects": false,
+   "counterTurnDeg": 449.8,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 1.2,
+    "p95M": 2.08,
+    "maxM": 3.77,
+    "scale": 0.9937
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    122090286,
+    122090295,
+    122090252,
+    122090243,
+    122090251,
+    122090282,
+    122090297,
+    122090270,
+    122090263,
+    122090289,
+    122090268,
+    122090299,
+    122090258,
+    122090260,
+    122090240,
+    122090275,
+    122090272,
+    122090284,
+    122090298,
+    110527567,
+    122090265,
+    122090248,
+    122090239,
+    122090276
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Road America Straight 19%",
+    "Road America 16%",
+    "Kettle Bottoms 12%",
+    "Moraine Sweep 10%"
+   ],
+   "lengthM": 6440.3,
+   "lengthErrPct": -1.19,
+   "selfIntersects": false,
+   "counterTurnDeg": 385.3,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 6.82,
+    "p95M": 5.37,
+    "maxM": 56.02,
+    "scale": 0.99
+   },
+   "index": 2
+  },
+  {
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
@@ -32,56 +153,28 @@
     122090299,
     122090268
    ],
-   "lengthM": 6498.7,
-   "lengthErrPct": -0.29,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 198.47,
-    "p95M": 300.8,
-    "maxM": 331.68,
-    "scale": 0.95
-   },
-   "index": 0
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    122090268,
-    122090289,
-    122090263,
-    122090270,
-    122090297,
-    122090282,
-    122090251,
-    122090243,
-    122090296,
-    122090295,
-    122090286,
-    122090276,
-    122090239,
-    122090248,
-    122090265,
-    110527567,
-    122090298,
-    122090284,
-    122090272,
-    122090275,
-    122090240,
-    122090260,
-    122090258,
-    122090299
+   "pitShare": 0.148,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Road America 16%",
+    "Pit Lane 15%",
+    "Kettle Bottoms 12%",
+    "Moraine Sweep 10%"
    ],
-   "lengthM": 6496.0,
-   "lengthErrPct": -0.34,
+   "lengthM": 6498.6,
+   "lengthErrPct": -0.3,
    "selfIntersects": false,
+   "counterTurnDeg": 474.6,
+   "flags": [
+    "runs 15% down a pit lane"
+   ],
    "builtFit": {
-    "rmsM": 196.42,
-    "p95M": 301.03,
-    "maxM": 327.41,
-    "scale": 0.95
+    "rmsM": 3.9,
+    "p95M": 7.94,
+    "maxM": 12.75,
+    "scale": 0.9901
    },
-   "index": 1
+   "index": 3
   },
   {
    "label": "raceway ring taken as the centre",
@@ -114,83 +207,55 @@
     122090270,
     122090263
    ],
+   "pitShare": 0.15,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Road America 16%",
+    "Pit Lane 15%",
+    "Kettle Bottoms 12%",
+    "Moraine Sweep 10%"
+   ],
    "lengthM": 6443.0,
    "lengthErrPct": -1.15,
    "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 201.17,
-    "p95M": 302.96,
-    "maxM": 329.65,
-    "scale": 0.95
-   },
-   "index": 2
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    122090263,
-    122090289,
-    122090268,
-    122090299,
-    122090258,
-    122090260,
-    122090240,
-    122090275,
-    122090272,
-    122090284,
-    122090298,
-    110527567,
-    122090265,
-    122090248,
-    122090239,
-    122090276,
-    122090286,
-    122090295,
-    122090252,
-    122090243,
-    122090251,
-    122090282,
-    122090297,
-    122090270
+   "counterTurnDeg": 410.9,
+   "flags": [
+    "runs 15% down a pit lane"
    ],
-   "lengthM": 6440.3,
-   "lengthErrPct": -1.19,
-   "selfIntersects": false,
    "builtFit": {
-    "rmsM": 199.07,
-    "p95M": 303.18,
-    "maxM": 325.78,
-    "scale": 0.95
+    "rmsM": 7.82,
+    "p95M": 11.39,
+    "maxM": 56.39,
+    "scale": 0.9863
    },
-   "index": 3
+   "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 198.47,
-  "p95M": 300.8,
-  "maxM": 331.68,
-  "refToBuiltMaxM": 614.06,
+  "rmsM": 1.19,
+  "p95M": 2.07,
+  "maxM": 3.5,
+  "refToBuiltMaxM": 3.61,
   "worstStretches": [
    {
-    "fromM": 5181,
-    "toM": 5279,
-    "meanM": 326.3
+    "fromM": 4211,
+    "toM": 4309,
+    "meanM": 2.2
    },
    {
-    "fromM": 4079,
-    "toM": 4177,
-    "meanM": 313.2
+    "fromM": 3789,
+    "toM": 3887,
+    "meanM": 2.1
    },
    {
-    "fromM": 5081,
-    "toM": 5179,
-    "meanM": 300.0
+    "fromM": 2779,
+    "toM": 2877,
+    "meanM": 2.0
    }
   ],
-  "scale": 0.95
+  "scale": 0.9938
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }

@@ -6,7 +6,7 @@
   "lengthMiles": 1.97,
   "surfaceWidthM": 12,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 5529392,1315957510,1184207349,1315957509,5529392,5510199,5529392,5510199); -0.19% from the published lap"
  },
  "wikipedia": {
   "title": "Portland International Raceway",
@@ -148,8 +148,8 @@
  },
  "lengthCheckPct": -0.15,
  "venueCentre": [
-  45.597044,
-  -122.696317
+  45.596818,
+  -122.695631
  ],
  "osmRadiusM": 1364,
  "osmCounts": {
@@ -177,10 +177,10 @@
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
   "width": 2891,
-  "height": 2140,
+  "height": 2135,
   "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

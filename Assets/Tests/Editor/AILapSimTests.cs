@@ -316,6 +316,31 @@ public class AILapSimTests
         finally { conditions.GetMethod("Reset").Invoke(null, null); }
     }
 
+    // Nine venues rebuilt from their real shapes (2026-11-22, track_reference.py candidates, 0.4-2.7 m RMS off the
+    // real tracks, from 14-198 m). The AI have to get round the new shapes with their track tuning, at the top of the
+    // pace the game hands them and at either end of the line spread, without leaving the road.
+    [Test]
+    public void AnAICarLapsARebuiltVenueCleanly(
+        [Values("RoadAmerica", "Chicago", "Indianapolis", "Sonoma", "MexicoCity", "Portland", "Talladega", "IRP",
+                "Rockingham")] string trackId,
+        [Values(-0.05f, 0.08f)] float lineFactor)
+    {
+        const float pace = 1.04f * 1.2f;
+        var conditions = Runtime("TrackConditions");
+        conditions.GetMethod("ApplyTrackTuning").Invoke(null, new object[] { trackId });
+        try
+        {
+            SpawnTrack($"Assets/Resources/TrackPackages/{trackId}.prefab");
+            var r = Drive(laps: 3, pace: pace, lineFactor: lineFactor);
+            string report = Report($"[LapSim] {trackId} pace {pace:0.00} line {lineFactor:0.00}", r);
+            Debug.Log(report);
+            TestContext.WriteLine(report);
+            Assert.AreEqual(3, r.lapTimes.Count, Report("The car didn't finish its laps", r));
+            Assert.IsEmpty(r.incidents, report);
+        }
+        finally { conditions.GetMethod("Reset").Invoke(null, null); }
+    }
+
     // Road-course aptitude has to show on the stopwatch. Two drivers identical in every stat but ROAD COURSES (1 vs
     // 20, out of 20), rated the way AIDriverBinding rates them and driven at calibrated Watkins Glen: the ace should
     // be about two seconds a lap quicker. Consistency is maxed so neither the event roll nor the session jitter moves

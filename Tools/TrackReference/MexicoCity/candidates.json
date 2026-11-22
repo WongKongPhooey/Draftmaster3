@@ -15,10 +15,10 @@
    "counterTurnDeg": 497.4,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.3,
-    "p95M": 194.4,
-    "maxM": 247.32,
-    "scale": 0.95
+    "rmsM": 2.74,
+    "p95M": 6.31,
+    "maxM": 8.93,
+    "scale": 0.9896
    },
    "index": 0
   },
@@ -60,10 +60,10 @@
    "counterTurnDeg": 643.9,
    "flags": [],
    "builtFit": {
-    "rmsM": 123.52,
-    "p95M": 241.95,
-    "maxM": 289.55,
-    "scale": 0.95
+    "rmsM": 29.56,
+    "p95M": 65.37,
+    "maxM": 125.05,
+    "scale": 0.9521
    },
    "index": 1
   },
@@ -98,10 +98,10 @@
    "counterTurnDeg": 493.1,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.86,
-    "p95M": 206.82,
-    "maxM": 258.45,
-    "scale": 0.95
+    "rmsM": 25.48,
+    "p95M": 49.55,
+    "maxM": 138.43,
+    "scale": 1.0108
    },
    "index": 2
   },
@@ -142,10 +142,10 @@
    "counterTurnDeg": 614.9,
    "flags": [],
    "builtFit": {
-    "rmsM": 121.08,
-    "p95M": 218.88,
-    "maxM": 269.06,
-    "scale": 0.95
+    "rmsM": 5.74,
+    "p95M": 6.99,
+    "maxM": 49.68,
+    "scale": 0.9913
    },
    "index": 3
   },
@@ -188,39 +188,41 @@
     "runs 19% down a pit lane"
    ],
    "builtFit": {
-    "rmsM": 123.28,
-    "p95M": 199.51,
-    "maxM": 251.11,
-    "scale": 0.95
+    "rmsM": 24.78,
+    "p95M": 50.51,
+    "maxM": 131.62,
+    "scale": 1.0016
    },
    "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 121.3,
-  "p95M": 194.4,
-  "maxM": 247.32,
-  "refToBuiltMaxM": 205.27,
+  "rmsM": 2.74,
+  "p95M": 6.31,
+  "maxM": 8.93,
+  "refToBuiltMaxM": 8.97,
   "worstStretches": [
    {
-    "fromM": 1886,
-    "toM": 1984,
-    "meanM": 240.3
+    "fromM": 3659,
+    "toM": 3757,
+    "meanM": 7.1
    },
    {
-    "fromM": 1986,
-    "toM": 2084,
-    "meanM": 203.4
+    "fromM": 2156,
+    "toM": 2254,
+    "meanM": 6.3
    },
    {
-    "fromM": 1786,
-    "toM": 1884,
-    "meanM": 193.3
+    "fromM": 1212,
+    "toM": 1310,
+    "meanM": 5.3
    }
   ],
-  "scale": 0.95
+  "scale": 0.9896
  },
- "verdict": "wrong shape",
- "notes": []
+ "verdict": "matches",
+ "notes": [
+  "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
+ ]
 }

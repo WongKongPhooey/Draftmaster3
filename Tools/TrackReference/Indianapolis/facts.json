@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 2.5,
   "surfaceWidthM": 15.24,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 588780334,588780335,588780332,588780343,588780345,588780347,588780351,588780349,51308226,588780333); 1.16% from the published lap"
  },
  "wikipedia": {
   "title": "Indianapolis Motor Speedway",
@@ -132,8 +132,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  39.798333,
-  -86.232778
+  39.795014,
+  -86.234649
  ],
  "osmRadiusM": 1637,
  "osmCounts": {
@@ -147,7 +147,7 @@
   "building": 3880,
   "parking": 101,
   "water": 8,
-  "road": 800
+  "road": 790
  },
  "osmPitLanes": [
   {
@@ -182,9 +182,9 @@
   }
  ],
  "wallGapMeasured": {
-  "medianM": 1.5,
-  "p10M": 1.5,
-  "p90M": 1.5,
+  "medianM": 1.4,
+  "p10M": 1.4,
+  "p90M": 1.4,
   "note": "gap between the two longest wall rings (outer wall to pit wall / inside wall)"
  },
  "aerial": {
@@ -194,7 +194,7 @@
   "height": 3982,
   "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-17"
  },
  "trackMap": null,
  "attribution": "OSM (c) OpenStreetMap contributors, ODbL; imagery USGS NAIP, public domain; facts Wikipedia, CC BY-SA 4.0"

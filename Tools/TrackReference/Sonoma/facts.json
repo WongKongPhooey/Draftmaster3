@@ -6,7 +6,7 @@
   "lengthMiles": 2.52,
   "surfaceWidthM": 12,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 380830038,834724051,1494191149,28825448,1494191149,505453048,28825444,505453048,28825444,505453048,116036857,834728156,505453048,380830038,505453048,913592144,1494191149,834724051,505454376); -0.12% from the published lap"
  },
  "wikipedia": {
   "title": "Sonoma Raceway",
@@ -165,8 +165,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  38.163243,
-  -122.458656
+  38.162944,
+  -122.457933
  ],
  "osmRadiusM": 1647,
  "osmCounts": {
@@ -193,11 +193,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 2906,
-  "height": 2638,
-  "groundMetresPerPixel": 0.6,
+  "width": 3122,
+  "height": 2472,
+  "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

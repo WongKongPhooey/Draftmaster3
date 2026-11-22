@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 2.66,
   "surfaceWidthM": 14.63,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 426163859,532106116,8835825,426163860); 0.54% from the published lap"
  },
  "wikipedia": {
   "title": "Talladega Superspeedway",
@@ -72,8 +72,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  33.566111,
-  -86.07
+  33.567185,
+  -86.065952
  ],
  "osmRadiusM": 1719,
  "osmCounts": {
@@ -100,11 +100,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 2480,
-  "height": 3747,
-  "groundMetresPerPixel": 0.6001,
+  "width": 2529,
+  "height": 3773,
+  "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

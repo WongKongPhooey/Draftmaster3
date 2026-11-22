@@ -2,38 +2,23 @@
  "trackId": "Indianapolis",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    588780334,
-    588780335,
-    588780332,
-    588780343,
-    588780345,
-    588780347,
-    588780351,
-    588780349,
-    51308226,
-    588780333
-   ],
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 588780334,588780335,588780332,588780343,588780345,588780347,588780351,588780349,51308226,588780333); 1.16% from the published lap",
    "pitShare": 0.0,
    "otherCircuitShare": 0.0,
-   "names": [
-    "Indianapolis Motor Speedway - Backstretch 24%",
-    "Indianapolis Motor Speedway - Main Straight 17%",
-    "Indianapolis Motor Speedway - Turn 1 11%",
-    "Indianapolis Motor Speedway - Turn 4 11%"
-   ],
-   "lengthM": 4069.9,
-   "lengthErrPct": 1.16,
+   "names": [],
+   "lengthM": 4069.5,
+   "lengthErrPct": 1.15,
    "selfIntersects": false,
-   "counterTurnDeg": 1.4,
+   "counterTurnDeg": 1.5,
    "flags": [],
    "builtFit": {
-    "rmsM": 150.27,
-    "p95M": 177.08,
-    "maxM": 177.62,
-    "scale": 1.0421
+    "rmsM": 1.92,
+    "p95M": 3.03,
+    "maxM": 3.15,
+    "scale": 1.0089
    },
    "index": 0
   },
@@ -68,10 +53,10 @@
    "counterTurnDeg": 1.5,
    "flags": [],
    "builtFit": {
-    "rmsM": 150.56,
-    "p95M": 177.07,
-    "maxM": 177.21,
-    "scale": 1.0429
+    "rmsM": 2.1,
+    "p95M": 3.13,
+    "maxM": 3.58,
+    "scale": 1.01
    },
    "index": 1
   },
@@ -98,16 +83,16 @@
     589308991,
     589308992
    ],
-   "lengthM": 4076.2,
-   "lengthErrPct": 1.31,
+   "lengthM": 4076.3,
+   "lengthErrPct": 1.32,
    "selfIntersects": false,
    "counterTurnDeg": 1.7,
    "flags": [],
    "builtFit": {
-    "rmsM": 150.6,
-    "p95M": 176.92,
-    "maxM": 177.26,
-    "scale": 1.043
+    "rmsM": 2.14,
+    "p95M": 3.04,
+    "maxM": 3.45,
+    "scale": 1.0101
    },
    "index": 2
   },
@@ -134,16 +119,16 @@
     589280298,
     589280296
    ],
-   "lengthM": 4076.2,
-   "lengthErrPct": 1.31,
+   "lengthM": 4076.3,
+   "lengthErrPct": 1.32,
    "selfIntersects": false,
    "counterTurnDeg": 1.8,
    "flags": [],
    "builtFit": {
-    "rmsM": 150.6,
-    "p95M": 176.99,
-    "maxM": 177.26,
-    "scale": 1.043
+    "rmsM": 2.14,
+    "p95M": 3.05,
+    "maxM": 3.39,
+    "scale": 1.0102
    },
    "index": 3
   },
@@ -172,16 +157,16 @@
     589280293,
     589285817
    ],
-   "lengthM": 4170.8,
-   "lengthErrPct": 3.66,
+   "lengthM": 4170.9,
+   "lengthErrPct": 3.67,
    "selfIntersects": false,
    "counterTurnDeg": 1.5,
    "flags": [],
    "builtFit": {
-    "rmsM": 158.78,
-    "p95M": 191.24,
-    "maxM": 191.43,
-    "scale": 1.05
+    "rmsM": 4.0,
+    "p95M": 6.5,
+    "maxM": 7.05,
+    "scale": 1.0366
    },
    "index": 4
   },
@@ -214,10 +199,10 @@
    "counterTurnDeg": 1.7,
    "flags": [],
    "builtFit": {
-    "rmsM": 158.81,
-    "p95M": 190.96,
-    "maxM": 191.29,
-    "scale": 1.05
+    "rmsM": 4.02,
+    "p95M": 6.73,
+    "maxM": 7.02,
+    "scale": 1.0367
    },
    "index": 5
   },
@@ -250,10 +235,10 @@
    "counterTurnDeg": 1.8,
    "flags": [],
    "builtFit": {
-    "rmsM": 158.81,
-    "p95M": 191.22,
-    "maxM": 191.3,
-    "scale": 1.05
+    "rmsM": 4.02,
+    "p95M": 6.74,
+    "maxM": 7.03,
+    "scale": 1.0367
    },
    "index": 6
   },
@@ -288,39 +273,39 @@
     "runs 84% down a pit lane"
    ],
    "builtFit": {
-    "rmsM": 146.55,
-    "p95M": 176.75,
-    "maxM": 176.85,
-    "scale": 1.0199
+    "rmsM": 3.06,
+    "p95M": 6.78,
+    "maxM": 8.76,
+    "scale": 0.9855
    },
    "index": 7
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 150.27,
-  "p95M": 177.08,
-  "maxM": 177.62,
-  "refToBuiltMaxM": 177.63,
+  "rmsM": 1.92,
+  "p95M": 3.03,
+  "maxM": 3.15,
+  "refToBuiltMaxM": 3.29,
   "worstStretches": [
    {
-    "fromM": 2319,
-    "toM": 2417,
-    "meanM": 177.5
+    "fromM": 2459,
+    "toM": 2557,
+    "meanM": 3.1
    },
    {
-    "fromM": 2419,
-    "toM": 2517,
-    "meanM": 177.2
+    "fromM": 2359,
+    "toM": 2457,
+    "meanM": 3.0
    },
    {
-    "fromM": 2519,
-    "toM": 2617,
-    "meanM": 176.9
+    "fromM": 2559,
+    "toM": 2657,
+    "meanM": 3.0
    }
   ],
-  "scale": 1.0421
+  "scale": 1.0089
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }

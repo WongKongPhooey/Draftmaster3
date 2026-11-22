@@ -25,7 +25,13 @@ using UnityEngine;
 // COTA (traced 2026-11-20 from track_reference.py candidate 0, the Grand Prix circuit) is the one waiting on
 // a Unity import. LimeRock (traced from candidate 0 and imported 2026-11-20, raced clockwise) reads 1.4 m.
 // MexicoCity (traced 2026-11-20 from candidate 0, the 2015-present Grand Prix circuit, raced clockwise) waits on
-// a Unity import too.
+// a Unity import too. Chicago (traced 2026-11-22 from candidate 0, the OSM street centrelines of the Grant Park
+// course, raced clockwise) has no mapped pit lane. Indianapolis (traced 2026-11-22 from candidate 0, the oval's
+// named ways, start/finish on the bricks) takes the mapped IMS Pit Lane ways down the main straight. RoadAmerica
+// (traced 2026-11-22 from candidate 0, raced clockwise, start/finish an estimate mid pit lane) takes the mapped Pit Lane; so does Sonoma
+// (traced 2026-11-22 from candidate 0, the 2.52 mi Carousel course, raced clockwise as OSM's one-way ways run). Portland (candidate 0, clockwise) and Talladega
+// (candidate 0, the raceway ring) were traced the same day, start/finish an estimate mid pit lane, mapped pit lanes;
+// Rockingham too (candidate 0, the raceway ring; pit lane trimmed to the front stretch).
 //
 // Engine-free (Draftmaster.Tracks Core only, no JsonUtility), so it also runs under Tools/HeadlessTests.
 public class TracedOvalImportTests
@@ -50,7 +56,14 @@ public class TracedOvalImportTests
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
+    [TestCase("Chicago")]
+    [TestCase("RoadAmerica")]
+    [TestCase("Sonoma")]
+    [TestCase("Portland")]
+    [TestCase("Talladega")]
+    [TestCase("Rockingham")]
     [TestCase("Daytona")]
+    [TestCase("Indianapolis")]
     [TestCase("Dover")]
     [TestCase("Iowa")]
     [TestCase("LasVegas")]
@@ -71,7 +84,14 @@ public class TracedOvalImportTests
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
+    [TestCase("Chicago")]
+    [TestCase("RoadAmerica")]
+    [TestCase("Sonoma")]
+    [TestCase("Portland")]
+    [TestCase("Talladega")]
+    [TestCase("Rockingham")]
     [TestCase("Daytona")]
+    [TestCase("Indianapolis")]
     [TestCase("Dover")]
     [TestCase("Iowa")]
     [TestCase("LasVegas")]
@@ -94,6 +114,12 @@ public class TracedOvalImportTests
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
     [TestCase("Daytona")]
+    [TestCase("Indianapolis")]
+    [TestCase("RoadAmerica")]
+    [TestCase("Sonoma")]
+    [TestCase("Portland")]
+    [TestCase("Talladega")]
+    [TestCase("Rockingham")]
     [TestCase("LongPond")]
     public void MappedPitLaneFitsAsPitRoad(string id)
     {
@@ -203,6 +229,10 @@ public class TracedOvalImportTests
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
+    [TestCase("Chicago")]
+    [TestCase("RoadAmerica")]
+    [TestCase("Sonoma")]
+    [TestCase("Portland")]
     public void AiGetsRoundTheBuiltRoadCourse(string id)
     {
         var r = Read(id);
@@ -252,7 +282,9 @@ public class TracedOvalImportTests
         Assert.Greater(slowest, 8f, $"{id}: a corner the car all but stops for ({slowest * 2.237f:0} mph at {slowestAt:0} m)");
         Assert.Less(lap.lapTimeSeconds, centre.lapTimeSeconds + 0.01f, $"{id}: training made the lap slower");
         float average = 3600f * lapMiles / lap.lapTimeSeconds;
-        Assert.That(average, Is.InRange(60f, 135f), $"{id}: {average:0} mph is not a road-course lap");
+        // Road America's long straights put this model (3.5 g, quicker than the real car) at ~140 mph; a lap that
+        // has lost its corners reads well past that.
+        Assert.That(average, Is.InRange(60f, 150f), $"{id}: {average:0} mph is not a road-course lap");
         for (int i = 0; i < n; i++)
             Assert.That(trained.lateral[i], Is.InRange(-half - 0.01f, half + 0.01f), $"{id}: trained line left the road at sample {i}");
     }

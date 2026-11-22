@@ -2,49 +2,55 @@
  "trackId": "Chicago",
  "candidates": [
   {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    -1
+   "label": "committed trace (Assets/TrackTraces)",
+   "kind": "trace",
+   "ways": [],
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways -1); -3.55% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Chicago Street Course (OSM street centrelines) 0%"
    ],
-   "lengthM": 3414.7,
-   "lengthErrPct": -3.55,
+   "lengthM": 3410.3,
+   "lengthErrPct": -3.68,
    "selfIntersects": false,
+   "counterTurnDeg": 267.4,
+   "flags": [],
    "builtFit": {
-    "rmsM": 159.15,
-    "p95M": 255.12,
-    "maxM": 291.48,
-    "scale": 0.95
+    "rmsM": 1.21,
+    "p95M": 2.15,
+    "maxM": 6.58,
+    "scale": 0.9509
    },
    "index": 0
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 159.15,
-  "p95M": 255.12,
-  "maxM": 291.48,
-  "refToBuiltMaxM": 323.04,
+  "rmsM": 1.21,
+  "p95M": 2.15,
+  "maxM": 6.58,
+  "refToBuiltMaxM": 6.75,
   "worstStretches": [
    {
-    "fromM": 3138,
-    "toM": 3237,
-    "meanM": 283.6
+    "fromM": 3255,
+    "toM": 3353,
+    "meanM": 2.3
    },
    {
-    "fromM": 258,
-    "toM": 356,
-    "meanM": 251.8
+    "fromM": 950,
+    "toM": 1048,
+    "meanM": 1.9
    },
    {
-    "fromM": 1310,
-    "toM": 1408,
-    "meanM": 246.1
+    "fromM": 426,
+    "toM": 524,
+    "meanM": 1.8
    }
   ],
-  "scale": 0.95
+  "scale": 0.9509
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": [
   "reference lap from reference_ways.json merged in: Synthetic reference lap for the Chicago street course: OSM street centrelines in race order (2023-2025 layout, NBC Chicago turn-by-turn 2024), corners smoothed. Built by build_reference.py. An estimate of the racing line, not a survey."
  ]

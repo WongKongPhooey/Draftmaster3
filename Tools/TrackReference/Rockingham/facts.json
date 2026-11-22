@@ -6,7 +6,7 @@
   "lengthMiles": 0.94,
   "surfaceWidthM": 16.76,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 245545526); 3.18% from the published lap"
  },
  "wikipedia": {
   "title": "Rockingham Speedway",
@@ -99,8 +99,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  34.974326,
-  -79.610148
+  34.974444,
+  -79.610513
  ],
  "osmRadiusM": 900,
  "osmCounts": {
@@ -132,11 +132,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 1897,
-  "height": 1343,
-  "groundMetresPerPixel": 0.6002,
+  "width": 2451,
+  "height": 2547,
+  "groundMetresPerPixel": 0.6,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

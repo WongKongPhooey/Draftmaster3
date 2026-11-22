@@ -126,6 +126,14 @@ a little inside the groove, which the rescale absorbs), resampled and smoothed, 
 Its pit lane is four mapped ways joined north to south, 668 m. Checked without the Editor by
 `TracedOvalImportTests`: closes to 3 m, lies ~1 m RMS off the trace once built, pit road fits at 820 m.
 
+Road America, Chicago, Indianapolis, Sonoma, Portland, Talladega and Rockingham were written 2026-11-22 by
+`track_reference.py --write-trace=0` (Chicago from its synthetic street-centreline way, -1), and IRP and Mexico City
+imported as written. Road courses are raced clockwise (`--clockwise`; Sonoma's direction from OSM's one-way ways).
+Start/finish lines are estimates mid pit lane except Indianapolis (OSM's start-finish node on the bricks) and Chicago
+(Columbus Dr by Buckingham Fountain). Sonoma's and Rockingham's `pitLane` were trimmed by hand to the front-stretch
+nodes of their ways, which wrap a turn apron; Chicago has no mapped pit lane. Commands and results per venue are in
+`Tools/TrackReference/audit.json`.
+
 ## What a trace cannot tell you
 
 **Banking** is not recorded in OSM at all, and **width** almost never is for raceways. Both still come from

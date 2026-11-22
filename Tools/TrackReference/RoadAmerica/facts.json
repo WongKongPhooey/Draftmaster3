@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 4.05,
   "surfaceWidthM": 15,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways 122090268,122090289,122090263,122090270,122090297,122090282,122090251,122090243,122090296,122090295,122090286,122090276,122090239,122090248,122090265,110527567,122090298,122090284,122090272,122090275,122090240,122090260,122090258,122090299); -0.34% from the published lap"
  },
  "wikipedia": {
   "title": "Road America",
@@ -94,8 +94,8 @@
  },
  "lengthCheckPct": -0.05,
  "venueCentre": [
-  43.7975,
-  -87.993889
+  43.798354,
+  -87.99525
  ],
  "osmRadiusM": 2200,
  "osmCounts": {
@@ -122,11 +122,11 @@
  "aerial": {
   "file": "aerial.jpg",
   "crs": "EPSG:3857",
-  "width": 3216,
+  "width": 3219,
   "height": 4000,
   "groundMetresPerPixel": 0.6484,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

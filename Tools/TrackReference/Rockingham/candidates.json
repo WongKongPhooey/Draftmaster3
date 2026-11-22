@@ -5,52 +5,22 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
-   "lengthM": 1495.4,
-   "lengthErrPct": -1.15,
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 245545526); 3.18% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 1560.1,
+   "lengthErrPct": 3.13,
    "selfIntersects": false,
+   "counterTurnDeg": 0.5,
+   "flags": [],
    "builtFit": {
-    "rmsM": 14.32,
-    "p95M": 22.52,
-    "maxM": 23.61,
-    "scale": 1.006
+    "rmsM": 0.91,
+    "p95M": 1.23,
+    "maxM": 1.7,
+    "scale": 1.0295
    },
    "index": 0
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    245545526,
-    245545519
-   ],
-   "lengthM": 1495.4,
-   "lengthErrPct": -1.15,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 14.32,
-    "p95M": 22.52,
-    "maxM": 23.61,
-    "scale": 1.006
-   },
-   "index": 1
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    245545526
-   ],
-   "lengthM": 1560.9,
-   "lengthErrPct": 3.18,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 23.25,
-    "p95M": 41.39,
-    "maxM": 42.49,
-    "scale": 1.05
-   },
-   "index": 2
   },
   {
    "label": "fence ring as the INSIDE edge, 8.4 m out",
@@ -61,11 +31,71 @@
    "lengthM": 1646.1,
    "lengthErrPct": 8.81,
    "selfIntersects": false,
+   "counterTurnDeg": 7.6,
+   "flags": [],
    "builtFit": {
-    "rmsM": 13.97,
-    "p95M": 25.93,
-    "maxM": 30.19,
-    "scale": 1.0295
+    "rmsM": 17.38,
+    "p95M": 29.14,
+    "maxM": 39.94,
+    "scale": 0.983
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    245545526,
+    245545519
+   ],
+   "pitShare": 0.485,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Rockingham Speedway 51%",
+    "Rockingham Speedway Pit Road 49%"
+   ],
+   "lengthM": 1495.4,
+   "lengthErrPct": -1.15,
+   "selfIntersects": false,
+   "counterTurnDeg": 0.5,
+   "flags": [
+    "runs 48% down a pit lane"
+   ],
+   "builtFit": {
+    "rmsM": 10.19,
+    "p95M": 20.73,
+    "maxM": 22.64,
+    "scale": 0.9684
+   },
+   "index": 2
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    245545526,
+    245545512,
+    245545527,
+    245545512
+   ],
+   "pitShare": 0.305,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Rockingham Speedway 70%",
+    "Rockingham Speedway Pit Road 30%"
+   ],
+   "lengthM": 1557.4,
+   "lengthErrPct": 2.95,
+   "selfIntersects": false,
+   "counterTurnDeg": 10.4,
+   "flags": [
+    "runs 30% down a pit lane"
+   ],
+   "builtFit": {
+    "rmsM": 5.45,
+    "p95M": 8.15,
+    "maxM": 8.51,
+    "scale": 1.0166
    },
    "index": 3
   },
@@ -78,34 +108,36 @@
    "lengthM": 1552.1,
    "lengthErrPct": 2.6,
    "selfIntersects": true,
+   "counterTurnDeg": 7.6,
+   "flags": [],
    "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 14.32,
-  "p95M": 22.52,
-  "maxM": 23.61,
-  "refToBuiltMaxM": 23.68,
+  "rmsM": 0.91,
+  "p95M": 1.23,
+  "maxM": 1.7,
+  "refToBuiltMaxM": 1.7,
   "worstStretches": [
    {
-    "fromM": 802,
-    "toM": 900,
-    "meanM": 22.4
+    "fromM": 8,
+    "toM": 106,
+    "meanM": 1.2
    },
    {
-    "fromM": 302,
-    "toM": 400,
-    "meanM": 21.8
+    "fromM": 108,
+    "toM": 206,
+    "meanM": 1.2
    },
    {
-    "fromM": 902,
-    "toM": 1001,
-    "meanM": 18.1
+    "fromM": 836,
+    "toM": 934,
+    "meanM": 1.1
    }
   ],
-  "scale": 1.006
+  "scale": 1.0295
  },
- "verdict": "off",
+ "verdict": "matches",
  "notes": []
 }

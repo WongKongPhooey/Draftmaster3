@@ -319,9 +319,12 @@ Indianapolis road course. Watkins Glen is skipped by name — it is hand-measure
 Dover, Iowa, Las Vegas and Pocono (2026-11-22) were re-read from the same OSM rings as curvature traces: the old
 importer read each end as one arc, which left them 4-7 m RMS off the real tracks; they now measure 0.6, 0.5, 1.0 and
 3.1 m. Their start/finish lines were kept where the game had them, so the packages keep their frame.
+Road America, Chicago, Indianapolis, Sonoma, Mexico City, Portland, Talladega, IRP and Rockingham (2026-11-22) were
+rebuilt from `track_reference.py` candidates (Chicago's from the street centrelines in `Tools/TrackReference/Chicago`),
+14-198 m RMS off the real tracks before and 0.4-2.7 m after; Tools/TrackReference/audit.json has each one's flags.
 
-The other twelve venues have **no usable trace at all**, and that is a hole in OSM rather than in the
-fetch: Talladega has 3,345m of its 4,281m lap drawn as raceway and Daytona 3,368m of 4,023m, the rest
+The other venues have **no usable trace at all**, and that is a hole in OSM rather than in the
+fetch: (before the reference pipeline's junction search) Talladega had 3,345m of its 4,281m lap drawn as raceway and Daytona 3,368m of 4,023m, the rest
 simply absent. Those keep their generated geometry, which is why the generator stays.
 
 ## Road courses, and the one oval no formula fits

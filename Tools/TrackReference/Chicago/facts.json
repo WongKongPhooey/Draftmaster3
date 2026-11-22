@@ -5,8 +5,8 @@
  "game": {
   "lengthMiles": 2.2,
   "surfaceWidthM": 11,
-  "hasCommittedTrace": false,
-  "traceFoundBy": ""
+  "hasCommittedTrace": true,
+  "traceFoundBy": "track_reference.py candidate 0: raceway ring taken as the centre (ways -1); -3.55% from the published lap"
  },
  "wikipedia": {
   "title": "Chicago Street Course",
@@ -57,8 +57,8 @@
  },
  "lengthCheckPct": -2.73,
  "venueCentre": [
-  41.875833,
-  -87.620556
+  41.873239,
+  -87.620733
  ],
  "osmRadiusM": 1482,
  "osmCounts": {
@@ -83,7 +83,7 @@
   "height": 2825,
   "groundMetresPerPixel": 0.6001,
   "source": "USGS NAIP (USGS, USDA, The National Map: Orthoimagery), public domain",
-  "fetched": "2026-11-18"
+  "fetched": "2026-11-22"
  },
  "trackMap": [
   {

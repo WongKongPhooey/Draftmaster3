@@ -5,41 +5,22 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
-   "lengthM": 3164.8,
-   "lengthErrPct": -0.18,
+   "note": "track_reference.py candidate 0: raceway ring taken as the centre (ways 5529392,1315957510,1184207349,1315957509,5529392,5510199,5529392,5510199); -0.19% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 3160.3,
+   "lengthErrPct": -0.32,
    "selfIntersects": false,
+   "counterTurnDeg": 316.3,
+   "flags": [],
    "builtFit": {
-    "rmsM": 47.63,
-    "p95M": 91.52,
-    "maxM": 107.31,
-    "scale": 0.95
+    "rmsM": 1.42,
+    "p95M": 2.58,
+    "maxM": 6.31,
+    "scale": 0.991
    },
    "index": 0
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    5529392,
-    1315957510,
-    1184207349,
-    1315957509,
-    5529392,
-    5510199,
-    5529392,
-    5510199
-   ],
-   "lengthM": 3164.4,
-   "lengthErrPct": -0.19,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 45.79,
-    "p95M": 90.6,
-    "maxM": 104.15,
-    "scale": 0.95
-   },
-   "index": 1
   },
   {
    "label": "raceway ring taken as the centre",
@@ -51,88 +32,86 @@
     1315957509,
     1184207349
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.123,
+   "names": [
+    "Portland International Raceway 88%",
+    "Drag strip 12%"
+   ],
    "lengthM": 3224.3,
    "lengthErrPct": 1.7,
    "selfIntersects": false,
+   "counterTurnDeg": 224.0,
+   "flags": [
+    "12% on ways named for another circuit"
+   ],
    "builtFit": {
-    "rmsM": 45.18,
-    "p95M": 81.55,
-    "maxM": 104.73,
-    "scale": 0.95
+    "rmsM": 11.95,
+    "p95M": 26.99,
+    "maxM": 60.1,
+    "scale": 1.007
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    5529392,
+    118127468,
+    5529392,
+    1184207349,
+    1315957509,
+    5529392,
+    5510199
+   ],
+   "pitShare": 0.212,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Portland International Raceway 79%",
+    "Pit Road 21%"
+   ],
+   "lengthM": 3091.4,
+   "lengthErrPct": -2.49,
+   "selfIntersects": false,
+   "counterTurnDeg": 209.0,
+   "flags": [
+    "runs 21% down a pit lane"
+   ],
+   "builtFit": {
+    "rmsM": 12.02,
+    "p95M": 15.99,
+    "maxM": 64.99,
+    "scale": 0.9867
    },
    "index": 2
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    5529392,
-    5510199,
-    5529392,
-    5510199,
-    5529392,
-    1184207349,
-    1315957509
-   ],
-   "lengthM": 3091.0,
-   "lengthErrPct": -2.5,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 44.94,
-    "p95M": 81.86,
-    "maxM": 104.59,
-    "scale": 0.95
-   },
-   "index": 3
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    1184207349,
-    1315957510,
-    5529392,
-    5510199,
-    5529392,
-    1315957509
-   ],
-   "lengthM": 3297.7,
-   "lengthErrPct": 4.02,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 46.02,
-    "p95M": 90.05,
-    "maxM": 104.84,
-    "scale": 0.95
-   },
-   "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 47.63,
-  "p95M": 91.52,
-  "maxM": 107.31,
-  "refToBuiltMaxM": 145.37,
+  "rmsM": 1.42,
+  "p95M": 2.58,
+  "maxM": 6.31,
+  "refToBuiltMaxM": 6.37,
   "worstStretches": [
    {
-    "fromM": 1644,
-    "toM": 1742,
-    "meanM": 101.2
+    "fromM": 390,
+    "toM": 488,
+    "meanM": 3.1
    },
    {
-    "fromM": 468,
-    "toM": 566,
-    "meanM": 89.1
+    "fromM": 2714,
+    "toM": 2812,
+    "meanM": 2.5
    },
    {
-    "fromM": 1032,
-    "toM": 1130,
-    "meanM": 81.8
+    "fromM": 290,
+    "toM": 388,
+    "meanM": 2.4
    }
   ],
-  "scale": 0.95
+  "scale": 0.991
  },
- "verdict": "wrong shape",
+ "verdict": "matches",
  "notes": []
 }

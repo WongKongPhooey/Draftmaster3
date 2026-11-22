@@ -15,39 +15,39 @@
    "counterTurnDeg": 0.0,
    "flags": [],
    "builtFit": {
-    "rmsM": 24.54,
-    "p95M": 30.92,
-    "maxM": 31.21,
-    "scale": 0.9944
+    "rmsM": 0.42,
+    "p95M": 0.63,
+    "maxM": 1.15,
+    "scale": 0.9586
    },
    "index": 0
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 24.54,
-  "p95M": 30.92,
-  "maxM": 31.21,
-  "refToBuiltMaxM": 31.22,
+  "rmsM": 0.42,
+  "p95M": 0.63,
+  "maxM": 1.15,
+  "refToBuiltMaxM": 1.15,
   "worstStretches": [
    {
-    "fromM": 676,
-    "toM": 774,
-    "meanM": 31.0
+    "fromM": 734,
+    "toM": 832,
+    "meanM": 0.5
    },
    {
-    "fromM": 54,
-    "toM": 152,
-    "meanM": 30.8
+    "fromM": 1038,
+    "toM": 1136,
+    "meanM": 0.5
    },
    {
-    "fromM": 154,
-    "toM": 252,
-    "meanM": 30.7
+    "fromM": 452,
+    "toM": 550,
+    "meanM": 0.5
    }
   ],
-  "scale": 0.9944
+  "scale": 0.9586
  },
- "verdict": "off",
+ "verdict": "matches",
  "notes": []
 }
