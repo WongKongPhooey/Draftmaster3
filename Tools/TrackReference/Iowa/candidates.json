@@ -5,34 +5,22 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
-   "lengthM": 1431.5,
-   "lengthErrPct": 1.08,
+   "note": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 1.08% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 1430.6,
+   "lengthErrPct": 1.02,
    "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [],
    "builtFit": {
-    "rmsM": 4.03,
-    "p95M": 6.44,
-    "maxM": 8.91,
-    "scale": 1.0111
+    "rmsM": 0.5,
+    "p95M": 0.72,
+    "maxM": 0.98,
+    "scale": 1.0148
    },
    "index": 0
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    119238784
-   ],
-   "lengthM": 1431.5,
-   "lengthErrPct": 1.08,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 4.03,
-    "p95M": 6.44,
-    "maxM": 8.91,
-    "scale": 1.0111
-   },
-   "index": 1
   },
   {
    "label": "raceway ring taken as the centre",
@@ -41,16 +29,26 @@
     119238784,
     920711271
    ],
+   "pitShare": 0.634,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pit Road 63%",
+    "Iowa Speedway 37%"
+   ],
    "lengthM": 1342.0,
    "lengthErrPct": -5.24,
    "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [
+    "runs 63% down a pit lane"
+   ],
    "builtFit": {
-    "rmsM": 17.94,
-    "p95M": 26.9,
-    "maxM": 27.74,
+    "rmsM": 14.82,
+    "p95M": 24.13,
+    "maxM": 25.5,
     "scale": 0.95
    },
-   "index": 2
+   "index": 1
   },
   {
    "label": "raceway ring taken as the centre",
@@ -61,43 +59,55 @@
     1089497446,
     1089497443
    ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.315,
+   "names": [
+    "Iowa Speedway 61%",
+    "Iowa Speedway Road Course 32%",
+    "1/3 Mile Oval 7%"
+   ],
    "lengthM": 1576.7,
    "lengthErrPct": 11.33,
    "selfIntersects": false,
+   "counterTurnDeg": 183.0,
+   "flags": [
+    "32% on ways named for another circuit",
+    "turns 183 deg against the lap: not an oval"
+   ],
    "builtFit": {
-    "rmsM": 7.08,
-    "p95M": 10.86,
-    "maxM": 36.55,
-    "scale": 0.9548
+    "rmsM": 9.01,
+    "p95M": 14.3,
+    "maxM": 38.54,
+    "scale": 0.9583
    },
-   "index": 3
+   "index": 2
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 4.03,
-  "p95M": 6.44,
-  "maxM": 8.91,
-  "refToBuiltMaxM": 8.93,
+  "rmsM": 0.5,
+  "p95M": 0.72,
+  "maxM": 0.98,
+  "refToBuiltMaxM": 1.15,
   "worstStretches": [
    {
-    "fromM": 416,
-    "toM": 514,
-    "meanM": 7.3
+    "fromM": 1406,
+    "toM": 1504,
+    "meanM": 0.7
    },
    {
-    "fromM": 208,
-    "toM": 306,
-    "meanM": 5.3
+    "fromM": 826,
+    "toM": 924,
+    "meanM": 0.6
    },
    {
-    "fromM": 638,
-    "toM": 736,
-    "meanM": 5.1
+    "fromM": 110,
+    "toM": 208,
+    "meanM": 0.5
    }
   ],
-  "scale": 1.0111
+  "scale": 1.0148
  },
- "verdict": "close",
+ "verdict": "matches",
  "notes": []
 }

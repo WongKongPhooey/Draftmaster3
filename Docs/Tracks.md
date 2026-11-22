@@ -286,7 +286,10 @@ surveyed. That works for a rounded triangle or a road course, whose straights po
 It cannot work for a plain oval. Its two straights are **antiparallel**, so between them they can only move
 the far end of the lap along one axis; the perpendicular error has nowhere to go and the solve either fails
 or asks for a straight of negative length. On an oval that error *is* the corner radius, so the fallback
-lets every segment give a little — for a corner, its arc length and therefore its radius. Both paths are in
+lets every segment give a little — for a corner, its arc length and therefore its radius. The straights-only solve is also refused
+when it would move a straight by more than 5 m plus ten times the gap: straights a degree or two from
+antiparallel (any oval read off a trace) make it all but singular, and Dover's 0.4 m gap once came back as
+both straights 286 m longer. Both paths are in
 `LapGeometry.Close`, and both are tested.
 
 ### Getting the traces
@@ -313,6 +316,9 @@ the reference pipeline), Bristol, Bowman Gray, Darlington, Dover, Fort
 Worth, Gateway, Iowa, Las Vegas, Michigan, New Hampshire, Phoenix, Pocono and Richmond. The rest are
 refused for now. Lime Rock (2026-11-20) imports from the reference pipeline too, raced clockwise like the
 Indianapolis road course. Watkins Glen is skipped by name — it is hand-measured off satellite imagery.
+Dover, Iowa, Las Vegas and Pocono (2026-11-22) were re-read from the same OSM rings as curvature traces: the old
+importer read each end as one arc, which left them 4-7 m RMS off the real tracks; they now measure 0.6, 0.5, 1.0 and
+3.1 m. Their start/finish lines were kept where the game had them, so the packages keep their frame.
 
 The other twelve venues have **no usable trace at all**, and that is a hole in OSM rather than in the
 fetch: Talladega has 3,345m of its 4,281m lap drawn as raceway and Daytona 3,368m of 4,023m, the rest

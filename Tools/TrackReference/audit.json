@@ -67,6 +67,30 @@
       "rebuild": "trace written 2026-11-18; Unity import pending",
       "from": "#0 (OSM way 123830268, Lucas Oil Raceway, -4.5%), now Assets/TrackTraces/IRP.json (--start=39.812369,-86.341805); pit = front-stretch run of way 531132316 (nodes 1-9)",
       "why": "Game is a long thin oval (464 x 156 m) on a wider, rounder 0.686 mi oval; 24.5 m RMS. The OSM ring sits on the racing surface toward the inside line (hence -4.5%; the importer rescales to the lap). 2026-11-18: checked on NAIP, the ring runs on the racing surface all round. Trace written from #0 for the curvature importer (start/finish an ESTIMATE mid front stretch by the grandstands; pitLane trimmed to the way's front-stretch nodes 1-9, since the whole way wraps the Turn 1 and Turn 3-4 aprons onto the backstretch and its ends lay no pit road). Replaying OsmTrackImporter headless (the importer's Core path, as TracedOvalImportTests does): 32 pieces, closes 0.47 m before the solve (0.04% of the lap, limit 3%), rescaled to the 1104 m lap; built lap 0.48 m RMS off the trace and predicted 0.43 m RMS (p95 0.67, max 1.23, scale x0.959) against this reference = matches; mapped pit road fits (438 m, r40 arcs, straight 338 m, entry 253 m before the line, exit 231 m after). The stale trained line (old shape, same 1104 m lap, so it would have been accepted) is deleted. Still needs a Unity lane: Import Traced Geometry (IRP only), Export Geometry For Paddock Layout, re-run this report, redress walls/ground/stands (package is fully generated - scenery scatter only), regenerate the paddock sidecar, retrain the line, run the IRP track tests and a lap sim."
+    },
+    "Dover": {
+      "wrong": "game",
+      "rebuild": "done 2026-11-22",
+      "from": "#0 (committed trace = OSM way 350676133, +3.2%)",
+      "why": "Close: 4.2 m RMS - the old importer read each end of the 51-node ring as one arc. Rebuilt 2026-11-22 (close -> matches): same OSM ring re-read as constant-curvature runs (--write-trace=0 --start=<the game's existing start/finish>), imported into the asset only, package re-dressed (TrackDressingFactory overwrite: ground, walls, grandstands, paddock) and re-scattered, geometry re-exported, paddock sidecar regenerated (8 variants), racing line retrained from scratch. No --pit: the mapped Pit Road (395874675) is on the real front stretch, the game's line and pit road are on the back stretch. First import hit a near-singular straights-only closure (0.4 m gap -> both straights +286 m, 30 m RMS); LapGeometry.CloseByStraights now refuses a correction over 5 m + 10x the gap. Now 0.6 m RMS (p95 0.9, max 1.2); 3.9 m against #1 (ring + pit road)."
+    },
+    "Iowa": {
+      "wrong": "game",
+      "rebuild": "done 2026-11-22",
+      "from": "#0 (committed trace = OSM way 119238784, +1.1%)",
+      "why": "Close: 4.0 m RMS - old one-arc-per-end reading of the 51-node ring. Rebuilt 2026-11-22 (close -> matches): same OSM ring re-read as constant-curvature runs (--write-trace=0 --start=<the game's existing start/finish>), imported into the asset only, package re-dressed (TrackDressingFactory overwrite: ground, walls, grandstands, paddock) and re-scattered, geometry re-exported, paddock sidecar regenerated (8 variants), racing line retrained from scratch. No --pit: the mapped Pit Road (920711271) wraps the infield from the front stretch round turns 1-2; the game's line and pit road are on the back stretch. Now 0.5 m RMS (p95 0.7, max 1.0)."
+    },
+    "LasVegas": {
+      "wrong": "game",
+      "rebuild": "done 2026-11-22",
+      "from": "#0 (committed trace = OSM raceway chain, +2.6%)",
+      "why": "Close: 7.2 m RMS - old one-arc-per-end reading. Rebuilt 2026-11-22 (close -> matches): same OSM ring re-read as constant-curvature runs (--write-trace=0 --start=<the game's existing start/finish>), imported into the asset only, package re-dressed (TrackDressingFactory overwrite: ground, walls, grandstands, paddock) and re-scattered, geometry re-exported, paddock sidecar regenerated (8 variants), racing line retrained from scratch. No --pit: the mapped Pit Road (27545409+1548033198+1548033197) runs the real tri-oval front stretch; the game's line and pit road are on the back stretch. Now 1.0 m RMS (p95 1.8, max 1.9), and 1.1 m against #1 (the outer wall offset 9.1 m in) as an independent check. Trainer lap 42.5 s against Kansas's 38.8 s on a near-identical shape; segment caps and banking grip match Kansas, cause not found."
+    },
+    "LongPond": {
+      "wrong": "game",
+      "rebuild": "done 2026-11-22",
+      "from": "#0 (committed trace = OSM way 109767460, +1.0%); pit way 563465040",
+      "why": "Close: 7.4 m RMS - old reading of the 69-node ring. Rebuilt 2026-11-22 (close -> matches): same OSM ring re-read as constant-curvature runs (--write-trace=0 --start=<the game's existing start/finish>), imported into the asset only, package re-dressed (TrackDressingFactory overwrite: ground, walls, grandstands, paddock) and re-scattered, geometry re-exported, paddock sidecar regenerated (8 variants), racing line retrained from scratch. --pit=563465040: the mapped Pit Lane is on the front straight with the line; pit road refitted on it (795 m, r250 arcs, entry 130 m / exit 925 m past the line; was 0-810 m). Now 3.1 m RMS (p95 5.0, max 6.1) - the ring opens 14 m and the straights take it."
     }
   }
 }

@@ -22,7 +22,7 @@
    "name": "MeetingRoom_Marker",
    "x": 195.7,
    "y": -126.9,
-   "rotation": 351.1,
+   "rotation": 351.2,
    "width": 8.9,
    "height": 8.9
   },
@@ -42,12 +42,12 @@
    "width": 10,
    "height": 10,
    "seat": {
-    "x": 255.6,
-    "y": 229.8
+    "x": 95.5,
+    "y": -28.1
    },
    "view": {
-    "x": 271.1,
-    "y": 293.3
+    "x": 95.4,
+    "y": 0
    }
   }
  ],
@@ -96,7 +96,7 @@
      "name": "MeetingRoom_Marker",
      "x": 195.7,
      "y": -126.9,
-     "rotation": 351.1,
+     "rotation": 351.2,
      "width": 8.9,
      "height": 8.9
     },
@@ -116,12 +116,12 @@
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 255.6,
-      "y": 229.8
+      "x": 95.5,
+      "y": -28.1
      },
      "view": {
-      "x": 271.1,
-      "y": 293.3
+      "x": 95.4,
+      "y": 0
      }
     }
    ],
@@ -190,12 +190,12 @@
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 255.6,
-      "y": 229.8
+      "x": 95.5,
+      "y": -28.1
      },
      "view": {
-      "x": 271.1,
-      "y": 293.3
+      "x": 95.4,
+      "y": 0
      }
     }
    ],
@@ -234,41 +234,41 @@
     },
     {
      "name": "MeetingRoom_Marker",
-     "x": 250.0,
-     "y": -54.3,
-     "rotation": 358.9,
+     "x": 179.5,
+     "y": -37.8,
+     "rotation": 0.6,
      "width": 9.7,
      "height": 9.4
     },
     {
      "name": "IntroStage_Marker",
-     "x": 290.7,
-     "y": -44.9,
-     "rotation": 352.1,
-     "width": 10.7,
-     "height": 6.5
+     "x": 298.7,
+     "y": -44.7,
+     "rotation": 350.6,
+     "width": 13.4,
+     "height": 7.3
     },
     {
      "name": "SigningFence_Marker",
-     "x": 297.6,
-     "y": -57.7,
-     "rotation": 356.0,
-     "width": 19.4,
-     "height": 3.2
+     "x": 267.2,
+     "y": -40.1,
+     "rotation": 358.6,
+     "width": 19.1,
+     "height": 3.3
     },
     {
      "name": "Grandstand_Marker",
-     "x": 6.7,
-     "y": -49.4,
-     "rotation": 359.1,
+     "x": 34.6,
+     "y": -50.7,
+     "rotation": 350.7,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 131.6,
+      "x": 95.5,
       "y": -28.1
      },
      "view": {
-      "x": 127.8,
+      "x": 95.4,
       "y": 0
      }
     }
@@ -316,9 +316,9 @@
     },
     {
      "name": "SponsorSuite_Marker",
-     "x": 197.7,
+     "x": 197.8,
      "y": -103.1,
-     "rotation": 349.5,
+     "rotation": 349.6,
      "width": 12.1,
      "height": 11.5
     },
@@ -332,18 +332,18 @@
     },
     {
      "name": "Grandstand_Marker",
-     "x": 14.0,
-     "y": -33.8,
-     "rotation": 355.7,
+     "x": 242.9,
+     "y": -44.1,
+     "rotation": 353.1,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 131.6,
-      "y": 229.8
+      "x": 95.5,
+      "y": -28.1
      },
      "view": {
-      "x": 127.3,
-      "y": 308.0
+      "x": 95.4,
+      "y": 0
      }
     }
    ],
@@ -373,51 +373,51 @@
   {
    "markers": [
     {
-     "name": "IntroStage_Marker",
-     "x": 297.3,
-     "y": -61.6,
-     "rotation": 355.1,
-     "width": 11.0,
-     "height": 6.5
+     "name": "SponsorSuite_Marker",
+     "x": 274.2,
+     "y": -50.9,
+     "rotation": 352.4,
+     "width": 14.2,
+     "height": 11.3
     },
     {
      "name": "SigningFence_Marker",
-     "x": 186.7,
-     "y": -138.3,
-     "rotation": 354.4,
-     "width": 20.6,
-     "height": 4.3
+     "x": 43.3,
+     "y": -42.3,
+     "rotation": 349.6,
+     "width": 20.7,
+     "height": 4.4
     },
     {
-     "name": "SponsorSuite_Marker",
-     "x": 250.1,
-     "y": -52.5,
-     "rotation": 355.7,
-     "width": 16.9,
-     "height": 11.6
+     "name": "IntroStage_Marker",
+     "x": 339.1,
+     "y": -42.4,
+     "rotation": 358.2,
+     "width": 11.4,
+     "height": 6.0
     },
     {
      "name": "MeetingRoom_Marker",
-     "x": 132.1,
-     "y": -124.3,
-     "rotation": 357.8,
-     "width": 11.9,
-     "height": 10.3
+     "x": 272.1,
+     "y": -75.7,
+     "rotation": 353.4,
+     "width": 9.2,
+     "height": 11.6
     },
     {
      "name": "Grandstand_Marker",
-     "x": 274.6,
-     "y": -46.9,
-     "rotation": 359.3,
+     "x": 314.3,
+     "y": -49.1,
+     "rotation": 357.3,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 255.6,
-      "y": 229.8
+      "x": 95.5,
+      "y": -28.1
      },
      "view": {
-      "x": 271.1,
-      "y": 293.3
+      "x": 95.4,
+      "y": 0
      }
     }
    ],
@@ -434,9 +434,9 @@
     },
     {
      "kind": "Motorhomes",
-     "x": 238.7,
-     "y": -92.1,
-     "rotation": 353.9,
+     "x": 209.7,
+     "y": -58.2,
+     "rotation": 358.9,
      "width": 94.0,
      "height": 43.8,
      "gap": 1.8,
@@ -456,51 +456,51 @@
     },
     {
      "name": "IntroStage_Marker",
-     "x": 338.9,
-     "y": -49.2,
-     "rotation": 355.6,
+     "x": 346.5,
+     "y": -79.5,
+     "rotation": 358.9,
      "width": 13.1,
      "height": 8.6
     },
     {
      "name": "MeetingRoom_Marker",
-     "x": 175.6,
-     "y": -82.7,
-     "rotation": 355.4,
-     "width": 8.6,
-     "height": 9.8
+     "x": 159.7,
+     "y": -81.8,
+     "rotation": 356.2,
+     "width": 8.1,
+     "height": 11.5
     },
     {
      "name": "SigningFence_Marker",
-     "x": 114.8,
-     "y": -138.2,
-     "rotation": 354.6,
-     "width": 18.3,
-     "height": 4.5
+     "x": 121.0,
+     "y": -67.2,
+     "rotation": 357.8,
+     "width": 20.1,
+     "height": 3.8
     },
     {
      "name": "Grandstand_Marker",
-     "x": 52.3,
-     "y": -31.0,
-     "rotation": 349.5,
+     "x": 106.9,
+     "y": -46.2,
+     "rotation": 352.7,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 131.6,
-      "y": 229.8
+      "x": 95.5,
+      "y": -28.1
      },
      "view": {
-      "x": 127.3,
-      "y": 308.0
+      "x": 95.4,
+      "y": 0
      }
     }
    ],
    "lots": [
     {
      "kind": "Garages",
-     "x": 302.8,
-     "y": -89.3,
-     "rotation": 352.1,
+     "x": 256.2,
+     "y": -74.4,
+     "rotation": 353.6,
      "width": 149.0,
      "height": 61.5,
      "gap": 1.8,
@@ -508,13 +508,13 @@
     },
     {
      "kind": "Motorhomes",
-     "x": 33.5,
-     "y": -63.3,
+     "x": 32.2,
+     "y": -78.3,
      "rotation": 358.1,
-     "width": 143.9,
-     "height": 29.8,
-     "gap": 2.5,
-     "rowGap": 7.9
+     "width": 92.4,
+     "height": 59.7,
+     "gap": 3.0,
+     "rowGap": 6.0
     }
    ]
   },
@@ -554,17 +554,17 @@
     },
     {
      "name": "Grandstand_Marker",
-     "x": 43.9,
-     "y": -36.1,
-     "rotation": 354.3,
+     "x": 180.0,
+     "y": -32.4,
+     "rotation": 360.0,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 131.6,
+      "x": 95.5,
       "y": -28.1
      },
      "view": {
-      "x": 127.8,
+      "x": 95.4,
       "y": 0
      }
     }
@@ -596,50 +596,50 @@
    "markers": [
     {
      "name": "SigningFence_Marker",
-     "x": 35.7,
-     "y": -37.7,
+     "x": 26.4,
+     "y": -56.4,
      "rotation": 354.8,
      "width": 22.7,
      "height": 4.2
     },
     {
      "name": "IntroStage_Marker",
-     "x": 338.4,
-     "y": -65.7,
-     "rotation": 2.2,
-     "width": 11.0,
-     "height": 8.5
+     "x": 290.7,
+     "y": -44.8,
+     "rotation": 350.5,
+     "width": 10.9,
+     "height": 8.0
     },
     {
      "name": "SponsorSuite_Marker",
-     "x": 74.2,
-     "y": -54.9,
-     "rotation": 360.0,
-     "width": 16.7,
-     "height": 10.1
+     "x": 259.6,
+     "y": -126.0,
+     "rotation": 359.9,
+     "width": 13.7,
+     "height": 13.7
     },
     {
      "name": "MeetingRoom_Marker",
-     "x": 121.6,
-     "y": -60.6,
-     "rotation": 349.5,
-     "width": 8.9,
-     "height": 10.2
+     "x": 194.0,
+     "y": -146.3,
+     "rotation": 359.2,
+     "width": 9.4,
+     "height": 10.8
     },
     {
      "name": "Grandstand_Marker",
-     "x": 162.8,
-     "y": -46.1,
-     "rotation": 358.5,
+     "x": 179.5,
+     "y": -38.4,
+     "rotation": 353.5,
      "width": 10,
      "height": 10,
      "seat": {
-      "x": 255.6,
+      "x": 95.5,
       "y": -28.1
      },
      "view": {
-      "x": 255.5,
-      "y": 0.2
+      "x": 95.4,
+      "y": 0
      }
     }
    ],

@@ -6,7 +6,7 @@
   "lengthMiles": 2.5,
   "surfaceWidthM": 15.24,
   "hasCommittedTrace": true,
-  "traceFoundBy": ""
+  "traceFoundBy": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 0.97% from the published lap"
  },
  "wikipedia": {
   "title": "Pocono Raceway",
@@ -115,8 +115,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  41.055001,
-  -75.508706
+  41.055103,
+  -75.508784
  ],
  "osmRadiusM": 1637,
  "osmCounts": {

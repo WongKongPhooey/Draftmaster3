@@ -5,34 +5,22 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "",
-   "lengthM": 4062.3,
-   "lengthErrPct": 0.97,
+   "note": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 0.97% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 4061.6,
+   "lengthErrPct": 0.95,
    "selfIntersects": false,
+   "counterTurnDeg": 1.2,
+   "flags": [],
    "builtFit": {
-    "rmsM": 7.38,
-    "p95M": 14.31,
-    "maxM": 18.33,
-    "scale": 1.0017
+    "rmsM": 3.09,
+    "p95M": 4.97,
+    "maxM": 6.1,
+    "scale": 1.0054
    },
    "index": 0
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    109767460
-   ],
-   "lengthM": 4062.3,
-   "lengthErrPct": 0.97,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 7.38,
-    "p95M": 14.31,
-    "maxM": 18.33,
-    "scale": 1.0017
-   },
-   "index": 1
   },
   {
    "label": "raceway ring taken as the centre",
@@ -41,14 +29,55 @@
     109767460,
     563465040
    ],
+   "pitShare": 0.179,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pocono Raceway 82%",
+    "Pit Lane 18%"
+   ],
    "lengthM": 4074.6,
    "lengthErrPct": 1.27,
    "selfIntersects": false,
+   "counterTurnDeg": 49.4,
+   "flags": [
+    "runs 18% down a pit lane"
+   ],
    "builtFit": {
-    "rmsM": 15.26,
-    "p95M": 28.57,
-    "maxM": 28.69,
-    "scale": 0.9939
+    "rmsM": 12.2,
+    "p95M": 25.9,
+    "maxM": 26.56,
+    "scale": 0.9977
+   },
+   "index": 1
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    109767460,
+    563465025,
+    563465021,
+    563465019,
+    563465017,
+    563465023
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pocono Raceway 70%"
+   ],
+   "lengthM": 4085.6,
+   "lengthErrPct": 1.55,
+   "selfIntersects": false,
+   "counterTurnDeg": 402.4,
+   "flags": [
+    "turns 402 deg against the lap: not an oval"
+   ],
+   "builtFit": {
+    "rmsM": 46.61,
+    "p95M": 96.65,
+    "maxM": 104.12,
+    "scale": 0.95
    },
    "index": 2
   },
@@ -57,55 +86,93 @@
    "kind": "raceway",
    "ways": [
     109767460,
-    563465023,
-    563465017,
-    563465020,
-    563465016,
-    563465020,
-    563465016,
-    563465020,
-    563465019,
-    563465022,
+    563465015,
     563465014,
-    563465015
+    563465022,
+    563465019,
+    563465020,
+    563465016,
+    563465020,
+    563465017,
+    563465023
    ],
-   "lengthM": 3643.8,
-   "lengthErrPct": -9.43,
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pocono Raceway 79%"
+   ],
+   "lengthM": 3790.5,
+   "lengthErrPct": -5.79,
    "selfIntersects": false,
+   "counterTurnDeg": 244.2,
+   "flags": [
+    "turns 244 deg against the lap: not an oval"
+   ],
    "builtFit": {
-    "rmsM": 68.85,
-    "p95M": 131.81,
-    "maxM": 162.07,
+    "rmsM": 61.45,
+    "p95M": 111.74,
+    "maxM": 157.45,
     "scale": 0.95
    },
    "index": 3
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    109767460,
+    563465014,
+    563465022,
+    563465019,
+    563465021,
+    563465025
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Pocono Raceway 89%"
+   ],
+   "lengthM": 4266.1,
+   "lengthErrPct": 6.03,
+   "selfIntersects": false,
+   "counterTurnDeg": 183.1,
+   "flags": [
+    "turns 183 deg against the lap: not an oval"
+   ],
+   "builtFit": {
+    "rmsM": 13.56,
+    "p95M": 14.66,
+    "maxM": 94.35,
+    "scale": 1.0034
+   },
+   "index": 4
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 7.38,
-  "p95M": 14.31,
-  "maxM": 18.33,
-  "refToBuiltMaxM": 18.35,
+  "rmsM": 3.09,
+  "p95M": 4.97,
+  "maxM": 6.1,
+  "refToBuiltMaxM": 6.1,
   "worstStretches": [
    {
-    "fromM": 1322,
-    "toM": 1420,
-    "meanM": 17.8
+    "fromM": 3779,
+    "toM": 3877,
+    "meanM": 5.4
    },
    {
-    "fromM": 1422,
-    "toM": 1521,
-    "meanM": 14.9
+    "fromM": 2895,
+    "toM": 2993,
+    "meanM": 5.1
    },
    {
-    "fromM": 1222,
-    "toM": 1320,
-    "meanM": 13.7
+    "fromM": 588,
+    "toM": 686,
+    "meanM": 4.9
    }
   ],
-  "scale": 1.0017
+  "scale": 1.0054
  },
- "verdict": "close",
+ "verdict": "matches",
  "notes": []
 }

@@ -5,15 +5,20 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "",
-   "lengthM": 1661.1,
-   "lengthErrPct": 3.22,
+   "note": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 3.22% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 1660.3,
+   "lengthErrPct": 3.17,
    "selfIntersects": false,
+   "counterTurnDeg": 0.9,
+   "flags": [],
    "builtFit": {
-    "rmsM": 4.24,
-    "p95M": 8.04,
-    "maxM": 8.75,
-    "scale": 1.0265
+    "rmsM": 0.57,
+    "p95M": 0.89,
+    "maxM": 1.16,
+    "scale": 1.0306
    },
    "index": 0
   },
@@ -24,61 +29,54 @@
     350676133,
     395874675
    ],
+   "pitShare": 0.48,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Dover Motor Speedway 52%",
+    "Pit Road 48%"
+   ],
    "lengthM": 1624.3,
    "lengthErrPct": 0.93,
    "selfIntersects": false,
+   "counterTurnDeg": 0.4,
+   "flags": [
+    "runs 48% down a pit lane"
+   ],
    "builtFit": {
-    "rmsM": 6.97,
-    "p95M": 11.93,
-    "maxM": 13.05,
-    "scale": 0.9986
+    "rmsM": 3.9,
+    "p95M": 6.49,
+    "maxM": 8.55,
+    "scale": 1.003
    },
    "index": 1
-  },
-  {
-   "label": "raceway ring taken as the centre",
-   "kind": "raceway",
-   "ways": [
-    350676133
-   ],
-   "lengthM": 1661.1,
-   "lengthErrPct": 3.22,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 4.24,
-    "p95M": 8.04,
-    "maxM": 8.75,
-    "scale": 1.0265
-   },
-   "index": 2
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 4.24,
-  "p95M": 8.04,
-  "maxM": 8.75,
-  "refToBuiltMaxM": 8.75,
+  "rmsM": 0.57,
+  "p95M": 0.89,
+  "maxM": 1.16,
+  "refToBuiltMaxM": 1.31,
   "worstStretches": [
    {
-    "fromM": 799,
-    "toM": 897,
-    "meanM": 8.0
+    "fromM": 867,
+    "toM": 965,
+    "meanM": 0.9
    },
    {
-    "fromM": 248,
-    "toM": 346,
-    "meanM": 7.9
+    "fromM": 1111,
+    "toM": 1209,
+    "meanM": 0.8
    },
    {
-    "fromM": 148,
-    "toM": 246,
-    "meanM": 6.0
+    "fromM": 48,
+    "toM": 146,
+    "meanM": 0.8
    }
   ],
-  "scale": 1.0265
+  "scale": 1.0306
  },
- "verdict": "close",
+ "verdict": "matches",
  "notes": [
   "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
  ]

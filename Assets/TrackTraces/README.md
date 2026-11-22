@@ -81,6 +81,15 @@ Sol), raced clockwise, start/finish estimated on the main straight (OSM marks no
 access loop rather than the circuit; that stretch was replaced by the straight it bypasses (lap +1.02% -> +0.05%). Read
 headless at the road-course window it lies 2.1 m RMS off the trace; importing it in Unity is still to do.
 
+Dover, Iowa, Las Vegas and Pocono had 2026-09 traces of OSM's raceway ring (one closed way each, Las Vegas a walked
+chain) read by the old importer as one arc per end, which left them 4-7 m RMS off the real tracks. They were rewritten
+2026-11-22 from `track_reference.py` candidate 0 (the same rings) for the curvature importer, `--start` at the point the
+game's start/finish already sat on (the back stretch at Dover, Iowa and Las Vegas, the west end of the front straight at
+Pocono) so each package keeps its frame. Dover, Iowa and Las Vegas carry no pit lane: their mapped pit roads are on the
+real front stretch, the far side of the lap from the game's line, so pit road stays where it was as a share of the lap.
+Pocono's mapped Pit Lane (way 563465040) is on the same straight as the line and is used. Imported, re-dressed,
+re-exported and retrained the same day; they measure 0.6 / 0.5 / 1.0 / 3.1 m RMS.
+
 The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
 Daytona, Talladega, Indianapolis, Road America and Watkins Glen — are not a bug in the
 fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,345m of its 4,281m lap drawn

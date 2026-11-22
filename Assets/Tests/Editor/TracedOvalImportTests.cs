@@ -51,6 +51,10 @@ public class TracedOvalImportTests
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
     [TestCase("Daytona")]
+    [TestCase("Dover")]
+    [TestCase("Iowa")]
+    [TestCase("LasVegas")]
+    [TestCase("LongPond")]
     public void TraceImportsAsAClosedLapOfThePublishedLength(string id)
     {
         var r = Read(id);
@@ -68,6 +72,10 @@ public class TracedOvalImportTests
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
     [TestCase("Daytona")]
+    [TestCase("Dover")]
+    [TestCase("Iowa")]
+    [TestCase("LasVegas")]
+    [TestCase("LongPond")]
     public void BuiltLapLiesOnTheTrace(string id)
     {
         var r = Read(id);
@@ -77,12 +85,16 @@ public class TracedOvalImportTests
         Assert.LessOrEqual(rms, MatchesRmsMetres, $"{id}: built lap is {rms:0.0} m RMS off its own trace");
     }
 
+    // Dover, Iowa and Las Vegas are left off: their traces carry no mapped pit lane on purpose. The game has start/finish
+    // and pit road on the back stretch there, and the mapped lanes are on the real front stretch, so the importer keeps
+    // pit road where it was (as a share of the lap) rather than moving it to the far side of the lap from the line.
     [TestCase("Charlotte")]
     [TestCase("COTA")]
     [TestCase("IndyRoad")]
     [TestCase("LimeRock")]
     [TestCase("MexicoCity")]
     [TestCase("Daytona")]
+    [TestCase("LongPond")]
     public void MappedPitLaneFitsAsPitRoad(string id)
     {
         var r = Read(id);

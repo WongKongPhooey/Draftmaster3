@@ -6,7 +6,7 @@
   "lengthMiles": 1,
   "surfaceWidthM": 12.19,
   "hasCommittedTrace": true,
-  "traceFoundBy": ""
+  "traceFoundBy": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 3.22% from the published lap"
  },
  "wikipedia": {
   "title": "Dover Motor Speedway",
@@ -59,8 +59,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  39.189371,
-  -75.530291
+  39.189632,
+  -75.530369
  ],
  "osmRadiusM": 900,
  "osmCounts": {

@@ -6,7 +6,7 @@
   "lengthMiles": 1.5,
   "surfaceWidthM": 18.29,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 2.63% from the published lap"
  },
  "wikipedia": {
   "title": "Las Vegas Motor Speedway",
@@ -97,8 +97,8 @@
  },
  "lengthCheckPct": 0.0,
  "venueCentre": [
-  36.272257,
-  -115.010401
+  36.272334,
+  -115.010411
  ],
  "osmRadiusM": 1122,
  "osmCounts": {

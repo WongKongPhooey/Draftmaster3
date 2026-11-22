@@ -263,6 +263,33 @@ public class OsmTrackGeometryTests
     }
 
     [Test]
+    public void NearlyParallelStraightsDoNotBlowUpASmallGap()
+    {
+        // Dover read off its trace: straights a fraction of a degree from antiparallel and a lap well under a
+        // metre open. The straights-only solve is then all but singular, and Dover's came back with both
+        // straights ~290 m longer. Here it would ask for ~39 m on each to close 0.2 m. A correction out of all
+        // proportion to the gap must be refused, and the fallback close the lap gently instead.
+        var lap = new List<LapGeometry.Piece>
+        {
+            new LapGeometry.Piece(false, 400f, 0f),
+            new LapGeometry.Piece(true, 420f, 180.3f),
+            new LapGeometry.Piece(false, 400f, 0f),
+            new LapGeometry.Piece(true, 415f, 179.7f),
+        };
+        var before = lap.ConvertAll(p => p.length);
+        float gap = LapGeometry.ClosureGap(lap);
+        Assert.Greater(gap, 0.1f, "This lap is supposed to start out a little open.");
+
+        Assert.IsFalse(LapGeometry.CloseByStraights(new List<LapGeometry.Piece>(lap)),
+            "The straights alone can only close this by stretching both out of all proportion.");
+        Assert.IsTrue(LapGeometry.Close(lap), "The lap couldn't be closed.");
+        Assert.Less(LapGeometry.ClosureGap(lap), 0.5f, "The lap still doesn't join up.");
+        for (int i = 0; i < lap.Count; i++)
+            Assert.AreEqual(before[i], lap[i].length, 5f + 10f * gap,
+                $"Piece {i} moved {lap[i].length - before[i]:0.0} m to close a {gap:0.0} m gap.");
+    }
+
+    [Test]
     public void ALapWithNoStraightsCannotBeClosedAndSaysSo()
     {
         // A circle is already closed and has nothing to move; the caller needs to know rather than be given

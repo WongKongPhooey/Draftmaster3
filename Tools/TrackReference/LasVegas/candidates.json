@@ -5,17 +5,60 @@
    "label": "committed trace (Assets/TrackTraces)",
    "kind": "trace",
    "ways": [],
-   "note": "batch",
-   "lengthM": 2477.5,
-   "lengthErrPct": 2.63,
+   "note": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 2.63% from the published lap",
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.0,
+   "names": [],
+   "lengthM": 2477.2,
+   "lengthErrPct": 2.62,
    "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [],
    "builtFit": {
-    "rmsM": 7.25,
-    "p95M": 12.06,
-    "maxM": 13.24,
-    "scale": 1.0202
+    "rmsM": 0.97,
+    "p95M": 1.75,
+    "maxM": 1.86,
+    "scale": 1.0252
    },
    "index": 0
+  },
+  {
+   "label": "wall ring as the OUTER edge, 9.1 m in",
+   "kind": "wall-outer",
+   "ways": [
+    342868473
+   ],
+   "lengthM": 2463.9,
+   "lengthErrPct": 2.07,
+   "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 1.11,
+    "p95M": 1.92,
+    "maxM": 2.83,
+    "scale": 1.0202
+   },
+   "index": 1
+  },
+  {
+   "label": "wall ring as the INSIDE edge, 9.1 m out",
+   "kind": "wall-inner",
+   "ways": [
+    342868473
+   ],
+   "lengthM": 2578.8,
+   "lengthErrPct": 6.83,
+   "selfIntersects": false,
+   "counterTurnDeg": 0.0,
+   "flags": [],
+   "builtFit": {
+    "rmsM": 8.02,
+    "p95M": 10.91,
+    "maxM": 11.88,
+    "scale": 1.05
+   },
+   "index": 2
   },
   {
    "label": "raceway ring taken as the centre",
@@ -28,98 +71,154 @@
     27545409,
     27545411
    ],
+   "pitShare": 0.382,
+   "otherCircuitShare": 0.0,
+   "names": [
+    "Las Vegas Motor Speedway 62%",
+    "Pit Road 38%"
+   ],
    "lengthM": 2420.5,
    "lengthErrPct": 0.27,
    "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 24.46,
-    "p95M": 47.68,
-    "maxM": 51.68,
-    "scale": 0.9802
-   },
-   "index": 1
-  },
-  {
-   "label": "wall ring as the OUTER edge, 9.1 m in",
-   "kind": "wall-outer",
-   "ways": [
-    342868473
+   "counterTurnDeg": 0.0,
+   "flags": [
+    "runs 38% down a pit lane"
    ],
-   "lengthM": 2463.9,
-   "lengthErrPct": 2.07,
-   "selfIntersects": false,
    "builtFit": {
-    "rmsM": 7.22,
-    "p95M": 12.66,
-    "maxM": 13.72,
-    "scale": 1.0152
+    "rmsM": 19.76,
+    "p95M": 42.15,
+    "maxM": 45.99,
+    "scale": 0.9861
    },
-   "index": 2
+   "index": 3
   },
   {
    "label": "raceway ring taken as the centre",
    "kind": "raceway",
    "ways": [
-    27545411,
-    1548033196,
-    130583370,
-    1548033195
+    51319172,
+    1422855075,
+    51319172,
+    210537849,
+    210537852,
+    51319172,
+    51319174
    ],
-   "lengthM": 2477.5,
-   "lengthErrPct": 2.63,
-   "selfIntersects": false,
-   "builtFit": {
-    "rmsM": 7.25,
-    "p95M": 12.06,
-    "maxM": 13.24,
-    "scale": 1.0202
-   },
-   "index": 3
-  },
-  {
-   "label": "wall ring as the INSIDE edge, 9.1 m out",
-   "kind": "wall-inner",
-   "ways": [
-    342868473
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.957,
+   "names": [
+    "Road Course 96%"
    ],
-   "lengthM": 2578.8,
-   "lengthErrPct": 6.83,
+   "lengthM": 2426.8,
+   "lengthErrPct": 0.53,
    "selfIntersects": false,
+   "counterTurnDeg": 397.8,
+   "flags": [
+    "96% on ways named for another circuit",
+    "turns 398 deg against the lap: not an oval"
+   ],
    "builtFit": {
-    "rmsM": 7.25,
-    "p95M": 15.23,
-    "maxM": 16.15,
-    "scale": 1.05
+    "rmsM": 91.68,
+    "p95M": 152.95,
+    "maxM": 174.31,
+    "scale": 0.95
    },
    "index": 4
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    51319172,
+    904783963
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 1.0,
+   "names": [
+    "Road Course 100%"
+   ],
+   "lengthM": 2307.3,
+   "lengthErrPct": -4.42,
+   "selfIntersects": false,
+   "counterTurnDeg": 330.6,
+   "flags": [
+    "100% on ways named for another circuit",
+    "turns 331 deg against the lap: not an oval"
+   ],
+   "builtFit": {
+    "rmsM": 113.77,
+    "p95M": 147.03,
+    "maxM": 175.31,
+    "scale": 0.95
+   },
+   "index": 5
+  },
+  {
+   "label": "raceway ring taken as the centre",
+   "kind": "raceway",
+   "ways": [
+    51319172,
+    1422855075,
+    51319172,
+    1422855075,
+    51319172,
+    210537849,
+    904783965,
+    904783964,
+    904783966,
+    904783964,
+    904783967,
+    210537849,
+    210537852
+   ],
+   "pitShare": 0.0,
+   "otherCircuitShare": 0.894,
+   "names": [
+    "Road Course 89%"
+   ],
+   "lengthM": 2683.9,
+   "lengthErrPct": 11.18,
+   "selfIntersects": false,
+   "counterTurnDeg": 438.2,
+   "flags": [
+    "89% on ways named for another circuit",
+    "turns 438 deg against the lap: not an oval"
+   ],
+   "builtFit": {
+    "rmsM": 96.92,
+    "p95M": 148.76,
+    "maxM": 167.06,
+    "scale": 0.95
+   },
+   "index": 6
   }
  ],
  "best": 0,
  "builtVsBest": {
-  "rmsM": 7.25,
-  "p95M": 12.06,
-  "maxM": 13.24,
-  "refToBuiltMaxM": 13.26,
+  "rmsM": 0.97,
+  "p95M": 1.75,
+  "maxM": 1.86,
+  "refToBuiltMaxM": 2.01,
   "worstStretches": [
    {
-    "fromM": 738,
-    "toM": 836,
-    "meanM": 12.9
+    "fromM": 284,
+    "toM": 382,
+    "meanM": 1.8
    },
    {
-    "fromM": 374,
-    "toM": 472,
-    "meanM": 11.0
+    "fromM": 1100,
+    "toM": 1198,
+    "meanM": 1.7
    },
    {
-    "fromM": 838,
-    "toM": 936,
-    "meanM": 9.9
+    "fromM": 184,
+    "toM": 282,
+    "meanM": 1.6
    }
   ],
-  "scale": 1.0202
+  "scale": 1.0252
  },
- "verdict": "close",
+ "verdict": "matches",
  "notes": [
   "buildings, roads, car parks and water not drawn (Overpass busy); a re-run fetches them"
  ]

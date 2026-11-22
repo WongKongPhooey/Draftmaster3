@@ -106,6 +106,11 @@ namespace Draftmaster.Tracks
             return CloseByStraights(lap, minLength) || CloseByEverything(lap, minLength);
         }
 
+        // How far CloseByStraights may move one straight: this much, plus this many metres per metre of gap. Every
+        // traced lap that closes honestly moves its straights by under 6x its gap (Darlington 6.9 m for 1.2 m).
+        const float MaxStraightChangeBase = 5f;
+        const float MaxStraightChangePerGapMetre = 10f;
+
         // Move the straights, and only the straights, until the lap joins up. False when that cannot be done
         // without folding one of them away entirely, in which case nothing is changed.
         public static bool CloseByStraights(IList<Piece> lap, float minStraight = 1f)
@@ -144,11 +149,18 @@ namespace Draftmaster.Tracks
             float lx = (ayy * residual.x - axy * residual.y) / det;
             float ly = (-axy * residual.x + axx * residual.y) / det;
 
+            // Straights that all run nearly the same way or its opposite (an oval read off a trace: three or four
+            // straights a degree or two apart) leave A A^T all but singular, and the "least-norm" answer then
+            // divides the gap by almost nothing: Dover's 0.4 m gap came back as both straights 286 m longer, a
+            // lap 600 m too long and corners squeezed to fit. A correction far bigger than the gap it closes is
+            // that, not a measurement, so refuse it and let Close fall back to spreading it over every segment.
+            float maxChange = MaxStraightChangeBase + MaxStraightChangePerGapMetre * residual.magnitude;
             var lengths = new float[index.Count];
             for (int k = 0; k < index.Count; k++)
             {
                 lengths[k] = lap[index[k]].length + dirs[k].x * lx + dirs[k].y * ly;
                 if (lengths[k] < minStraight) return false;
+                if (Mathf.Abs(lengths[k] - lap[index[k]].length) > maxChange) return false;
             }
 
             for (int k = 0; k < index.Count; k++)

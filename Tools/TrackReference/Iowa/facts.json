@@ -6,7 +6,7 @@
   "lengthMiles": 0.88,
   "surfaceWidthM": 18.29,
   "hasCommittedTrace": true,
-  "traceFoundBy": "batch"
+  "traceFoundBy": "track_reference.py candidate 0: committed trace (Assets/TrackTraces) (ways ); 1.08% from the published lap"
  },
  "wikipedia": {
   "title": "Iowa Speedway",
@@ -73,8 +73,8 @@
  },
  "lengthCheckPct": -0.57,
  "venueCentre": [
-  41.674699,
-  -93.013379
+  41.674643,
+  -93.013219
  ],
  "osmRadiusM": 900,
  "osmCounts": {
