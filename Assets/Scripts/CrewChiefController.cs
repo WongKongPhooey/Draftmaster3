@@ -235,6 +235,13 @@ public class CrewChiefController : MonoBehaviour
     {
         if (_playerCar == null) _playerCar = GameObject.Find("PlayerCar");
 
+        // Off the broadcast first (BroadcastController): one camera away from the car at a time. The car stays with
+        // the AI through the switch, and if the player had been driving before the broadcast took it, coming off
+        // the headset gives it back to them as it would have from the seat.
+        bool broadcastWasDriving = false;
+        bool fromBroadcast = BroadcastController.Current != null &&
+                             BroadcastController.Current.HandOverToCrewChief(out broadcastWasDriving);
+
         // Where the player is standing, asked BEFORE the chief's body exists — that body is an
         // OnFootController too, and would answer for them a frame later. No walking body means they are sat
         // in the car; PitLaneStart deactivates it when they climb in and hands it back after a tow.
@@ -242,7 +249,7 @@ public class CrewChiefController : MonoBehaviour
         _wasInCar = body == null;
         // Driving is not the same as being in the car: Auto (V) already gave the AI the wheel, and
         // exiting must not hand it back to a player who chose to watch.
-        _wasDriving = _wasInCar && driveMode != null && driveMode.IsDriving;
+        _wasDriving = _wasInCar && driveMode != null && (driveMode.IsDriving || (fromBroadcast && broadcastWasDriving));
 
         if (driveMode != null)
         {
@@ -289,7 +296,21 @@ public class CrewChiefController : MonoBehaviour
                           touchText: "PREV CAR / NEXT CAR to watch the cars on track");
     }
 
-    void Exit()
+    // The broadcast button was pressed on the pit wall: off the headset without giving the car back (the broadcast
+    // keeps it with the AI), answering whether the player had been driving it so the broadcast can give it back
+    // when it ends. False when the player was not the chief.
+    public bool HandOverToBroadcast(out bool wasDriving)
+    {
+        wasDriving = false;
+        if (!_active) return false;
+        wasDriving = _wasDriving;
+        Exit(giveCarBack: false);
+        return true;
+    }
+
+    void Exit() => Exit(giveCarBack: true);
+
+    void Exit(bool giveCarBack)
     {
         Watch(null);
         if (_avatar != null) _avatar.SetActive(false);
@@ -310,7 +331,7 @@ public class CrewChiefController : MonoBehaviour
         {
             // Climb back in only if they got out of a car they were driving — DriveModeController retargets
             // the camera back to it. Someone who handed the wheel to the AI first is left watching.
-            if (_wasDriving && !driveMode.IsDriving) driveMode.SetDriving(true);
+            if (giveCarBack && _wasDriving && !driveMode.IsDriving) driveMode.SetDriving(true);
             else if (cameraFollow != null && _playerCar != null) cameraFollow.target = _playerCar.transform;
         }
         else if (cameraFollow != null && _playerCar != null)

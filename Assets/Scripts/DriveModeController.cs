@@ -113,6 +113,8 @@ public class DriveModeController : MonoBehaviour
         _zoom = FindFirstObjectByType<PitLaneStart>();
 
         if (startInBroadcast) SetDriving(false);
+        // Broadcast mode (the TV button beside the crew chief's headset) rides along with the car hand-off it uses.
+        if (GetComponent<BroadcastController>() == null) gameObject.AddComponent<BroadcastController>();
         // A phone has the touch controls' own AUTO button in its top row.
         if (!TouchDriveControls.TouchPlatform) BuildButton();
     }

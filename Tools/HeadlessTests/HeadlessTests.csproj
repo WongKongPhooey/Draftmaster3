@@ -40,6 +40,7 @@
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\WreckEscape.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\PitLanes.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\WheelHubs.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\BroadcastShots.cs" />
   </ItemGroup>
 
   <!-- Tests that only reach the assemblies above. -->
@@ -61,6 +62,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RoadsideShopsTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\RaceFlowTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\SpinSlideTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\BroadcastShotsTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\PlateDraftTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\EngineTempTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\FuelPlanTests.cs" />

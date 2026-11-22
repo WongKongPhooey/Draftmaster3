@@ -59,6 +59,9 @@ public class VehicleCollision : MonoBehaviour
     // The same, for every car at once: (car, closing speed m/s). CautionWatch listens to put a yellow out the
     // moment a car up the road finds the wall, without having to subscribe car by car.
     public static event System.Action<Transform, float> AnyBarrierHit;
+    // Car-to-car contact, for every car at once: (this car, the car it touched, closing speed m/s). Fired every step
+    // the pair overlap, from both cars. Broadcast mode (BroadcastController) listens to cut the camera to a big hit.
+    public static event System.Action<Transform, Transform, float> AnyCarHit;
 
     // One resolved contact, in world space. Fired for barriers AND cars every step the overlap persists,
     // so listeners that shouldn't repeat (bursts, sounds) must rate-limit themselves. ImpactParticles reads this.
@@ -296,6 +299,7 @@ public class VehicleCollision : MonoBehaviour
 
                 _responder?.ApplyCarImpact(pushWorld * (mB / total), d.pointA, dvA, severity);
                 otherResponder.ApplyCarImpact(-pushWorld * (mA / total), d.pointB, dvB, severity);
+                AnyCarHit?.Invoke(transform, other.transform, closingSpeed);
 
                 // Feed the rivalry system: genuine impacts (above the damage threshold) sour the two
                 // drivers' relationship. frontHit = the contact point lies ahead of us along our direction
