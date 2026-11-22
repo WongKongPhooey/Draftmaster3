@@ -56,6 +56,7 @@ public static class GameSession
     // Whether the player ever leaves the car in this mode. The walk to the car, the paddock cast, the
     // crowd, the motorhome lot and the pit-wall avatar all hang off this. A single race is driven from
     // the green flag to the chequer and never puts a body on the ground; the career and the lobby race
-    // both do (the lobby race spawns straight onto the grid, but its own code decides that).
+    // both do (the lobby race spawns straight onto the grid, but its own code decides that). One exception:
+    // the crew chief's headset (CrewChiefController) is offered in a SINGLE RACE too.
     public static bool OnFootAllowed => !IsOneOffRace;
 }

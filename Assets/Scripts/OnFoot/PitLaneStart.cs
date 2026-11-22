@@ -1719,6 +1719,31 @@ public class PitLaneStart : MonoBehaviour
         return true;
     }
 
+    // A spot beside the player's pit box, `along` metres down the lane and `lateral` metres across it from
+    // where the car parks — the same frame PlacedNPC's ParkedCar anchor uses, so the crew chief's headset
+    // avatar can stand where the pit-box chief NPC would in a scene that built none. Falls back to the box
+    // itself when the session has no pit lane to measure along.
+    public static bool TryPlayerBoxSide(float along, float lateral, out Vector3 pos)
+    {
+        pos = default;
+        if (_current == null || !_current._boxKnown) return false;
+        var self = _current;
+        self.CurrentBoxPose(out pos, out _);
+
+        var samples = self._pitSamples;
+        if (self.track == null || !self._usedPit || samples == null || samples.Count < 2) return true;
+        if (!PitLane.Configured || PitLane.PlayerBox < 0) return true;
+        float pitLength = samples[samples.Count - 1].distance;
+        if (pitLength <= 0f) return true;
+
+        float d = Mathf.Clamp(PitLane.BoxDistance(PitLane.PlayerBox, pitLength) + along, 0f, pitLength);
+        var s = self.track.SamplePitAt(d, samples);
+        Vector2 p = s.position + s.normal * (PitLane.ParkLateral + lateral);
+        Vector3 world = self.track.transform.TransformPoint(new Vector3(p.x, p.y, 0f));
+        pos = new Vector3(world.x, world.y, pos.z);
+        return true;
+    }
+
     void CurrentBoxPose(out Vector3 pos, out float headingDeg)
     {
         pos = _boxPosition;

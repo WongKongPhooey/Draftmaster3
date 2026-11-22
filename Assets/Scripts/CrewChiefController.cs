@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 using Draftmaster.Controls;
 using Draftmaster.Sim;
 
-// The crew chief's headset icon, bottom right of the HUD (single player) — or, on a phone held upright for the
+// The crew chief's headset icon, bottom right of the HUD (career and single race) — or, on a phone held upright for the
 // swing camera, small in the top row beside the TV button. Tapping it drops the player into
 // an on-foot crew-chief character at the pit wall. It is the first of the team controls: one square glyph per
 // person you can hand the car to, so the corner grows a face rather than another caption when the team gains
@@ -99,9 +99,11 @@ public class CrewChiefController : MonoBehaviour
 
     void Start()
     {
-        // Crew chief mode stands the player on the pit wall as a walking body. A single race is driven from
-        // inside the car start to finish, so neither the headset button nor its key exists there.
-        if (!GameSession.OnFootAllowed) { enabled = false; return; }
+        // Crew chief mode stands the player on the pit wall as a walking body. A single race otherwise never
+        // puts a body on the ground, but the headset is the exception there too: the player can hand the car
+        // to the AI and call the race from the pit box exactly as in the career. A Master Draft race keeps
+        // the driver in the car start to finish, so neither the button nor its key exists there.
+        if (!GameSession.OnFootAllowed && !GameSession.IsSingleRace) { enabled = false; return; }
 
         if (driveMode == null) driveMode = FindFirstObjectByType<DriveModeController>();
         if (cameraFollow == null && Camera.main != null) cameraFollow = Camera.main.GetComponent<CameraFollow>();
@@ -335,19 +337,24 @@ public class CrewChiefController : MonoBehaviour
     }
 
     // Where the chief stands: beside the player's pit box. The pit-box chief NPC is already stood there (he
-    // stays put while the car is out — PlacedNPC.CarIsDriven), so the player takes his place; failing him, the
-    // box itself; the car only when the scene knows of no box at all.
+    // stays put while the car is out — PlacedNPC.CarIsDriven), so the player takes his place; failing him
+    // (a single race builds no paddock cast), the same spot beside the box he would have stood on, so the car
+    // does not pit into him; the car only when the scene knows of no box at all.
     Vector3 PitBoxStandPoint()
     {
         Vector3 pos;
         var chief = PitBoxChief();
         if (spawnPoint != null) pos = spawnPoint.position;
         else if (chief != null) pos = chief.transform.position;
-        else if (!PitLaneStart.TryPlayerBoxPosition(out pos))
+        else if (!PitLaneStart.TryPlayerBoxSide(ChiefAlong, ChiefLateral, out pos))
             pos = _playerCar != null ? _playerCar.transform.position : transform.position;
         pos.z = -0.1f;
         return pos;
     }
+
+    // The pit-box chief NPC's own offset from the parked car (PlacedNPCDefaults.CreateChief).
+    const float ChiefAlong = -1.5f;
+    const float ChiefLateral = -3f;
 
     // Teleport through the body as well as the transform, or the physics pose drags him back.
     void PlaceAvatar(Vector3 pos)
