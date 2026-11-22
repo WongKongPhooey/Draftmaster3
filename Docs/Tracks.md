@@ -436,7 +436,20 @@ paved between the road and the wall with the racing surface's own asphalt — a 
 labelled `Back straight infield (paved)`, so it drives as tarmac. Author Daytona applies both;
 `Draftmaster > Tracks > Daytona > Infield Wall + Paved Back Straight (rebuild walls, re-scatter)` applies them
 alone (walls rebuilt, paddock untouched) and re-scatters the scenery so the fan RVs and crowd stand behind the
-wall.
+wall. The infield is paved the same way from the end of turn 3 to pit entry (`Turn 3 to pit entry infield
+(paved)`; turns 3-4 are one corner, so "the end of turn 3" is where it has turned half of the way from the back
+straight's heading to the heading at pit entry - about 1290 m round the lap).
+
+**Paint and outside paving** (added 2026-11-22, `Assets/Editor/DaytonaTrackMarkings.cs`). The bottom of the
+track is a double yellow - two 0.15 m yellow strips 0.15 m apart straddling the infield edge - and
+TrackBuilder's own white infield edge line is off (`drawLeftEdgeLine`); the white line is a strip along the
+apron's grass edge instead. The outside wall stands on an `Outside wall (paved)` strip of the racing surface's
+asphalt (road edge to past the back of the SAFER barrier and its fence), so no grass shows under it. The joined
+tri-oval stand is pulled in to 5 m off the road (`TriOvalStandSetback`, standard 12) and is 28 m deep (standard
+14), with `Tri-oval frontage (paved)` asphalt from the road to its front row. Strips labelled "paved" register
+as tarmac run-off like the apron; the paint strips do not. Author Daytona applies all of it;
+`Draftmaster > Tracks > Daytona > Apron Lines, Wall Paving + Tri-oval Crowd` applies it alone (walls/strips,
+road paint and grandstands rebuilt, paddock untouched). `DaytonaTrackMarkingsTests` checks the result.
 
 Re-run the menu item after regenerating Daytona. Do not follow it with an overwriting `Dress Selected
 Package`, which regenerates the paddock pocket from the pit lane.

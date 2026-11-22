@@ -12,7 +12,10 @@ using UnityEngine;
 // the racing surface and pit road.
 //
 // The infield between the road and the wall on the back straight (the longest straight) is paved with the
-// racing surface's own asphalt: a TarmacRunoff area, so the car physics reads it as tarmac, not grass.
+// racing surface's own asphalt: a TarmacRunoff area, so the car physics reads it as tarmac, not grass. So is the
+// infield from the end of turn 3 round turn 4 to the pit entry (where pit road leaves the racing surface). Turns 3
+// and 4 are one continuous corner here, so "the end of turn 3" is taken as its middle: the point where the road
+// has turned half of the way from the back straight's heading to the heading at pit entry.
 //
 // Applied by Author Daytona (DaytonaPackageAuthoring) and on its own, without re-laying the paddock, by
 // Draftmaster > Tracks > Daytona > Infield Wall + Paved Back Straight (TrackWallRebuildMenu), which also
@@ -24,6 +27,7 @@ public static class DaytonaInfieldWall
     // How far the infield wall stands off the racing surface's infield edge, in track widths.
     public const float TrackWidthsBack = 3f;
     public const string PavingLabel = "Back straight infield (paved)";
+    public const string TurnFourPavingLabel = "Turn 3 to pit entry infield (paved)";
     // The paving runs this far past the wall's track face, under the wall, so no grass shows at the seam.
     const float PavingUnderWall = 0.5f;
     // Rail spacing along the straight (m).
@@ -78,7 +82,7 @@ public static class DaytonaInfieldWall
         env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.innerEdgeOffset, env.outerEdgeOffset);
 
         var areas = new List<TrackEnvironment.RunoffArea>(env.runoffAreas ?? new TrackEnvironment.RunoffArea[0]);
-        areas.RemoveAll(a => a.label == PavingLabel);
+        areas.RemoveAll(a => a.label == PavingLabel || a.label == TurnFourPavingLabel);
         int seg = LongestStraight(track);
         var outline = seg >= 0 ? PavingOutline(builder, seg, env.outerEdgeOffset) : null;
         if (outline != null)
@@ -89,13 +93,64 @@ public static class DaytonaInfieldWall
                 points = outline,
                 materialOverride = builder.surfaceMaterial,
             });
+
+        Vector2[] turnFour = null;
+        string turnFourNote = " turn 4 infield NOT paved";
+        if (TryTurnFourSpan(builder, seg, out float t3End, out float pitEntry))
+        {
+            turnFour = PavingOutline(builder, t3End, pitEntry, env.outerEdgeOffset);
+            areas.Add(new TrackEnvironment.RunoffArea
+            {
+                label = TurnFourPavingLabel,
+                surface = TrackEnvironment.SurfaceType.TarmacRunoff,
+                points = turnFour,
+                materialOverride = builder.surfaceMaterial,
+            });
+            turnFourNote = $" turn 4 infield paved {t3End:F0}-{pitEntry:F0} m ({turnFour.Length} points)";
+        }
         env.runoffAreas = areas.ToArray();
         EditorUtility.SetDirty(env);
 
         return $"infield wall {env.outerEdgeOffset:F1} m off the infield edge ({TrackWidthsBack} x {RoadWidth(track):F1} m), " +
                $"{env.barrierGaps.Length} wall gaps, back straight = segment {seg}" +
-               (outline != null ? $" paved ({outline.Length} points, {(builder.surfaceMaterial != null ? builder.surfaceMaterial.name : "NO MATERIAL")})" : " NOT paved");
+               (outline != null ? $" paved ({outline.Length} points, {(builder.surfaceMaterial != null ? builder.surfaceMaterial.name : "NO MATERIAL")})" : " NOT paved") +
+               ";" + turnFourNote;
     }
+
+    // From the end of turn 3 to the pit entry, as lap distances (start < end, no wrap): the corner after the back
+    // straight, from the point where it has turned half of the way between the straight's end and pit entry.
+    public static bool TryTurnFourSpan(TrackBuilder builder, int backStraight, out float turnThreeEnd, out float pitEntry)
+    {
+        turnThreeEnd = pitEntry = 0f;
+        var track = builder.track;
+        if (track == null || !track.hasPitLane || backStraight < 0) return false;
+        var segs = track.segments;
+        float straightEnd = 0f;
+        for (int i = 0; i <= backStraight; i++) straightEnd += segs[i].length;
+        pitEntry = track.PitEntryDistanceOnLap;
+        if (pitEntry <= straightEnd + HeadingStep) return false;
+
+        // Heading turned since the straight's end, unwrapped, sampled every HeadingStep metres.
+        var along = new List<float>();
+        var turned = new List<float>();
+        Vector2 prev = builder.SampleAt(straightEnd).tangent;
+        float total = 0f;
+        for (float d = straightEnd; ; d = Mathf.Min(d + HeadingStep, pitEntry))
+        {
+            Vector2 t = builder.SampleAt(d).tangent;
+            total += Vector2.SignedAngle(prev, t);
+            prev = t;
+            along.Add(d);
+            turned.Add(total);
+            if (d >= pitEntry) break;
+        }
+        if (Mathf.Abs(total) < 10f) return false;   // no corner between them
+        for (int i = 0; i < turned.Count; i++)
+            if (Mathf.Abs(turned[i]) >= Mathf.Abs(total) * 0.5f) { turnThreeEnd = along[i]; return true; }
+        return false;
+    }
+
+    const float HeadingStep = 5f;
 
     // The infield between the road's left edge and the wall, over one segment, in the track's local space: down
     // the road edge, back up under the wall.
@@ -104,7 +159,12 @@ public static class DaytonaInfieldWall
         var segs = builder.track.segments;
         float start = 0f;
         for (int i = 0; i < segIndex; i++) start += segs[i].length;
-        float end = start + segs[segIndex].length;
+        return PavingOutline(builder, start, start + segs[segIndex].length, wallOffset);
+    }
+
+    // The same between two lap distances (start < end).
+    public static Vector2[] PavingOutline(TrackBuilder builder, float start, float end, float wallOffset)
+    {
         int steps = Mathf.Max(1, Mathf.CeilToInt((end - start) / PavingStep));
 
         var edge = new List<Vector2>();

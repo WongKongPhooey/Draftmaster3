@@ -51,9 +51,17 @@ public static class DaytonaPackageAuthoring
         public bool apron;            // Daytona's 3.5 m paved strip below the yellow line
         public bool infieldLayout;    // too small for Watkins' paddock: lay the lots out in the clear infield
         public bool joinedFrontStand; // one long stand bent round the front stretch, as at Daytona's tri-oval
+        public float frontStandSetback = -1f; // > 0: the joined stand's front row this far off the road (else standard)
+        public float frontStandDepth = -1f;   // > 0: the joined stand this deep (else standard)
+        public bool markings;         // Daytona's double yellow, apron white line and outside paving (DaytonaTrackMarkings)
     }
 
-    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = true, setBackInfieldWall = true, apron = true, infieldLayout = false, joinedFrontStand = true };
+    static readonly Venue Daytona = new Venue
+    {
+        id = "Daytona", infieldWall = true, setBackInfieldWall = true, apron = true, infieldLayout = false,
+        joinedFrontStand = true, markings = true,
+        frontStandSetback = DaytonaTrackMarkings.TriOvalStandSetback, frontStandDepth = DaytonaTrackMarkings.TriOvalStandDepth,
+    };
     static readonly Venue Martinsville = new Venue { id = "Martinsville", infieldWall = true, apron = false, infieldLayout = true };
 
     // How far the infield paddock stays from the edge of the racing surface, and its bands' depths.
@@ -142,6 +150,81 @@ public static class DaytonaPackageAuthoring
     static float FrontStandAt(Venue venue, TrackBuilder builder) =>
         venue.joinedFrontStand ? StartFinishDistance(builder) : -1f;
 
+    static int RebuildStands(GameObject contents, TrackBuilder builder, Venue venue) =>
+        TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder),
+                                                venue.frontStandSetback, venue.frontStandDepth);
+
+    // The double yellow at the bottom of the track, the white line moved to the apron's grass edge, the infield paved
+    // from the end of turn 3 to pit entry, the outside wall on asphalt, and the tri-oval crowd brought in to
+    // DaytonaTrackMarkings.TriOvalStandSetback, twice as deep, with asphalt in front of it - without re-running
+    // Author (which regenerates the geometry and re-lays the paddock). Re-lays the walls/strips/run-off, the road's
+    // paint and the generated grandstands; keeps the grandstand gate's seat in a stand and takes out unlocked
+    // scattered scenery the bigger stand now covers. Writes Temp/daytona_markings_result.txt.
+    [MenuItem("Draftmaster/Tracks/Daytona/Apron Lines, Wall Paving + Tri-oval Crowd")]
+    public static void ApplyDaytonaMarkingsMenu()
+    {
+        string summary = ApplyDaytonaMarkings();
+        Debug.Log($"[PackageAuthoring] {summary}");
+        File.WriteAllText($"Temp/{Daytona.id.ToLowerInvariant()}_markings_result.txt", summary);
+    }
+
+    public static string ApplyDaytonaMarkings()
+    {
+        var venue = Daytona;
+        string path = $"{PackageDir}/{venue.id}.prefab";
+        if (!File.Exists(path)) return $"{venue.id}: no package at {path}.";
+
+        var contents = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            var package = contents.GetComponent<TrackPackage>();
+            var builder = package != null ? package.Builder : null;
+            var envBuilder = contents.GetComponentInChildren<TrackEnvironmentBuilder>(true);
+            if (builder == null || builder.track == null || envBuilder == null || envBuilder.environment == null)
+                return $"{venue.id} package has no TrackBuilder/geometry/environment - left alone.";
+
+            var notes = new List<string>();
+            var env = envBuilder.environment;
+            notes.Add(DaytonaInfieldWall.Apply(env, builder));
+            notes.Add(DaytonaTrackMarkings.Apply(env, builder, FrontStandAt(venue, builder)));
+            AssetDatabase.SaveAssets();
+            RebuildRoadAndEnvironment(builder, envBuilder);
+
+            int built = RebuildStands(contents, builder, venue);
+            notes.Add($"{built} grandstands");
+            var stands = contents.GetComponentsInChildren<Grandstand>(true);
+            foreach (var stand in stands)
+                if (Mathf.Abs(stand.depth - venue.frontStandDepth) < 0.01f)
+                {
+                    notes.Add($"tri-oval stand e.g. {stand.name}: {stand.depth:0} m deep, {stand.length:0.0} m long");
+                    break;
+                }
+            var paddockRoot = package.paddockRoot != null ? package.paddockRoot : contents.transform.Find("Paddock");
+            if (paddockRoot != null) KeepSeatInStand(contents, paddockRoot, builder, stands, notes);
+            ClearSceneryUnderStands(contents, stands, notes);
+
+            // Scattered pieces drew themselves on load; their art is DontSave, but strip it as the scatter does.
+            foreach (var piece in contents.GetComponentsInChildren<SceneryPiece>(true)) piece.ClearArt();
+            PrefabUtility.SaveAsPrefabAsset(contents, path);
+            return $"{venue.id} markings applied:\n  {string.Join("\n  ", notes)}";
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+    }
+
+    // Loading the contents already ran both builders' OnEnable builds; the environment builder's clear doesn't take
+    // during a load, so its children are cleared by hand before it builds again. The road rebuild drops TrackBuilder's
+    // own edge line once DaytonaTrackMarkings has turned it off.
+    static void RebuildRoadAndEnvironment(TrackBuilder builder, TrackEnvironmentBuilder envBuilder)
+    {
+        for (int i = envBuilder.transform.childCount - 1; i >= 0; i--)
+            Object.DestroyImmediate(envBuilder.transform.GetChild(i).gameObject, true);
+        envBuilder.Build();
+        builder.Build();
+    }
+
     static string RebuildGrandstandsOnly(Venue venue)
     {
         string path = $"{PackageDir}/{venue.id}.prefab";
@@ -155,7 +238,7 @@ public static class DaytonaPackageAuthoring
             if (builder == null || builder.track == null) return $"{venue.id} package has no TrackBuilder/geometry.";
 
             var notes = new List<string>();
-            int built = TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder));
+            int built = RebuildStands(contents, builder, venue);
             notes.Add($"{built} grandstands");
             var stands = contents.GetComponentsInChildren<Grandstand>(true);
             foreach (var stand in stands)
@@ -304,14 +387,12 @@ public static class DaytonaPackageAuthoring
                     env.outerSideBarrier = venue.infieldWall;
                     env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
                 }
+                if (venue.markings) notes.Add(DaytonaTrackMarkings.Apply(env, builder, FrontStandAt(venue, builder)));
                 EnsurePaddockTarmac(env, blueprint, map, frame, infield?.outline, notes);
                 EditorUtility.SetDirty(env);
                 AssetDatabase.SaveAssets();
-                // Loading the contents already ran the builder's OnEnable build, whose clear doesn't take during a
-                // load - clear by hand or the new walls and run-off stack on the old.
-                for (int i = envBuilder.transform.childCount - 1; i >= 0; i--)
-                    Object.DestroyImmediate(envBuilder.transform.GetChild(i).gameObject, true);
-                envBuilder.Build();
+                // Clears the environment builder by hand first, or the new walls and run-off stack on the old.
+                RebuildRoadAndEnvironment(builder, envBuilder);
                 int outside = 0;
                 foreach (var g in env.barrierGaps) if (g.side == TrackEnvironment.BarrierSide.Inner) outside++;
                 notes.Add($"{env.barrierGaps.Length} wall gaps, {outside} in the outside wall");
@@ -321,7 +402,7 @@ public static class DaytonaPackageAuthoring
 
             // Grandstands: laid along the road as it is now, so the shape changing (a traced import) doesn't leave
             // them standing where the old front stretch was. Before the paddock, whose seat is picked from them.
-            notes.Add($"{TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder))} grandstands");
+            notes.Add($"{RebuildStands(contents, builder, venue)} grandstands");
 
             // 3. The paddock.
             LayPaddock(contents, paddockRoot, builder, frame, blueprint, map, infield, notes);
@@ -391,7 +472,7 @@ public static class DaytonaPackageAuthoring
     // The apron: 3.5 m of paving below the yellow line, all the way round on the infield side. A strip anchored
     // to the left (infield) edge, so it follows the road wherever the trace takes it; TrackEnvironmentBuilder
     // registers it as tarmac run-off, so a car on it is off the racing surface but not on the grass.
-    const float ApronMetres = 3.5f;
+    public const float ApronMetres = 3.5f;
     const string ApronLabel = "Apron";
     const string ApronFallbackMaterial = "Assets/Materials/TarmacLight.mat";
 

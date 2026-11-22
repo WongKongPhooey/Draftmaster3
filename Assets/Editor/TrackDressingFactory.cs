@@ -120,15 +120,71 @@ public static class TrackDressingFactory
     // but the generated Grandstands root, are left alone. Returns how many were built.
     //
     // joinRunAt >= 0 names a lap distance whose run gets one continuous stand instead of separate blocks: see
-    // BuildJoinedRun.
-    public static int RebuildGrandstands(GameObject contents, TrackBuilder builder, float joinRunAt = -1f)
+    // BuildJoinedRun. joinedSetback / joinedDepth (> 0) move that one stand's front row nearer the road and
+    // change how deep it is; the separate blocks keep the standard StandSetback / StandDepth.
+    public static int RebuildGrandstands(GameObject contents, TrackBuilder builder, float joinRunAt = -1f,
+                                         float joinedSetback = -1f, float joinedDepth = -1f)
     {
         var environmentRoot = EnsureChild(contents.transform, "Environment");
         var owned = environmentRoot.Find(GrandstandsName);
         if (owned != null) Object.DestroyImmediate(owned.gameObject);
         var samples = builder.SampleCenterline();
         if (samples.Count < 2) return 0;
-        return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples), joinRunAt);
+        return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples), joinRunAt,
+                                joinedSetback > 0f ? joinedSetback : StandSetback,
+                                joinedDepth > 0f ? joinedDepth : StandDepth);
+    }
+
+    // The lap span [from, from + length] the joined stand is laid along for the run holding joinRunAt - the same
+    // span BuildGrandstands gives it (the run less 20 m clear at each end). False when no stand run holds it.
+    public static bool JoinedRunSpan(TrackBuilder builder, float joinRunAt, out float from, out float length)
+    {
+        from = length = 0f;
+        var track = builder != null ? builder.track : null;
+        if (track == null || track.segments == null || joinRunAt < 0f) return false;
+        float lap = track.TotalLength();
+        foreach (var run in StandRuns(track))
+        {
+            if (Mathf.Repeat(joinRunAt - run.start, lap) > run.length) continue;
+            from = run.start + 20f;
+            length = run.length - 40f;
+            return true;
+        }
+        return false;
+    }
+
+    // Runs of road straight or gentle enough for a stand, at least MinStraightForStands long: (start distance,
+    // length). Found round the ring, so one the lap seam falls in is still one run.
+    static List<(int first, float start, float length)> StandRuns(TrackInfoV2 track)
+    {
+        var runs = new List<(int first, float start, float length)>();
+        var segs = track.segments;
+        int n = segs.Length;
+        var segStart = new float[n];
+        float lap = 0f;
+        for (int i = 0; i < n; i++) { segStart[i] = lap; lap += segs[i].length; }
+        bool StandAlong(int i) => segs[i].type == TrackInfoV2.SegmentType.Straight
+            || Mathf.Abs(segs[i].angle) / Mathf.Max(1f, segs[i].length) < MaxStandBendDegPerMetre;
+
+        int from = -1;
+        for (int i = 0; i < n; i++) if (!StandAlong(i)) { from = (i + 1) % n; break; }
+        if (from < 0) from = 0;   // every piece qualifies: a near-circle; start anywhere
+
+        int walked = 0;
+        while (walked < n)
+        {
+            int first = (from + walked) % n;
+            if (!StandAlong(first)) { walked++; continue; }
+            float runLength = 0f;
+            while (walked < n && StandAlong((from + walked) % n))
+            {
+                runLength += segs[(from + walked) % n].length;
+                walked++;
+            }
+            if (runLength < MinStraightForStands) continue;
+            runs.Add((first, segStart[first], runLength));
+        }
+        return runs;
     }
 
     // ---------------------------------------------------------------- pieces
@@ -359,7 +415,8 @@ public static class TrackDressingFactory
     // Stands along every straight long enough to carry one, on the side facing away from the middle of the
     // circuit — that's where a real crowd sits, and on an oval it keeps them out of the infield.
     static int BuildGrandstands(Transform root, TrackBuilder builder, List<TrackBuilder.Sample> samples,
-                                Vector2 centroid, float joinRunAt = -1f)
+                                Vector2 centroid, float joinRunAt = -1f,
+                                float joinedSetback = StandSetback, float joinedDepth = StandDepth)
     {
         var track = builder.track;
         if (track == null || track.segments == null) return 0;
@@ -371,51 +428,29 @@ public static class TrackDressingFactory
         // Stands go along runs of road that are straight or bend gently - a traced lap is mostly long gentle
         // pieces rather than Straight segments, and a front stretch like Daytona's tri-oval is a curve the main
         // grandstand follows. Runs are found round the ring, so one the lap seam falls in is still one run.
-        var segs = track.segments;
-        int n = segs.Length;
-        var segStart = new float[n];
-        float lap = 0f;
-        for (int i = 0; i < n; i++) { segStart[i] = lap; lap += segs[i].length; }
-        bool StandAlong(int i) => segs[i].type == TrackInfoV2.SegmentType.Straight
-            || Mathf.Abs(segs[i].angle) / Mathf.Max(1f, segs[i].length) < MaxStandBendDegPerMetre;
-
-        int from = -1;
-        for (int i = 0; i < n; i++) if (!StandAlong(i)) { from = (i + 1) % n; break; }
-        if (from < 0) from = 0;   // every piece qualifies: a near-circle; start anywhere
-
+        float lap = track.TotalLength();
         int built = 0;
-        int walked = 0;
-        while (walked < n)
+        foreach (var run in StandRuns(track))
         {
-            int first = (from + walked) % n;
-            if (!StandAlong(first)) { walked++; continue; }
-            float runLength = 0f;
-            while (walked < n && StandAlong((from + walked) % n))
-            {
-                runLength += segs[(from + walked) % n].length;
-                walked++;
-            }
-            if (runLength < MinStraightForStands) continue;
-
             // Leave the ends of the run clear so stands don't run into the corner.
-            float usable = runLength - 40f;
+            float usable = run.length - 40f;
 
-            if (joinRunAt >= 0f && Mathf.Repeat(joinRunAt - segStart[first], lap) <= runLength)
+            if (joinRunAt >= 0f && Mathf.Repeat(joinRunAt - run.start, lap) <= run.length)
             {
-                built += BuildJoinedRun(standsRoot.transform, builder, samples, centroid, segStart[first] + 20f,
-                                        usable, crowd, $"Grandstand_{first}");
+                built += BuildJoinedRun(standsRoot.transform, builder, samples, centroid, run.start + 20f,
+                                        usable, crowd, $"Grandstand_{run.first}", joinedSetback, joinedDepth);
                 continue;
             }
             int count = Mathf.Max(1, Mathf.FloorToInt((usable + StandGap) / (StandLength + StandGap)));
             float block = count * StandLength + (count - 1) * StandGap;
-            float cursor = segStart[first] + 20f + (usable - block) * 0.5f;
+            float cursor = run.start + 20f + (usable - block) * 0.5f;
 
             for (int k = 0; k < count; k++)
             {
                 float centre = cursor + StandLength * 0.5f;
                 cursor += StandLength + StandGap;
                 BuildStand(standsRoot.transform, builder, samples, centroid, ((centre % lap) + lap) % lap, crowd,
-                           $"Grandstand_{first}_{k}");
+                           $"Grandstand_{run.first}_{k}");
                 built++;
             }
         }
@@ -458,7 +493,8 @@ public static class TrackDressingFactory
     // into equal pieces of about StandLength, and each piece is the circular arc through its two ends and its
     // middle - so neighbouring pieces meet exactly, and a piece on a straight comes out straight.
     static int BuildJoinedRun(Transform root, TrackBuilder builder, List<TrackBuilder.Sample> samples,
-                              Vector2 centroid, float from, float runLength, Texture2D crowd, string prefix)
+                              Vector2 centroid, float from, float runLength, Texture2D crowd, string prefix,
+                              float setback = StandSetback, float depth = StandDepth)
     {
         float lap = builder.track.TotalLength();
         float Wrap(float d) => lap > 1f ? Mathf.Repeat(d, lap) : d;
@@ -474,7 +510,7 @@ public static class TrackDressingFactory
         for (int i = 0; i < count; i++)
         {
             var s = builder.SampleAt(Wrap(from + runLength * i / (count - 1)), samples);
-            Vector2 p = s.position + s.normal * outward * (s.width * 0.5f + StandSetback + StandDepth * 0.5f);
+            Vector2 p = s.position + s.normal * outward * (s.width * 0.5f + setback + depth * 0.5f);
             if (i > 0) total += Vector2.Distance(line[i - 1], p);
             line.Add(p);
             along.Add(total);
@@ -524,7 +560,7 @@ public static class TrackDressingFactory
             var stand = go.AddComponent<Grandstand>();
             stand.crowdTexture = crowd;
             stand.length = length;
-            stand.depth = StandDepth;
+            stand.depth = depth;
             stand.flipFacing = outward > 0f;
             stand.bendDegrees = bend * Mathf.Rad2Deg;
             stands[k] = stand;

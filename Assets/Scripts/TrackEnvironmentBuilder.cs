@@ -601,8 +601,14 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         return strip.material != null && strip.material.name.ToLowerInvariant().Contains("kerb");
     }
 
+    // An apron, or any strip labelled "paved" (Daytona's paving under the outside wall and in front of the
+    // tri-oval stand): drawn in asphalt, so driven as tarmac too.
     static bool IsApron(TrackEnvironment.Strip strip)
-        => !string.IsNullOrEmpty(strip.label) && strip.label.ToLowerInvariant().Contains("apron");
+    {
+        if (string.IsNullOrEmpty(strip.label)) return false;
+        string label = strip.label.ToLowerInvariant();
+        return label.Contains("apron") || label.Contains("paved");
+    }
 
     void BuildStrips(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
     {
@@ -669,7 +675,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             // "unclassified off-track = grass" — which is what threw grass clods on the red-and-whites.
             // Registered after the runoff areas so the kerb wins wherever it overlaps one (last poly wins).
             if (outline != null && IsKerb(strip)) SurfaceField.Add(outline, TrackEnvironment.SurfaceType.Kerb);
-            // An oval's apron is paved: off the racing surface, but tarmac rather than grass.
+            // An oval's apron (or a strip labelled paved) is off the racing surface, but tarmac rather than grass.
             else if (outline != null && IsApron(strip)) SurfaceField.Add(outline, TrackEnvironment.SurfaceType.TarmacRunoff);
         }
     }
