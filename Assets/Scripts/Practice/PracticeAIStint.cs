@@ -85,6 +85,34 @@ public class PracticeAIStint : MonoBehaviour
         _state = _spline.IsOnPit ? State.PittingIn : State.HeadingToPit;
     }
 
+    // Out on a run: left its box and not yet parked back in it.
+    public bool OutOnRun => _state != State.Parked;
+    // Whether this is the player's own car, brought in by the AI at the end of a session (SessionEndPitIn).
+    public bool BringingPlayerIn => boxOverride >= 0;
+    // Distance (m) down the pit lane of the centre of this car's box; -1 without a box ladder.
+    public float BoxCentre => PitLane.Configured && _spline.PitLength > 0f
+        ? PitLane.BoxDistance(BoxIndex, _spline.PitLength) : -1f;
+
+    // Stopped out on the circuit and fetched by the tow truck (AIRetirement, practice and qualifying): put straight
+    // into the box and parked, the run over. The crew then have it for `repairSeconds` on top of the usual rest
+    // before the director may send it out again. False, leaving the car where it is, without a box to put it in.
+    public bool TowToBox(float repairSeconds)
+    {
+        float box = BoxCentre;
+        if (box < 0f) return false;
+        if (_ai == null) _ai = GetComponent<AIRacingBehaviour>();
+        if (_ai != null) _ai.enabled = false;
+        _spline.ClearPitApproach();
+        _spline.tacticalLateralOffset = 0f;
+        _spline.SnapToPitBox(box, PitLane.ParkLateral);
+        _lapsToRun = 0;
+        _hasPrev = false;
+        _state = State.Parked;
+        _director?.OnStintParked(this);
+        nextReleaseTime = Mathf.Max(nextReleaseTime, Time.time) + Mathf.Max(0f, repairSeconds);
+        return true;
+    }
+
     public void Release(int laps)
     {
         if (_state != State.Parked) return;

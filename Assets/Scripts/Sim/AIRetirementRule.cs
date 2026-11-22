@@ -116,6 +116,14 @@ namespace Draftmaster.Sim
         public static bool MoveForRestart(bool brokenDown, bool waitingSinceCaution, bool underCaution) =>
             brokenDown && waitingSinceCaution && !underCaution;
 
+        // Practice and qualifying: whether an AI car out on a run is towed back to its pit box. There is no retiring
+        // from a practice session - a car that has stopped on the circuit (crashed, beached, facing the wrong way)
+        // is fetched by the truck and the crew fix it for its next run. Only a car out on a run (not parked in its
+        // box) counts; the waits are the race's (Retire): short for a car too damaged or dry to drive on, longer
+        // for one that might still get itself going.
+        public static bool TowInPractice(bool outOnRun, float stoppedFor, bool wrecked, float wreckedWait, float stuckWait) =>
+            outOnRun && Retire(stoppedFor, wrecked, wreckedWait, stuckWait);
+
         // Index of the centreline sample nearest `point`; -1 for an empty list.
         public static int NearestIndex(Vector2 point, IReadOnlyList<Vector2> centres)
         {

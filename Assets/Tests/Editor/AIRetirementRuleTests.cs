@@ -149,4 +149,21 @@ public class AIRetirementRuleTests
         Assert.IsFalse(AIRetirementRule.MoveForRestart(true, false, false), "not one retired under a caution");
         Assert.IsFalse(AIRetirementRule.MoveForRestart(false, true, false), "not broken");
     }
+
+    [Test]
+    public void APracticeCarStoppedOutOnARunIsTowedAfterTheSameWaits()
+    {
+        // A car wrecked in practice used to sit where it stopped, flying a yellow for the rest of the session.
+        Assert.IsTrue(AIRetirementRule.TowInPractice(true, 4f, wrecked: true, wreckedWait: 4f, stuckWait: 15f));
+        Assert.IsFalse(AIRetirementRule.TowInPractice(true, 4f, wrecked: false, wreckedWait: 4f, stuckWait: 15f),
+                       "might still get itself going");
+        Assert.IsTrue(AIRetirementRule.TowInPractice(true, 15f, wrecked: false, wreckedWait: 4f, stuckWait: 15f));
+        Assert.IsFalse(AIRetirementRule.TowInPractice(true, -1f, wrecked: true, wreckedWait: 4f, stuckWait: 15f), "moving");
+    }
+
+    [Test]
+    public void APracticeCarParkedInItsBoxIsNeverTowed()
+    {
+        Assert.IsFalse(AIRetirementRule.TowInPractice(false, 999f, wrecked: true, wreckedWait: 4f, stuckWait: 15f));
+    }
 }

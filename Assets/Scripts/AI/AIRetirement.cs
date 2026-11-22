@@ -22,9 +22,14 @@ using UnityEngine;
 // stops raising local yellows and no longer holds a full-course caution out. RaceDirector stops waiting for it at
 // the chequer; it is classified laps down like any car that did not finish.
 //
-// Race only, and only while the race is running (green or caution): a car held on the grid, queued in the pit
-// lane or parked after the flag is not stuck. Practice and qualifying keep their own stint control. Never the
-// human's car — the player has the tow (StrandedTow).
+// Retiring is for races only, and only while the race is running (green or caution): a car held on the grid,
+// queued in the pit lane or parked after the flag is not stuck. Never the human's car — the player has the tow
+// (StrandedTow).
+//
+// Practice and qualifying have no retiring: there a car that stops out on the circuit — crashed, beached, facing
+// the wrong way — is towed back to its own pit box (TickPracticeTow), on the same waits and the same out-of-shot
+// rule, and the crew fix it before its next run. Left where it stopped it held a yellow out for the rest of the
+// session.
 //
 // Added by GridSpawner to every dynamic-model AI car. Runs between SplineInputDriver (-50), whose inputs it
 // overrides once the car has broken down, and PlayerVehicleController (0), which consumes them.
@@ -80,6 +85,11 @@ public class AIRetirement : MonoBehaviour
              "there, and its caution out, for ever. 0 = wait for ever.")]
     public float forceMoveAfterSeconds = 90f;
 
+    [Header("Practice tow")]
+    [Tooltip("Practice/qualifying: seconds the crew spend on a car towed back to its box (repaired and refuelled), " +
+             "on top of the usual rest between runs, before it may go out again.")]
+    public float towRepairSeconds = 60f;
+
     static readonly HashSet<Transform> _retired = new();
     static readonly HashSet<Transform> _retiring = new();
     static Camera[] _cameras;
@@ -111,6 +121,8 @@ public class AIRetirement : MonoBehaviour
     bool _waitBehindWall;
     float _waitingSince;
     bool _waitSinceCaution;   // retired under a caution as too damaged to restart: moved at the green at the latest
+    PracticeAIStint _stint;
+    bool _towDue;             // practice: stopped long enough, waiting for the camera to look away before the tow
     int _layerMask;    // layers the car is drawn on; a camera that culls them all cannot see it
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -143,6 +155,9 @@ public class AIRetirement : MonoBehaviour
     {
         if (Retired || _spline == null || _car == null) return;
         if (_input == null) _input = GetComponent<SplineInputDriver>();
+
+        // Practice and qualifying: no breakdowns, no retiring - a car stopped out on the circuit is towed home.
+        if (RaceWeekend.IsPracticeLike) { TickPracticeTow(); return; }
 
         // Engine gone: no throttle, roll to a stop. Steering still follows the driver's line. Latched — a broken
         // car does not start driving again because the flag fell or a caution came out.
@@ -307,6 +322,98 @@ public class AIRetirement : MonoBehaviour
         _waitSinceCaution = false;
         _retiring.Remove(transform);
         Retire(_waitSpot, _waitHeading, _waitBehindWall, carSeen || spotSeen);
+    }
+
+    // ---- Practice and qualifying: the tow ----
+
+    // A car out on a run that has stopped on the circuit is due a tow once it has sat there as long as a race car
+    // would before retiring (shorter if it is wrecked or dry). It then waits, still on the road and still flagged,
+    // until neither it nor its box is in shot - or forceMoveAfterSeconds - and is put in its box.
+    void TickPracticeTow()
+    {
+        if (_stint == null) _stint = GetComponent<PracticeAIStint>();
+        bool watched = _stint != null && _stint.enabled && !_stint.BringingPlayerIn && _car.isActiveAndEnabled
+                       && !PlayerVehicleController.IsHuman(_car) && !IsTrackedAsPlayer();
+        if (!watched) { _towDue = false; _stoppedSince = -1f; return; }
+
+        if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
+        bool wrecked = _car.FuelDry || (_bodywork != null
+            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
+                                           FrontCrush(), breakdownFrontCrush));
+
+        if (_towDue) { TickTowWaiting(wrecked); return; }
+
+        float now = Time.fixedTime;
+        if (!StoppedOnCircuitInPractice(wrecked)) { _stoppedSince = -1f; return; }
+        if (_stoppedSince < 0f) _stoppedSince = now;
+        if (!AIRetirementRule.TowInPractice(_stint.OutOnRun, now - _stoppedSince, wrecked, brokenRetireSeconds,
+                                            stuckRetireSeconds)) return;
+        if (_stint.BoxCentre < 0f) { _stoppedSince = now; return; }   // no box ladder to tow it to
+
+        _towDue = true;
+        _waitingSince = now;
+        TickTowWaiting(wrecked);
+        if (_towDue)
+            Debug.Log($"[AIRetire] {name} stopped on the circuit in practice ({(wrecked ? "wrecked" : "stuck")}) — " +
+                      "tow once the camera looks away");
+    }
+
+    // StoppedOnCircuit for a practice car: no breakdown latch, no caution queue, but the same tests otherwise.
+    bool StoppedOnCircuitInPractice(bool wrecked)
+    {
+        if (_car.SpeedMph > stoppedBelowMph) return false;
+        if (_spline.IsHeldStill || _spline.IsOnPit) return false;
+        if (_spline.track != null && _spline.track.IsOnPitSurface(transform.position)) return false;
+        if (_input == null || !_input.enabled) return false;
+        if (!wrecked && queuedBehindMetres > 0f && RaceField.TryGetAhead(_spline, queuedBehindMetres, out _, out _))
+            return false;
+        return true;
+    }
+
+    void TickTowWaiting(bool wrecked)
+    {
+        // Got itself going again, or parked by something else meanwhile: no tow.
+        if (!_stint.OutOnRun || _spline.IsOnPit || (!wrecked && _car.SpeedMph > stoppedBelowMph)
+            || _input == null || !_input.enabled)
+        {
+            _towDue = false;
+            _stoppedSince = -1f;
+            return;
+        }
+
+        float box = _stint.BoxCentre;
+        if (box < 0f) { _towDue = false; _stoppedSince = -1f; return; }
+        float radius = CarSize().magnitude * 0.5f;
+        bool carSeen = InShot(transform.position, radius);
+        bool boxSeen = InShot(_spline.PitPointWorld(box), radius);
+        if (!AIRetirementRule.MoveOutOfSight(carSeen, boxSeen, Time.fixedTime - _waitingSince, forceMoveAfterSeconds))
+            return;
+
+        _towDue = false;
+        _stoppedSince = -1f;
+        TowToBox(carSeen || boxSeen);
+    }
+
+    // Into its box, parked; then the crew have it. The car is moved, not driven: the lap it was on is void.
+    void TowToBox(bool forced)
+    {
+        if (!_stint.TowToBox(towRepairSeconds)) return;
+
+        // Re-enabled, the input driver drops whatever recovery or impact upset it was in the middle of and seeds the
+        // model from the box pose the hold now commands (SplineInputDriver.OnEnable).
+        _input.enabled = false;
+        _input.enabled = true;
+        // And the model itself goes there now: it runs later this step, from the crash site, before the input
+        // driver's next seed.
+        _car.SetInput(0f, 0f, 1f);
+        _car.SeedPose(transform.position, _spline.CommandedHeadingDeg, 0f);
+        if (_bodywork != null) _bodywork.RepairFull();
+        var tank = GetComponent<FuelTank>();
+        if (tank != null) tank.FillFull();
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(transform);
+
+        Debug.Log($"[AIRetire] {name} towed back to its box" +
+                  (forced ? $" (still in shot after {forceMoveAfterSeconds:0} s; moved anyway)" : ""));
     }
 
     // Whether any camera drawing to the screen has this circle in its frame. No camera (a headless sim): nobody.

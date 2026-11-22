@@ -1725,6 +1725,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         RacePositionTracker.NoteTeleport(transform);
     }
 
+    // World position of the pit-lane centreline `pitDistance` m down the lane, without moving the car: where a box
+    // is, for asking whether a camera can see it before a car is put there (AIRetirement's practice tow).
+    public Vector3 PitPointWorld(float pitDistance)
+    {
+        if (track == null || _pitSamples == null || _pitSamples.Count < 2) return transform.position;
+        Vector2 p = track.SamplePitAt(pitDistance, _pitSamples).position;
+        Vector3 wp = track.transform.TransformPoint(new Vector3(p.x, p.y, 0f));
+        return new Vector3(wp.x, wp.y, transform.position.z);
+    }
+
     // Place the car at startDistance immediately and write the transform, independent of Start() ordering.
     // The networked spawner calls this before NetworkObject.Spawn() so the car captures a valid on-track pose:
     // otherwise the AI input driver's first physics step (which runs before Start) seeds it at the origin.
