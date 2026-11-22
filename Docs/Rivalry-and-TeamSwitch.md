@@ -50,6 +50,12 @@ keys `contacts.caused`, `contacts.received`, `paybacks.against` (see NPCs-and-Qu
 one button per team car (`#number NAME  Pposition`), click to jump into that car mid-race
 (green-flag onwards; disabled in practice/qualifying; blocked while the target is on the pit lane).
 
+- **HUD swap buttons**: the TEAM box starts put away (F3 / LB), so the race HUD also carries a
+  `Drive #N` button for every other team car (the original car included once you have left it), in the
+  bottom-right row left of the broadcast TV and the crew chief headset, standing on the touch pedals on a
+  phone. Shown while the player's race runs (green or caution) and they are in a car — not on foot, on the
+  pit wall, broadcasting or in the results; greyed under caution or while that car is on pit road.
+  `hudButtons` (HUD swap buttons header) turns them off.
 - **Teams**: `GridSpawner` (Teams header) stamps `DriverLabel.teamId/teamName` in spawn order — the
   first `playerTeammates` (default 2) AI join team 0, the player's team; the rest pair into rival
   teams of `teamSize`. Only team-0 cars with a `PlayerVehicleController` (dynamic AI) are offered.

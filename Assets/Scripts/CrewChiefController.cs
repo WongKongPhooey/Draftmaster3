@@ -229,6 +229,10 @@ public class CrewChiefController : MonoBehaviour
     // session. What does not count is the rest of the weekend, when no series of the player's is on track.
     public bool Available => RaceWeekend.SessionLive;
 
+    // The headset is on the HUD in its bottom-right corner spot (not up in a phone's portrait top row), so
+    // anything else in that row (TeamSwitchController's swap buttons) lines up to the left of it.
+    public bool CornerButtonShown => _buttonRoot != null && _buttonRoot.activeInHierarchy && !_onTopRow;
+
     public void Toggle() { if (_active) Exit(); else Enter(); }
 
     void Enter()

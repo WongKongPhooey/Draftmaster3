@@ -118,6 +118,10 @@ public class BroadcastController : MonoBehaviour
     // The player's own race, while it runs.
     public bool Available => RaceWeekend.SessionLive && RaceWeekend.IsRaceSession && driveMode != null;
 
+    // The TV is on the HUD in its bottom-right corner spot (not up in a phone's portrait top row), so anything
+    // else in that row (TeamSwitchController's swap buttons) lines up to the left of it.
+    public bool CornerButtonShown => _buttonRoot != null && _buttonRoot.activeInHierarchy && !_onTopRow;
+
     void Update()
     {
         if (RaceStart.IsRunning) _raceClock += Time.deltaTime;

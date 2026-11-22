@@ -40,6 +40,19 @@ public class TeamSwitchController : MonoBehaviour
     [Tooltip("Key toggling the TEAM box.")]
     public KeyCode toggleKey = KeyCode.F3;
 
+    [Header("HUD swap buttons")]
+    [Tooltip("A 'Drive #N' button on the HUD for every other car on the player's team, in the bottom-right row " +
+             "left of the broadcast TV and the crew chief's headset — a teammate one tap away during the race, " +
+             "without opening the TEAM box (F3), which a phone has no key for.")]
+    public bool hudButtons = true;
+    [Tooltip("Width of each swap button, in 640x360 UI pixels (it grows if its caption needs more).")]
+    public float hudButtonWidth = 64f;
+    [Tooltip("Gap between the swap buttons, and between them and the TV/headset, in 640x360 UI pixels.")]
+    public float hudButtonGap = 6f;
+    [Tooltip("Margin from the bottom-right corner when neither the TV nor the headset is on the HUD (clears the " +
+             "speedometer dial, as the headset's own buttonCorner does).")]
+    public Vector2 hudFallbackCorner = new Vector2(92f, 12f);
+
     // What RacePositionTracker.playerName reads as when nobody has set a career name.
     public const string kPlaceholderName = "You";
 
@@ -77,11 +90,15 @@ public class TeamSwitchController : MonoBehaviour
         // No roster in practice/qualifying — team cars are parked stint props there. And none at all
         // outside the player's own session: another championship's cars going past while the player is on
         // foot in the paddock are not theirs to climb into.
-        bool available = RaceWeekend.SessionLive && !RaceWeekend.IsPracticeLike && !_hidden;
+        bool raceOn = RaceWeekend.SessionLive && !RaceWeekend.IsPracticeLike;
+        bool available = raceOn && !_hidden;
+        bool hud = raceOn && HudButtonsWanted();
         // Hide the whole window, frame included — hiding only the content would leave an empty plate.
         if (_window != null && _window.gameObject.activeSelf != available)
             _window.gameObject.SetActive(available);
-        if (!available) return;
+        if (_hudCanvas != null && _hudCanvas.gameObject.activeSelf != hud)
+            _hudCanvas.gameObject.SetActive(hud);
+        if (!available && !hud) return;
 
         bool touch = InputGlyphs.UsingTouch;
         if (_close != null && _close.gameObject.activeSelf != touch) _close.gameObject.SetActive(touch);
@@ -91,6 +108,8 @@ public class TeamSwitchController : MonoBehaviour
 
         _labelTimer -= Time.deltaTime;
         if (_labelTimer <= 0f) { _labelTimer = labelRefreshSeconds; RefreshButtonLabels(); }
+
+        if (hud) UpdateHudButtons();
     }
 
     // The human's driver name persists on whichever car they occupy; the original chassis needs a label
@@ -195,6 +214,7 @@ public class TeamSwitchController : MonoBehaviour
             _window.sizeDelta = new Vector2(120f, 22f + _teamCars.Count * 20f);
 
         RefreshButtonLabels();
+        _hudLayoutDirty = true;   // the car just left gets a button, the one just taken loses its
     }
 
     // Hand the car the human is leaving to the AI, without a teleport: the spline brain re-engages at the
@@ -265,6 +285,8 @@ public class TeamSwitchController : MonoBehaviour
         xrt.anchoredPosition = new Vector2(-4f, -4f);
         _close.onClick.AddListener(() => _hidden = true);
         _close.gameObject.SetActive(InputGlyphs.UsingTouch);
+
+        BuildHudCanvas();
     }
 
     void RebuildButtons()
@@ -309,6 +331,7 @@ public class TeamSwitchController : MonoBehaviour
             _buttonLabels.Add(label);
         }
         RefreshButtonLabels();
+        RebuildHudButtons();
     }
 
     void RefreshButtonLabels()
@@ -336,6 +359,147 @@ public class TeamSwitchController : MonoBehaviour
             text.color = mine ? PixelGUI.Gold : PixelGUI.Text;
             if (btn != null) btn.interactable = !mine;
         }
+    }
+
+    // ---- HUD swap buttons ----
+    //
+    // The TEAM box starts put away (SessionHud) and only F3 / LB brings it up, so a phone could never swap
+    // cars at all. These sit on the HUD for the whole race instead: one "Drive #N" per team car other than
+    // the one the player is in, along the bottom-right row left of the TV and the headset, stood on top of
+    // the touch pedals while they show. Off while the player is on foot, on the pit wall or watching the
+    // broadcast — the camera is away from the car then — and greyed under a caution or while the teammate
+    // is on pit road, when SwitchTo would refuse anyway.
+
+    Canvas _hudCanvas;
+    CanvasScaler _hudScaler;
+    readonly List<GameObject> _hudRoots = new();   // parallel to _teamCars; the current car's is hidden
+    readonly List<Button> _hudButtons = new();
+    readonly List<TMP_Text> _hudLabels = new();
+    bool _hudLayoutDirty = true;
+    float _hudScale = -1f, _hudLift = -1f, _hudStartX = -1f;
+    CrewChiefController _chief;
+    bool _chiefLooked;
+
+    void BuildHudCanvas()
+    {
+        if (!hudButtons) return;
+        // The kit's 640x360 grid scaled off the screen's short side, as the TV and headset canvases are, so
+        // the row lines up with them upright or flat.
+        _hudCanvas = PixelUI.CreateCanvas("TeamSwapCanvas", 111);
+        _hudScaler = _hudCanvas.GetComponent<CanvasScaler>();
+        if (_hudScaler != null) _hudScaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        FitHudCanvas();
+        _hudCanvas.gameObject.SetActive(false);
+    }
+
+    // The player's own race is running and they are sat in a car the camera is following.
+    bool HudButtonsWanted() =>
+        hudButtons && _hudCanvas != null
+        && RaceStart.IsRunning && !RaceDirector.InResults
+        && OnFootController.Current == null
+        && !BroadcastController.IsBroadcasting && !CrewChiefController.IsCrewChief;
+
+    void RebuildHudButtons()
+    {
+        foreach (var r in _hudRoots) if (r != null) Destroy(r);
+        _hudRoots.Clear();
+        _hudButtons.Clear();
+        _hudLabels.Clear();
+        if (_hudCanvas == null) return;
+
+        foreach (var car in _teamCars)
+        {
+            var carRef = car; // captured
+            var btn = IronOvalUI.TabButton(_hudCanvas.transform, "TeamSwapButton", HudCaption(car),
+                                           new Vector2(hudButtonWidth, Draftmaster.Controls.UIButton.KitPx));
+            btn.onClick.AddListener(() => SwitchTo(carRef));
+            var root = btn.transform.parent.gameObject;   // TabButton returns the face; its root is the shadow
+            _hudRoots.Add(root);
+            _hudButtons.Add(btn);
+            _hudLabels.Add(btn.GetComponentInChildren<TMP_Text>(true));
+        }
+        _hudLayoutDirty = true;
+    }
+
+    // The number is on the car, so it is what the player picks a teammate by; a car without one goes by name.
+    static string HudCaption(GameObject car)
+    {
+        var label = car != null ? car.GetComponent<DriverLabel>() : null;
+        if (label != null && label.carNumber > 0) return $"Drive #{label.carNumber}";
+        string name = label != null && !string.IsNullOrEmpty(label.driverName) ? label.driverName
+                    : car != null ? car.name : "";
+        return $"Drive {name}";
+    }
+
+    void UpdateHudButtons()
+    {
+        float scale = FitHudCanvas();
+        float lift = Mathf.Ceil(TouchDriveControls.PedalsTopFromBottom / scale);
+        float startX = HudStartX();
+        if (_hudLayoutDirty || scale != _hudScale || lift != _hudLift || startX != _hudStartX)
+        {
+            _hudLayoutDirty = false;
+            _hudScale = scale;
+            _hudLift = lift;
+            _hudStartX = startX;
+
+            // Right to left from the TV: the original car first, then the teammates in grid order.
+            float x = startX;
+            for (int i = 0; i < _hudRoots.Count && i < _teamCars.Count; i++)
+            {
+                var root = _hudRoots[i];
+                if (root == null) continue;
+                bool show = _teamCars[i] != null && _teamCars[i] != _current;
+                if (root.activeSelf != show) root.SetActive(show);
+                if (!show) continue;
+                var rt = (RectTransform)root.transform;
+                HudCorner(rt, new Vector2(x, hudFallbackCorner.y + lift));
+                x += rt.sizeDelta.x + hudButtonGap;   // sizeDelta: a phone grows the plate to its caption
+            }
+        }
+
+        bool green = RaceStart.IsGreen;
+        for (int i = 0; i < _hudButtons.Count && i < _teamCars.Count; i++)
+        {
+            var car = _teamCars[i];
+            var btn = _hudButtons[i];
+            if (car == null || btn == null || car == _current) continue;
+            var spline = car.GetComponent<SplineDriver>();
+            bool can = green && !(spline != null && spline.enabled && spline.IsOnPit);
+            if (btn.interactable != can) btn.interactable = can;
+            var text = i < _hudLabels.Count ? _hudLabels[i] : null;
+            var colour = can ? PixelGUI.Text : PixelGUI.TextDim;
+            if (text != null && text.color != colour) text.color = colour;
+        }
+    }
+
+    // Right edge of the row, in UI pixels in from the screen's right: one gap past whichever of the TV and
+    // the headset reaches furthest left, or the headset's own spot when neither is in the corner.
+    float HudStartX()
+    {
+        float x = 0f;
+        var tv = BroadcastController.Current;
+        if (tv != null && tv.CornerButtonShown) x = Mathf.Max(x, tv.buttonCorner.x + tv.buttonSize);
+        if (!_chiefLooked) { _chief = FindFirstObjectByType<CrewChiefController>(); _chiefLooked = true; }
+        if (_chief != null && _chief.CornerButtonShown) x = Mathf.Max(x, _chief.buttonCorner.x + _chief.buttonSize);
+        return x > 0f ? x + hudButtonGap : hudFallbackCorner.x;
+    }
+
+    // As CrewChiefController.FitCanvasToShortSide — measured off Screen, the surface the canvas draws to.
+    float FitHudCanvas()
+    {
+        float scale = DriveOrientation.CanvasScale(Screen.width, Screen.height, PixelUITheme.ReferenceHeight);
+        if (_hudScaler != null && !Mathf.Approximately(_hudScaler.scaleFactor, scale)) _hudScaler.scaleFactor = scale;
+        return scale;
+    }
+
+    // Pin a control to the bottom-right corner, `margin` UI pixels in from it.
+    static void HudCorner(RectTransform rt, Vector2 margin)
+    {
+        rt.anchorMin = new Vector2(1f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = new Vector2(-margin.x, margin.y);
     }
 
     static void EnsureEventSystem()
