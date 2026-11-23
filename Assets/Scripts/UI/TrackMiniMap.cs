@@ -221,10 +221,18 @@ public class TrackMiniMap : MonoBehaviour
         // the timing screen is down the left, so neither is in the way.
         float size = PixelGUI.Px(stand ? standMapSize : mapSize);
         size = Mathf.Min(size, Screen.width * 0.4f, Screen.height * 0.4f);
-        var rect = new Rect(
-            Screen.width - size - PixelGUI.Px(cornerMargin.x),
-            Screen.height - size - PixelGUI.Px(cornerMargin.y) - (stand ? 0f : speedoClearance * HudScale()),
-            size, size);
+        float bottom = Screen.height - PixelGUI.Px(cornerMargin.y) - (stand ? 0f : speedoClearance * HudScale());
+        // In the car with the Iron Oval HUD up, the old dial is stood down: sit just above the speed readout and
+        // the TV / headset / team buttons instead, and below the tyre/draft/fuel/temp plate - shrunk to fit
+        // between them rather than drawn behind the plate.
+        if (!stand && IronOvalRaceHUD.DrawsLapCount && IronOvalRaceHUD.SpeedTop > 0f)
+        {
+            float gap = PixelGUI.Px(4f);
+            bottom = Mathf.Min(IronOvalRaceHUD.SpeedTop, CornerButtonsTop()) - gap;
+            float top = IronOvalRaceHUD.MetersBottom > 0f ? IronOvalRaceHUD.MetersBottom + gap : 0f;
+            size = Mathf.Max(PixelGUI.Px(48f), Mathf.Min(size, bottom - top));
+        }
+        var rect = new Rect(Screen.width - size - PixelGUI.Px(cornerMargin.x), bottom - size, size, size);
 
         // No plate and no frame behind it: the map is a line drawing laid straight over the race, which
         // keeps the corner of the screen looking out at the track rather than at a box. What used to be
@@ -258,6 +266,29 @@ public class TrackMiniMap : MonoBehaviour
     // An unset (fully transparent) inspector colour means "use the theme", so the palette stays in one
     // place while a scene can still override a pip by hand.
     static Color Resolve(Color authored, Color themed) => authored.a > 0f ? authored : themed;
+
+    // Top edge (screen pixels from the top) of the bottom-right button row - the broadcast TV, the crew chief's
+    // headset and the team swap buttons beside them - when any of it is up; the screen's foot otherwise. They
+    // are on the 640x360 canvas grid, lifted over the touch pedals.
+    static CrewChiefController _chief;
+    static float _chiefLookAt;
+
+    static float CornerButtonsTop()
+    {
+        float up = 0f;
+        var tv = BroadcastController.Current;
+        if (tv != null && tv.CornerButtonShown) up = Mathf.Max(up, tv.buttonCorner.y + tv.buttonSize);
+        if (_chief == null && Time.unscaledTime >= _chiefLookAt)
+        {
+            _chief = FindFirstObjectByType<CrewChiefController>();
+            _chiefLookAt = Time.unscaledTime + 1f;   // not every OnGUI pass
+        }
+        var chief = _chief;
+        if (chief != null && chief.CornerButtonShown) up = Mathf.Max(up, chief.buttonCorner.y + chief.buttonSize);
+        if (up <= 0f) return Screen.height;
+        float scale = Draftmaster.Controls.DriveOrientation.CanvasScale(Screen.width, Screen.height, PixelUITheme.ReferenceHeight);
+        return Screen.height - up * scale - TouchDriveControls.PedalsTopFromBottom;
+    }
 
     void DrawDot(Rect mapRect, Vector2 world, Color color, float size)
     {

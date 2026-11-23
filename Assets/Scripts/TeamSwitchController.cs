@@ -42,12 +42,15 @@ public class TeamSwitchController : MonoBehaviour
     public KeyCode toggleKey = KeyCode.F3;
 
     [Header("HUD swap buttons")]
-    [Tooltip("A 'Drive #N' button on the HUD for every other car on the player's team, in the bottom-right row " +
+    [Tooltip("A swap button showing the car number (Resources/cup20num<N>) on the HUD for every other car on the player's team, in the bottom-right row " +
              "left of the broadcast TV and the crew chief's headset — a teammate one tap away during the race, " +
              "without opening the TEAM box (F3), which a phone has no key for.")]
     public bool hudButtons = true;
-    [Tooltip("Width of each swap button, in 640x360 UI pixels (it grows if its caption needs more).")]
+    [Tooltip("Width of a swap button for a car with no number art (a text 'Drive <name>' plate), in 640x360 UI pixels. " +
+             "A car with number art gets a square icon button the size of the TV and headset (BroadcastController.buttonSize).")]
     public float hudButtonWidth = 64f;
+    [Tooltip("Resources name prefix for the car-number art on the swap buttons: this + the number, e.g. 'cup20num' + 24.")]
+    public string hudNumberPrefix = "cup20num";
     [Tooltip("Gap between the swap buttons, and between them and the TV/headset, in 640x360 UI pixels.")]
     public float hudButtonGap = 6f;
     [Tooltip("Margin from the bottom-right corner when neither the TV nor the headset is on the HUD (clears the " +
@@ -386,7 +389,7 @@ public class TeamSwitchController : MonoBehaviour
     CanvasScaler _hudScaler;
     readonly List<GameObject> _hudRoots = new();   // parallel to _teamCars; the current car's is hidden
     readonly List<Button> _hudButtons = new();
-    readonly List<TMP_Text> _hudLabels = new();
+    readonly List<Graphic> _hudLabels = new();     // the caption or the number icon, greyed when the swap is refused
     bool _hudLayoutDirty = true;
     float _hudScale = -1f, _hudLift = -1f, _hudStartX = -1f;
     CrewChiefController _chief;
@@ -422,15 +425,48 @@ public class TeamSwitchController : MonoBehaviour
         foreach (var car in _teamCars)
         {
             var carRef = car; // captured
-            var btn = IronOvalUI.TabButton(_hudCanvas.transform, "TeamSwapButton", HudCaption(car),
+            // The car's own number art, square and the size of the TV and headset beside it. A car with no art
+            // (or no number) falls back to a text plate.
+            var number = HudNumberSprite(car);
+            Button btn;
+            Graphic label;
+            if (number != null)
+            {
+                btn = IronOvalUI.IconButton(_hudCanvas.transform, "TeamSwapButton", number, HudIconSize());
+                var icon = btn.transform.Find("Icon");
+                var img = icon != null ? icon.GetComponent<Image>() : null;
+                if (img != null) { img.preserveAspect = true; img.color = Color.white; }   // the art's own colours
+                label = img;
+            }
+            else
+            {
+                btn = IronOvalUI.TabButton(_hudCanvas.transform, "TeamSwapButton", HudCaption(car),
                                            new Vector2(hudButtonWidth, Draftmaster.Controls.UIButton.KitPx));
+                label = btn.GetComponentInChildren<TMP_Text>(true);
+            }
             btn.onClick.AddListener(() => SwitchTo(carRef));
-            var root = btn.transform.parent.gameObject;   // TabButton returns the face; its root is the shadow
+            var root = btn.transform.parent.gameObject;   // TabButton/IconButton return the face; the root is the shadow
             _hudRoots.Add(root);
             _hudButtons.Add(btn);
-            _hudLabels.Add(btn.GetComponentInChildren<TMP_Text>(true));
+            _hudLabels.Add(label);
         }
         _hudLayoutDirty = true;
+    }
+
+    Sprite HudNumberSprite(GameObject car)
+    {
+        var label = car != null ? car.GetComponent<DriverLabel>() : null;
+        if (label == null || label.carNumber <= 0 || string.IsNullOrEmpty(hudNumberPrefix)) return null;
+        return Resources.Load<Sprite>(hudNumberPrefix + label.carNumber);
+    }
+
+    // Square, matched to the TV and headset buttons it sits beside.
+    static float HudIconSize()
+    {
+        var tv = BroadcastController.Current;
+        if (tv != null && tv.buttonSize > 0f) return tv.buttonSize;
+        var chief = FindFirstObjectByType<CrewChiefController>();
+        return chief != null && chief.buttonSize > 0f ? chief.buttonSize : 32f;
     }
 
     // The number is on the car, so it is what the player picks a teammate by; a car without one goes by name.
@@ -480,7 +516,8 @@ public class TeamSwitchController : MonoBehaviour
             bool can = green && !(spline != null && spline.enabled && spline.IsOnPit);
             if (btn.interactable != can) btn.interactable = can;
             var text = i < _hudLabels.Count ? _hudLabels[i] : null;
-            var colour = can ? PixelGUI.Text : PixelGUI.TextDim;
+            var colour = text is Image ? (can ? Color.white : new Color(0.5f, 0.5f, 0.5f, 0.6f))
+                       : (can ? PixelGUI.Text : PixelGUI.TextDim);
             if (text != null && text.color != colour) text.color = colour;
         }
     }

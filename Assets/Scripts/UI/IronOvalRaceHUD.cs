@@ -20,6 +20,18 @@ public class IronOvalRaceHUD : MonoBehaviour
     [Tooltip("Rebind to the player car / track this often (s).")]
     public float rebindSeconds = 1f;
 
+    [Header("Meters")]
+    [Tooltip("Desktop only: the tyre/draft/fuel/temp plate is drawn one kit step smaller than the rest of the HUD " +
+             "(3x -> 2x at 1080p, 4x -> 3x at 1440p), never below this many screen pixels per kit pixel. A phone " +
+             "keeps the full size, which is what reads at arm's length; on a monitor it filled the right side.")]
+    public int desktopMeterMinScale = 2;
+
+    // Where the meter plate and the speed readout ended up on screen the last time they were drawn (screen
+    // pixels; the plate's bottom edge from the top, the readout's top edge from the top). TrackMiniMap fits
+    // itself between the two. 0 = not drawn.
+    public static float MetersBottom { get; private set; }
+    public static float SpeedTop { get; private set; }
+
     [Header("Caution flag")]
     [Tooltip("Side (design px) of the yellow flag box drawn in the top-right corner.")]
     public float cautionFlagSize = 28f;
@@ -116,7 +128,7 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     void OnGUI()
     {
-        if (!show || _player == null) return;
+        if (!show || _player == null) { MetersBottom = SpeedTop = 0f; return; }
         if (RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
 
         DrawPositionBlock();
@@ -182,6 +194,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
         float x = Screen.width - PixelGUI.Px(8f) - w;
         float y = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
+        SpeedTop = y;
         NumeralWithSuffix(x, y, text, "MPH");
     }
 
@@ -216,6 +229,12 @@ public class IronOvalRaceHUD : MonoBehaviour
         float h = inset * 2f + 4f * PixelGUI.LineH + 4f * PixelGUI.CellsHeight + PixelGUI.Px(14f);
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
+
+        // Smaller on a monitor, pinned at its top-right corner so it stays tucked under the caution flag.
+        float k = MeterScale();
+        var savedMatrix = GUI.matrix;
+        if (k < 1f) GUIUtility.ScaleAroundPivot(new Vector2(k, k), new Vector2(x + w, y));
+        MetersBottom = y + h * k;
 
         PixelGUI.Panel(new Rect(x, y, w, h));
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
@@ -273,6 +292,17 @@ public class IronOvalRaceHUD : MonoBehaviour
                        Mathf.RoundToInt(Draftmaster.Sim.EngineTemp.Gauge01(tempC) * 10f), 10, tempColour);
 
         label.normal.textColor = prev;
+        GUI.matrix = savedMatrix;
+    }
+
+    // Fraction of the HUD's size the meter plate is drawn at: 1 on a phone; on a desktop one whole kit step
+    // down, so the pixel type lands on a whole screen-pixel scale (2/3 of 3x is exactly 2x) and stays crisp.
+    float MeterScale()
+    {
+        if (PixelGUI.Handheld) return 1f;
+        int full = PixelGUI.Scale;
+        int small = Mathf.Max(desktopMeterMinScale, full - 1);
+        return small >= full ? 1f : (float)small / full;
     }
 
     // Yellow flag, top right: a stopped car, or one that just hit the wall, within CautionWatch's look-ahead. Placeholder
