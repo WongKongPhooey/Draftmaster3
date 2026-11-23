@@ -151,7 +151,10 @@ public class BroadcastController : MonoBehaviour
         if (CrewChiefController.IsCrewChief) { Exit(giveCarBack: false); return; }
 
         _shotTime += Time.deltaTime;
-        bool lost = _watching == null || !_watching.gameObject.activeInHierarchy;
+        // A car that has retired is parked out of the race: nothing to watch. One due to retire is only held for
+        // the end of its own crash shot - the camera staying on it is what keeps it from being moved.
+        bool lost = _watching == null || !_watching.gameObject.activeInHierarchy
+                    || AIRetirement.IsRetired(_watching) || (!_showingHit && AIRetirement.IsOutOfRace(_watching));
         if (lost || _shotTime >= (_showingHit ? incidentHoldSeconds : shotSeconds)) NextShot();
 
         if (cameraFollow != null && _watching != null && cameraFollow.target != _watching)
@@ -278,13 +281,18 @@ public class BroadcastController : MonoBehaviour
         _shotCars.Clear();
         int current = BroadcastShots.None;
         float now = Time.time;
+        int prevUsable = -1;
         for (int i = 0; order != null && i < order.Count; i++)
         {
             var e = order[i];
             var tf = e != null ? e.tf : null;
-            bool usable = tf != null && tf.gameObject.activeInHierarchy;
-            float gap = i == 0 || !usable || order[i - 1] == null ? 0f
-                      : Mathf.Max(0f, e.gapToLeaderSec - order[i - 1].gapToLeaderSec);
+            // Crashed and parked out of the race (or about to be): never a shot.
+            bool usable = tf != null && tf.gameObject.activeInHierarchy && !AIRetirement.IsOutOfRace(tf);
+            // The gap to the car ahead that is still racing, not to a wreck parked laps down between them.
+            float gap = i == 0 || !usable ? 0f
+                      : prevUsable < 0 ? float.PositiveInfinity   // nobody racing ahead of it: no battle
+                      : Mathf.Max(0f, e.gapToLeaderSec - order[prevUsable].gapToLeaderSec);
+            if (usable) prevUsable = i;
             _shotCars.Add(usable ? tf : null);
             _gapAhead.Add(i == 0 ? 0f : (usable ? gap : float.PositiveInfinity));
             // A car that cannot be shown is "just shown", so it is only ever picked when nothing else is left.
@@ -319,6 +327,7 @@ public class BroadcastController : MonoBehaviour
         if (_showingHit && car == _watching) { _hitMps = Mathf.Max(_hitMps, closingMps); return; }
         if (!BroadcastShots.CutToHit(closingMps, bigHitMps, _shotTime, minShotSeconds, _showingHit, _hitMps)) return;
         if (!InRunningOrder(car)) return;   // the safety car, a parked car in the paddock
+        if (AIRetirement.IsRetired(car)) return;   // a wreck already parked out of the race, being nudged
         Show(car, hit: true, mps: closingMps);
     }
 

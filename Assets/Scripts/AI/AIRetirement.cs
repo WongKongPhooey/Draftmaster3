@@ -10,6 +10,8 @@ using UnityEngine;
 // sits stopped on the circuit too long — broken down, beached, wedged against the wall, facing the wrong way — is
 // retired: lifted off the circuit and parked on the far side of the infield wall, with room checked for it there.
 // Where a stretch has no infield wall it is parked well out in the infield instead, clear of every part of the road.
+// A car that stops close to or alongside the pit lane (pitBoxNearMetres) is put in its own pit box instead, and left
+// there as it is - out of the race, not repaired.
 //
 // The move is never seen. Once the car is due to go its spot is picked and held for it, but the car stays where it
 // stopped (still on the circuit, still raising its yellow) until neither it nor the spot is inside any camera's
@@ -76,6 +78,11 @@ public class AIRetirement : MonoBehaviour
     public float alongStepMetres = 12f;
     public float alongMaxMetres = 240f;
 
+    [Header("Retire to the pit box")]
+    [Tooltip("A car retiring within this many metres of the pit lane (its centreline, entry and exit included) is " +
+             "parked in its own pit box rather than over the infield wall, and left there unrepaired. 0 = never.")]
+    public float pitBoxNearMetres = 30f;
+
     [Header("Out of shot")]
     [Tooltip("Extra clearance (m) beyond a camera's frame that both the car and its parking spot need before the " +
              "car is moved: covers the camera's travel between this physics step and the next render.")]
@@ -98,6 +105,8 @@ public class AIRetirement : MonoBehaviour
     static List<TrackBuilder.Sample> _samples;
     static List<Vector2> _centres;
     static List<float> _halfWidths;
+    static TrackBuilder _pitSamplesFor;
+    static List<TrackBuilder.Sample> _pitSamples;
 
     // Whether this car has retired from the race.
     public static bool IsRetired(Transform car) => car != null && _retired.Contains(car);
@@ -119,6 +128,7 @@ public class AIRetirement : MonoBehaviour
     Vector2 _waitSpot;
     float _waitHeading;
     bool _waitBehindWall;
+    float _waitBox = -1f;     // >= 0: going to its pit box, this far (m) down the pit lane, not over the wall
     float _waitingSince;
     bool _waitSinceCaution;   // retired under a caution as too damaged to restart: moved at the green at the latest
     PracticeAIStint _stint;
@@ -136,6 +146,8 @@ public class AIRetirement : MonoBehaviour
         _samples = null;
         _centres = null;
         _halfWidths = null;
+        _pitSamplesFor = null;
+        _pitSamples = null;
     }
 
     void Awake()
@@ -270,6 +282,23 @@ public class AIRetirement : MonoBehaviour
     // Returns false, leaving the car racing (and flagged), when there is nowhere off the road to put it.
     bool BeginRetire()
     {
+        // Stopped by the pit lane: into its own box, a few metres away, rather than over a wall somewhere.
+        if (PitBoxNearby(out float box))
+        {
+            _retiring.Add(transform);
+            _waiting = true;
+            _waitBox = box;
+            _waitSpot = _spline.PitPointWorld(box);
+            _waitHeading = 0f;
+            _waitBehindWall = false;
+            _waitingSince = Time.fixedTime;
+            TickWaiting();
+            if (_waiting)
+                Debug.Log($"[AIRetire] {name} retiring to its pit box ({(BrokenDown ? "broken down" : "stuck")}) — " +
+                          "in shot, moves once the camera looks away");
+            return true;
+        }
+
         // Room checked first. Should nothing pass (a scene where something solid covers the whole infield), the
         // spot only has to be clear of the road. And if not even that, the car stays where it is, still in the race
         // and still raising its yellow: a retired car raises none, so it must never be left on the road.
@@ -283,6 +312,7 @@ public class AIRetirement : MonoBehaviour
         _takenSpots.Add(spot);   // held while it waits, so no other car is parked on it
         _retiring.Add(transform);
         _waiting = true;
+        _waitBox = -1f;
         _waitSpot = spot;
         _waitHeading = headingDeg;
         _waitBehindWall = behindWall;
@@ -306,7 +336,8 @@ public class AIRetirement : MonoBehaviour
             _waiting = false;
             _waitSinceCaution = false;
             _retiring.Remove(transform);
-            _takenSpots.Remove(_waitSpot);
+            if (_waitBox < 0f) _takenSpots.Remove(_waitSpot);
+            _waitBox = -1f;
             _stoppedSince = -1f;
             return;
         }
@@ -321,7 +352,55 @@ public class AIRetirement : MonoBehaviour
         _waiting = false;
         _waitSinceCaution = false;
         _retiring.Remove(transform);
-        Retire(_waitSpot, _waitHeading, _waitBehindWall, carSeen || spotSeen);
+        if (_waitBox >= 0f) RetireToBox(_waitBox, carSeen || spotSeen);
+        else Retire(_waitSpot, _waitHeading, _waitBehindWall, carSeen || spotSeen);
+        _waitBox = -1f;
+    }
+
+    // Its box, when the car has stopped close to or alongside the pit lane and has a box to go to.
+    bool PitBoxNearby(out float box)
+    {
+        box = -1f;
+        if (pitBoxNearMetres <= 0f || !PitLane.Configured || _spline.PitLength <= 0f) return false;
+        var track = _spline.track;
+        if (track == null || track.track == null || !track.track.hasPitLane) return false;
+        if (_pitSamplesFor != track || _pitSamples == null)
+        {
+            _pitSamples = track.SamplePitCenterline();
+            _pitSamplesFor = track;
+        }
+        if (_pitSamples == null || _pitSamples.Count < 2) return false;
+
+        Vector2 local = track.transform.InverseTransformPoint(transform.position);
+        float nearSq = pitBoxNearMetres * pitBoxNearMetres;
+        bool near = false;
+        for (int i = 0; i < _pitSamples.Count && !near; i++)
+            near = (_pitSamples[i].position - local).sqrMagnitude <= nearSq;
+        if (!near) return false;
+
+        var pits = GetComponent<PitStopController>();
+        int index = pits != null ? pits.BoxIndex : _spline.qualifyingPosition;
+        if (index < 0) return false;
+        box = PitLane.BoxDistance(index, _spline.PitLength);
+        return true;
+    }
+
+    // Out of the race in its own pit box: parked there as it is - nobody repairs it - switched off and pinned.
+    void RetireToBox(float box, bool forced)
+    {
+        // Brain and pit stop off before the spline is put in the box, so nothing drives it out again.
+        var formation = GetComponent<FormationController>();
+        if (formation != null) formation.enabled = false;
+        var ai = GetComponent<AIRacingBehaviour>();
+        if (ai != null) ai.enabled = false;
+        var pits = GetComponent<PitStopController>();
+        if (pits != null) pits.enabled = false;
+        if (_input != null) _input.enabled = false;
+
+        _spline.ClearPitApproach();
+        _spline.tacticalLateralOffset = 0f;
+        _spline.SnapToPitBox(box, PitLane.ParkLateral);   // writes the box pose onto the transform
+        Retire(transform.position, _spline.CommandedHeadingDeg, false, forced, inBox: true);
     }
 
     // ---- Practice and qualifying: the tow ----
@@ -460,7 +539,7 @@ public class AIRetirement : MonoBehaviour
     }
 
     // Out of the race: off the circuit, over the infield wall, switched off and pinned there.
-    void Retire(Vector2 spot, float headingDeg, bool behindWall, bool forced)
+    void Retire(Vector2 spot, float headingDeg, bool behindWall, bool forced, bool inBox = false)
     {
         Retired = true;
         _retired.Add(transform);
@@ -499,7 +578,7 @@ public class AIRetirement : MonoBehaviour
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(transform);
 
         Debug.Log($"[AIRetire] {name} retired ({(BrokenDown ? "broken down" : "stuck")}) — " +
-                  (behindWall ? "parked behind the infield wall" : "parked in the infield, no wall") +
+                  (inBox ? "parked in its pit box" : behindWall ? "parked behind the infield wall" : "parked in the infield, no wall") +
                   (forced ? $" (still in shot after {forceMoveAfterSeconds:0} s; moved anyway)" : ""));
     }
 

@@ -144,7 +144,7 @@ public class PitStopController : MonoBehaviour
     // Which box this car stops in. The field uses the box its grid slot owns; the player's car, brought in by
     // the AI after the race (RaceEndPitIn), uses the box the player was given.
     [HideInInspector] public int boxOverride = -1;
-    int BoxIndex => boxOverride >= 0 ? boxOverride : _spline.qualifyingPosition;
+    public int BoxIndex => boxOverride >= 0 ? boxOverride : _spline.qualifyingPosition;
 
     public bool IsPitting => _state != State.Racing;
 

@@ -7,7 +7,8 @@ using Draftmaster.Controls;
 // Mid-race team car switching (NASCAR Thunder-style): a button per team car lets the player jump into
 // any car on their team (DriverLabel.teamId == 0). The car they leave is handed to the AI seamlessly
 // (SplineDriver re-engaged from its current pose + SplineInputDriver feeding the shared dynamic model);
-// the car they take gets AI brains disabled and live PlayerVehicleController input. Driver NAMES swap
+// the car they take stays with its AI, on Auto (DriveModeController.AdoptOnAuto) — V / AUTO and a pedal tap
+// hand them the wheel, as they would in their own car. Driver NAMES swap
 // with the human (you are always "You" in the standings), while car number/livery stay with the chassis —
 // a real driver swap.
 //
@@ -197,11 +198,14 @@ public class TeamSwitchController : MonoBehaviour
         if (dm != null && !dm.IsDriving) dm.SetDriving(true);
 
         if (!HandToAI(_current)) return;
-        TakeControl(target);
+        // The player arrives in the teammate's car on Auto: its AI keeps driving, and V / AUTO takes it over.
+        // Without a drive-mode switch to take it back with, they get the wheel straight away.
+        if (dm == null) TakeControl(target);
+        else if (!AIDriving(target)) HandToAI(target);
         SwapDriverNames(_current, target);
 
         _current = target;
-        if (dm != null) dm.RetargetPlayerCar(target);
+        if (dm != null) dm.AdoptOnAuto(target);
         if (cameraFollow != null) cameraFollow.target = target.transform;
         if (RacePositionTracker.Instance != null) RacePositionTracker.Instance.SetLocalPlayer(target.transform);
         var hud = FindObjectOfType<PlayerTelemetryHUD>();
@@ -224,6 +228,14 @@ public class TeamSwitchController : MonoBehaviour
     // Give the human live control of a (dynamic-AI) team car: brains off, inputs live, obstacle
     // registration on so the rest of the field brakes for it like they do for any human.
     static void TakeControl(GameObject car) => AIHandover.ToHuman(car);
+
+    // A team car mid-race is the AI's: spline brain engaged and its input driver feeding the dynamic model.
+    static bool AIDriving(GameObject car)
+    {
+        var spline = car.GetComponent<SplineDriver>();
+        var input = car.GetComponent<SplineInputDriver>();
+        return spline != null && spline.enabled && input != null && input.enabled;
+    }
 
     // The human's name rides with the human; number + livery stay with the chassis.
     static void SwapDriverNames(GameObject a, GameObject b)

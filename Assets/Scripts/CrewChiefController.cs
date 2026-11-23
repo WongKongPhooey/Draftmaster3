@@ -181,12 +181,13 @@ public class CrewChiefController : MonoBehaviour
         for (int i = 0; _watching != null && i < count; i++)
             if (order[i] != null && order[i].tf == _watching) { current = i; break; }
 
-        // Skip any empty rows rather than stopping on them.
+        // Skip any empty rows, and cars crashed out and parked, rather than stopping on them.
         int next = current;
         for (int tries = 0; tries <= count; tries++)
         {
             next = PitWallWatch.Step(next, count, dir);
-            if (next == PitWallWatch.Self || (order[next] != null && order[next].tf != null)) break;
+            if (next == PitWallWatch.Self
+                || (order[next] != null && order[next].tf != null && !AIRetirement.IsOutOfRace(order[next].tf))) break;
         }
         Watch(next == PitWallWatch.Self ? null : order[next].tf);
     }

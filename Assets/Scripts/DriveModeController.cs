@@ -566,6 +566,19 @@ public class DriveModeController : MonoBehaviour
         _spline = car.GetComponent<SplineDriver>();
     }
 
+    // Team switching put the player in a teammate's car the AI is already racing: it is theirs now, on Auto. Nothing
+    // is rewired - the team car keeps the brain, input driver and pit brain it was built with - so the AI drives on
+    // undisturbed, and V / AUTO hands it over the usual way (Auto off, then a pedal tap).
+    public void AdoptOnAuto(GameObject car)
+    {
+        if (car == null) return;
+        RetargetPlayerCar(car);
+        _handBack.Cancel();
+        _driving = false;
+        _inputAddedTo = null;   // not Auto's: the team car's own input driver stays on when the player takes it
+        _laneOptOut = false;
+    }
+
     public void SetDriving(bool driving)
     {
         _handBack.Cancel();   // set outright: nothing left to wait for

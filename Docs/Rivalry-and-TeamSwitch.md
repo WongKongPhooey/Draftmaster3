@@ -63,13 +63,16 @@ one button per team car (`#number NAME  Pposition`), click to jump into that car
   (`EngageFromCurrentPose`, no teleport), gets `SplineInputDriver` + `AIRacingBehaviour`
   (added if missing — the original PlayerCar gains them on first switch), PVC flips to
   `externalInput`, wheelspin off, damage-impairs-handling off, `PitStopController` re-enabled.
-- **Take-over in**: AI brains disabled (`SplineInputDriver`, `AIRacingBehaviour`,
-  `PitStopController`), spline disabled (out of RaceField), PVC re-enabled so it registers as a
-  RaceObstacle (the field brakes for it), `SeedPose` at the current pose — no lurch.
+- **Arriving on Auto**: the car switched into stays with its AI — `DriveModeController.AdoptOnAuto`
+  points the drive mode at it with Auto ON, nothing rewired, so the teammate's brain drives on undisturbed.
+  To drive it yourself, turn Auto off (V / AUTO) and tap a pedal, exactly as in your own car. Taking it
+  over then disables the AI brains (`SplineInputDriver`, `AIRacingBehaviour`, `PitStopController`),
+  disables the spline (out of RaceField), re-enables the PVC so it registers as a RaceObstacle (the field
+  brakes for it), and `SeedPose`s at the current pose — no lurch. A scene with no `DriveModeController`
+  still hands over the wheel at once.
 - **Identity**: driver **names swap with the human** (you are always "You" in standings/results);
   car number + livery stay with the chassis. `RacePositionTracker.SetLocalPlayer` moves the player
-  flag; `DriveModeController.RetargetPlayerCar` keeps the V broadcast toggle pointed at the right
-  car; `PlayerTelemetryHUD` retargets.
+  flag; `DriveModeController.AdoptOnAuto` keeps the V / AUTO toggle pointed at the right car; `PlayerTelemetryHUD` retargets.
 - Each switch increments the `teamswitches` stat (quest-able).
 
 ### Known gaps / polish backlog
