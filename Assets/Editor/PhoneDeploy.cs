@@ -93,12 +93,7 @@ public static partial class PhoneDeploy
     // "release"; no bump of its own, but any bumps patches counted are applied first (After Task bumps keep the
     // version code ahead of the last upload), and no Run.
     [MenuItem("Draftmaster/Build/Build Play Store Bundle (Release .aab)", priority = 220)]
-    static void ReleaseBundle()
-    {
-        var s = new Status { request = "release", bump = false, state = "working", startedAt = Now(), message = "queued" };
-        Write(s);
-        EditorApplication.delayCall += () => RunRelease(s);
-    }
+    static void ReleaseBundle() => Schedule("release", bump: false);
 
     // upload: push the finished bundle to the Play Console testing track (PhoneDeploy.PlayUpload.cs). The version
     // code is then bumped past whatever Play already holds before anything is built, and Play is asked first, so a
@@ -134,7 +129,7 @@ public static partial class PhoneDeploy
             if (unsigned != null)
             {
                 Finish(s, "skipped", "", $"Keystore password not set ({unsigned}); re-enter it in " +
-                                         "Player Settings > Publishing Settings. Unity forgets it on restart.");
+                                         "Player Settings > Publishing Settings, then run Draftmaster > Build > Remember Keystore Passwords On This Machine so a restart can't lose them again.");
                 return;
             }
             if (upload && !PrepareUploadVersion(s)) return;
@@ -188,17 +183,50 @@ public static partial class PhoneDeploy
         // that changed scripts reloads the domain right about now — which left status.json stuck at "queued"
         // and the controller waiting out its whole deploy timeout (2026-10-29). ResumeQueued picks it up.
         SessionState.SetString(QueuedKey, JsonUtility.ToJson(s));
-        EditorApplication.delayCall += () => RunQueued(s);
+        Arm(s);
     }
 
     const string QueuedKey = "PhoneDeploy.Queued";
 
-    // Run a scheduled request once, whichever of the delayCall and the post-reload resume gets there first.
+    // A delayCall alone sat unfired for hours while the editor was unfocused (2026-11-17, -18, -19: status.json
+    // stuck at "queued"), so the request is also put on the next update tick. Whichever comes first runs it; the
+    // other finds the queue empty. If neither fires, RunPendingNow is the way in from outside.
+    static void Arm(Status s)
+    {
+        EditorApplication.delayCall += () => RunQueued(s);
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            EditorApplication.update -= tick;
+            RunQueued(s);
+        };
+        EditorApplication.update += tick;
+    }
+
+    // Run a scheduled request once, whichever of the delayCall, the update tick and the post-reload resume gets
+    // there first.
     static void RunQueued(Status s)
     {
         if (SessionState.GetString(QueuedKey, "").Length == 0) return;   // already taken
         SessionState.EraseString(QueuedKey);
-        Run(s);
+        switch (s.request)
+        {
+            case "release": RunRelease(s); break;
+            case "play-internal": RunRelease(s, upload: true); break;
+            default: Run(s); break;
+        }
+    }
+
+    // For Tokenmaxxer, through the MCP's execute_code, when status.json has sat at "queued" because the editor never
+    // ticked the queued request: runs it right now. The MCP call then blocks for the whole build (and times out on
+    // the caller's side), but the build goes ahead; watch status.json as usual.
+    public static string RunPendingNow()
+    {
+        string json = SessionState.GetString(QueuedKey, "");
+        if (json.Length == 0) return "nothing queued";
+        var s = JsonUtility.FromJson<Status>(json);
+        RunQueued(s);
+        return $"ran {s.request}: {s.state} - {s.message}";
     }
 
     [InitializeOnLoadMethod]
@@ -206,8 +234,7 @@ public static partial class PhoneDeploy
     {
         string json = SessionState.GetString(QueuedKey, "");
         if (json.Length == 0) return;
-        var s = JsonUtility.FromJson<Status>(json);
-        EditorApplication.delayCall += () => RunQueued(s);
+        Arm(JsonUtility.FromJson<Status>(json));
     }
 
     static void Run(Status s)
@@ -272,7 +299,7 @@ public static partial class PhoneDeploy
             if (unsigned != null)
             {
                 Finish(s, "skipped", "", $"{BumpNote(s)}Keystore password not set ({unsigned}); re-enter it in " +
-                                         "Player Settings > Publishing Settings. Unity forgets it on restart.");
+                                         "Player Settings > Publishing Settings, then run Draftmaster > Build > Remember Keystore Passwords On This Machine so a restart can't lose them again.");
                 return;
             }
 
@@ -465,12 +492,109 @@ public static partial class PhoneDeploy
     }
 
     // Which password a custom-keystore build would have to ask for, or null when signing can go ahead unattended.
+    // Unity forgets both passwords on every editor restart; when they are gone they are put back from this machine's
+    // saved copy (RememberKeystorePasswords), so an overnight build after a restart still signs.
     static string MissingKeystorePassword()
     {
         if (!PlayerSettings.Android.useCustomKeystore) return null;
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) ||
+            string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass))
+            RestoreKeystorePasswords();
         if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass)) return "keystore";
         if (string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass)) return "key alias";
         return null;
+    }
+
+    // This machine's copy of the keystore passwords, outside the repo next to the Play service account key. Plain
+    // JSON in the user profile: the same trust level as the service account key beside it. Environment variables
+    // DRAFTMASTER_KEYSTORE_PASS / DRAFTMASTER_KEYALIAS_PASS win over the file.
+    [Serializable]
+    class KeystoreSecrets
+    {
+        public string keystoreName;   // file name of the keystore these belong to; empty = any
+        public string keystorePass;
+        public string keyaliasName;
+        public string keyaliasPass;
+    }
+
+    static string KeystoreSecretsPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".draftmaster", "keystore.json");
+
+    // Fill whichever password Unity has forgotten. Only for the keystore the passwords were saved for: a wrong
+    // password fails the build at signing, after the whole build has run.
+    static void RestoreKeystorePasswords()
+    {
+        KeystoreSecrets k = null;
+        try
+        {
+            if (File.Exists(KeystoreSecretsPath))
+                k = JsonUtility.FromJson<KeystoreSecrets>(File.ReadAllText(KeystoreSecretsPath));
+        }
+        catch (Exception e) { Debug.LogWarning($"PhoneDeploy: {KeystoreSecretsPath} unreadable ({e.Message})."); }
+        k = k ?? new KeystoreSecrets();
+        string envStore = Environment.GetEnvironmentVariable("DRAFTMASTER_KEYSTORE_PASS");
+        string envAlias = Environment.GetEnvironmentVariable("DRAFTMASTER_KEYALIAS_PASS");
+        if (!string.IsNullOrEmpty(envStore)) k.keystorePass = envStore;
+        if (!string.IsNullOrEmpty(envAlias)) k.keyaliasPass = envAlias;
+
+        if (!string.IsNullOrEmpty(k.keystoreName) &&
+            !string.Equals(Path.GetFileName(PlayerSettings.Android.keystoreName), k.keystoreName,
+                           StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.LogWarning($"PhoneDeploy: saved keystore passwords are for {k.keystoreName}, not " +
+                             $"{Path.GetFileName(PlayerSettings.Android.keystoreName)}; not used.");
+            return;
+        }
+        if (!string.IsNullOrEmpty(k.keyaliasName) &&
+            !string.Equals(PlayerSettings.Android.keyaliasName, k.keyaliasName, StringComparison.Ordinal))
+        {
+            Debug.LogWarning($"PhoneDeploy: saved key alias password is for alias {k.keyaliasName}, not " +
+                             $"{PlayerSettings.Android.keyaliasName}; not used.");
+            k.keyaliasPass = null;
+        }
+
+        bool any = false;
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) && !string.IsNullOrEmpty(k.keystorePass))
+        {
+            PlayerSettings.Android.keystorePass = k.keystorePass;
+            any = true;
+        }
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass) && !string.IsNullOrEmpty(k.keyaliasPass))
+        {
+            PlayerSettings.Android.keyaliasPass = k.keyaliasPass;
+            any = true;
+        }
+        if (any) Debug.Log("PhoneDeploy: keystore passwords restored from this machine's saved copy.");
+    }
+
+    // Once per machine, with the passwords typed into Publishing Settings: saves them so unattended builds survive
+    // an editor restart. Writes nothing into the project.
+    [MenuItem("Draftmaster/Build/Remember Keystore Passwords On This Machine", priority = 224)]
+    static void RememberKeystorePasswords()
+    {
+        if (!PlayerSettings.Android.useCustomKeystore)
+        {
+            Debug.LogWarning("PhoneDeploy: no custom keystore in Publishing Settings; nothing to remember.");
+            return;
+        }
+        if (string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) ||
+            string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass))
+        {
+            Debug.LogWarning("PhoneDeploy: type both keystore passwords into Player Settings > Publishing Settings " +
+                             "first, then run this again.");
+            return;
+        }
+        var k = new KeystoreSecrets
+        {
+            keystoreName = Path.GetFileName(PlayerSettings.Android.keystoreName),
+            keystorePass = PlayerSettings.Android.keystorePass,
+            keyaliasName = PlayerSettings.Android.keyaliasName,
+            keyaliasPass = PlayerSettings.Android.keyaliasPass,
+        };
+        Directory.CreateDirectory(Path.GetDirectoryName(KeystoreSecretsPath));
+        File.WriteAllText(KeystoreSecretsPath, JsonUtility.ToJson(k, true));
+        Debug.Log($"PhoneDeploy: keystore passwords for {k.keystoreName} / {k.keyaliasName} saved to " +
+                  $"{KeystoreSecretsPath}. Unattended builds will put them back after an editor restart.");
     }
 
     // Next to the last build, named for the version: Builds/Android/Draftmaster3-Demo.0.3.9.apk (or .aab).

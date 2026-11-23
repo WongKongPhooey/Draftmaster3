@@ -63,10 +63,8 @@ public static partial class PhoneDeploy
     [MenuItem("Draftmaster/Build/Build + Upload To Play Internal Testing", priority = 221)]
     static void BuildAndUploadInternal()
     {
-        var s = new Status { request = "play-internal", bump = true, state = "working", startedAt = Now(), message = "queued" };
-        Write(s);
         RunProgress("checking setup");
-        EditorApplication.delayCall += () => RunRelease(s, upload: true);
+        Schedule("play-internal");   // the queue, so an unfocused editor or a domain reload can't drop it
     }
 
     [MenuItem("Draftmaster/Build/Upload Last Bundle To Play Internal Testing", priority = 222)]

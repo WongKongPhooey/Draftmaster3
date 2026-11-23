@@ -28,11 +28,24 @@ Progress:
 
 Nothing in the flow opens a dialog, so Tokenmaxxer can run it through the MCP like the phone deploy.
 
+## Automated: Tokenmaxxer, end of the night
+
+With `"play_upload": "end"` on the Draftmaster3 project in Tokenmaxxer's `config.json`, any night where a task
+changed the project ends with one Build + Upload, after the last task and any phone deploy. Tokenmaxxer fires the
+menu item, waits on `Library/PhoneDeploy/status.json` (and the uploader's own file), and commits the version bump
+as `Build version <v>` when ProjectSettings had no local edits. If the request sits at `queued` for two minutes
+(an unfocused editor can leave queued work unticked for hours), it runs it with `execute_code`
+`PhoneDeploy.RunPendingNow()`. The menu requests go through the same SessionState queue as the phone patches, so
+a domain reload can't drop them either. The result goes to the morning report and a desktop message.
+
 ## One-time setup
 
-1. **Upload keystore.** Player Settings > Publishing Settings > Custom Keystore. You have to type its
-   passwords in again after every editor restart, because Unity forgets them. The build stops early with a
-   message if they are missing.
+1. **Upload keystore.** Player Settings > Publishing Settings > Custom Keystore. Unity forgets its
+   passwords on every editor restart. Type them in once, then run `Draftmaster > Build > Remember Keystore
+   Passwords On This Machine`: it saves them to `%USERPROFILE%\.draftmaster\keystore.json` (outside the repo,
+   next to the service account key), and every build puts them back when Unity has forgotten them. They are
+   only used for the keystore file and alias they were saved for. `DRAFTMASTER_KEYSTORE_PASS` /
+   `DRAFTMASTER_KEYALIAS_PASS` override the file. With neither, the build stops early with a message.
 2. **App in the Play Console.** The app has to exist, and its first bundle has to be uploaded by hand.
    The API can't create an app.
 3. **Service account.**
