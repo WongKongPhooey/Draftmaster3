@@ -166,4 +166,21 @@ public class AIRetirementRuleTests
     {
         Assert.IsFalse(AIRetirementRule.TowInPractice(false, 999f, wrecked: true, wreckedWait: 4f, stuckWait: 15f));
     }
+
+    [Test]
+    public void LightDentsAllRound_RaceOn_HoweverHighTheHitTotal()
+    {
+        // Daytona 2026-11-22: cars read damage 0.86-1.00 from a pile of light knocks, with 1-7% of the bodywork
+        // folded, wheels on, nose and tail intact - and were parked. The fold, not the total, decides now.
+        const float Limp = 0.08f, BreakDent = 0.15f;
+        Assert.IsFalse(AIRetirementRule.BrokenDown(1f, 0f, 0, true, 0.1f, 0.25f, 0.04f, BreakDent), "light dents, total 1.0");
+        Assert.IsFalse(AIRetirementRule.Limping(0.04f, Limp, BreakDent));
+        Assert.IsTrue(AIRetirementRule.Limping(0.1f, Limp, BreakDent), "properly bent: limps in for repairs");
+        Assert.IsFalse(AIRetirementRule.BrokenDown(0.5f, 0f, 0, true, 0.1f, 0.25f, 0.1f, BreakDent));
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.5f, 0f, 0, true, 0.1f, 0.25f, 0.16f, BreakDent), "folded: finished");
+        Assert.IsFalse(AIRetirementRule.Limping(0.2f, Limp, BreakDent), "past the line it is broken, not limping");
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.3f, 0f, 1, true, 0f, 0.25f, 0.02f, BreakDent), "a wheel off still ends it");
+        Assert.IsTrue(AIRetirementRule.BrokenDown(0.3f, 0f, 0, true, 0.49f, 0.25f, 0.02f, BreakDent), "so does the nose");
+        Assert.IsFalse(AIRetirementRule.Limping(0.2f, 0f, BreakDent), "0 = no limping");
+    }
 }

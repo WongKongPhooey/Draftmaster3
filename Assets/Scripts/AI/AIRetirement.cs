@@ -4,7 +4,8 @@ using UnityEngine;
 
 // An AI car's way out of the race.
 //
-// Two things end it (AIRetirementRule). Bent past breakdownDamage, or with a wheel off (the bodywork folded in past
+// Two things end it (AIRetirementRule). Folded past breakdownDent (the denting you can see, not the running hit
+// total), the nose crushed in, or with a wheel off (the bodywork folded in past
 // one of VehicleDamage's wheel hubs), the car stops working: the engine is gone, the throttle is cut and the
 // driver rolls it to a stop on the brakes, still steering along their line. And a car that
 // sits stopped on the circuit too long — broken down, beached, wedged against the wall, facing the wrong way — is
@@ -41,8 +42,13 @@ public class AIRetirement : MonoBehaviour
 {
     [Header("Breakdown")]
     [Tooltip("Bodywork damage (VehicleDamage.DamageLevel, 0..1 — a full-severity hit adds ~0.18) at which the car " +
-             "stops working. 0 = cars never break down.")]
-    [Range(0f, 1f)] public float breakdownDamage = 0.6f;
+             "stops working. 0 = off (the default): it is a running total of every hit, so a car with nothing but " +
+             "light dents all round read 0.9-1.0 and was parked. What breaks a car is breakdownDent, a wheel off or the nose.")]
+    [Range(0f, 1f)] public float breakdownDamage = 0f;
+    [Tooltip("Share of the bodywork actually folded (VehicleDamage.DentAmount, the mean fold of every panel, 0..1) at " +
+             "which the car stops working. Daytona 2026-11-22: cars with light denting all round read 0.01-0.07; the " +
+             "real wrecks (wheels off, tail crushed 0.9-1.4 m) 0.15-0.56. 0 = the denting doesn't count.")]
+    [Range(0f, 1f)] public float breakdownDent = 0.15f;
     [Tooltip("A car that has lost a wheel — its bodywork folded in past the point where the wheel joins the axle " +
              "(VehicleDamage.wheelHubs) — breaks down whatever its damage level.")]
     public bool breakdownOnWheelOff = true;
@@ -52,6 +58,14 @@ public class AIRetirement : MonoBehaviour
     public float breakdownFrontCrush = 0.25f;
     [Tooltip("Brake (0..1) a broken-down car rolls to a stop on. Gentle: it is coasting off, not stopping for a wreck.")]
     [Range(0f, 1f)] public float breakdownBrake = 0.3f;
+
+    [Header("Limping")]
+    [Tooltip("Denting (VehicleDamage.DentAmount) at which a car that still runs limps: held to limpMph on its own " +
+             "model and brought in for repairs at the next pit-road pass (under green too). Light dents all round " +
+             "(under ~0.07) race on. 0 = no limping.")]
+    [Range(0f, 1f)] public float limpDent = 0.08f;
+    [Tooltip("Top speed (mph) of a limping car under green. The caution's queue sets its own pace.")]
+    public float limpMph = 45f;
 
     [Header("Retirement")]
     [Tooltip("At or below this speed (mph) the car counts as stopped.")]
@@ -90,7 +104,7 @@ public class AIRetirement : MonoBehaviour
     [Tooltip("Seconds a car due to retire waits on the circuit for the camera to look away before it is moved " +
              "anyway. A fixed view (a grandstand seat, the camera following this car) would otherwise keep it " +
              "there, and its caution out, for ever. 0 = wait for ever.")]
-    public float forceMoveAfterSeconds = 90f;
+    public float forceMoveAfterSeconds = 10f;
 
     [Header("Practice tow")]
     [Tooltip("Practice/qualifying: seconds the crew spend on a car towed back to its box (repaired and refuelled), " +
@@ -115,6 +129,7 @@ public class AIRetirement : MonoBehaviour
     public static bool IsOutOfRace(Transform car) => car != null && (_retired.Contains(car) || _retiring.Contains(car));
 
     public bool BrokenDown { get; private set; }
+    public bool Limping { get; private set; }
     public bool Retired { get; private set; }
 
     SplineDriver _spline;
@@ -175,6 +190,9 @@ public class AIRetirement : MonoBehaviour
         // car does not start driving again because the flag fell or a caution came out.
         if (BrokenDown && _input != null && _input.enabled && _car.externalInput)
             _car.SetInput(_input.LastSteer, 0f, breakdownBrake);
+        else if (Limping && _input != null && _input.enabled && _car.externalInput && !_spline.IsOnPit
+                 && _car.SpeedMph > limpMph)
+            _car.SetInput(_input.LastSteer, 0f, _input.LastBrake);   // off the throttle above limping pace
 
         if (_waiting) { TickWaiting(); return; }
 
@@ -189,8 +207,7 @@ public class AIRetirement : MonoBehaviour
         // back its own model - in the middle of the restarting pack (Daytona, 2026-11-21: damage 1.00 and 0.86 at the
         // green). It is finished, so it is taken out of the queue now and retired out of shot.
         if (!BrokenDown && RaceStart.IsCaution && !_spline.IsOnPit && _bodywork != null && (_input == null || !_input.enabled)
-            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
-                                           FrontCrush(), breakdownFrontCrush))
+            && Wrecked())
         {
             BrokenDown = true;
             Debug.Log($"[AIRetire] {name} too damaged to restart (damage {_bodywork.DamageLevel:0.00}) - retiring under the caution");
@@ -204,9 +221,16 @@ public class AIRetirement : MonoBehaviour
         // Out of fuel is the same: no engine (PlayerVehicleController.FuelDry).
         if (!BrokenDown && !_spline.IsOnPit && _bodywork != null && _input != null && _input.enabled
             && (_car.FuelDry
-                || AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
-                                               FrontCrush(), breakdownFrontCrush)))
+                || Wrecked()))
             BreakDown();
+
+        // Bent but still running: limp on and come in for repairs at the next pit-road pass, under green too. A
+        // repaired car (the stop's RepairFull) is back to racing.
+        if (!BrokenDown && _bodywork != null)
+        {
+            bool limp = AIRetirementRule.Limping(_bodywork.DentAmount, limpDent, breakdownDent);
+            if (limp != Limping) SetLimping(limp);
+        }
 
         float now = Time.fixedTime;
         if (!StoppedOnCircuit()) { _stoppedSince = -1f; return; }
@@ -253,6 +277,12 @@ public class AIRetirement : MonoBehaviour
         return true;
     }
 
+    // Too badly hurt to go on: folded past breakdownDent, a wheel off, the nose in, or (if set) past breakdownDamage.
+    bool Wrecked() =>
+        _bodywork != null
+        && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
+                                       FrontCrush(), breakdownFrontCrush, _bodywork.DentAmount, breakdownDent);
+
     float FrontCrush()
     {
         if (breakdownFrontCrush <= 0f || _bodywork == null) return 0f;
@@ -260,9 +290,35 @@ public class AIRetirement : MonoBehaviour
         return front;
     }
 
+    PitStopController _pits;
+    float _greenRepairBefore = -1f;
+
+    // In for repairs under green while limping (PitStopController.greenRepairDamage, off for the field by default);
+    // put back once the car is repaired.
+    void SetLimping(bool limp)
+    {
+        Limping = limp;
+        if (_pits == null) _pits = GetComponent<PitStopController>();
+        if (_pits == null) return;
+        if (limp)
+        {
+            _greenRepairBefore = _pits.greenRepairDamage;
+            // In at the next pass whatever its damage total says (that figure is in different units to the dents).
+            _pits.greenRepairDamage = 0.01f;
+            Debug.Log($"[AIRetire] {name} limping (dents {_bodywork.DentAmount:0.00}, damage {_bodywork.DamageLevel:0.00}) - " +
+                      $"{limpMph:0} mph, pitting for repairs");
+        }
+        else if (_greenRepairBefore >= 0f)
+        {
+            _pits.greenRepairDamage = _greenRepairBefore;
+            _greenRepairBefore = -1f;
+        }
+    }
+
     void BreakDown()
     {
         BrokenDown = true;
+        if (Limping) SetLimping(false);
         // A car with no engine is not coming in for tyres: the stop would leave it rolling down pit road.
         var pits = GetComponent<PitStopController>();
         if (pits != null) pits.enabled = false;
@@ -272,6 +328,7 @@ public class AIRetirement : MonoBehaviour
         if (formation != null) formation.enabled = false;
         string why = _car.FuelDry ? "out of fuel, " : "";
         if (_bodywork.WheelsOff > 0) why += $"{_bodywork.WheelsOff} wheel(s) off, ";
+        if (breakdownDent > 0f && _bodywork.DentAmount >= breakdownDent) why += $"dents {_bodywork.DentAmount:0.00}, ";
         float crush = FrontCrush();
         if (breakdownFrontCrush > 0f && crush >= breakdownFrontCrush) why += $"nose in {crush:0.00} m, ";
         Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
@@ -417,8 +474,7 @@ public class AIRetirement : MonoBehaviour
 
         if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
         bool wrecked = _car.FuelDry || (_bodywork != null
-            && AIRetirementRule.BrokenDown(_bodywork.DamageLevel, breakdownDamage, _bodywork.WheelsOff, breakdownOnWheelOff,
-                                           FrontCrush(), breakdownFrontCrush));
+            && Wrecked());
 
         if (_towDue) { TickTowWaiting(wrecked); return; }
 

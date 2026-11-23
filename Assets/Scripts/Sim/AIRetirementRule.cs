@@ -33,6 +33,19 @@ namespace Draftmaster.Sim
             (breakdownFrontCrush > 0f && frontCrush >= breakdownFrontCrush)
             || BrokenDown(damage, breakdownDamage, wheelsOff, wheelOffBreaksDown);
 
+        // And the denting you can see: `dent` is VehicleDamage.DentAmount, the mean fold of the bodywork (0..1). The
+        // damage figure is a running total of every hit, so light dents all round add up to 1.0 on a car that is
+        // plainly fine; the fold is what tells a wreck from a scuffed car.
+        public static bool BrokenDown(float damage, float breakdownDamage, int wheelsOff, bool wheelOffBreaksDown,
+                                      float frontCrush, float breakdownFrontCrush, float dent, float breakdownDent) =>
+            (breakdownDent > 0f && dent >= breakdownDent)
+            || BrokenDown(damage, breakdownDamage, wheelsOff, wheelOffBreaksDown, frontCrush, breakdownFrontCrush);
+
+        // Whether a car this dented (DentAmount) still runs but limps (slowed, in for repairs): from `limpDent` up to
+        // the breakdown line. 0 or less disables limping.
+        public static bool Limping(float dent, float limpDent, float breakdownDent) =>
+            limpDent > 0f && dent >= limpDent && !(breakdownDent > 0f && dent >= breakdownDent);
+
         // Whether a car stopped for `stoppedFor` seconds (negative = moving) is retired now. A broken-down car goes
         // after `brokenWait`; one that could still drive only after the longer `stuckWait`.
         public static bool Retire(float stoppedFor, bool brokenDown, float brokenWait, float stuckWait)
