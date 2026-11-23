@@ -46,4 +46,22 @@ public class StrandedTowRuleTests
     {
         Assert.IsFalse(Offer(-1f, 1f, practiceLike: true));
     }
+
+    [Test]
+    public void TowedCar_IsHeld_ForTheImpound_ThenReleased()
+    {
+        const float At = 50f, Hold = StrandedTowRule.DefaultImpoundSeconds;
+        Assert.That(Hold, Is.GreaterThanOrEqualTo(120f), "a tow costs at least a couple of minutes");
+        Assert.AreEqual(Hold, StrandedTowRule.ImpoundLeft(At, At, Hold), 1e-4f);
+        Assert.AreEqual(Hold - 30f, StrandedTowRule.ImpoundLeft(At, At + 30f, Hold), 1e-4f);
+        Assert.AreEqual(0f, StrandedTowRule.ImpoundLeft(At, At + Hold, Hold));
+        Assert.AreEqual(0f, StrandedTowRule.ImpoundLeft(At, At + Hold + 10f, Hold));
+    }
+
+    [Test]
+    public void NeverTowed_IsNeverHeld()
+    {
+        Assert.AreEqual(0f, StrandedTowRule.ImpoundLeft(-1f, 500f, 120f));
+        Assert.AreEqual(0f, StrandedTowRule.ImpoundLeft(10f, 10f, 0f));
+    }
 }

@@ -22,5 +22,19 @@ namespace Draftmaster.Sim
             if (wrecked || !requireDamage) return stoppedFor >= damagedWait;
             return practiceLike && stoppedFor >= undamagedWait;
         }
+
+        // A towed car is held in its box before the crew may touch it or the driver may take it back out —
+        // the truck, the paperwork and the inspection. Without it a tow was a teleport to the box plus a few
+        // seconds of panel-beating, which made the wall a shortcut whenever the lap was already lost.
+        public const float DefaultImpoundSeconds = 120f;
+
+        // Seconds of the hold still to run, `now - towedAt` after the tow landed. 0 once it is served (and
+        // for a car that was never held: towedAt < 0).
+        public static float ImpoundLeft(float towedAt, float now, float impoundSeconds)
+        {
+            if (towedAt < 0f || impoundSeconds <= 0f) return 0f;
+            float left = impoundSeconds - (now - towedAt);
+            return left > 0f ? left : 0f;
+        }
     }
 }

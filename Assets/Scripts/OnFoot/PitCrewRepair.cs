@@ -9,6 +9,9 @@ using UnityEngine;
 // happen is the point: the dents come out a little every frame (VehicleDamage.Repair), not all at once. A tow that returned a straight car would make putting
 // it in the wall free, and the player would take the wall over the lap time every time.
 //
+// Before any of that the car is impounded (impoundSeconds, two minutes by default): the crew stay on the wall
+// and the driver cannot get back in, with a countdown on screen. Only then does the repair start.
+//
 // Self-installing: PitLaneStart.TowToPits calls Begin(car) and this attaches itself. Nothing to wire.
 public class PitCrewRepair : MonoBehaviour
 {
@@ -27,7 +30,14 @@ public class PitCrewRepair : MonoBehaviour
              "repaired while it is being driven would repair itself on the way down the back straight.")]
     public bool pauseWhileDriven = true;
 
+    [Tooltip("Seconds a towed car is held in its box before the crew start on it and before the driver can " +
+             "get back in (StrandedTowRule.ImpoundLeft). The repair itself runs after this.")]
+    public float impoundSeconds = Draftmaster.Sim.StrandedTowRule.DefaultImpoundSeconds;
+
     PlayerVehicleController _car;
+
+    // When the tow landed, for the impound hold. -1 = not held.
+    float _towedAt = -1f;
     VehicleDamage _bodywork;
 
     // How long this job takes, fixed when it starts (RepairSeconds of the damage then).
@@ -58,6 +68,15 @@ public class PitCrewRepair : MonoBehaviour
         }
     }
 
+    // Seconds of impound left on the car the crew are on; 0 when nothing is held.
+    public static float ImpoundLeft => Active != null ? Active.ImpoundRemaining : 0f;
+
+    float ImpoundRemaining => Draftmaster.Sim.StrandedTowRule.ImpoundLeft(_towedAt, Time.time, impoundSeconds);
+
+    // True while this car is held after a tow: the driver may not get back in it yet.
+    public static bool Impounds(PlayerVehicleController car) =>
+        car != null && Active != null && Active._car == car && Active.ImpoundRemaining > 0f;
+
     // Put a crew on this car. Calling it again on a car already being worked on restarts the estimate
     // against whatever the damage is now, which is what a second trip into the wall should do.
     //
@@ -65,6 +84,9 @@ public class PitCrewRepair : MonoBehaviour
     // with its controls OFF; it is pinned in the box while the crew work and its controls come back on when
     // they finish. Without it the controls were switched straight back on, which is "being driven", so the
     // crew never came out and the car never straightened.
+    //
+    // A tow is the only caller, and every call starts the impound hold again: a second trip into the wall
+    // serves a second sentence.
     public static PitCrewRepair Begin(PlayerVehicleController car, bool handBackWhenDone = false)
     {
         if (car == null) return null;
@@ -77,6 +99,7 @@ public class PitCrewRepair : MonoBehaviour
         repair._startedAt = repair._bodywork != null ? repair._bodywork.DamageLevel : 0f;
         repair._jobSeconds = RepairSeconds(repair._startedAt, repair.minRepairSeconds, repair.maxRepairSeconds);
         repair._handBackWhenDone = handBackWhenDone;
+        repair._towedAt = Time.time;
         if (handBackWhenDone) ParkedCarPin.Hold(car);
         repair.enabled = true;
         // Already out round it from an earlier tow: re-measure, because the car may have landed elsewhere.
@@ -99,6 +122,10 @@ public class PitCrewRepair : MonoBehaviour
 
     void Update()
     {
+        // Impounded: nobody touches the car and (PitLaneStart) nobody gets in it until the hold is served.
+        // Checked before anything that could Finish, so even an undamaged car is held the full time.
+        if (ImpoundRemaining > 0f) { StandCrewDown(); return; }
+
         if (_bodywork == null) { Finish(); return; }
 
         // The driver is back in it. Work stops until they are out again — which also means a driver who
@@ -117,8 +144,35 @@ public class PitCrewRepair : MonoBehaviour
         _bodywork.Repair(Mathf.Clamp01(perSecond * Time.deltaTime / remaining));
     }
 
+    // The hold's countdown, top centre, so the wait reads as a rule rather than a car that will not start.
+    // Then the crew's progress while they work.
+    void OnGUI()
+    {
+        if (Event.current.type != EventType.Repaint) return;
+        if (Active != this || RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
+
+        string text;
+        float left = ImpoundRemaining;
+        if (left > 0f)
+        {
+            int s = Mathf.CeilToInt(left);
+            text = $"Towed in - car held for {s / 60}:{s % 60:00}";
+        }
+        else if (_bodywork != null && _startedAt > doneBelow)
+            text = $"Crew repairing - {Mathf.RoundToInt(Progress01 * 100f)}%";
+        else return;
+
+        var style = PixelGUI.Label;
+        var size = style.CalcSize(new GUIContent(text));
+        float pad = PixelGUI.Px(6f);
+        var r = new Rect(Mathf.Round((Screen.width - size.x) * 0.5f), PixelGUI.Px(40f), size.x, size.y);
+        PixelGUI.Fill(new Rect(r.x - pad, r.y - pad * 0.5f, r.width + pad * 2f, r.height + pad), PixelGUI.PlateDeep);
+        GUI.Label(r, text, style);
+    }
+
     void Finish()
     {
+        _towedAt = -1f;
         if (Active == this) Active = null;
         StandCrewDown();
         enabled = false;

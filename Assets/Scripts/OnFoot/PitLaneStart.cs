@@ -887,12 +887,15 @@ public class PitLaneStart : MonoBehaviour
             return;
         }
 
-        ShowPrompt(inRange);
+        // A towed car is held in its box for a while before anyone may take it back out (PitCrewRepair's
+        // impound; its countdown is on screen). No prompt, and E does nothing, until that is served.
+        bool impounded = PitCrewRepair.Impounds(car);
+        ShowPrompt(inRange && !impounded);
 
         // A co-op guest never gets into the scene's player car: that car is the HOST's entry in the weekend,
         // and the guest's copy of it is scene content, not a second entry. When a session starts, the guest
         // is put into one of the cars already in the field instead (CoopPossession).
-        if (inRange && InteractPressed() && !Coop.IsGuest) EnterCar();
+        if (inRange && !impounded && InteractPressed() && !Coop.IsGuest) EnterCar();
     }
 
     // Armed once the player has been seen OUTSIDE the motorhome. The scene opens with them stood inside it,
