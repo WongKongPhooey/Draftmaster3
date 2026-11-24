@@ -208,8 +208,43 @@ public class DriveModeController : MonoBehaviour
             _laneSelect.Reset(brain.NearestPlayerLane(), steer);
         }
         else if (!PadInput.ModalOpen) _laneSelect.Update(steer);
+        // Lined up two-wide for a restart: the pick follows the column - inside column the inside lane, outside column
+        // the middle - once per restart, so the car is not sent back out wide once it is up to speed. The player can
+        // still move it after. Lane-AI ovals say so through the start lanes; pack ovals (Daytona) and road courses only
+        // through the formation's column, which is read while the caution lasts. On a road course the columns are the
+        // left and right lines, so the lane is the column's side.
+        var spline = playerCar.GetComponent<SplineDriver>();
+        int startSide = spline != null && spline.RestartStartLanes ? spline.StartLaneSide : 0;
+        bool startOval = true;
+        if (startSide == 0 && RaceStart.IsCaution)
+        {
+            var formation = playerCar.GetComponent<FormationController>();
+            if (formation != null && formation.enabled)
+            {
+                startSide = formation.ColumnSide;
+                startOval = formation.ColumnOnOval;
+            }
+        }
+        if (startSide != 0 && startSide != _restartLaneSide)
+        {
+            int lane;
+            if (!startOval) lane = startSide;
+            else
+            {
+                float infield = spline.LaneInsideSide != 0f ? spline.LaneInsideSide : spline.InfieldSide;
+                int inside = infield < 0f ? -1 : 1;
+                lane = startSide < 0 ? inside : 0;
+            }
+            _laneSelect.Reset(lane, steer);
+        }
+        // Held through the caution (a step out of the columns - making way, settling - is not a new restart), and
+        // cleared once the restart is over, so the next one sets the lane again.
+        if (startSide != 0) _restartLaneSide = startSide;
+        else if (!RaceStart.IsCaution) _restartLaneSide = 0;
         brain.playerLane = _laneSelect.Lane;
     }
+
+    int _restartLaneSide;   // the restart start lane the lane pick was last set from (0 none)
 
     // The lane goes back to the brain to choose.
     void StopLanes()

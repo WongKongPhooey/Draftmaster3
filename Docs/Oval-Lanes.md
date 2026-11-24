@@ -557,6 +557,31 @@ handover. `OvalPassingTests.AFullFieldGreenDeepInTheTriovalFansOutWithoutContact
 start lanes at 50 mph, leader 38 m short of the line, pace-lap offset in the tactical term, director throttled to
 one lane a step.
 
+### The start lanes are the racing lanes (2026-11-23)
+
+The separate low start lines went: the field lined up on lines of its own, then split onto Inside / Outside once up to
+speed. Now the two columns line up on two of the lines the field races on, and stay there until the first move:
+
+- **Lane-AI ovals**: the inside column on the **Inside** lane, the outside column on the **ideal** (the Middle) where
+  the ideal keeps `SplineDriver.startPairMinGapMetres` (3.2 m, centre to centre) off the Inside lane all the way
+  round, else on the **Outside** lane (`SplineDriver.StartHighLane`; `[StartLanes]` logs the choice per track). The
+  director gives each car the lane it lined up on, so the hold after the green has nothing to ease off. Where the
+  ideal does pair with the Inside lane, a car on the ideal with a car inside it holds (`StepPairLanes`) and a pass from
+  the Inside lane goes to the ideal. The ideal is laid once per track by a disabled stand-in car (`ProbeIdealLane`).
+  Measured: the ideal comes within 1.3 m of the Inside lane (or crosses it) somewhere on every lane-AI oval - Texas
+  -2.5 m, Martinsville 0.1, Darlington -1.1, Charlotte 1.2 - so all of them line up **Inside + Outside** today.
+- **Pack ovals** (Daytona, Talladega): the inside groove and the one beside it (Daytona -3.6 / 0, the Middle;
+  Talladega -5.4 / -1.8), or the outside groove where those are under `FormationController.packColumnMinGapM`
+  (3.2 m). At the green each car takes the groove it is in (`AIRacingBehaviour.FirstLane`), so nobody splits. Before,
+  the columns sat 1.5 m either side of the centre and went to the inside and outside grooves at the green.
+- **Road courses**: the left column on the authored leftmost line, the right on the rightmost (the Outside line)
+  (`SplineDriver.TryAuthoredSideLineAt`).
+
+`OvalLanes.Start` and the start-line build are gone; `TrackBuilder.TryGetOvalStartLanes` returns the racing lanes.
+Sims: `OvalPassingTests` start / launch / trioval cases and `FormationLapSimTests` formation-lap and green cases pass
+as before; Martinsville (a safety car x pit-exit graze), Chicago (pit-exit merge, 28 -> 11 contacts) and Darlington
+(6.5 m stagger at the green) fail the same on the commit before. Not play-tested.
+
 ## Not done yet
 
 - **Live races not yet play-tested.** The director has only been run in the sim.

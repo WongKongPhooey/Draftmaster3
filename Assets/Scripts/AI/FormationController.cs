@@ -248,6 +248,12 @@ public class FormationController : MonoBehaviour
     PackSettings _cautionPack; // the close-up pack with the caution's gentle comfort braking
     float _prevLine;           // last step's racing-line lateral, for how fast the line is swinging across the road
     bool _hasPrevLine;
+    // The column this car is lined up in on its line (TryColumnLines), every formation step: -1 the inside column (on a
+    // road course, the left), +1 the other, 0 not on the column lines (single file, settling, making way, pit lane).
+    // Read by the player's lane controls, so the lane they show follows the column the car was put in.
+    public int ColumnSide { get; private set; }
+    // ColumnSide is inside / outside (an oval) rather than left / right (a road course).
+    public bool ColumnOnOval { get; private set; }
     int _ovalTrack = -1;   // -1 unknown, 0 road course, 1 oval: columnEdgeMarginM applies on ovals only
     const float MaxLineRate = 10f; // m/s; a jump faster than this is a seam (the pit merge), not the line moving
     readonly List<PackCar> _cars = new List<PackCar>();
@@ -488,6 +494,7 @@ public class FormationController : MonoBehaviour
 
     void FixedUpdate()
     {
+        ColumnSide = 0;   // set again below while the car is on its column line
         if (_spline == null || _spline.TrackLength <= 0f) return;
         if (!RaceStart.UnderSafetyCar) return;
         bool caution = RaceStart.IsCaution;
@@ -746,31 +753,33 @@ public class FormationController : MonoBehaviour
         // swinging across a corner — at the gentle weave slew the inside car lagged into its partner alongside. Only
         // in the close-up, where the rows are drawn level side by side; the staggered train before it never needed it.
         bool squeezed = Mathf.Abs(fitted - column) > 0.05f;
-        // Start lanes (lane-AI ovals): the two columns run the two low start lines instead - a fixed height above the
-        // inside edge and well apart, not offsets either side of the racing line, which swings up the banking through
-        // every turn and the trioval. The column toward the infield takes the low line. The car keeps to it after the
-        // green until up to speed (SplineDriver.startLanes).
-        int startSide = 0;
-        if ((!caution || doubled) && !settling && !makingWay && !_spline.usePitLane && column != 0f && _spline.startLanes
-            && OvalLaneDirector.Applies && OvalLaneDirector.Enabled)
+        // The two columns run two of the lines the field races on, not offsets either side of the racing line:
+        //   * lane-AI ovals: the Inside lane, and the ideal (the Middle) or the Outside lane (SplineDriver.startLanes) -
+        //     kept to after the green until up to speed, and given as the car's lane;
+        //   * pack ovals (Daytona, Talladega): the inside groove and the one beside it (the middle), or the outside
+        //     groove where those two are too close - the groove each car takes at the green (AIRacingBehaviour.FirstLane);
+        //   * road courses: the authored leftmost line and the rightmost (the Outside line).
+        // The column toward the infield takes the inside line (on a road course, the left column the leftmost).
+        int startSide = 0, columnSide = 0;
+        bool onLines = false;
+        if ((!caution || doubled) && !settling && !makingWay && !_spline.usePitLane && column != 0f
+            && TryColumnLines(column, out int side, out float lowLat, out float highLat, out bool laneStart))
         {
-            float infield = _spline.InfieldSide;
-            int side = infield == 0f ? 0 : column * infield > 0f ? -1 : 1;
-            float at = _spline.CentreDistanceOnTrack;
-            if (side != 0 && _spline.TryStartLaneLateralAt(-1, at, out float lowLat) && _spline.TryStartLaneLateralAt(1, at, out float highLat))
-            {
-                startSide = side;
-                // The pair fitted inside the car-centre limits as the columns are (FitColumn): the limits pinch in
-                // under the road's width in places (Daytona's pit exit), and clamped there the low car was pushed up
-                // into its partner.
-                float mid = 0.5f * (lowLat + highLat), half = 0.5f * Mathf.Abs(highLat - lowLat);
-                float mine = (side < 0 ? lowLat : highLat) - mid;
-                // No columnEdgeMarginM: the start lanes keep their own room from the edges.
-                float fit = FormationLanes.FitColumn(mine >= 0f ? half : -half, mid, boundLo, boundHi);
-                fitted = mid + fit - _spline.UntacticalLateral;
-            }
+            if (laneStart) startSide = side;
+            onLines = true;
+            columnSide = side;
+            // The pair fitted inside the car-centre limits as the columns are (FitColumn): the limits pinch in
+            // under the road's width in places (Daytona's pit exit), and clamped there the low car was pushed up
+            // into its partner.
+            float mid = 0.5f * (lowLat + highLat), half = 0.5f * Mathf.Abs(highLat - lowLat);
+            float mine = (side < 0 ? lowLat : highLat) - mid;
+            // No columnEdgeMarginM: the lines keep their own room from the edges.
+            float fit = FormationLanes.FitColumn(mine >= 0f ? half : -half, mid, boundLo, boundHi);
+            fitted = mid + fit - _spline.UntacticalLateral;
         }
         _spline.SetStartLane(startSide);
+        ColumnSide = columnSide;
+        ColumnOnOval = _ovalTrack == 1;
         column = fitted;
         float line = _spline.UntacticalLateral;
         float lineRate = _hasPrevLine ? Mathf.Min(Mathf.Abs(line - _prevLine) / Mathf.Max(dt, 1e-4f), MaxLineRate) : 0f;
@@ -822,9 +831,9 @@ public class FormationController : MonoBehaviour
             // leader pitted): the caution catch-up lifts it the same way.
             CruiseMph = yielding || cautionApproach ? baseCap : cruise + Mathf.Max(farBonus, cautionBonus),
             ColumnTactical = column + weave,
-            // On a start lane the column is the gap from the racing line to a fixed line: it must keep up with the
+            // On a line of its own the column is the gap from the racing line to that line: it must keep up with the
             // racing line swinging across the road as the squeezed pair's does.
-            ColumnSlew = (squeezed && closingUp) || startSide != 0 ? Mathf.Max(weaveSlewPerSec, pack.SwerveSlewPerSec) + lineRate
+            ColumnSlew = (squeezed && closingUp) || onLines ? Mathf.Max(weaveSlewPerSec, pack.SwerveSlewPerSec) + lineRate
                        : makingWay ? Mathf.Max(weaveSlewPerSec, cautionYieldSlewPerSec) : weaveSlewPerSec,
             // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.
             AllowSwerve = !settling,
@@ -844,6 +853,40 @@ public class FormationController : MonoBehaviour
         HasPlan = true;
         DbgSettling = settling;
     }
+
+    [Tooltip("Pack ovals: the two columns line up in the inside groove and the one beside it (the middle) when the grooves are at " +
+             "least this far apart (m, centre to centre) - a car's width and a little over a metre between the doors - else in " +
+             "the inside and the outside groove.")]
+    public float packColumnMinGapM = 3.2f;
+
+    // The two lines the columns line up on here (see the lateral intent in FixedUpdate): `side` -1 for the inside (on a
+    // road course, the left) column and +1 for the other, both lines as laterals at the car's place on the lap.
+    // `laneStart`: the lane-AI start lanes, which the car is also put on (SplineDriver.SetStartLane). False where the
+    // columns stay offsets either side of the racing line.
+    bool TryColumnLines(float column, out int side, out float lowLat, out float highLat, out bool laneStart)
+    {
+        side = 0;
+        lowLat = highLat = 0f;
+        laneStart = false;
+        float at = _spline.CentreDistanceOnTrack;
+        if (_ovalTrack == 1)
+        {
+            float infield = _spline.InfieldSide;
+            if (infield == 0f) return false;
+            side = column * infield > 0f ? -1 : 1;
+            if (_spline.startLanes && OvalLaneDirector.Applies && OvalLaneDirector.Enabled)
+            {
+                laneStart = _spline.TryStartLaneLateralAt(-1, at, out lowLat) && _spline.TryStartLaneLateralAt(1, at, out highLat);
+                return laneStart;
+            }
+            if (_racer == null) _racer = GetComponent<AIRacingBehaviour>();
+            return _racer != null && _racer.TryStartGrooves(packColumnMinGapM, out lowLat, out highLat);
+        }
+        side = column < 0f ? -1 : 1;
+        return _spline.TryAuthoredSideLineAt(-1, at, out lowLat) && _spline.TryAuthoredSideLineAt(1, at, out highLat);
+    }
+
+    AIRacingBehaviour _racer;
 
     // Off the box strip onto the pit lane's driving line, by distance rolled rather than by time (see
     // pitPullOutAngleDeg): a car held in the queue stays where it is, pointing where it was.

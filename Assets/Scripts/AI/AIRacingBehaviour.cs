@@ -1838,6 +1838,22 @@ public class AIRacingBehaviour : MonoBehaviour
         return true;
     }
 
+    // The two grooves a pack lines up two-wide in for a start or restart: the inside groove and the one beside it (the
+    // middle of three) - or the outside groove, where the one beside is under `minGap` (m, centre to centre) from the
+    // inside, too close for two cars side by side. At the green each car takes the groove it is in (FirstLane), so the
+    // field races on from the lines it lined up on. False off a pack.
+    public bool TryStartGrooves(float minGap, out float insideLat, out float besideLat)
+    {
+        insideLat = besideLat = 0f;
+        if (!Pack || TrackConditions.AiPackLanes < 2 || _spline == null || !LaneGeometry(out _, out _, out int count)) return false;
+        bool infieldRight = _spline.InfieldSide > 0f;
+        int inside = infieldRight ? count - 1 : 0;
+        insideLat = LaneLateral(inside);
+        besideLat = LaneLateral(inside + (infieldRight ? -1 : 1));
+        if (Mathf.Abs(besideLat - insideLat) < minGap) besideLat = LaneLateral(infieldRight ? 0 : count - 1);
+        return Mathf.Abs(besideLat - insideLat) >= 0.5f;
+    }
+
     int FirstLane(float lateral, int count)
     {
         if (!LaneGeometry(out float lo, out float hi, out _)) return 0;

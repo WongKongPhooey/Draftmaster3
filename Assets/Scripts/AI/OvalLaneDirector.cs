@@ -208,10 +208,11 @@ public class OvalLaneDirector : MonoBehaviour
 
     OvalLanes.Lane Choose(SplineDriver self, IReadOnlyList<SplineDriver> drivers)
     {
-        // Off the pace lap's start lanes: low takes the inside lane, high the outside, and the car keeps to its start
-        // lane on top of it until up to speed.
+        // Off the pace lap's start lanes: low takes the Inside lane, high the lane it lined up on - the ideal (the Middle)
+        // where that pairs with the Inside lane, else the Outside (SplineDriver.StartHighLane) - and keeps to it with no
+        // moves until up to speed.
         if (self.StartLaneSide < 0) return OvalLanes.Lane.Inside;
-        if (self.StartLaneSide > 0) return OvalLanes.Lane.Outside;
+        if (self.StartLaneSide > 0) return self.StartHighLane;
         float myD = self.CentreDistanceOnTrack, myLat = self.CarLateral;
         float myIn = myLat * _insideSide;   // how far toward the infield
         bool besideInner = false, besideOuter = false;

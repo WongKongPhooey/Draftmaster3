@@ -912,8 +912,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Staggered launch: the longest (s) any car holds after the green, whatever the car ahead does.")]
     public float launchMaxHoldSeconds = 2.5f;
 
-    [Tooltip("Start lanes (oval lane AI): the pace lap runs two-wide on two LOW lines (OvalLanes.Start: a fixed height above the inside edge, well apart), and after the green each car keeps to its start lane - given the matching racing lane, low = inside, high = outside, with no lane changes - until it is up to speed (its flat-out launch is over), then eases onto its racing lane over startLaneReleaseSeconds. Before (Texas 2026-11-10) the green handed the pair straight to the racing lanes while the whole field was on the throttle together: the outside car was sent up toward the wall through the trioval and pairs closed on each other where the drawn lines converge. Off = the racing lanes from the green.")]
+    [Tooltip("Start lanes (oval lane AI): the pace lap runs two-wide on two of the racing lanes - the inside column on the Inside lane, the outside column on the ideal (the Middle) where it keeps startPairMinGapMetres off the Inside lane all the way round, else on the Outside lane - and after the green each car is given that same lane and keeps to it, with no lane changes, until it is up to speed (its flat-out launch is over). The field is two-wide on the lines it races on from the pace lap to its first move, rather than lining up on lines of its own and splitting onto the racing lanes once up to speed. Off = the racing lanes from the green, columns either side of the racing line on the pace lap.")]
     public bool startLanes = true;
+    [Tooltip("Start lanes: the outside column runs the ideal line (the Middle) only where the ideal keeps at least this far (m, centre to centre) off the Inside lane all the way round the lap: a car's width and a little over a metre between the doors. Closer than that the two cars would touch, and the outside column runs the Outside lane instead. Measured 2026-11-23, the ideal comes within 1.3 m of the Inside lane (or crosses it) somewhere on every lane-AI oval, so all of them line up Inside + Outside.")]
+    public float startPairMinGapMetres = 3.2f;
     [Tooltip("Start lanes: seconds to ease from the start lane onto the racing lane once up to speed (a smoothstep, so no sideways kick at either end).")]
     public float startLaneReleaseSeconds = 3f;
     [Tooltip("Start lanes: the longest (s) any car keeps to its start lane after the green, up to speed or not.")]
@@ -927,8 +929,6 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _startWeight;             // 1 holding, easing to 0 on release
     bool _startReleasing;
     float _startReleaseP, _startHeldSeconds;
-    float[] _startLow, _startHigh;
-    List<TrackBuilder.Sample> _startLanesFor;
     // The start lane this car is in (-1 low, +1 high) on the pace lap and after the green until it has eased off it.
     public int StartLaneSide => _startSide;
     // Still on its start lane after the green (not yet easing off it).
@@ -941,6 +941,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         side = System.Math.Sign(side);
         startLane = side;
+        if (!RaceStart.IsGreen) _startIsRestart = RaceStart.IsCaution;
         if (!startLanes || _onPit) side = 0;
         if (_startSide == side && (side == 0 || !_startReleasing)) return;
         if (RaceStart.IsGreen && _startHeldSeconds > 0f) return;   // after the green: only the next pace lap moves it
@@ -951,18 +952,143 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _startHeldSeconds = 0f;
     }
 
-    // Lateral (m, + right of travel) of a start lane (-1 low, +1 high) at `distance`. False off an oval.
+    // Lateral (m, + right of travel) of a start lane (-1 low, +1 high) at `distance`: the Inside racing lane, and the
+    // ideal or the Outside lane (StartHighLane). False off a lane-AI oval.
     public bool TryStartLaneLateralAt(int side, float distance, out float lateral)
     {
         lateral = 0f;
-        if (side == 0 || track == null || _mainSamples == null || _mainSamples.Count < 3) return false;
-        if (_startLanesFor != _mainSamples)
-        {
-            _startLanesFor = _mainSamples;
-            if (!track.TryGetOvalStartLanes(_mainSamples, out _startLow, out _startHigh)) _startLow = _startHigh = null;
-        }
-        var line = side < 0 ? _startLow : _startHigh;
+        if (side == 0) return false;
+        var pair = EnsureStartPair();
+        var line = pair == null ? null : side < 0 ? pair.low : RestartStartLanes && pair.restartHigh != null ? pair.restartHigh : pair.high;
         if (line == null || line.Length != _mainSamples.Count) return false;
+        lateral = SampleAlongLine(line, distance, 0f);
+        return true;
+    }
+
+    // The racing lane the outside column lines up on, and is given at the green: the ideal (the Middle) where it keeps
+    // startPairMinGapMetres off the Inside lane all the way round, else the Outside lane.
+    public Draftmaster.Tracks.OvalLanes.Lane StartHighLane
+    {
+        get
+        {
+            var pair = EnsureStartPair();
+            if (pair != null && RestartStartLanes && pair.restartHigh != null) return Draftmaster.Tracks.OvalLanes.Lane.Ideal;
+            return pair != null && pair.highIsIdeal ? Draftmaster.Tracks.OvalLanes.Lane.Ideal : Draftmaster.Tracks.OvalLanes.Lane.Outside;
+        }
+    }
+
+    // A restart, not the start: the field doubling up behind the safety car, or holding the lanes it lined up in after
+    // a restart's green. Lined up Inside + Outside the restart pair was too wide, so a restart puts the inside column on
+    // the Inside lane and the outside column on the Middle (the ideal, kept a car's width and daylight off the Inside
+    // lane: restartHigh), and gives them those lanes at the green.
+    bool _startIsRestart;
+    public bool RestartStartLanes => RaceStart.IsCaution || (RaceStart.IsGreen && _startIsRestart && _startSide != 0);
+
+    // Two cars side by side on the Inside lane and the ideal are a pair (the start pair runs that way): neither has to
+    // split out to the Outside lane for the other.
+    bool IdealPairsWithInside
+    {
+        get
+        {
+            var pair = EnsureStartPair();
+            return pair != null && pair.highIsIdeal;
+        }
+    }
+
+    // The start pair for a track: both lines per main sample, worked out once and shared by every car on it.
+    sealed class StartPair
+    {
+        public int n;
+        public float length;
+        public float[] low, high;
+        // The restart's high lane: the ideal (the Middle), pushed out wherever it comes closer than startPairMinGapMetres
+        // to the Inside lane and never past the Outside lane. Null with no ideal to lay it on.
+        public float[] restartHigh;
+        public bool highIsIdeal;
+        public float idealGap;   // the least the ideal keeps off the Inside lane round the lap (m, toward the outside)
+    }
+    static readonly Dictionary<TrackBuilder, StartPair> s_startPairs = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStartPairs() => s_startPairs.Clear();
+
+    StartPair EnsureStartPair()
+    {
+        if (track == null || track.track == null || _mainSamples == null || _mainSamples.Count < 3) return null;
+        int n = _mainSamples.Count;
+        if (s_startPairs.TryGetValue(track, out var pair) && pair.n == n && Mathf.Approximately(pair.length, _mainLength))
+            return pair.low != null ? pair : null;
+        pair = new StartPair { n = n, length = _mainLength };
+        s_startPairs[track] = pair;
+        if (!track.TryGetOvalLanes(_mainSamples, out var inside, out var outside) || inside.Length != n) return null;
+
+        // The ideal as a lane car runs it (lineFactor 0, the line every lane car is laid on): this car's own if it holds
+        // a lane already, else laid once by a stand-in that never joins the race.
+        float[] ideal = _idealLaneLine != null && _idealLaneLine.Length == n ? _idealLaneLine : ProbeIdealLane();
+        bool haveIdeal = ideal != null && ideal.Length == n;
+        double towardInside = 0.0;
+        for (int i = 0; i < n; i++) towardInside += inside[i] - outside[i];
+        float side = towardInside < 0.0 ? -1f : 1f;
+        float gap = float.NegativeInfinity;
+        if (haveIdeal)
+        {
+            gap = float.MaxValue;
+            for (int i = 0; i < n; i++) gap = Mathf.Min(gap, (inside[i] - ideal[i]) * side);
+        }
+        pair.idealGap = gap;
+        pair.highIsIdeal = haveIdeal && gap >= startPairMinGapMetres;
+        pair.low = inside;
+        pair.high = pair.highIsIdeal ? (float[])ideal.Clone() : outside;
+        if (haveIdeal)
+        {
+            pair.restartHigh = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                // In "toward the infield" terms: at most the Inside lane less the pair gap, at least the Outside lane.
+                float lat = ideal[i] * side;
+                lat = Mathf.Min(lat, inside[i] * side - startPairMinGapMetres);
+                lat = Mathf.Max(lat, outside[i] * side);
+                pair.restartHigh[i] = lat * side;
+            }
+        }
+        Debug.Log($"[StartLanes] {track.track.name}: two-wide on Inside + {(pair.highIsIdeal ? "Middle (the ideal)" : "Outside")} - " +
+                  (haveIdeal ? $"the ideal keeps {gap:0.00} m off the Inside lane at its closest (needs {startPairMinGapMetres:0.0})"
+                             : "no ideal line to measure"));
+        return pair;
+    }
+
+    // The ideal line a lane car is laid on, from a disabled copy of this car that is built once and thrown away: a car
+    // still on the pace lap has its own spread line (lineFactor) and no lanes built.
+    float[] ProbeIdealLane()
+    {
+        var go = new GameObject("StartPairProbe");
+        go.SetActive(false);
+        go.hideFlags = HideFlags.HideAndDontSave;
+        try
+        {
+            var probe = go.AddComponent<SplineDriver>();
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(this), probe);
+            probe.track = track;
+            probe.vehicleInfo = vehicleInfo;
+            probe.lineFactor = 0f;
+            probe.ovalLane = Draftmaster.Tracks.OvalLanes.Lane.Ideal;
+            probe.Rebuild();
+            return probe._idealLaneLine;
+        }
+        finally
+        {
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+    }
+
+    // The authored leftmost (side -1) and rightmost (+1) lines at `distance`, kept on the road: where a road course's field
+    // lines up two-wide, the left column on the leftmost line and the right on the rightmost (the Outside line).
+    public bool TryAuthoredSideLineAt(int side, float distance, out float lateral)
+    {
+        lateral = 0f;
+        var line = side < 0 ? _authoredLeft : side > 0 ? _authoredRight : null;
+        if (line == null || _mainSamples == null || line.Length != _mainSamples.Count) return false;
         lateral = SampleAlongLine(line, distance, 0f);
         return true;
     }
@@ -983,6 +1109,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float dt = Time.fixedDeltaTime;
         if (!RaceStart.IsGreen)
         {
+            _startIsRestart = RaceStart.IsCaution;
             _startSide = startLanes && !_onPit ? startLane : 0;
             _startWeight = _startSide != 0 ? 1f : 0f;
             _startReleasing = false;
@@ -1175,6 +1302,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _laneCooldown;
     float _passAdvantage;
     float[] _insideLaneLine, _outsideLaneLine, _idealLaneLine;   // every lane's lateral per main sample (lane mode only)
+    float[] _authoredLeft, _authoredRight;   // the authored leftmost / rightmost lines, kept on the road (every build)
     float[] _laneBuildInside, _laneBuildOutside;
 
     // Lateral (m) of an oval lane's line at `distance` along the main track. 0 when the car has no lanes.
@@ -1301,8 +1429,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (!TryStartPass(first, here, v)) TryStartPass(second, here, v);
             return;
         }
+        // From the Inside lane: out to the Outside lane - or to the ideal, where that pairs with the Inside lane and so
+        // is the lane beside it.
         TryStartPass(ovalLane == Draftmaster.Tracks.OvalLanes.Lane.Inside
-            ? Draftmaster.Tracks.OvalLanes.Lane.Outside : Draftmaster.Tracks.OvalLanes.Lane.Inside, here, v);
+            ? (IdealPairsWithInside ? Draftmaster.Tracks.OvalLanes.Lane.Ideal : Draftmaster.Tracks.OvalLanes.Lane.Outside)
+            : Draftmaster.Tracks.OvalLanes.Lane.Inside, here, v);
     }
 
     bool TryStartPass(Draftmaster.Tracks.OvalLanes.Lane target, float here, float v)
@@ -1391,6 +1522,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             {
                 // Take the side lane the car beside us is not in (or heading for); if it is on the ideal too, the
                 // one nearer the infield goes inside. Both cars read the same pair, so they always split.
+                // Where the ideal and the Inside lane are a pair of their own (IdealPairsWithInside), a car on the ideal
+                // with one inside it stays put: the two are already side by side on two lanes.
+                bool inner = otherLane == Inside || (otherLane != Outside && otherIn > myIn);
+                if (inner && IdealPairsWithInside) return false;
                 if (otherLane == Inside) target = Outside;
                 else if (otherLane == Outside) target = Inside;
                 else target = otherIn > myIn ? Outside : Inside;
@@ -1869,11 +2004,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
         bool ovalWide = ovalLanes && ovalFullWidth && BoundsPinched;
 
+        _authoredLeft = new float[n];
+        _authoredRight = new float[n];
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
             _leftBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, -1f, _anchors, _mainLength), _mainSamples[i].width);
             _rightBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), _mainSamples[i].width);
+            _authoredLeft[i] = _leftBoundProfile[i];
+            _authoredRight[i] = _rightBoundProfile[i];
             if (ovalWide)
             {
                 float edgeLo = ClampToRoad(float.NegativeInfinity, _mainSamples[i].width);
