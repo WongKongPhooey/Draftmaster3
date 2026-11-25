@@ -53,13 +53,14 @@ public static class DaytonaPackageAuthoring
         public bool joinedFrontStand; // one long stand bent round the front stretch, as at Daytona's tri-oval
         public float frontStandSetback = -1f; // > 0: the joined stand's front row this far off the road (else standard)
         public float frontStandDepth = -1f;   // > 0: the joined stand this deep (else standard)
+        public bool frontStandOnly;   // the joined stand is the venue's only crowd: no stands down the other straights
         public bool markings;         // Daytona's double yellow, apron white line and outside paving (DaytonaTrackMarkings)
     }
 
     static readonly Venue Daytona = new Venue
     {
         id = "Daytona", infieldWall = true, setBackInfieldWall = true, apron = true, infieldLayout = false,
-        joinedFrontStand = true, markings = true,
+        joinedFrontStand = true, frontStandOnly = true, markings = true,
         frontStandSetback = DaytonaTrackMarkings.TriOvalStandSetback, frontStandDepth = DaytonaTrackMarkings.TriOvalStandDepth,
     };
     static readonly Venue Martinsville = new Venue { id = "Martinsville", infieldWall = true, apron = false, infieldLayout = true };
@@ -152,7 +153,7 @@ public static class DaytonaPackageAuthoring
 
     static int RebuildStands(GameObject contents, TrackBuilder builder, Venue venue) =>
         TrackDressingFactory.RebuildGrandstands(contents, builder, FrontStandAt(venue, builder),
-                                                venue.frontStandSetback, venue.frontStandDepth);
+                                                venue.frontStandSetback, venue.frontStandDepth, venue.frontStandOnly);
 
     // The double yellow at the bottom of the track, the white line moved to the apron's grass edge, the infield paved
     // from the end of turn 3 to pit entry, the outside wall on asphalt, and the tri-oval crowd brought in to

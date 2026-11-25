@@ -122,8 +122,10 @@ public static class TrackDressingFactory
     // joinRunAt >= 0 names a lap distance whose run gets one continuous stand instead of separate blocks: see
     // BuildJoinedRun. joinedSetback / joinedDepth (> 0) move that one stand's front row nearer the road and
     // change how deep it is; the separate blocks keep the standard StandSetback / StandDepth.
+    // joinedOnly: the joined stand is the only one - no standard stands on the venue's other straights (Daytona's crowd
+    // is all in the tri-oval; the back straight has none).
     public static int RebuildGrandstands(GameObject contents, TrackBuilder builder, float joinRunAt = -1f,
-                                         float joinedSetback = -1f, float joinedDepth = -1f)
+                                         float joinedSetback = -1f, float joinedDepth = -1f, bool joinedOnly = false)
     {
         var environmentRoot = EnsureChild(contents.transform, "Environment");
         var owned = environmentRoot.Find(GrandstandsName);
@@ -132,7 +134,7 @@ public static class TrackDressingFactory
         if (samples.Count < 2) return 0;
         return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples), joinRunAt,
                                 joinedSetback > 0f ? joinedSetback : StandSetback,
-                                joinedDepth > 0f ? joinedDepth : StandDepth);
+                                joinedDepth > 0f ? joinedDepth : StandDepth, joinedOnly && joinRunAt >= 0f);
     }
 
     // The lap span [from, from + length] the joined stand is laid along for the run holding joinRunAt - the same
@@ -281,7 +283,12 @@ public static class TrackDressingFactory
 
     // rightWallOffset / leftWallOffset: how far each wall stands off its edge of the road (innerEdgeOffset /
     // outerEdgeOffset), so the cut is measured against the wall on the pit road's side where it really is.
-    public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float rightWallOffset, float leftWallOffset)
+    //
+    // openAlongPitRoad: a set-back wall is also left out all the way from where pit road crosses it on the way in to
+    // where it crosses back out - the stretch where the wall would otherwise stand between the racing surface and pit
+    // road (Daytona's front stretch). Off, it is only opened at the two crossings.
+    public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float rightWallOffset, float leftWallOffset,
+                                                        bool openAlongPitRoad = false)
     {
         var track = builder.track;
         if (track == null || !track.hasPitLane) return new TrackEnvironment.BarrierGap[0];
@@ -348,8 +355,26 @@ public static class TrackDressingFactory
         }
         if (runStart >= 0f) ranges.Add(new Vector2(runStart - pad, runEnd + pad));
 
-        var gaps = new List<TrackEnvironment.BarrierGap>();
         float OnLapGap(float a, float b) { float g = Mathf.Abs(Mathf.Repeat(a - b, lap)); return Mathf.Min(g, lap - g); }
+
+        // One opening from the start of the crossing nearest pit entry, forward round the lap, to the end of the
+        // crossing nearest pit exit.
+        if (openAlongPitRoad && wallOffset > SetBackWallOffset && ranges.Count >= 2)
+        {
+            Vector2 inCut = ranges[0], outCut = ranges[0];
+            foreach (var r in ranges)
+            {
+                float mid = (r.x + r.y) * 0.5f;
+                if (OnLapGap(mid, track.pitEntryDistance) < OnLapGap((inCut.x + inCut.y) * 0.5f, track.pitEntryDistance)) inCut = r;
+                if (OnLapGap(mid, track.pitExitDistance) < OnLapGap((outCut.x + outCut.y) * 0.5f, track.pitExitDistance)) outCut = r;
+            }
+            float from = inCut.x;
+            float to = outCut.y;
+            while (to < from) to += lap;
+            if (to - from < lap) ranges.Add(new Vector2(from, to));
+        }
+
+        var gaps = new List<TrackEnvironment.BarrierGap>();
         foreach (var r in MergeOnLap(ranges, lap))
         {
             float mid = (r.x + r.y) * 0.5f;
@@ -416,7 +441,7 @@ public static class TrackDressingFactory
     // circuit — that's where a real crowd sits, and on an oval it keeps them out of the infield.
     static int BuildGrandstands(Transform root, TrackBuilder builder, List<TrackBuilder.Sample> samples,
                                 Vector2 centroid, float joinRunAt = -1f,
-                                float joinedSetback = StandSetback, float joinedDepth = StandDepth)
+                                float joinedSetback = StandSetback, float joinedDepth = StandDepth, bool joinedOnly = false)
     {
         var track = builder.track;
         if (track == null || track.segments == null) return 0;
@@ -441,6 +466,7 @@ public static class TrackDressingFactory
                                         usable, crowd, $"Grandstand_{run.first}", joinedSetback, joinedDepth);
                 continue;
             }
+            if (joinedOnly) continue;
             int count = Mathf.Max(1, Mathf.FloorToInt((usable + StandGap) / (StandLength + StandGap)));
             float block = count * StandLength + (count - 1) * StandGap;
             float cursor = run.start + 20f + (usable - block) * 0.5f;

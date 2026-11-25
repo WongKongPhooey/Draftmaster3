@@ -8,8 +8,8 @@ using UnityEngine;
 // so the apron runs onto a wide strip of grass before the wall rather than straight into it. Pit road crosses
 // that line twice, where the chord peels off the front stretch and where it comes back, and the wall is only
 // opened there (TrackDressingFactory.PitGaps with a set-back wall measures the crossings and cuts no fixed window
-// round the pit nodes, which sit inside the wall). Along the middle of the front stretch the wall runs between
-// the racing surface and pit road.
+// round the pit nodes, which sit inside the wall) - and left out all the way between those two crossings, so no
+// wall stands between the racing surface and pit road down the front stretch (PitGaps openAlongPitRoad).
 //
 // The infield between the road and the wall on the back straight (the longest straight) is paved with the
 // racing surface's own asphalt: a TarmacRunoff area, so the car physics reads it as tarmac, not grass. So is the
@@ -79,7 +79,8 @@ public static class DaytonaInfieldWall
             }
             env.barrierOffsets = keep.ToArray();
         }
-        env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.innerEdgeOffset, env.outerEdgeOffset);
+        // Open along the whole of pit road: no wall between the racing surface and pit road down the front stretch.
+        env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.innerEdgeOffset, env.outerEdgeOffset, openAlongPitRoad: true);
 
         var areas = new List<TrackEnvironment.RunoffArea>(env.runoffAreas ?? new TrackEnvironment.RunoffArea[0]);
         areas.RemoveAll(a => a.label == PavingLabel || a.label == TurnFourPavingLabel);
