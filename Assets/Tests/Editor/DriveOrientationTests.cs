@@ -192,4 +192,29 @@ public class DriveOrientationTests
         Assert.IsTrue(DriveOrientation.ReadyToLeave(1080f, 2400f, DriveOrientation.TurnBackTimeout),
             "a phone with rotation locked must still let the player out");
     }
+
+    // --- the meter plate under the top row -----------------------------------------------------------------
+
+    [Test]
+    public void UprightTheMeterPlateDropsBelowItsLandscapeSpot()
+    {
+        // 1060 px wide phone: kit scale 2, landscape top Px(96) = 192; the top row ends well above it.
+        float top = DriveOrientation.UprightMetersTop(192f, 90f, 2f);
+        Assert.That(top, Is.EqualTo(192f + DriveOrientation.UprightMetersDrop * 2f));
+    }
+
+    [Test]
+    public void UprightTheMeterPlateKeepsItsGapUnderADeepTopRow()
+    {
+        // A notch pushes the top row (headset, TV) down to 200 px: the plate stays a full gap under it.
+        float top = DriveOrientation.UprightMetersTop(192f, 200f, 2f);
+        Assert.That(top, Is.EqualTo(200f + DriveOrientation.UprightMetersGap * 2f));
+    }
+
+    [Test]
+    public void UprightWithTheControlsAwayTheMeterPlateStillDrops()
+    {
+        Assert.That(DriveOrientation.UprightMetersTop(192f, 0f, 2f),
+                    Is.EqualTo(192f + DriveOrientation.UprightMetersDrop * 2f));
+    }
 }

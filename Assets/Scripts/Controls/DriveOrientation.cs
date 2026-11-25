@@ -72,6 +72,22 @@ namespace Draftmaster.Controls
         // right way round again (not taller than it is wide), or it has been waited on long enough.
         public static bool ReadyToLeave(float screenWidth, float screenHeight, float waited)
             => screenHeight <= screenWidth || waited >= TurnBackTimeout;
+
+        // Where the race HUD's Tire/Draft/Fuel/Temp plate starts on a screen held upright, in screen pixels.
+        // In landscape it hangs `landscapeTop` down the right edge; upright the touch controls' top row
+        // (pause, Auto, the headset and the TV, ending at `topRowBottom`; 0 when the controls are away) runs
+        // out over that corner and the plate sat hard under the headset and TV. Upright it drops a further
+        // UprightMetersDrop kit px, and never comes nearer the row than UprightMetersGap, however deep the
+        // screen's notch pushes the row down.
+        public const float UprightMetersDrop = 16f;
+        public const float UprightMetersGap = 16f;
+
+        public static float UprightMetersTop(float landscapeTop, float topRowBottom, float kitScale)
+        {
+            float dropped = landscapeTop + UprightMetersDrop * kitScale;
+            float clear = topRowBottom > 0f ? topRowBottom + UprightMetersGap * kitScale : 0f;
+            return dropped > clear ? dropped : clear;
+        }
     }
 
     // Turns to portrait at once and back only after the reason has been gone for a moment. The in-car test

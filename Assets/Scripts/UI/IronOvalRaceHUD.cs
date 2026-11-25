@@ -510,6 +510,10 @@ public class IronOvalRaceHUD : MonoBehaviour
         float h = inset * 2f + 4f * PixelGUI.LineH + 4f * PixelGUI.CellsHeight + PixelGUI.Px(14f);
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
+        // Held upright (swing camera), lower: the headset and TV buttons sit in the top row above this corner.
+        if (Screen.height > Screen.width)
+            y = Mathf.Round(Draftmaster.Controls.DriveOrientation.UprightMetersTop(
+                y, TouchDriveControls.Active ? TouchDriveControls.CrewChiefSlot.yMax : 0f, PixelGUI.Scale));
 
         // Smaller on a monitor, pinned at its top-right corner so it stays tucked under the caution flag.
         float k = MeterScale();
