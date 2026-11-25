@@ -220,7 +220,7 @@ public class AIRetirement : MonoBehaviour
         // on its own dynamic model — not while a caution's formation queue is driving it kinematically.
         // Out of fuel is the same: no engine (PlayerVehicleController.FuelDry).
         if (!BrokenDown && !_spline.IsOnPit && _bodywork != null && _input != null && _input.enabled
-            && (_car.FuelDry
+            && (_car.FuelDry || _car.EngineBlown
                 || Wrecked()))
             BreakDown();
 
@@ -326,7 +326,7 @@ public class AIRetirement : MonoBehaviour
         // kinematically and drive it round behind the safety car instead of leaving it to be retired.
         var formation = GetComponent<FormationController>();
         if (formation != null) formation.enabled = false;
-        string why = _car.FuelDry ? "out of fuel, " : "";
+        string why = _car.FuelDry ? "out of fuel, " : _car.EngineBlown ? "engine blown, " : "";
         if (_bodywork.WheelsOff > 0) why += $"{_bodywork.WheelsOff} wheel(s) off, ";
         if (breakdownDent > 0f && _bodywork.DentAmount >= breakdownDent) why += $"dents {_bodywork.DentAmount:0.00}, ";
         float crush = FrontCrush();
@@ -473,7 +473,7 @@ public class AIRetirement : MonoBehaviour
         if (!watched) { _towDue = false; _stoppedSince = -1f; return; }
 
         if (_bodywork == null) _bodywork = GetComponentInChildren<VehicleDamage>();
-        bool wrecked = _car.FuelDry || (_bodywork != null
+        bool wrecked = _car.FuelDry || _car.EngineBlown || (_bodywork != null
             && Wrecked());
 
         if (_towDue) { TickTowWaiting(wrecked); return; }
@@ -543,6 +543,7 @@ public class AIRetirement : MonoBehaviour
         _car.SetInput(0f, 0f, 1f);
         _car.SeedPose(transform.position, _spline.CommandedHeadingDeg, 0f);
         if (_bodywork != null) _bodywork.RepairFull();
+        _car.RepairEngine();
         var tank = GetComponent<FuelTank>();
         if (tank != null) tank.FillFull();
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(transform);

@@ -1,8 +1,9 @@
 using UnityEngine;
+using RevDialScale = Draftmaster.Sim.RevDialScale;
 
 // The in-race HUD from the Iron Oval design file's RACE HUD screen: position ("POS 7 /40") and lap ("LAP 12 /200")
-// stacked top left and speed ("187 MPH") bottom right, all in the same big numerals with a hard shadow and a
-// dim suffix, and a tyre/draft/fuel meter plate on the right under the track map.
+// stacked top left in big numerals with a hard shadow and a dim suffix, a rev counter scaled to the car's rev range
+// bottom right (with road speed under the hub), and a tyre/draft/fuel meter plate on the right under the track map.
 //
 // It replaces three older readouts rather than sitting on top of them — the authored speedometer dial,
 // the "P x / N" position panel and RaceDirector's own lap counter all stand down while this is running,
@@ -48,9 +49,11 @@ public class IronOvalRaceHUD : MonoBehaviour
     SplineDriver _spline;
     TireModel _tires;
     FuelTank _fuel;
+    EngineGearbox _gearbox;
     PlayerVehicleController _pvc;
     float _rebindTimer;
     float _shownMph;
+    float _shownRpm;
     float _shownDraft;
     bool _standDownApplied;
 
@@ -94,6 +97,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         _spline = _pvc != null ? _pvc.GetComponent<SplineDriver>() : null;
         _tires = _pvc != null ? _pvc.GetComponent<TireModel>() : null;
         _fuel = _pvc != null ? _pvc.GetComponent<FuelTank>() : null;
+        _gearbox = _pvc != null ? _pvc.GetComponent<EngineGearbox>() : null;
     }
 
     // The older readouts covered the same three numbers in three different visual languages. This owns
@@ -180,22 +184,294 @@ public class IronOvalRaceHUD : MonoBehaviour
         style.normal.textColor = prev;
     }
 
-    // Speed in the bottom-right corner — the corner the old speedometer dial owned, which the crew chief's
-    // headset already steps in to clear (CrewChiefController.buttonCorner). Right-aligned so the block grows
-    // leftward as the number gains a digit; on a phone it stands on top of the touch pedals, as the headset does.
+    // ------------------------------------------------------------------ rev counter
+
+    // A rev counter in the bottom-right corner, drawn in code rather than from a sprite so its numbering fits the
+    // car: Draftmaster.Sim.RevDialScale turns the car's own VehicleInfo rev range (maxRpm, shiftUpRpm) into
+    // numerals in thousands, a round top end and a red band, and the face is rasterised from that whenever the
+    // range changes — a Cup car reads 0-10, a low-revving engine 0-3.5 in halves. The face and needle are drawn
+    // into textures at the kit's own resolution (104 px landscape, 128 upright) and blown up by PixelGUI's whole
+    // number scale with point filtering, so every edge lands on a screen pixel; the numerals are the kit's
+    // Silkscreen face, sharp at any scale. Road speed stays as the readout under the hub (pit-lane limits are
+    // in mph). A car with no gearbox falls back to the plain numeral speed readout.
+    static readonly Color DialInk = new Color32(0x05, 0x06, 0x0A, 0xFF);        // hard shadow
+    static readonly Color DialReadoutInk = new Color32(0x12, 0x14, 0x1C, 0xFF); // readout on the cream face
+    static readonly Color32 DialBezel = new Color32(0x1E, 0x22, 0x30, 0xFF);
+    static readonly Color32 DialRim = new Color32(0x8A, 0x90, 0xA0, 0xFF);
+    static readonly Color32 DialFace = new Color32(0xF0, 0xE6, 0xCE, 0xFF);
+    static readonly Color32 DialTick = new Color32(0x12, 0x14, 0x1C, 0xFF);
+    static readonly Color32 DialRed = new Color32(0xD8, 0x34, 0x2B, 0xFF);
+    static readonly Color32 DialNeedle = new Color32(0xE8, 0x45, 0x2C, 0xFF);
+    static readonly Color32 DialHub = new Color32(0x1E, 0x22, 0x30, 0xFF);
+    static readonly Color32 DialClear = new Color32(0, 0, 0, 0);
+
+    // How far (640x360 UI px) the corner buttons — headset, TV, Auto, team swaps — step left of where they were
+    // authored (92 px in from the right) so they clear the 104 px dial at 12 px in, with a 6 px gap. Added at
+    // placement rather than to the serialized corners, which RaceScene's saved values would override.
+    public const float DialCornerClearance = 32f;
+
+    static Font _readoutFont;
+    static GUIStyle _readoutStyle, _numeralStyle;
+    static int _readoutPt, _numeralPt;
+
+    // Face: rebuilt when the dial size or the car's rev range changes. Needle: rebuilt when its whole-degree
+    // angle changes, on a clear canvas the same size as the face.
+    static Texture2D _faceTex, _needleTex;
+    static Color32[] _needlePixels;
+    static int _faceKit;
+    static RevDialScale _faceScale;
+    static int _needleDeg = int.MinValue;
+
+    // Speed and revs in the bottom-right corner, standing on top of the touch pedals on a phone as the headset does.
     void DrawSpeedBlock()
     {
         if (_pvc == null) return;
 
         float mph = SpeedMps() * 2.237f;
         _shownMph = Mathf.Lerp(_shownMph, mph, 1f - Mathf.Exp(-12f * Time.unscaledDeltaTime));
-        string text = Mathf.RoundToInt(_shownMph).ToString();
 
-        float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
-        float x = Screen.width - PixelGUI.Px(8f) - w;
-        float y = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
+        var info = _gearbox != null ? (_gearbox.vehicleInfo != null ? _gearbox.vehicleInfo : _pvc.vehicleInfo) : null;
+        if (info == null)
+        {
+            // No engine to read: the plain numeral readout, so speed never disappears.
+            string text = Mathf.RoundToInt(_shownMph).ToString();
+            float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
+            float ty = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
+            SpeedTop = ty;
+            NumeralWithSuffix(Screen.width - PixelGUI.Px(8f) - w, ty, text, "MPH");
+            return;
+        }
+
+        _shownRpm = Mathf.Lerp(_shownRpm, _gearbox.Rpm, 1f - Mathf.Exp(-20f * Time.unscaledDeltaTime));
+
+        bool upright = Screen.height > Screen.width;
+        int kit = upright ? 128 : 104;
+        var scale = RevDialScale.For(info.maxRpm, info.shiftUpRpm);
+        EnsureFace(kit, scale);
+
+        float side = PixelGUI.Px(kit);
+        float x = Screen.width - PixelGUI.Px(upright ? 16f : 12f) - side;
+        float y = Screen.height - PixelGUI.Px(upright ? 12f : 10f) - side - TouchDriveControls.PedalsTopFromBottom;
+        // Whole screen pixels, so a kit pixel never straddles two.
+        x = Mathf.Round(x); y = Mathf.Round(y);
         SpeedTop = y;
-        NumeralWithSuffix(x, y, text, "MPH");
+
+        var rect = new Rect(x, y, side, side);
+        var prevColour = GUI.color;
+
+        // 3 px ink drop shadow: the face's own silhouette in ink, offset down-right.
+        GUI.color = DialInk;
+        GUI.DrawTexture(new Rect(x + PixelGUI.Px(3f), y + PixelGUI.Px(3f), side, side), _faceTex);
+        GUI.color = Color.white;
+        GUI.DrawTexture(rect, _faceTex);
+
+        DrawNumerals(rect, kit, scale);
+        DrawReadout(rect, kit, Mathf.RoundToInt(_shownMph).ToString());
+
+        EnsureNeedle(kit, Mathf.RoundToInt(scale.Degrees(_shownRpm)));
+        GUI.DrawTexture(rect, _needleTex);
+
+        GUI.color = prevColour;
+    }
+
+    // Dial geometry in kit px, all from the 104 px design: bezel 3, rim 1, red band 4 wide set 5 in, ticks
+    // hanging off the inside of the band, numerals on a ring inside the ticks.
+    static float DialK(int kit) => kit / 104f;
+    static float RimOuter(int kit) => kit * 0.5f;
+    static float TickOuter(int kit) => RimOuter(kit) - 5f * DialK(kit);
+    static float NumeralRing(int kit) => TickOuter(kit) - 14f * DialK(kit);
+
+    static void EnsureFace(int kit, RevDialScale scale)
+    {
+        if (_faceTex != null && _faceKit == kit && SameScale(_faceScale, scale)) return;
+        _faceKit = kit;
+        _faceScale = scale;
+        if (_faceTex == null || _faceTex.width != kit)
+        {
+            if (_faceTex != null) Destroy(_faceTex);
+            _faceTex = NewDialTexture(kit, "RevCounterFace");
+        }
+
+        float k = DialK(kit);
+        float c = kit * 0.5f;
+        float rOut = RimOuter(kit);
+        float rBezel = rOut - 3f * k;
+        float rRim = rBezel - 1f * k;
+        float tickOut = TickOuter(kit);
+        float bandIn = tickOut - 4f * k;
+        float redFromDeg = scale.Degrees(scale.RedFromRpm);
+        float redToDeg = scale.Degrees(scale.TopRpm);
+
+        var px = new Color32[kit * kit];
+        for (int row = 0; row < kit; row++)
+        {
+            float dy = c - (kit - 1 - row + 0.5f);   // up positive; texture row 0 is the bottom
+            for (int col = 0; col < kit; col++)
+            {
+                float dx = col + 0.5f - c;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                Color32 col32;
+                if (r > rOut) col32 = DialClear;
+                else if (r > rBezel) col32 = DialBezel;
+                else if (r > rRim) col32 = DialRim;
+                else
+                {
+                    col32 = DialFace;
+                    float deg = Mathf.Atan2(dx, dy) * Mathf.Rad2Deg;   // clockwise from up
+                    if (r >= bandIn && r <= tickOut && deg >= redFromDeg && deg <= redToDeg) col32 = DialRed;
+                }
+                px[row * kit + col] = col32;
+            }
+        }
+
+        // Ticks, stamped as pixel lines rather than tested per pixel: a thin ray sampled at pixel centres breaks
+        // into dots on the diagonals. Every minor step; majors twice as long and two pixels wide.
+        int tickCount = Mathf.RoundToInt(scale.TopRpm / scale.MinorStep) + 1;
+        for (int i = 0; i < tickCount; i++)
+        {
+            float rpm = i * scale.MinorStep;
+            bool major = Mathf.Abs(rpm / scale.MajorStep - Mathf.Round(rpm / scale.MajorStep)) < 1e-3f;
+            float a = scale.Degrees(rpm) * Mathf.Deg2Rad;
+            float s = Mathf.Sin(a), co = Mathf.Cos(a);
+            float rIn = tickOut - (major ? 8f : 4f) * k;
+            int width = Mathf.Max(1, Mathf.RoundToInt((major ? 2f : 1f) * k));
+            for (float along = rIn; along <= tickOut - 0.25f; along += 0.25f)
+                for (int wv = 0; wv < width; wv++)
+                {
+                    float off = wv - (width - 1) * 0.5f;
+                    // Point in texture space (y up): along the ray, nudged sideways for width.
+                    float fx = c + along * s + off * co;
+                    float fy = c + along * co - off * s;
+                    int ix = Mathf.FloorToInt(fx), iy = Mathf.FloorToInt(fy);
+                    if (ix < 0 || iy < 0 || ix >= kit || iy >= kit) continue;
+                    px[iy * kit + ix] = DialTick;
+                }
+        }
+        _faceTex.SetPixels32(px);
+        _faceTex.Apply(false);
+    }
+
+    static void EnsureNeedle(int kit, int deg)
+    {
+        if (_needleTex != null && _needleTex.width == kit && _needleDeg == deg) return;
+        _needleDeg = deg;
+        if (_needleTex == null || _needleTex.width != kit)
+        {
+            if (_needleTex != null) Destroy(_needleTex);
+            _needleTex = NewDialTexture(kit, "RevCounterNeedle");
+            _needlePixels = new Color32[kit * kit];
+        }
+
+        float k = DialK(kit);
+        float c = kit * 0.5f;
+        float a = deg * Mathf.Deg2Rad;
+        float s = Mathf.Sin(a), co = Mathf.Cos(a);
+        float tip = TickOuter(kit) - 1f * k;
+        float tail = -7f * k;
+        float halfW = 1.4f * k;
+        float hub = 5f * k;
+        float hubDot = 1.6f * k;
+
+        for (int row = 0; row < kit; row++)
+        {
+            float dy = c - (kit - 1 - row + 0.5f);
+            for (int col = 0; col < kit; col++)
+            {
+                float dx = col + 0.5f - c;
+                float r2 = dx * dx + dy * dy;
+                Color32 col32 = DialClear;
+                float along = dx * s + dy * co;
+                float perp = Mathf.Abs(dx * co - dy * s);
+                // Tapers from full width at the hub to one pixel at the tip.
+                float w = Mathf.Lerp(halfW, 0.75f, Mathf.Clamp01(along / tip));
+                if (along >= tail && along <= tip && perp <= w) col32 = DialNeedle;
+                if (r2 <= hub * hub) col32 = DialHub;
+                if (r2 <= hubDot * hubDot) col32 = DialRim;
+                _needlePixels[row * kit + col] = col32;
+            }
+        }
+        _needleTex.SetPixels32(_needlePixels);
+        _needleTex.Apply(false);
+    }
+
+    static bool SameScale(RevDialScale a, RevDialScale b) =>
+        a.TopRpm == b.TopRpm && a.MajorStep == b.MajorStep && a.MinorStep == b.MinorStep && a.RedFromRpm == b.RedFromRpm;
+
+    static Texture2D NewDialTexture(int kit, string name) =>
+        new Texture2D(kit, kit, TextureFormat.RGBA32, false)
+        {
+            name = name,
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.DontSave,
+        };
+
+    // The numerals, generated from the scale each frame: thousands on a ring inside the ticks, red from the
+    // redline up, and "x1000" above the hub so the units are never a guess.
+    static void DrawNumerals(Rect dial, int kit, RevDialScale scale)
+    {
+        int pt = PixelGUI.HeadingSmall.fontSize;
+        if (_numeralStyle == null || _numeralPt != pt)
+        {
+            _numeralPt = pt;
+            _numeralStyle = new GUIStyle(PixelGUI.HeadingSmall)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Overflow,
+                wordWrap = false,
+                richText = false,
+            };
+        }
+
+        float px = PixelGUI.Scale;
+        float c = kit * 0.5f;
+        float ring = NumeralRing(kit);
+        float h = PixelGUI.LineH;
+        float w = PixelGUI.Px(24f);
+        for (int i = 0; i < scale.MajorCount; i++)
+        {
+            float rpm = i * scale.MajorStep;
+            float a = scale.Degrees(rpm) * Mathf.Deg2Rad;
+            // Centre on a whole kit pixel, so every numeral sits on the same pixel grid as the face.
+            float kx = Mathf.Round(c + ring * Mathf.Sin(a));
+            float ky = Mathf.Round(c - ring * Mathf.Cos(a));
+            _numeralStyle.normal.textColor = rpm >= scale.RedFromRpm - 1f ? (Color)DialRed : DialReadoutInk;
+            GUI.Label(new Rect(dial.x + kx * px - w * 0.5f, dial.y + ky * px - h * 0.5f, w, h),
+                      scale.Label(rpm), _numeralStyle);
+        }
+
+        _numeralStyle.normal.textColor = new Color(DialReadoutInk.r, DialReadoutInk.g, DialReadoutInk.b, 0.6f);
+        float capY = Mathf.Round(kit * 0.36f);
+        GUI.Label(new Rect(dial.x, dial.y + capY * px - h * 0.5f, dial.width, h), "x1000", _numeralStyle);
+    }
+
+    static void DrawReadout(Rect dial, float dialKit, string text)
+    {
+        if (_readoutFont == null) _readoutFont = Resources.Load<Font>("Fonts/PixelifySans-Bold");
+        // Pixelify Sans is drawn on a 20 px cell: anything else resamples it soft. Nearest whole cell to the
+        // design's size, never less than one.
+        int pt = Mathf.Max(1, Mathf.RoundToInt(14f * dialKit / 100f * PixelGUI.Scale / 20f)) * 20;
+        if (_readoutStyle == null || _readoutPt != pt)
+        {
+            _readoutPt = pt;
+            _readoutStyle = new GUIStyle
+            {
+                font = _readoutFont != null ? _readoutFont : PixelGUI.Display.font,
+                fontSize = pt,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Overflow,
+            };
+            _readoutStyle.normal.textColor = DialReadoutInk;
+        }
+        float h = pt * 1.4f;
+        GUI.Label(new Rect(dial.x, dial.y + dial.height * 0.74f - h * 0.5f, dial.width, h), text, _readoutStyle);
+
+        // "MPH" small under the readout, in the numerals' face.
+        if (_numeralStyle == null) return;
+        _numeralStyle.normal.textColor = new Color(DialReadoutInk.r, DialReadoutInk.g, DialReadoutInk.b, 0.6f);
+        float lh = PixelGUI.LineH;
+        float my = Mathf.Round(dialKit * 0.88f) * PixelGUI.Scale;
+        GUI.Label(new Rect(dial.x, dial.y + my - lh * 0.5f, dial.width, lh), "MPH", _numeralStyle);
     }
 
     // Height of a numeral block: the big numerals' 30 px rect, with the dim suffix sitting low beside them.
@@ -280,16 +556,22 @@ public class IronOvalRaceHUD : MonoBehaviour
                        fuelLow ? PixelGUI.Danger : PixelGUI.Gold);
         cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
-        // Engine temperature (EngineTemp): empty at normal running, full at overheating. Amber once it runs hot -
-        // back off the bumper or find clean air - and alarm red when it is losing power.
-        float tempC = _pvc != null && _pvc.isActiveAndEnabled ? _pvc.EngineTempC : Draftmaster.Sim.EngineTemp.NormalC;
-        var tempColour = tempC >= Draftmaster.Sim.EngineTemp.OverheatC ? PixelGUI.Danger
+        // Engine temperature (EngineTemp): three bars idling in the box (already warm), climbing with how hard the
+        // engine works, full at MaxC. Amber once it runs hot - back off the bumper or find clean air - and alarm red
+        // when it is losing power. Pinned full it flashes: the throttle is now counting down to a blown engine
+        // (EngineTemp.BlowSeconds). Blown, the row says so.
+        bool live = _pvc != null && _pvc.isActiveAndEnabled;
+        float tempC = live ? _pvc.EngineTempC : Draftmaster.Sim.EngineTemp.NormalC;
+        bool blown = _pvc != null && _pvc.EngineBlown;
+        bool pinned = !blown && tempC >= Draftmaster.Sim.EngineTemp.MaxC - 0.01f;
+        var tempColour = blown || tempC >= Draftmaster.Sim.EngineTemp.OverheatC ? PixelGUI.Danger
                        : tempC >= Draftmaster.Sim.EngineTemp.HotC ? PixelGUI.Gold : PixelGUI.Confirm;
+        bool flashOff = pinned && Mathf.Repeat(Time.unscaledTime, 0.4f) >= 0.2f;
         label.normal.textColor = tempColour;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "Temp", label);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), blown ? "Blown" : "Temp", label);
         cy += PixelGUI.LineH;
-        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight),
-                       Mathf.RoundToInt(Draftmaster.Sim.EngineTemp.Gauge01(tempC) * 10f), 10, tempColour);
+        int tempCells = blown ? 10 : Mathf.RoundToInt(Draftmaster.Sim.EngineTemp.Gauge01(tempC) * 10f);
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), flashOff ? 0 : tempCells, 10, tempColour);
 
         label.normal.textColor = prev;
         GUI.matrix = savedMatrix;

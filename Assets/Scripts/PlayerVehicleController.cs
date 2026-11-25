@@ -363,7 +363,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float RadiatorCover { get; private set; }
     public bool EngineOverheating => EngineTempC > Draftmaster.Sim.EngineTemp.OverheatC;
     // Back to normal running temperature (a new race, a reset car).
-    public void ResetEngineTemp() { EngineTempC = Draftmaster.Sim.EngineTemp.NormalC; RadiatorCover = 0f; }
+    public void ResetEngineTemp() { EngineTempC = Draftmaster.Sim.EngineTemp.NormalC; RadiatorCover = 0f; EngineStrain = 0f; }
+
+    // Seconds of full throttle spent pinned at the top of the gauge (EngineTemp.StepStrain); at BlowSeconds the
+    // engine lets go. Blown: no drive at all, smoke and debris out of it (EngineBlowFX), and the car coasts to a
+    // stop - the tow (StrandedTow) in practice and qualifying, a breakdown for the AI (AIRetirement).
+    public float EngineStrain { get; private set; }
+    public bool EngineBlown { get; private set; }
+    public event System.Action EngineBlew;
+    // A new engine: the tow's crew (PitCrewRepair) and anything else that hands back a whole car.
+    public void RepairEngine() { EngineBlown = false; ResetEngineTemp(); }
 
     // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
     // Only the active HUMAN car registers (an AI car keeps an enabled SplineDriver and is already in RaceField).
@@ -560,6 +569,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (impactDebris && GetComponent<ImpactParticles>() == null) gameObject.AddComponent<ImpactParticles>();
         if (damageDragSparks && GetComponent<DamageDragSparks>() == null) gameObject.AddComponent<DamageDragSparks>();
         if (damageDebris && GetComponent<DamageDebris>() == null) gameObject.AddComponent<DamageDebris>();
+        if (enableEngineTemp && GetComponent<EngineBlowFX>() == null) gameObject.AddComponent<EngineBlowFX>();
 
         if (enableWear)
         {
@@ -699,6 +709,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _lastSteerIn = steerIn; _lastThrottleIn = throttleIn; _lastBrakeIn = brakeIn;
         // Out of fuel in a race: the engine cuts and the car coasts (FuelTank, Draftmaster.Sim.FuelPlan).
         if (FuelDry) throttleIn = 0f;
+        // A blown engine drives nothing.
+        if (EngineBlown) throttleIn = 0f;
         // A wheel off: nothing left to drive it (VehicleDamage.WheelsOff).
         if (WheelOff) throttleIn = 0f;
 
@@ -775,8 +787,20 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         {
             RadiatorCover = ComputeRadiatorCover();
             float heatRefMps = TrackConditions.PlateMph > 0f ? TrackConditions.PlateMph / 2.237f : Draftmaster.Sim.EngineTemp.ReferenceMps;
-            EngineTempC = Draftmaster.Sim.EngineTemp.Step(EngineTempC, RadiatorCover,
-                Draftmaster.Sim.EngineTemp.SpeedShare(speedNow, heatRefMps), dt, grilleTape);
+            float share = Draftmaster.Sim.EngineTemp.SpeedShare(speedNow, heatRefMps);
+            // The engine's own work warms it too: throttle x how hard it is working at this speed. A dead engine
+            // does no work, so a blown one only cools.
+            float load = EngineBlown ? 0f : Mathf.Clamp01(throttleIn) * share;
+            EngineTempC = Draftmaster.Sim.EngineTemp.Step(EngineTempC, RadiatorCover, share, dt, grilleTape, load);
+            if (!EngineBlown)
+            {
+                EngineStrain = Draftmaster.Sim.EngineTemp.StepStrain(EngineStrain, EngineTempC, throttleIn, dt);
+                if (Draftmaster.Sim.EngineTemp.Blown(EngineStrain))
+                {
+                    EngineBlown = true;
+                    EngineBlew?.Invoke();
+                }
+            }
         }
         else ResetEngineTemp();
         float enginePower = Draftmaster.Sim.EngineTemp.PowerFactor(EngineTempC);

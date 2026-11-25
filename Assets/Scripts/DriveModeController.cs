@@ -115,7 +115,8 @@ public class DriveModeController : MonoBehaviour
         if (startInBroadcast) SetDriving(false);
         // Broadcast mode (the TV button beside the crew chief's headset) rides along with the car hand-off it uses.
         if (GetComponent<BroadcastController>() == null) gameObject.AddComponent<BroadcastController>();
-        // A phone has the touch controls' own AUTO button in its top row.
+        // A phone has the touch controls' own AUTO button in its top row. Decided once: in the editor, start Play
+        // in the view you mean to test (Device Simulator = phone, Game view = PC) and stay in it.
         if (!TouchDriveControls.TouchPlatform) BuildButton();
     }
 
@@ -350,7 +351,8 @@ public class DriveModeController : MonoBehaviour
     TMP_Text _chipLabel;
     GameObject _hint;
     TMP_Text _hintText;
-    bool _buttonShowsDriving;
+    int _chipShowsAuto = -1;   // -1 = not painted yet, else 0 / 1
+    Button _autoButton;
 
     void BuildButton()
     {
@@ -369,7 +371,7 @@ public class DriveModeController : MonoBehaviour
         var root = (RectTransform)rootGo.transform;
         root.anchorMin = root.anchorMax = root.pivot = new Vector2(1f, 0f);
         root.sizeDelta = ButtonSize + new Vector2(b * 2f, b * 2f);
-        root.anchoredPosition = new Vector2(-buttonCorner.x, buttonCorner.y);
+        root.anchoredPosition = new Vector2(-(buttonCorner.x + IronOvalRaceHUD.DialCornerClearance), buttonCorner.y);
 
         // The border as four strips: the plate is see-through, so a solid green fill under it would tint it.
         Strip(root, "BorderTop", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -b), Vector2.zero);
@@ -434,7 +436,8 @@ public class DriveModeController : MonoBehaviour
 
         _buttonRoot = rootGo;
         BuildPitButton(canvas.transform, root);
-        _buttonShowsDriving = !_driving;   // forces the first paint
+        _autoButton = button;
+        _chipShowsAuto = -1;   // forces the first paint
         UpdateButton();
     }
 
@@ -458,7 +461,7 @@ public class DriveModeController : MonoBehaviour
         var root = (RectTransform)rootGo.transform;
         root.anchorMin = root.anchorMax = root.pivot = new Vector2(1f, 0f);
         root.sizeDelta = PitButtonSize + new Vector2(b * 2f, b * 2f);
-        root.anchoredPosition = new Vector2(-buttonCorner.x - autoRoot.sizeDelta.x - 6f, buttonCorner.y);
+        root.anchoredPosition = new Vector2(-(buttonCorner.x + IronOvalRaceHUD.DialCornerClearance) - autoRoot.sizeDelta.x - 6f, buttonCorner.y);
 
         foreach (var strip in new[] {
                      (n: "BorderTop", a: new Vector2(0f, 1f), c: new Vector2(1f, 1f), lo: new Vector2(0f, -b), hi: Vector2.zero),
@@ -541,29 +544,34 @@ public class DriveModeController : MonoBehaviour
         img.raycastTarget = false;
     }
 
-    // Up while the player is sat in their car (or has handed it to the AI) with nothing modal over the race, and
-    // the car is theirs to take back — the same moments V answers in.
+    // Up while the player is sat in their car (or has handed it to the AI) with nothing modal over the race — the
+    // same moments V answers in. Also up, locked on ON, while the AI brings the car home after the session (the
+    // run done in practice or qualifying, the flag in the race): the car is not theirs to take back then, but it
+    // is still being driven for them, and a hidden button left the player no way to tell.
     void UpdateButton()
     {
         if (_buttonRoot == null) return;
+        bool broughtIn = PracticeDirector.BringingPlayerIn || RaceEndPitIn.HandedOverAtLine;
         bool show = !PadInput.OnFoot && !PadInput.ModalOpen &&
-                    (PlayerVehicleController.Human != null || !_driving) &&
-                    !PracticeDirector.BringingPlayerIn && !RaceEndPitIn.HandedOverAtLine;
+                    (broughtIn || PlayerVehicleController.Human != null || !_driving);
         if (_buttonRoot.activeSelf != show) _buttonRoot.SetActive(show);
-        UpdatePitButton(show);
-        bool hintShown = _handBack.Waiting || _laneActive;
+        if (_autoButton != null && _autoButton.interactable == broughtIn) _autoButton.interactable = !broughtIn;
+        UpdatePitButton(show && !broughtIn);
+        bool hintShown = _handBack.Waiting || _laneActive || broughtIn;
         if (_hint != null)
         {
             if (_hint.activeSelf != hintShown) _hint.SetActive(hintShown);
-            // Over the button: what takes the car back, or with the lane controls on, the lane it is in.
-            string hintText = _laneActive ? "< " + LaneName.ToUpperInvariant() + " >" : "TAP GAS OR BRAKE";
+            // Over the button: what takes the car back, with the lane controls on the lane it is in, or that the
+            // AI is taking it home.
+            string hintText = broughtIn ? "BRINGING YOU IN"
+                            : _laneActive ? "< " + LaneName.ToUpperInvariant() + " >" : "TAP GAS OR BRAKE";
             if (_hintText != null && _hintText.text != hintText) _hintText.text = hintText;
         }
-        if (_buttonShowsDriving == _driving) return;
-        _buttonShowsDriving = _driving;
-
         // AUTO ON while the AI has the car: the green chip. Driving, the chip goes dark and reads OFF.
-        bool on = !_driving;
+        bool on = !_driving || broughtIn;
+        if (_chipShowsAuto == (on ? 1 : 0)) return;
+        _chipShowsAuto = on ? 1 : 0;
+
         if (_chipFill != null) _chipFill.color = on ? DriveScoutStyle.Good : ChipOffFill;
         if (_chipLabel != null)
         {

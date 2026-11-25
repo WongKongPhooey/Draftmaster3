@@ -548,7 +548,7 @@ public class TeamSwitchController : MonoBehaviour
         rt.anchorMin = new Vector2(1f, 0f);
         rt.anchorMax = new Vector2(1f, 0f);
         rt.pivot = new Vector2(1f, 0f);
-        rt.anchoredPosition = new Vector2(-margin.x, margin.y);
+        rt.anchoredPosition = new Vector2(-(margin.x + IronOvalRaceHUD.DialCornerClearance), margin.y);
     }
 
     static void EnsureEventSystem()

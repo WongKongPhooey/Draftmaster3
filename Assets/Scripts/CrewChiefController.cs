@@ -623,12 +623,13 @@ public class CrewChiefController : MonoBehaviour
     }
 
     // Pin a control to the bottom-right corner, `margin` UI pixels in from it.
+    // margin.x is stepped past the HUD's speed dial (IronOvalRaceHUD.DialCornerClearance).
     static void Corner(RectTransform rt, Vector2 margin)
     {
         rt.anchorMin = new Vector2(1f, 0f);
         rt.anchorMax = new Vector2(1f, 0f);
         rt.pivot = new Vector2(1f, 0f);
-        rt.anchoredPosition = new Vector2(-margin.x, margin.y);
+        rt.anchoredPosition = new Vector2(-(margin.x + IronOvalRaceHUD.DialCornerClearance), margin.y);
     }
 
     // On duty the plate goes alarm red, the same way the kit marks a selected tab; off duty it is the

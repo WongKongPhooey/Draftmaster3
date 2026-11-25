@@ -9,8 +9,11 @@ using UnityEngine;
 // happen is the point: the dents come out a little every frame (VehicleDamage.Repair), not all at once. A tow that returned a straight car would make putting
 // it in the wall free, and the player would take the wall over the lap time every time.
 //
-// Before any of that the car is impounded (impoundSeconds, two minutes by default): the crew stay on the wall
-// and the driver cannot get back in, with a countdown on screen. Only then does the repair start.
+// Before any of that, in a race, the car is impounded (impoundSeconds, two minutes by default): the crew stay on
+// the wall and the driver cannot get back in, with a countdown on screen. Only then does the repair start.
+// Practice and qualifying run against a session clock instead, so there the hold is not served standing in the
+// box: the same time comes straight off the session clock (PracticeDirector.SpendSessionTime) and the crew go
+// to work at once.
 //
 // Self-installing: PitLaneStart.TowToPits calls Begin(car) and this attaches itself. Nothing to wire.
 public class PitCrewRepair : MonoBehaviour
@@ -95,11 +98,24 @@ public class PitCrewRepair : MonoBehaviour
         if (repair == null) repair = car.gameObject.AddComponent<PitCrewRepair>();
 
         repair._car = car;
+        car.RepairEngine();   // towed in on a blown (or cooked) engine: the crew put a fresh one in
         repair._bodywork = car.GetComponentInChildren<VehicleDamage>();
         repair._startedAt = repair._bodywork != null ? repair._bodywork.DamageLevel : 0f;
         repair._jobSeconds = RepairSeconds(repair._startedAt, repair.minRepairSeconds, repair.maxRepairSeconds);
         repair._handBackWhenDone = handBackWhenDone;
         repair._towedAt = Time.time;
+        // Practice and qualifying: the hold comes off the session clock rather than being waited out in the box,
+        // said for a few seconds in the strip the hold's countdown uses.
+        if (RaceWeekend.IsPracticeLike || PracticeDirector.TimedSessionRunning)
+        {
+            repair._towedAt = -1f;
+            float lost = PracticeDirector.SpendSessionTime(repair.impoundSeconds);
+            if (lost >= 1f)
+            {
+                int s = Mathf.RoundToInt(lost);
+                TowClockNotice.Show($"Towed in - {s / 60}:{s % 60:00} off the session clock");
+            }
+        }
         if (handBackWhenDone) ParkedCarPin.Hold(car);
         repair.enabled = true;
         // Already out round it from an earlier tow: re-measure, because the car may have landed elsewhere.
@@ -150,6 +166,7 @@ public class PitCrewRepair : MonoBehaviour
     {
         if (Event.current.type != EventType.Repaint) return;
         if (Active != this || RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
+        if (TowClockNotice.Showing) return;   // the session-clock notice has the strip for its few seconds
 
         string text;
         float left = ImpoundRemaining;
@@ -162,12 +179,46 @@ public class PitCrewRepair : MonoBehaviour
             text = $"Crew repairing - {Mathf.RoundToInt(Progress01 * 100f)}%";
         else return;
 
+        DrawStrip(text);
+    }
+
+    // One line top centre on a deep plate: the hold, the repair, the session-clock notice.
+    static void DrawStrip(string text)
+    {
         var style = PixelGUI.Label;
         var size = style.CalcSize(new GUIContent(text));
         float pad = PixelGUI.Px(6f);
         var r = new Rect(Mathf.Round((Screen.width - size.x) * 0.5f), PixelGUI.Px(40f), size.x, size.y);
         PixelGUI.Fill(new Rect(r.x - pad, r.y - pad * 0.5f, r.width + pad * 2f, r.height + pad), PixelGUI.PlateDeep);
         GUI.Label(r, text, style);
+    }
+
+    // What a practice or qualifying tow cost, up for a few seconds. Its own object rather than the repair's
+    // OnGUI: an undamaged car finishes its repair (and switches the component off) the frame after the tow.
+    sealed class TowClockNotice : MonoBehaviour
+    {
+        const float Seconds = 4f;
+        static TowClockNotice _instance;
+        string _text;
+        float _until;
+
+        public static bool Showing => _instance != null && Time.time < _instance._until;
+
+        public static void Show(string text)
+        {
+            if (_instance == null) _instance = new GameObject("TowClockNotice").AddComponent<TowClockNotice>();
+            _instance._text = text;
+            _instance._until = Time.time + Seconds;
+        }
+
+        void OnGUI()
+        {
+            if (Event.current.type != EventType.Repaint || Time.time >= _until) return;
+            if (RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
+            DrawStrip(_text);
+        }
+
+        void OnDestroy() { if (_instance == this) _instance = null; }
     }
 
     void Finish()

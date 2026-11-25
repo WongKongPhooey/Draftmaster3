@@ -658,12 +658,13 @@ public class BroadcastController : MonoBehaviour
         if (_icon != null) _icon.rectTransform.sizeDelta = _iconSize * k;
     }
 
+    // margin.x is stepped past the HUD's speed dial (IronOvalRaceHUD.DialCornerClearance).
     static void Corner(RectTransform rt, Vector2 margin)
     {
         rt.anchorMin = new Vector2(1f, 0f);
         rt.anchorMax = new Vector2(1f, 0f);
         rt.pivot = new Vector2(1f, 0f);
-        rt.anchoredPosition = new Vector2(-margin.x, margin.y);
+        rt.anchoredPosition = new Vector2(-(margin.x + IronOvalRaceHUD.DialCornerClearance), margin.y);
     }
 
     // A 16x16 television, drawn here rather than imported so the kit's icon set needs no new slot: white on clear,

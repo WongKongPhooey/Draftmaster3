@@ -147,6 +147,14 @@ public class OnFootController : MonoBehaviour
     {
         All.Remove(this);
         _moveAction?.Disable();
+        // The body is being put away (into the car, a cutscene swap, a scene change) with a conversation still
+        // open: nobody is left to press through it, and an open conversation holds PadInput.ModalOpen — the
+        // letterbox stays down and the race HUD's AUTO button stays hidden for the rest of the session. End it.
+        if (_activeNpc != null)
+        {
+            if (_activeNpc.IsTalking) _activeNpc.EndConversation();
+            _activeNpc = null;
+        }
     }
 
     // Builds a private clone of controlsAsset and grabs OnFoot/Movement. Cloning keeps our
@@ -367,7 +375,10 @@ public class OnFootController : MonoBehaviour
             {
                 // The weekend sheet or a result card is up over the paddock and owns the confirm button (the
                 // pad's A books a session there); the press is theirs, not the nearest NPC's.
-                var npc = WeekendModal.AnyOpen ? null : (tapped ?? NearestInRange());
+                // Likewise the car's own "get in" prompt: E stood at the car is getting in, not talking to a
+                // fan who has wandered up beside it. A tap still picks out whoever it lands on.
+                var npc = WeekendModal.AnyOpen ? null
+                        : tapped ?? (PitLaneStart.CarPromptUp ? null : NearestInRange());
                 if (npc != null)
                 {
                     npc.SetInteractor(transform);
@@ -469,7 +480,8 @@ public class OnFootController : MonoBehaviour
 
     void UpdateNearestPrompt()
     {
-        var nearest = NearestInRange();
+        // The car's prompt owns E while it is up, so no second keycap over a nearby NPC offers it too.
+        var nearest = PitLaneStart.CarPromptUp ? null : NearestInRange();
         var wanted = nearest != null && !nearest.IsTalking ? nearest : null;
 
         if (_prompted != wanted)

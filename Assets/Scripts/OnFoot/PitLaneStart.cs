@@ -796,6 +796,7 @@ public class PitLaneStart : MonoBehaviour
         if (_gettingIn == this) _gettingIn = null;
         if (_current == this) _current = null;
         if (_inChallenge == this) _inChallenge = null;
+        if (_promptOwner == this) { _promptOwner = null; CarPromptUp = false; }
     }
 
     // No running until the run hint has been shown. The hint itself waits on the phone lesson
@@ -1824,8 +1825,17 @@ public class PitLaneStart : MonoBehaviour
         return Vector2.Distance(p, car.transform.position) <= 3f;
     }
 
+    // True while the "get in" keycap is over the player's car: E (and the pad's interact) belongs to the car then,
+    // and OnFootController starts no conversation with it. Both read the same key on the same frame, so a fan
+    // stood by the car took the press as well — the player got in, the body that was in the conversation was
+    // put away with the line still open, and nothing was left to advance it (stuck letterbox, no AUTO button).
+    public static bool CarPromptUp { get; private set; }
+    static PitLaneStart _promptOwner;
+
     void ShowPrompt(bool show)
     {
+        CarPromptUp = show;
+        _promptOwner = this;
         if (show)
         {
             if (_prompt == null)

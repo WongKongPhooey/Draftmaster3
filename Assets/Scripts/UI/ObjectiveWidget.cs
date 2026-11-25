@@ -72,35 +72,69 @@ public static class ObjectiveWidget
         return new Vector2(m, Mathf.Round(Screen.height - m - h));
     }
 
-    // One of eight pixel arrows, centred in the box: the design's ◀ and its seven turns. Drawn in whole kit
-    // pixels rather than rotated, so a diagonal stays as crisp as the four straight ones.
+    // A pixel arrow centred in the box, pointing any way round the full 360 degrees rather than snapped to the
+    // eight compass points. It is rasterised in whole kit pixels at the current angle (a shaft and a head, the
+    // design's gold) into a small point-filtered texture and drawn at the kit's whole-number scale, so a turned
+    // arrow is as crisp as an upright one; the texture is only redrawn when the angle moves a whole degree.
+    const int ArrowPx = 21;   // the arrow's square canvas, in kit pixels (fits the 24 px box)
+    static Texture2D _arrowTex;
+    static Color32[] _arrowPixels;
+    static int _arrowDeg = int.MinValue;
+
     static void DrawArrow(Rect box, Vector2 dir, float px)
     {
         if (dir.sqrMagnitude < 0.0001f) return;
-        // GUI space runs y down; the octant is counted anticlockwise from "right" with y up.
-        float angle = Mathf.Atan2(-dir.y, dir.x) * Mathf.Rad2Deg;
-        int octant = ((Mathf.RoundToInt(angle / 45f) % 8) + 8) % 8;
-        var c = DriveScoutStyle.Gold;
+        // GUI space runs y down; the angle is counted anticlockwise from "right" with y up.
+        int deg = Mathf.RoundToInt(Mathf.Atan2(-dir.y, dir.x) * Mathf.Rad2Deg);
+        deg = ((deg % 360) + 360) % 360;
+        EnsureArrow(deg);
 
-        bool straight = octant % 2 == 0;
-        float gw = straight ? (octant == 0 || octant == 4 ? 4f : 7f) : 5f;
-        float gh = straight ? (octant == 0 || octant == 4 ? 7f : 4f) : 5f;
-        float ox = box.x + Mathf.Floor((BoxW - gw) * 0.5f) * px;
-        float oy = box.y + Mathf.Floor((H - gh) * 0.5f) * px;
+        float ox = box.x + Mathf.Floor((BoxW - ArrowPx) * 0.5f) * px;
+        float oy = box.y + Mathf.Floor((H - ArrowPx) * 0.5f) * px;
+        GUI.DrawTexture(new Rect(ox, oy, ArrowPx * px, ArrowPx * px), _arrowTex);
+    }
 
-        void P(float x, float y, float w, float h) => PixelGUI.Fill(new Rect(ox + x * px, oy + y * px, w * px, h * px), c);
-
-        switch (octant)
+    static void EnsureArrow(int deg)
+    {
+        if (_arrowTex != null && _arrowDeg == deg) return;
+        _arrowDeg = deg;
+        if (_arrowTex == null)
         {
-            case 4: for (int i = 0; i < 4; i++) P(i, 3 - i, 1, 1 + 2 * i); break;          // left: tip on the left
-            case 0: for (int i = 0; i < 4; i++) P(3 - i, 3 - i, 1, 1 + 2 * i); break;      // right
-            case 2: for (int j = 0; j < 4; j++) P(3 - j, j, 1 + 2 * j, 1); break;          // up: tip on top
-            case 6: for (int j = 0; j < 4; j++) P(3 - j, 3 - j, 1 + 2 * j, 1); break;      // down
-            case 3: for (int j = 0; j < 5; j++) P(0, j, 5 - j, 1); break;                  // up-left: corner top-left
-            case 1: for (int j = 0; j < 5; j++) P(j, j, 5 - j, 1); break;                  // up-right
-            case 5: for (int j = 0; j < 5; j++) P(0, j, j + 1, 1); break;                  // down-left
-            case 7: for (int j = 0; j < 5; j++) P(4 - j, j, j + 1, 1); break;              // down-right
+            _arrowTex = new Texture2D(ArrowPx, ArrowPx, TextureFormat.RGBA32, false)
+            {
+                name = "ObjectiveArrow",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave,
+            };
+            _arrowPixels = new Color32[ArrowPx * ArrowPx];
         }
+
+        // Direction with y up, the texture's own orientation (row 0 is the bottom).
+        float a = deg * Mathf.Deg2Rad;
+        float dx = Mathf.Cos(a), dy = Mathf.Sin(a);
+        float c = ArrowPx * 0.5f;
+        Color32 gold = DriveScoutStyle.Gold;
+        var clear = new Color32(0, 0, 0, 0);
+
+        // In the arrow's own frame (u along it, v across): a head from u = 1 to the tip at u = 9, 9.6 px across
+        // its base, on a 3 px shaft back to u = -8.
+        const float Tip = 9f, HeadBase = 1f, HeadSlope = 0.6f, Tail = -8f, ShaftHalf = 1.5f;
+        for (int row = 0; row < ArrowPx; row++)
+        {
+            float py = row + 0.5f - c;
+            for (int col = 0; col < ArrowPx; col++)
+            {
+                float pxl = col + 0.5f - c;
+                float u = pxl * dx + py * dy;
+                float v = Mathf.Abs(-pxl * dy + py * dx);
+                bool head = u >= HeadBase && u <= Tip && v <= (Tip - u) * HeadSlope + 0.35f;
+                bool shaft = u >= Tail && u < HeadBase && v <= ShaftHalf;
+                _arrowPixels[row * ArrowPx + col] = head || shaft ? gold : clear;
+            }
+        }
+        _arrowTex.SetPixels32(_arrowPixels);
+        _arrowTex.Apply(false);
     }
 
     // A border `t` thick drawn just outside `r`.

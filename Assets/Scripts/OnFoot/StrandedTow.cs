@@ -114,6 +114,8 @@ public class StrandedTow : MonoBehaviour
         if (_bodywork != null && _bodywork.WheelsOff > 0) damage = Mathf.Max(damage, 1f);
         // So is a car out of fuel: it is not going anywhere under its own power either.
         if (_car.FuelDry) damage = Mathf.Max(damage, 1f);
+        // And a car whose engine has blown.
+        if (_car.EngineBlown) damage = Mathf.Max(damage, 1f);
         return Draftmaster.Sim.StrandedTowRule.Offer(Time.time - _stoppedSince, damage, RaceWeekend.IsPracticeLike,
                                                      requireDamage, damageAtLeast, stoppedForSeconds,
                                                      undamagedStoppedForSeconds);

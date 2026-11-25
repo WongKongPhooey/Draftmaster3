@@ -20,6 +20,11 @@ namespace Draftmaster.Sim
     // Overheated (past OverheatC) the engine loses power and some top speed, which drops the car off the bumper,
     // which cools it - pushing regulates itself. PlayerVehicleController runs it for every dynamic car, player and
     // AI alike; AIRacingBehaviour opens its pack gap when its engine runs hot.
+    //
+    // On top of the wake, the engine's own work warms it: an engine idling in the box sits at NormalC, and flat out
+    // in clean air it settles up to LoadRiseC above that (Settle), which never reaches HotC - only someone's wake, or
+    // a heavily taped grille, takes it into the amber. Pinned at MaxC with the throttle down it is living on borrowed
+    // time: BlowSeconds of full throttle there and it lets go (StepStrain / Blown).
     public static class EngineTemp
     {
         public const float CarLength = 4.8f;          // metres, nose to tail (AIRacingBehaviour.packFollowGap's car)
@@ -46,6 +51,16 @@ namespace Draftmaster.Sim
         // Speed (m/s, ~168 mph) at which the engine is working flat out for heat; off a plate track. On a plate
         // track it is the plate speed, where the pack races.
         public const float ReferenceMps = 75f;
+
+        // The engine's own work: flat out in clean air it settles LoadRiseC above NormalC, approached with a time
+        // constant of SettleSeconds. Load = throttle x SpeedShare, so idling (or creeping down pit road) is NormalC.
+        public const float LoadRiseC = 12f;
+        public const float SettleSeconds = 25f;
+
+        // Seconds of full throttle at MaxC before the engine blows. Part throttle wears it proportionally; once the
+        // temperature is back under OverheatC the strain bleeds away at StrainRecoverRate of real time.
+        public const float BlowSeconds = 10f;
+        public const float StrainRecoverRate = 0.5f;
 
         public const float MaxPowerLoss = 0.15f;     // share of engine pull gone at MaxC
         public const float MaxTopSpeedLoss = 0.03f;  // share of top speed gone at MaxC (~6 mph at Daytona)
@@ -89,9 +104,31 @@ namespace Draftmaster.Sim
             return HeatRate * GrilleTape.HeatScale(tape) * speedShare * heat - CoolRate * cool;
         }
 
-        // One step of the engine's temperature, held between NormalC and MaxC.
-        public static float Step(float tempC, float cover, float speedShare, float dt, float tape = GrilleTape.Default)
-            => Mathf.Clamp(tempC + Rate(cover, speedShare, tape) * dt, NormalC, MaxC);
+        // Where the engine's own work settles it in clean air: NormalC idling, NormalC + LoadRiseC flat out at speed.
+        public static float Settle(float load) => NormalC + LoadRiseC * Mathf.Clamp01(load);
+
+        // One step of the engine's temperature, held between NormalC and MaxC. `load` (throttle x SpeedShare, 0..1)
+        // warms it toward Settle(load); the wake heats it past that, and clean air cools it back down - never below
+        // what the engine's work holds it at. Load 0 is the wake-only model.
+        public static float Step(float tempC, float cover, float speedShare, float dt, float tape = GrilleTape.Default,
+                                 float load = 0f)
+        {
+            float settle = Settle(load);
+            float next = tempC + Rate(cover, speedShare, tape) * dt;
+            float floor = tempC <= settle ? tempC + (settle - tempC) * Mathf.Clamp01(dt / SettleSeconds) : settle;
+            return Mathf.Clamp(Mathf.Max(next, floor), NormalC, MaxC);
+        }
+
+        // Wear on an engine pinned at MaxC: grows with the throttle while it is there, bleeds away once the
+        // temperature is back under OverheatC, holds in between.
+        public static float StepStrain(float strain, float tempC, float throttle, float dt)
+        {
+            if (tempC >= MaxC - 0.01f) return strain + Mathf.Clamp01(throttle) * dt;
+            if (tempC < OverheatC) return Mathf.Max(0f, strain - StrainRecoverRate * dt);
+            return strain;
+        }
+
+        public static bool Blown(float strain) => strain >= BlowSeconds;
 
         // 0 at or under OverheatC, 1 at MaxC.
         public static float Overheat01(float tempC) => Mathf.Clamp01((tempC - OverheatC) / (MaxC - OverheatC));
@@ -99,8 +136,11 @@ namespace Draftmaster.Sim
         public static float PowerFactor(float tempC) => 1f - MaxPowerLoss * Overheat01(tempC);
         public static float TopSpeedFactor(float tempC) => 1f - MaxTopSpeedLoss * Overheat01(tempC);
 
-        // The gauge: 0 at normal running, 1 at overheating.
-        public static float Gauge01(float tempC) => Mathf.Clamp01((tempC - NormalC) / (OverheatC - NormalC));
+        // The gauge: GaugeIdle (three of its ten bars) at normal running - an engine idling in the box is already
+        // warm - and full at MaxC, the temperature where the clock to a blow-up starts.
+        public const float GaugeIdle = 0.3f;
+        public static float Gauge01(float tempC) =>
+            Mathf.Clamp01(GaugeIdle + (1f - GaugeIdle) * (tempC - NormalC) / (MaxC - NormalC));
     }
 
     // Grille tape, the setup sheet's Tape slider (CarSetup.tape): how much of the radiator opening is taped over.

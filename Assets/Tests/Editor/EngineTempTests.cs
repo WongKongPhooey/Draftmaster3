@@ -105,8 +105,68 @@ public class EngineTempTests
         Assert.AreEqual(1f - EngineTemp.MaxTopSpeedLoss, EngineTemp.TopSpeedFactor(EngineTemp.MaxC), 1e-6f);
         Assert.Less(EngineTemp.PowerFactor(130f), 1f);
         Assert.Greater(EngineTemp.PowerFactor(130f), EngineTemp.PowerFactor(EngineTemp.MaxC));
-        Assert.AreEqual(0f, EngineTemp.Gauge01(EngineTemp.NormalC), 1e-6f);
-        Assert.AreEqual(1f, EngineTemp.Gauge01(EngineTemp.OverheatC), 1e-6f);
+    }
+
+    // ------------------------------------------------------------------ gauge, warm-up and blowing up
+
+    [Test]
+    public void Gauge_ThreeBarsIdling_FullAtMax()
+    {
+        Assert.AreEqual(3, (int)System.Math.Round(EngineTemp.Gauge01(EngineTemp.NormalC) * 10f));
+        Assert.AreEqual(1f, EngineTemp.Gauge01(EngineTemp.MaxC), 1e-6f);
+        Assert.Less(EngineTemp.Gauge01(EngineTemp.HotC), EngineTemp.Gauge01(EngineTemp.OverheatC));
+        Assert.Less(EngineTemp.Gauge01(EngineTemp.OverheatC), 1f);
+    }
+
+    [Test]
+    public void IdlingInTheBox_StaysAtNormal()
+    {
+        float t = EngineTemp.NormalC;
+        for (int i = 0; i < 6000; i++) t = EngineTemp.Step(t, 0f, 0f, Dt, GrilleTape.Default, load: 0f);
+        Assert.AreEqual(EngineTemp.NormalC, t, 1e-4f);
+    }
+
+    [Test]
+    public void FlatOutInCleanAir_WarmsUpButStaysOutOfTheAmber()
+    {
+        float t = EngineTemp.NormalC, after30 = 0f;
+        for (int i = 0; i < 6000; i++)   // two minutes at 50 Hz
+        {
+            t = EngineTemp.Step(t, 0f, 1f, Dt, GrilleTape.Default, load: 1f);
+            if (i == 1499) after30 = t;
+        }
+        Assert.Greater(after30, EngineTemp.NormalC + 6f, "climbs noticeably in the first half minute");
+        Assert.AreEqual(EngineTemp.Settle(1f), t, 0.5f);
+        Assert.Less(t, EngineTemp.HotC);
+    }
+
+    [Test]
+    public void WarmEngine_CoolsBackToWhatItsWorkHoldsWhenLoadDrops()
+    {
+        float t = EngineTemp.Settle(1f);
+        for (int i = 0; i < 6000; i++) t = EngineTemp.Step(t, 0f, 0.2f, Dt, GrilleTape.Default, load: 0f);
+        Assert.AreEqual(EngineTemp.NormalC, t, 0.5f);
+    }
+
+    [Test]
+    public void PinnedAtMax_BlowsAfterTenSecondsOfFullThrottle()
+    {
+        float strain = 0f, s = 0f;
+        while (!EngineTemp.Blown(strain) && s < 60f) { strain = EngineTemp.StepStrain(strain, EngineTemp.MaxC, 1f, Dt); s += Dt; }
+        Assert.AreEqual(EngineTemp.BlowSeconds, s, 0.05f);
+
+        // Half throttle takes twice as long; off the throttle it never goes.
+        strain = 0f;
+        for (int i = 0; i < (int)(EngineTemp.BlowSeconds / Dt); i++) strain = EngineTemp.StepStrain(strain, EngineTemp.MaxC, 0.5f, Dt);
+        Assert.IsFalse(EngineTemp.Blown(strain));
+        Assert.AreEqual(0f, EngineTemp.StepStrain(0f, EngineTemp.MaxC, 0f, 1f));
+    }
+
+    [Test]
+    public void Strain_BleedsAwayOnceCooled_HoldsWhileStillHot()
+    {
+        Assert.AreEqual(5f, EngineTemp.StepStrain(5f, EngineTemp.OverheatC + 1f, 1f, 1f), 1e-6f);
+        Assert.AreEqual(5f - EngineTemp.StrainRecoverRate, EngineTemp.StepStrain(5f, EngineTemp.HotC, 1f, 1f), 1e-6f);
     }
 
     // ------------------------------------------------------------------ grille tape (the setup sheet's Tape slider)
