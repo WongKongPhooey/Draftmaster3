@@ -694,9 +694,10 @@ Free: `F12`.
 
 ## Which camera you drive from
 
-The pause menu's **Swing camera** row picks the view. Off (the default) is the fixed camera the game has
-always had: square with the world, north up the screen, the car turning underneath it. On is a chase
-camera — the whole picture rolls until the car's nose points up the screen, on a spring that trails the
+The pause menu's **View** row picks the view, and tapping it flips between the two. **Landscape** (the
+default) is the fixed camera the game has always had: square with the world, north up the screen, the car
+turning underneath it. **Portrait** is the swing camera (`CameraViewMode.Swinging`, and a phone stands
+upright for it) — a chase camera — the whole picture rolls until the car's nose points up the screen, on a spring that trails the
 heading through a corner and swings a little past it on the way out, so it reads as being dragged round
 behind the car rather than bolted to it. Switching either way eases rather than snaps, so it can be tried
 mid-race, and the choice is a setting (`CameraMode` in PlayerPrefs, kept across a demo reset).

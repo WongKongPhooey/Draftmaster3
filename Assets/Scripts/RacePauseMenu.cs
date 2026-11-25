@@ -23,7 +23,7 @@ public class RacePauseMenu : MonoBehaviour
     bool _inRaceScene;
     float _pollTimer;
     float _prevTimeScale = 1f;
-    GUIStyle _title, _toggle;
+    GUIStyle _title, _toggle, _choice;
 
     // The co-op row's memory of the attempt it is watching: whether the launcher was busy last frame, and
     // until when the row should be reporting that the last attempt failed.
@@ -325,13 +325,15 @@ public class RacePauseMenu : MonoBehaviour
         if (newMap != map) TrackMiniMap.Visible = newMap;
         cy += toggleH;
 
-        // Which camera the race is watched from. Off is the fixed view the game has always had; on swings the
-        // whole picture round to sit behind the car. Switching either way is smooth, so it can be tried
-        // mid-race without the view snapping.
+        // Which camera the race is watched from, named for how it is held: Landscape is the fixed view the game
+        // has always had; Portrait is the swing camera, the whole picture turned round to sit behind the car
+        // (and a phone stood upright for it). The row names the view in use and a tap flips it. Switching
+        // either way is smooth, so it can be tried mid-race without the view snapping.
         bool swing = CameraViewMode.Swinging;
-        PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, toggleH));
-        bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), swing, "  Swing camera", _toggle);
-        if (newSwing != swing) CameraViewMode.Swinging = newSwing;
+        var viewRect = new Rect(content.x, cy, content.width, toggleH);
+        PadCursor(PadRow.SwingCamera, viewRect);
+        if (TouchTaps.Button(viewRect, swing ? "  View: Portrait" : "  View: Landscape", _choice))
+            CameraViewMode.Swinging = !swing;
         cy += toggleH;
 
         // FPS, frame time and the 1% / 10% lows in a corner of the screen (DebugStatsOverlay).
@@ -518,5 +520,16 @@ public class RacePauseMenu : MonoBehaviour
         _toggle.onNormal.textColor = PixelGUI.Text;
         _toggle.hover.textColor = PixelGUI.Text;
         _toggle.onHover.textColor = PixelGUI.Text;
+
+        // A two-way choice (the view row) laid out like a toggle row — same face and padding, so its text lines
+        // up with the toggles' — but with no check box, since the label itself says which way it is set.
+        _choice = new GUIStyle(_toggle);
+        foreach (var state in new[] { _choice.normal, _choice.onNormal, _choice.hover, _choice.onHover,
+                                      _choice.active, _choice.onActive, _choice.focused, _choice.onFocused })
+        {
+            state.background = null;
+            state.scaledBackgrounds = new Texture2D[0];
+            state.textColor = PixelGUI.Text;
+        }
     }
 }
