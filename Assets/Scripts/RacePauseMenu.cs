@@ -528,7 +528,10 @@ public class RacePauseMenu : MonoBehaviour
                                       _choice.active, _choice.onActive, _choice.focused, _choice.onFocused })
         {
             state.background = null;
+#if UNITY_EDITOR
+            // Editor-only API (retina @2x backgrounds); not in the player, where background alone is enough.
             state.scaledBackgrounds = new Texture2D[0];
+#endif
             state.textColor = PixelGUI.Text;
         }
     }
