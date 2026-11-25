@@ -458,6 +458,37 @@ public class TouchDriveTests
     }
 
     [Test]
+    public void PitButton_TakesTheLimitersPlace_OnlyWhileTheLimiterIsNot()
+    {
+        var s = new TouchDriveState();
+        float x = L.limiter.centerX, y = L.limiter.centerY;
+
+        s.Update(Fingers(F(1, x, y)), L);
+        Assert.IsFalse(s.PitTapped, "a hidden PIT button takes no finger");
+        s.Update(Fingers(), L);
+
+        s.PitShown = true;
+        s.Update(Fingers(F(2, x, y)), L);
+        Assert.IsTrue(s.PitTapped, "PIT sits where LIMIT does");
+        Assert.IsFalse(s.LimiterTapped);
+        Assert.AreEqual(0f, s.Throttle + s.Brake, "a tap on PIT presses no pedal");
+        s.Update(Fingers(F(2, x, y)), L);
+        Assert.IsFalse(s.PitTapped, "held is one tap, not one a frame");
+        s.Update(Fingers(), L);
+
+        s.LimiterShown = true;   // on pit road the slot is the limiter's
+        s.Update(Fingers(F(3, x, y)), L);
+        Assert.IsTrue(s.LimiterTapped);
+        Assert.IsFalse(s.PitTapped, "with LIMIT up, the slot is LIMIT's");
+        s.Update(Fingers(), L);
+
+        s.LimiterShown = false;
+        s.ButtonsOnly = true;    // on Auto: the top row still answers
+        s.Update(Fingers(F(4, x, y)), L);
+        Assert.IsTrue(s.PitTapped, "on Auto, PIT still takes a tap");
+    }
+
+    [Test]
     public void ButtonsOnly_TheWheelAndPedalsTakeNoFinger()
     {
         var s = new TouchDriveState { ButtonsOnly = true, BroadcastShown = true };

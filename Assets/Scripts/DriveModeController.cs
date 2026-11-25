@@ -136,6 +136,11 @@ public class DriveModeController : MonoBehaviour
         UpdateAutoAfterTow();
         UpdateHandBack();
         UpdateChiefFuelCall();
+        // Lanes put the car on Auto on the grid, before GridSpawner has published the player's pit box, and the one try
+        // at fitting the pit brain then gave up for the race (Daytona, 2026-11-21). Tried again until it sticks; once
+        // fitted this returns at once.
+        if (!_driving && InSeat && RaceStart.IsRunning) EnsureAutoPitBrain();
+        UpdatePitHandBack();
         UpdateLanes();
         UpdateButton();
     }
@@ -442,17 +447,19 @@ public class DriveModeController : MonoBehaviour
         UpdateButton();
     }
 
-    // ---- PIT button (Auto only) ----
-    // Auto saves fuel only gently (SplineInputDriver.fuelSaveMinThrottle), so a car short of it has to come in: under
-    // pitButtonFuelLitres, while Auto drives a race, a PIT button sits left of AUTO in the same style - amber border -
-    // and tapping it books the stop (PitStopController.RequestStop), taken at the next pit entry pit road allows.
-    [Header("Pit button (Auto)")]
-    [Tooltip("The PIT button shows while Auto drives a race with less than this much fuel (litres) in the tank.")]
-    public float pitButtonFuelLitres = 15f;
+    // ---- PIT button ----
+    // Up whenever a race is being run and the player is in the seat - driving or on Auto - off pit road: on a phone in
+    // the touch controls' top row, where LIMIT shows on pit road (TouchDriveControls), and on PC left of AUTO in the
+    // same style - amber border. Tapping it books the stop (PitStopController.RequestStop), taken at the next pit entry
+    // pit road allows, and it reads IN until the car turns onto pit road; tapped again before then, the booking is
+    // dropped. From the wheel, the stop is Auto's to make: the car goes on Auto to be brought in, and once it is back
+    // out on the circuit the usual hand-back is armed - a tap of gas or brake and it is the player's again.
     static readonly Vector2 PitButtonSize = new Vector2(44f, 26f);
     static readonly Color PitAmber = new Color32(0xe0, 0xa8, 0x3a, 0xff);
     GameObject _pitRoot;
     TMP_Text _pitLabel;
+    // The PIT button put the car on Auto from the wheel: hand it back once the stop is made (or dropped).
+    bool _pitHandBack;
 
     void BuildPitButton(Transform canvas, RectTransform autoRoot)
     {
@@ -485,7 +492,7 @@ public class DriveModeController : MonoBehaviour
         faceImg.color = ButtonPlate;
         var button = face.GetComponent<Button>();
         button.targetGraphic = faceImg;
-        button.onClick.AddListener(RequestAutoPit);
+        button.onClick.AddListener(PressPit);
 
         _pitLabel = IronOvalUI.Label(frt, "Label", "PIT", IronOvalUI.Role.HeaderSmall, DriveScoutStyle.Text);
         _pitLabel.characterSpacing = SilkscreenTrack2Px;
@@ -500,34 +507,80 @@ public class DriveModeController : MonoBehaviour
         _pitRoot.SetActive(false);
     }
 
-    void RequestAutoPit()
+    // Whether the PIT button is up: a race under way (green or caution, not practice or qualifying, the player's car
+    // not past the chequer), the player in the seat, and the car off pit road - there the slot is LIMIT's, and a car
+    // already turned in has nothing left to book. Not where the player's car can have no pit brain (no reserved box).
+    public bool PitButtonShown
     {
-        var pit = playerCar != null ? playerCar.GetComponent<PitStopController>() : null;
-        if (pit != null) pit.RequestStop();
+        get
+        {
+            if (playerCar == null || !InSeat) return false;
+            if (!RaceStart.IsRunning || RaceWeekend.IsPracticeLike || RaceDirector.TookChequer(playerCar.transform)) return false;
+            var pit = playerCar.GetComponent<PitStopController>();
+            if (pit == null && (!PitLane.Configured || PitLane.PlayerBox < 0)) return false;
+            var limiter = playerCar.GetComponent<PitLimiter>();
+            if (limiter != null && limiter.InPitZone) return false;
+            if (pit != null && pit.IsPitting && _spline != null && _spline.IsOnPit) return false;
+            return true;
+        }
     }
 
-    // Shown with the AUTO button, while the AI drives a race with the tank under pitButtonFuelLitres and a pit brain to
-    // take the stop. Once booked it reads "IN" and stays until the car is on pit road.
+    // On Auto with the stop booked (or the car on its way in): the button reads IN. From the wheel it always reads
+    // PIT - a booking left over from an earlier spell on Auto is only made once the car is on Auto again.
+    public bool PitBooked
+    {
+        get
+        {
+            if (_driving || playerCar == null) return false;
+            var pit = playerCar.GetComponent<PitStopController>();
+            return pit != null && (pit.StopRequested || pit.IsPitting);
+        }
+    }
+
+    // The PIT button. From the wheel: the car goes on Auto with the stop booked. On Auto: book it, or drop the one
+    // booked.
+    public void PressPit()
+    {
+        if (!PitButtonShown) return;
+        if (_driving)
+        {
+            // With the lane controls on, the lanes keep the car on Auto after the stop, as anywhere off pit road.
+            SetDriving(false);
+            if (_driving) return;
+            _pitHandBack = !LegacyLaneControls.Enabled;
+            EnsureAutoPitBrain();
+            var booked = playerCar.GetComponent<PitStopController>();
+            if (booked != null) booked.RequestStop();
+            return;
+        }
+        EnsureAutoPitBrain();
+        var pit = playerCar.GetComponent<PitStopController>();
+        if (pit == null || pit.IsPitting) return;
+        if (pit.StopRequested) pit.CancelStop();   // a hand-back waiting on this stop is armed next frame
+        else pit.RequestStop();
+    }
+
+    // The car the PIT button took off the player is back out on the circuit, the stop made (or dropped, or called off
+    // at a green flag): Auto off, waiting for a pedal tap, as if they had pressed AUTO themselves.
+    void UpdatePitHandBack()
+    {
+        if (!_pitHandBack) return;
+        var pit = playerCar != null ? playerCar.GetComponent<PitStopController>() : null;
+        if (_driving || !InSeat || pit == null) { _pitHandBack = false; return; }
+        if (pit.StopRequested || pit.IsPitting) return;
+        _pitHandBack = false;
+        if (_handBack.Waiting) return;
+        ReadPedals(out float throttle, out float brake);
+        _handBack.Arm(throttle, brake);
+    }
+
+    // The PC button, with the AUTO button.
     void UpdatePitButton(bool autoShown)
     {
         if (_pitRoot == null) return;
-        bool show = false;
-        string label = "PIT";
-        if (autoShown && !_driving && playerCar != null && RaceStart.IsRunning && !RaceWeekend.IsPracticeLike)
-        {
-            // Lanes put the car on Auto on the grid, before GridSpawner has published the player's pit box, and the one
-            // try at fitting the pit brain then gave up for the race: no pit brain, so no PIT button however low the
-            // tank ran (Daytona, 2026-11-21). Tried again until it sticks; once fitted this returns at once.
-            EnsureAutoPitBrain();
-            var tank = playerCar.GetComponent<FuelTank>();
-            var pit = playerCar.GetComponent<PitStopController>();
-            if (tank != null && pit != null && !pit.IsPitting && tank.fuelLitres < pitButtonFuelLitres)
-            {
-                show = true;
-                if (pit.StopRequested) label = "IN";
-            }
-        }
+        bool show = autoShown && PitButtonShown;
         if (_pitRoot.activeSelf != show) _pitRoot.SetActive(show);
+        string label = PitBooked ? "IN" : "PIT";
         if (show && _pitLabel != null && _pitLabel.text != label) _pitLabel.text = label;
     }
 

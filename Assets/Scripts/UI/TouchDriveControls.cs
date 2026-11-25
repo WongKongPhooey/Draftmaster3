@@ -158,6 +158,9 @@ public class TouchDriveControls : MonoBehaviour
         bool lanes = LaneSteering;
         _state.ButtonsOnly = Broadcasting && !DriveModeController.Current.HandBackPending && !lanes;
         _state.LimiterShown = limiter != null && !Broadcasting;
+        // Off pit road while a race is on, the limiter's place is the PIT button's.
+        var drive = DriveModeController.Current;
+        _state.PitShown = !_state.LimiterShown && drive != null && drive.PitButtonShown;
         _state.BroadcastShown = DriveModeController.Current != null;
         _state.SteerMode = SteerButtons || lanes ? TouchSteerMode.Buttons : TouchSteerMode.Wheel;
         _state.Update(_touches, _layout);
@@ -165,6 +168,7 @@ public class TouchDriveControls : MonoBehaviour
 
         if (_state.PauseTapped) RacePauseMenu.TogglePause();
         if (_state.LimiterTapped && limiter != null) limiter.SetArmed(!limiter.Armed);
+        if (_state.PitTapped && drive != null) drive.PressPit();
         if (_state.BroadcastTapped && DriveModeController.Current != null) DriveModeController.Current.Toggle();
     }
 
@@ -225,6 +229,12 @@ public class TouchDriveControls : MonoBehaviour
         {
             var limiter = Limiter;
             DrawTopButton(_layout.limiter, "LIMIT", limiter != null && limiter.Armed, PixelGUI.Gold);
+        }
+        else if (_state.PitShown)
+        {
+            // Lit, reading IN, once the stop is booked.
+            bool booked = DriveModeController.Current != null && DriveModeController.Current.PitBooked;
+            DrawTopButton(_layout.limiter, booked ? "IN" : "PIT", booked, PixelGUI.Gold);
         }
         if (_state.BroadcastShown)
         {

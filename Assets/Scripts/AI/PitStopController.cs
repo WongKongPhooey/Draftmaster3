@@ -162,6 +162,8 @@ public class PitStopController : MonoBehaviour
     // allows, then cleared. Fuel and tyres as any stop; a caution's rules still apply.
     public bool StopRequested { get; private set; }
     public void RequestStop() { if (!IsPitting) StopRequested = true; }
+    // Changed their mind before the car turned in: the booking is dropped. A car already heading in carries on.
+    public void CancelStop() => StopRequested = false;
     // The pit-road lane this car is driving down (PitLanes.BoxSide / FarSide), or -1 while it is not in one - in its
     // box, cutting in, or not on pit road at all. Other cars judge a -1 by where it is across the lane. A car pulling
     // out of its box already claims the lane it is pulling into, so the car in the next box sees it is taken.

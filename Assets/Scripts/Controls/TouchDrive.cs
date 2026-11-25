@@ -71,7 +71,8 @@ namespace Draftmaster.Controls
         public readonly TouchRect brakeHit, throttleHit;    // pressed: the drawn pedal plus slop, split at the gap
         public readonly TouchRect pause;
         // Either side of pause, same size: the pit limiter (only while it can be toggled) and the broadcast
-        // view. A keyboard has L and V for them; a phone has these.
+        // view. A keyboard has L and V for them; a phone has these. Off pit road, while a race is on, the
+        // limiter's place is the PIT button's.
         public readonly TouchRect limiter, broadcast;
         // Right of the broadcast view, pause-sized: where the crew chief's headset goes while the phone is held
         // upright (swing camera). Drawn by CrewChiefController, not here, so it takes no touch role.
@@ -156,7 +157,7 @@ namespace Draftmaster.Controls
     //     brake to the throttle works, and a steering thumb that strays over the pedals presses nothing.
     public sealed class TouchDriveState
     {
-        enum Role { Steer, SteerButton, Pedal, Pause, Limiter, Broadcast, Ignored }
+        enum Role { Steer, SteerButton, Pedal, Pause, Limiter, Pit, Broadcast, Ignored }
 
         readonly Dictionary<int, Role> _roles = new Dictionary<int, Role>();
         readonly HashSet<int> _present = new HashSet<int>();
@@ -173,12 +174,15 @@ namespace Draftmaster.Controls
         public float Brake { get; private set; }        // 0 or 1
         public bool PauseTapped { get; private set; }   // a finger came down on the pause button this update
         public bool LimiterTapped { get; private set; }
+        public bool PitTapped { get; private set; }
         public bool BroadcastTapped { get; private set; }
 
         // Whether those two buttons are on screen. A button that is not drawn takes no finger: one landing
         // where it would be is a pedal thumb, as it always was.
         public bool LimiterShown { get; set; }
         public bool BroadcastShown { get; set; }
+        // The PIT button, in the limiter's place: there only while the limiter is not, so the two never share it.
+        public bool PitShown { get; set; }
 
         // Broadcast view: the AI has the car, so the wheel and pedals are put away and only the buttons at the
         // top stand. Fingers anywhere else do nothing.
@@ -196,7 +200,7 @@ namespace Draftmaster.Controls
 
         public void Update(IReadOnlyList<TouchPoint> touches, in TouchLayout layout)
         {
-            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
+            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; PitTapped = false; BroadcastTapped = false;
             SteerLeftHeld = false; SteerRightHeld = false;
 
             // Let go of the fingers that have lifted before placing the ones that have landed: a thumb taken
@@ -227,6 +231,7 @@ namespace Draftmaster.Controls
                     if (role == Role.Steer) { _steering = true; _gripped = false; _turned = 0f; _wheelSteer = 0f; }
                     else if (role == Role.Pause) PauseTapped = true;
                     else if (role == Role.Limiter) LimiterTapped = true;
+                    else if (role == Role.Pit) PitTapped = true;
                     else if (role == Role.Broadcast) BroadcastTapped = true;
                 }
 
@@ -258,7 +263,7 @@ namespace Draftmaster.Controls
             _roles.Clear();
             _steering = false;
             _returning = true;
-            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
+            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; PitTapped = false; BroadcastTapped = false;
             SteerLeftHeld = false; SteerRightHeld = false;
         }
 
@@ -290,6 +295,7 @@ namespace Draftmaster.Controls
         {
             if (layout.pause.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Pause;
             if (LimiterShown && layout.limiter.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Limiter;
+            if (PitShown && layout.limiter.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Pit;
             if (BroadcastShown && layout.broadcast.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Broadcast;
             if (ButtonsOnly) return Role.Ignored;
             if (layout.steerZone.Contains(t.x, t.y))
