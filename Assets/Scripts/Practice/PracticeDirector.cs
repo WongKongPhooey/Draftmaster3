@@ -380,6 +380,12 @@ public class PracticeDirector : MonoBehaviour
             float bottom = LapTimingManager.StripTop ?? (Screen.height - TouchDriveControls.ControlsTopFromBottom);
             box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), bottom - h - PixelGUI.Px(4f), w, h);
         }
+        // A phone held landscape with the touch controls up: the track map holds the top-right corner, so the
+        // clock sits right under it, sharing its right edge.
+        else if (TrackMiniMap.TopRightRect is Rect map)
+        {
+            box = new Rect(map.xMax - w, map.yMax + PixelGUI.Px(4f), w, h);
+        }
         PixelGUI.Panel(box);
 
         // Counting down is the accent; done and waiting on the player is the gain colour.

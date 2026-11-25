@@ -83,6 +83,16 @@ public class TouchDriveControls : MonoBehaviour
     // button and the size of pause. Screen pixels, top-left origin; only meaningful while Active.
     public static Rect CrewChiefSlot => ToRect(_layout.crewChief);
 
+    // What the race HUD lays itself out against on a landscape phone (IronOvalRaceHUD.LandscapeTouchLayout): the
+    // brake, the left pedal of the pair, which the rev counter stands beside; the right edge of whichever steering
+    // control is in use (the wheel, or the left/right buttons), which the meter plate stands beside; and the safe
+    // area, which the track map's top-right corner keeps inside. Screen pixels, top-left origin; only meaningful
+    // while Active.
+    public static Rect BrakeRect => ToRect(_layout.brake);
+    public static float SteerControlsRight =>
+        _state.SteerMode == TouchSteerMode.Buttons ? _layout.steerRight.xMax : _layout.wheel.xMax;
+    public static Rect SafeRect => ToRect(_layout.safe);
+
     // A device the player drives with their thumbs: a phone or tablet, or the editor's Device Simulator
     // pretending to be one.
     public static bool TouchPlatform =>

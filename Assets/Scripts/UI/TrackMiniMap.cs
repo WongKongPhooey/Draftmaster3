@@ -206,6 +206,14 @@ public class TrackMiniMap : MonoBehaviour
     // the gold goes to the leader instead.
     static bool WatchingFromStand => GrandstandVisit.Watching;
 
+    // Where the map was last drawn while it holds the top-right corner (landscape phone, touch controls up), or
+    // null when it is not there — the caution flag and the practice clock, which otherwise use that corner,
+    // step around it.
+    public static Rect? TopRightRect =>
+        Time.frameCount - _topRightFrame <= 1 ? _topRight : (Rect?)null;
+    static Rect _topRight;
+    static int _topRightFrame = -10;
+
     void OnGUI()
     {
         // `_builder == null` too: the road it was drawn from has gone (scene change) and the next poll has not
@@ -244,6 +252,20 @@ public class TrackMiniMap : MonoBehaviour
             right = dial.xMax;
         }
         var rect = new Rect(right - size, bottom - size, size, size);
+        // A phone held landscape with the touch controls up: the rev counter and the meter plate have gone down to
+        // the foot of the screen beside the controls, so the map goes up into the top-right corner (inside the
+        // safe area), as wide as the rev counter. The caution flag and the practice clock that used that corner
+        // move off it (TopRightRect).
+        bool topRight = !stand && IronOvalRaceHUD.DrawsLapCount && IronOvalRaceHUD.LandscapeTouchLayout;
+        if (topRight)
+        {
+            size = dial.width > 0f ? dial.width : PixelGUI.Px(mapSize);
+            var safe = TouchDriveControls.SafeRect;
+            rect = new Rect(Mathf.Round(safe.xMax - PixelGUI.Px(cornerMargin.x) - size),
+                            Mathf.Round(safe.y + PixelGUI.Px(cornerMargin.y)), size, size);
+            _topRight = rect;
+            _topRightFrame = Time.frameCount;
+        }
 
         // No plate and no frame behind it: the map is a line drawing laid straight over the race, which
         // keeps the corner of the screen looking out at the track rather than at a box. What used to be

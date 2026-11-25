@@ -325,6 +325,10 @@ public class LapTimingManager : MonoBehaviour
         // with no gap between them for the strip, so it stands on top of them instead.
         if (DriveOrientationController.Portrait && TouchDriveControls.Active)
             y = Mathf.Round(Screen.height - TouchDriveControls.ControlsTopFromBottom - h - stripBottomMargin * s);
+        // Held landscape, the rev counter and the meter plate stand along the foot of the screen beside the touch
+        // controls (IronOvalRaceHUD.LandscapeTouchLayout): where the strip would run under either, it stands on top.
+        var footTop = IronOvalRaceHUD.FootReadoutTop(x, x + w);
+        if (footTop.HasValue) y = Mathf.Min(y, Mathf.Round(footTop.Value - h - stripBottomMargin * s));
         StripTopY = y;
         _stripDrawnFrame = Time.frameCount;
 

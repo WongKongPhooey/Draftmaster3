@@ -36,6 +36,39 @@ public class IronOvalRaceHUD : MonoBehaviour
     // it was not (no gearbox: the numeral readout stands in). Held upright, TrackMiniMap lines up over it.
     public static Rect DialRect { get; private set; }
 
+    // A phone held landscape with the touch controls up: the rev counter (or the plain speed readout) stands at the
+    // foot of the screen just left of the brake and gas pedals, the tyre/draft/fuel/temp plate at the foot just
+    // right of the steering wheel or the left/right buttons, and TrackMiniMap takes the top-right corner at the
+    // dial's width. Held upright, or with no touch controls (desktop, a pad on a phone), the corner layout stands -
+    // and so it does on a screen too square to fit the plate and the dial side by side between the steering and the
+    // pedals (a 4:3 tablet with the wheel up), rather than draw one over the other.
+    public static bool LandscapeTouchLayout =>
+        TouchDriveControls.Active && Screen.width >= Screen.height
+        && TouchDriveControls.SteerControlsRight + PixelGUI.Px(3f * TouchControlGap + MeterPlateKitW + LandscapeDialKit)
+           <= TouchDriveControls.BrakeRect.x;
+
+    // Gap (kit px) between the foot-of-screen readouts and the touch controls they stand beside.
+    const float TouchControlGap = 12f;
+    // Kit px: the meter plate's width (ten cells, CellsWidth(10) = 98, plus its 10 px inset each side, as DrawMeters
+    // sizes it) and the landscape rev counter's side.
+    const float MeterPlateKitW = 118f;
+    const float LandscapeDialKit = 104f;
+
+    // The top (screen px from the top) of whichever foot-of-screen readout - rev counter or meter plate, in the
+    // landscape touch layout - spans any of xMin..xMax, as last drawn; null when neither does or the layout is not
+    // up. The lap timing strip, centred along the bottom, stands on top of them instead of running under them.
+    public static float? FootReadoutTop(float xMin, float xMax)
+    {
+        if (Time.frameCount - _footDrawnFrame > 1) return null;
+        float? top = null;
+        if (_footDial.width > 0f && _footDial.xMax > xMin && _footDial.x < xMax) top = _footDial.y;
+        if (_footMeters.width > 0f && _footMeters.xMax > xMin && _footMeters.x < xMax)
+            top = top.HasValue ? Mathf.Min(top.Value, _footMeters.y) : _footMeters.y;
+        return top;
+    }
+    static Rect _footDial, _footMeters;
+    static int _footDrawnFrame = -10;
+
     [Header("Caution flag")]
     [Tooltip("Side (design px) of the yellow flag box drawn in the top-right corner.")]
     public float cautionFlagSize = 28f;
@@ -137,6 +170,9 @@ public class IronOvalRaceHUD : MonoBehaviour
     {
         if (!show || _player == null) { MetersBottom = SpeedTop = 0f; DialRect = default; return; }
         if (RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
+
+        _footDial = _footMeters = default;
+        if (LandscapeTouchLayout) _footDrawnFrame = Time.frameCount;
 
         DrawPositionBlock();
         DrawLapBlock();
@@ -280,10 +316,19 @@ public class IronOvalRaceHUD : MonoBehaviour
             // No engine to read: the plain numeral readout, so speed never disappears.
             string text = Mathf.RoundToInt(_shownMph).ToString();
             float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
+            float tx = Screen.width - PixelGUI.Px(8f) - w;
             float ty = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
+            // Landscape phone: at the foot of the screen beside the pedals, where the dial would be.
+            if (LandscapeTouchLayout)
+            {
+                var brake = TouchDriveControls.BrakeRect;
+                tx = Mathf.Round(brake.x - PixelGUI.Px(TouchControlGap) - w);
+                ty = Mathf.Round(brake.yMax - BlockH);
+                _footDial = new Rect(tx, ty, w, BlockH);
+            }
             SpeedTop = ty;
             DialRect = default;
-            NumeralWithSuffix(Screen.width - PixelGUI.Px(8f) - w, ty, text, "MPH");
+            NumeralWithSuffix(tx, ty, text, "MPH");
             return;
         }
 
@@ -297,12 +342,22 @@ public class IronOvalRaceHUD : MonoBehaviour
         float side = PixelGUI.Px(kit);
         float x = Screen.width - PixelGUI.Px(upright ? 16f : 12f) - side;
         float y = Screen.height - PixelGUI.Px(upright ? 12f : 10f) - side - TouchDriveControls.PedalsTopFromBottom;
+        // Landscape phone: at the foot of the screen just left of the pedals, its bottom level with theirs, rather
+        // than up in the corner on top of them.
+        bool besidePedals = LandscapeTouchLayout;
+        if (besidePedals)
+        {
+            var brake = TouchDriveControls.BrakeRect;
+            x = brake.x - PixelGUI.Px(TouchControlGap) - side;
+            y = brake.yMax - side;
+        }
         // Whole screen pixels, so a kit pixel never straddles two.
         x = Mathf.Round(x); y = Mathf.Round(y);
         SpeedTop = y;
 
         var rect = new Rect(x, y, side, side);
         DialRect = rect;
+        if (besidePedals) _footDial = rect;
         var prevColour = GUI.color;
 
         // 3 px ink drop shadow: the face's own silhouette in ink, offset down-right.
@@ -542,7 +597,8 @@ public class IronOvalRaceHUD : MonoBehaviour
     }
 
     // Tyre life, draft, fuel and engine temperature, as the design's cell rows: alarm red for the rubber, telemetry blue for
-    // the tow, gold for the tank. Sits on the right, under where the track map lives.
+    // the tow, gold for the tank. Sits on the right, under where the track map lives - or, on a landscape phone, at
+    // the foot of the screen beside the steering.
     void DrawMeters()
     {
         // Sized from what goes in it rather than from a round number: a ten-cell row is CellsWidth(10)
@@ -558,6 +614,15 @@ public class IronOvalRaceHUD : MonoBehaviour
         if (Screen.height > Screen.width)
             y = Mathf.Round(Draftmaster.Controls.DriveOrientation.UprightMetersTop(
                 y, TouchDriveControls.Active ? TouchDriveControls.CrewChiefSlot.yMax : 0f, PixelGUI.Scale));
+        // Landscape phone: at the foot of the screen just right of the steering (wheel or left/right buttons), its
+        // bottom level with the pedals', leaving the top-right corner to the track map. A phone draws it at full
+        // size (MeterScale 1), so nothing below scales it away from this spot.
+        if (LandscapeTouchLayout)
+        {
+            x = Mathf.Round(TouchDriveControls.SteerControlsRight + PixelGUI.Px(TouchControlGap));
+            y = Mathf.Round(TouchDriveControls.BrakeRect.yMax - h);
+            _footMeters = new Rect(x, y, w, h);
+        }
 
         // Smaller on a monitor, pinned at its top-right corner so it stays tucked under the caution flag.
         float k = MeterScale();
@@ -653,6 +718,13 @@ public class IronOvalRaceHUD : MonoBehaviour
         float size = PixelGUI.Px(cautionFlagSize);
         float x = Screen.width - size - PixelGUI.Px(8f);
         float y = PixelGUI.Px(8f);
+        // The track map holds the top-right corner on a landscape phone: the flag flies just left of it.
+        var map = TrackMiniMap.TopRightRect;
+        if (map.HasValue)
+        {
+            x = Mathf.Round(map.Value.x - PixelGUI.Px(8f) - size);
+            y = map.Value.y;
+        }
 
         float b = PixelGUI.Px(1f);
         PixelGUI.Fill(new Rect(x - b, y - b, size + b * 2f, size + b * 2f), PixelGUI.Ink);
