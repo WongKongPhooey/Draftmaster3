@@ -63,6 +63,13 @@ public class DriveModeController : MonoBehaviour
              "0..1 — a full-severity hit adds ~0.18) reaches this. 0 = only under a caution.")]
     [Range(0f, 1f)] public float autoGreenRepairDamage = 0.15f;
 
+    [Header("Quick exit")]
+    [Tooltip("Triple-tap one steering direction (A / D, the arrow keys, the left stick, the phone's steer buttons) to take " +
+             "the car off Auto at once - no pedal-tap wait - for a crash unfolding ahead. The third press, held, is already " +
+             "steering. Off under the Draftmaster 2 lane controls, where left / right on Auto change lanes.")]
+    public bool quickExitTripleTap = true;
+    public const int QuickExitTaps = 3;
+
     public bool IsDriving => _driving;
     // Auto has been switched off and the AI is still driving, waiting for the player to tap a pedal.
     public bool HandBackPending => _handBack.Waiting;
@@ -82,6 +89,7 @@ public class DriveModeController : MonoBehaviour
 
     bool _keyPrev;
     readonly AutoHandBack _handBack = new AutoHandBack();
+    readonly MultiTap _quickLeft = new MultiTap(QuickExitTaps), _quickRight = new MultiTap(QuickExitTaps);
     readonly LaneSelect _laneSelect = new LaneSelect();
     bool _laneActive;            // the lane controls have the player's lane on the car's brain
     // The player took the car back off the lane controls (V / AUTO): they drive it, and the lanes do not put it back on
@@ -135,6 +143,7 @@ public class DriveModeController : MonoBehaviour
 
         UpdateAutoAfterTow();
         UpdateHandBack();
+        UpdateQuickExit();
         UpdateChiefFuelCall();
         // Lanes put the car on Auto on the grid, before GridSpawner has published the player's pit box, and the one try
         // at fitting the pit brain then gave up for the race (Daytona, 2026-11-21). Tried again until it sticks; once
@@ -286,6 +295,28 @@ public class DriveModeController : MonoBehaviour
             }
         }
         return steer;
+    }
+
+    // ---- Quick exit: triple-tap a steering direction ----
+
+    // A crash unfolding ahead: three quick taps one way and the car is the player's that instant, the third press
+    // already steering it (MultiTap fires as that press starts). Three, not two: two quick corrections of the wheel are
+    // too easy to make by accident. Each direction counts on its own, so a left-right wiggle is not a run.
+    void UpdateQuickExit()
+    {
+        bool live = quickExitTripleTap && !_driving && InSeat && !PadInput.ModalOpen && !LegacyLaneControls.Enabled;
+        if (!live)
+        {
+            // A key held through it must be let go before it counts as a tap.
+            _quickLeft.Interrupt();
+            _quickRight.Interrupt();
+            return;
+        }
+        float steer = ReadSteer();
+        float now = Time.unscaledTime;
+        bool left = _quickLeft.Update(Mathf.Max(0f, -steer), now);
+        bool right = _quickRight.Update(Mathf.Max(0f, steer), now);
+        if (left || right) SetDriving(true);
     }
 
     // ---- Hand-back on a pedal tap ----

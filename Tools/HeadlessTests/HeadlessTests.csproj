@@ -42,6 +42,7 @@
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\WheelHubs.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\BroadcastShots.cs" />
     <Compile Include="$(ProjectRoot)Assets\Scripts\Sim\RevDialScale.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Scripts\Controls\MultiTap.cs" />
   </ItemGroup>
 
   <!-- Tests that only reach the assemblies above. -->
@@ -53,6 +54,7 @@
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelDaysTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TravelTutorialRouteTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OsmTrackGeometryTests.cs" />
+    <Compile Include="$(ProjectRoot)Assets\Tests\Editor\MultiTapTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TracedOvalImportTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\TrackReferenceAlignmentTests.cs" />
     <Compile Include="$(ProjectRoot)Assets\Tests\Editor\OvalGeometryTests.cs" />
