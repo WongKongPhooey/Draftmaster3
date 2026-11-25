@@ -52,4 +52,31 @@ public class FuelPlanTests
         // Hopelessly short: held at the floor, not crawling.
         Assert.AreEqual(0.5f, FuelPlan.ThrottleCapToFinish(2f, 10f, perLap, 0.5f), 1e-6f);
     }
+
+    // The player's Auto car with the player on the pit wall: no PIT button to press, so the chief calls the stop.
+    // Phone/editor, Daytona 2026-11-25: 14.3 L a lap flat out, the tank ran dry under the chief and the car stopped on
+    // the circuit.
+    [Test]
+    public void ChiefCallsTheStopWhenTheTankIsLowAndWillNotMakeIt()
+    {
+        const float perLap = 14.3f;
+        Assert.IsFalse(FuelPlan.ChiefCallsStop(50f, perLap, 8f), "three laps in the tank: not yet");
+        Assert.IsTrue(FuelPlan.ChiefCallsStop(20f, perLap, 8f), "1.4 laps left in it, 8 to go: in");
+        Assert.IsTrue(FuelPlan.ChiefCallsStop(0f, perLap, 8f), "dry: in, if it can get there");
+    }
+
+    [Test]
+    public void ChiefLeavesACarThatMakesTheFinishOut()
+    {
+        const float perLap = 14.3f;
+        // 1.4 laps of fuel, one lap to go: it makes it with margin, so no stop.
+        Assert.IsFalse(FuelPlan.ChiefCallsStop(20f, perLap, 1f));
+        // Just short of the margin: it would coast over the line, if at all - call it.
+        Assert.IsTrue(FuelPlan.ChiefCallsStop(15f, perLap, 1f));
+        // Race distance not known yet: the tank alone decides.
+        Assert.IsTrue(FuelPlan.ChiefCallsStop(15f, perLap, -1f));
+        Assert.IsFalse(FuelPlan.ChiefCallsStop(30f, perLap, -1f));
+        // No fuel plan (practice, no race): never.
+        Assert.IsFalse(FuelPlan.ChiefCallsStop(0f, 0f, 8f));
+    }
 }

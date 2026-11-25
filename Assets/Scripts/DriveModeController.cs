@@ -135,6 +135,7 @@ public class DriveModeController : MonoBehaviour
 
         UpdateAutoAfterTow();
         UpdateHandBack();
+        UpdateChiefFuelCall();
         UpdateLanes();
         UpdateButton();
     }
@@ -528,6 +529,26 @@ public class DriveModeController : MonoBehaviour
         }
         if (_pitRoot.activeSelf != show) _pitRoot.SetActive(show);
         if (show && _pitLabel != null && _pitLabel.text != label) _pitLabel.text = label;
+    }
+
+    // On Auto the fuel stop is the player's call - the PIT button above - and that button is in the seat. On the pit wall
+    // (CrewChiefController) there is none, and the Auto pit brain stops for damage only, so nobody made the call: the
+    // tank ran dry under the chief, the engine cut and the car coasted to a stop on the circuit for the field to run
+    // into (Daytona, 2026-11-25). Calling the stops is the chief's job, so while the player is the chief the call is
+    // made for them, as the button would have (Draftmaster.Sim.FuelPlan.ChiefCallsStop). Back in the seat, the PIT
+    // button is theirs again; a stop already booked stays booked and the button reads IN.
+    void UpdateChiefFuelCall()
+    {
+        if (_driving || !CrewChiefController.IsCrewChief || playerCar == null) return;
+        if (!RaceStart.IsRunning || RaceWeekend.IsPracticeLike || RaceDirector.TookChequer(playerCar.transform)) return;
+        EnsureAutoPitBrain();
+        var pit = playerCar.GetComponent<PitStopController>();
+        var tank = playerCar.GetComponent<FuelTank>();
+        if (pit == null || !pit.enabled || pit.IsPitting || pit.StopRequested || tank == null || !tank.Planned) return;
+        var rd = RaceDirector.Instance;
+        float progress = RaceDirector.Progress01;
+        float lapsLeft = rd != null && rd.raceLaps > 0 && progress >= 0f ? rd.raceLaps * (1f - progress) : -1f;
+        if (Draftmaster.Sim.FuelPlan.ChiefCallsStop(tank.fuelLitres, tank.LitresPerLapFull, lapsLeft)) pit.RequestStop();
     }
 
     static void Strip(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)

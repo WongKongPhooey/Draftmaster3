@@ -43,5 +43,18 @@ namespace Draftmaster.Sim
             float t = (share - IdleShare) / (1f - IdleShare);
             return Mathf.Clamp(t, Mathf.Clamp01(minThrottle), 1f);
         }
+
+        // The crew chief's fuel call, for a car on Auto that nobody can call in by hand (the player is on the pit wall,
+        // away from the PIT button): bring it in once the tank is down to callAtLaps of flat-out running and will not
+        // make the finish (lapsRemaining + marginLaps). callAtLaps covers the worst run to the pit entry - just past
+        // it, a whole lap - with some to spare. lapsRemaining below 0 = race distance not known: the tank alone decides.
+        public static bool ChiefCallsStop(float litres, float litresPerLapFull, float lapsRemaining,
+                                          float callAtLaps = 1.5f, float marginLaps = 0.25f)
+        {
+            if (litresPerLapFull <= 0f) return false;
+            float lapsOfFuel = Mathf.Max(0f, litres) / litresPerLapFull;
+            if (lapsRemaining >= 0f && lapsOfFuel >= lapsRemaining + Mathf.Max(0f, marginLaps)) return false;
+            return lapsOfFuel < callAtLaps;
+        }
     }
 }
