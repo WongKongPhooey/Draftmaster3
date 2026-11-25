@@ -155,6 +155,38 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public bool pitStopHold = false;
     [Tooltip("Distance (m) along the pit lane to hard-park at (e.g. the safety car parking near the entrance). -1 = no park; the car drives the pit normally. Once reached the car is pinned here and stopped, regardless of decel/vehicleInfo.")]
     public float pitParkDistance = -1f;
+
+    // A sideways move on pit road planned over distance (PitStopController's S-curve into its box, Draftmaster.Sim.
+    // PitBoxPath): from `from` to `to` m across, starting `startD` m down the lane, `length` m long. lateralOffset still
+    // carries where the move is NOW; this lets the point a dynamic car steers at (PathPointAhead) sit where the move will
+    // be at that point down the lane. Aimed at the car's current lateral slid ahead, the car turned for its box only once
+    // the move was mostly behind it, and at a crawl it stopped metres short of the box strip.
+    bool _pitLatPath;
+    float _pitLatFrom, _pitLatTo, _pitLatStart, _pitLatLength;
+    public void SetPitLateralPath(float from, float to, float startD, float length)
+    {
+        _pitLatPath = true;
+        _pitLatFrom = from; _pitLatTo = to; _pitLatStart = startD; _pitLatLength = Mathf.Max(0.01f, length);
+    }
+    public void ClearPitLateralPath() => _pitLatPath = false;
+    // Making that move now (SplineInputDriver gives the car full steering for it at a crawl).
+    public bool PitLateralPathActive => _pitLatPath && _onPit;
+    // The point `pitDistance` m down pit road on that move (track-local) - what a dynamic car turning into its box steers
+    // at, measured from where the car itself is (SplineInputDriver). PathPointAhead measures from the brain's point,
+    // which runs PathPointAheadOfCentre and more in front of the car: aimed that far ahead at a crawl, the car was still
+    // closing on its line when it stopped, most of a metre out of its box.
+    public Vector2 PitPathPoint(float pitDistance)
+    {
+        if (track == null || _pitSamples == null || _pitSamples.Count < 2) return CommandedLocalPos;
+        float dp = Mathf.Clamp(pitDistance, 0f, _pitLength);
+        var sp = track.SamplePitAt(dp, _pitSamples);
+        Vector2 rp = new Vector2(sp.tangent.y, -sp.tangent.x);
+        return sp.position + rp * (PitLateralAt(pitDistance) + tacticalLateralOffset + MergeBiasAt(dp));
+    }
+    float PitLateralAt(float pitDistance) => _pitLatPath
+        ? Draftmaster.Sim.PitBoxPath.Lateral(_pitLatFrom, _pitLatTo, pitDistance - _pitLatStart, _pitLatLength)
+        : lateralOffset;
+
     [Tooltip("Hard-park pin, independent of the race phase (practice cars waiting in their box). Zero speed, transform pinned to the commanded point until cleared.")]
     public bool parkedHold = false;
     [Tooltip("Speed (m/s) a car that has just pulled up in its box settles onto its exact parked spot. The hold starts from wherever the car actually stopped and eases the last bit, rather than jumping onto the spot in one frame.")]
@@ -2910,6 +2942,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             _onPit = usePitLane;
             ClearPitApproach();
+            _pitLatPath = false;
             _apronExitBlend = 0f;
             // Land on the new lane at the point nearest the car's current position (no teleport to lane start),
             // carrying its current lateral as a bias that eases out — same continuous merge as the pit exit.
@@ -3010,6 +3043,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // lateral discontinuity spikes the lean into a phantom 360). Instead continue from the main-spline
             // point nearest the car's current position, and carry its current lateral as a bias that eases out.
             _onPit = false;
+            _pitLatPath = false;
             usePitLane = false;
             // Any pit-only lateral (the wall-side box lane a pit start parks on) must not leak onto the
             // track. Zeroed BEFORE the rejoin so the merge bias absorbs it and eases it out continuously.
@@ -3466,7 +3500,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // full look-ahead on the track the step it left pit road.
             Vector2 beyond = sp.tangent * Mathf.Max(0f, want - _pitLength);
             // On the same merge curve as Place lays the car (pit entry: carried in from the track).
-            return sp.position + beyond + rp * (lateralOffset + tacticalLateralOffset + MergeBiasAt(dp));
+            return sp.position + beyond + rp * (PitLateralAt(want) + tacticalLateralOffset + MergeBiasAt(dp));
         }
 
         float d = _distance + aheadMeters;

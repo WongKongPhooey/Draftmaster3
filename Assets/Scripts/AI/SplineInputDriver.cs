@@ -18,6 +18,10 @@ public class SplineInputDriver : MonoBehaviour
     [System.NonSerialized] public float brakeScale = 1f;
     [Tooltip("Below this speed (m/s) steering authority ramps down to avoid low-speed wobble / spin.")]
     public float lowSpeedCutoff = 6f;
+    [Tooltip("Least steering authority (0..1) while the car makes its S-curve into a pit box (SplineDriver.PitLateralPathActive), whatever its speed: the low-speed ramp left it a third of its lock at a crawl, and the car stopped short of its box.")]
+    [Range(0f, 1f)] public float pitBoxSteerAuthority = 1f;
+    [Tooltip("Turning into a pit box, the car aims this far (m) down the lane from its own centre, on the S-curve it is making (SplineDriver.PitPathPoint). The usual aim point is measured from the brain's point, several metres in front of the car, which at a crawl left it closing on its box when it stopped.")]
+    public float pitBoxAimM = 3f;
     [Tooltip("Derivative damping (s) on the heading error: counters how fast the error is CHANGING, killing the high-frequency tail wiggle of the P-only chase (visible at pace-lap speeds where the weave caps the lookahead short). Acts on the error rate, not raw yaw rate, so steady-state cornering — constant error, constant yaw — is untouched.")]
     public float steerDamping = 0.08f;
     [Tooltip("Yaw damping (deg of wheel per deg/s): steers against the gap between how fast the car is actually " +
@@ -350,7 +354,10 @@ public class SplineInputDriver : MonoBehaviour
 
         // --- Slide state: body slip angle is how far the velocity vector points away from the nose. Past
         // slideStartDeg the car is sliding — winding on more lock or more throttle only makes it worse.
-        float slipDeg = _car.SlipAngleDeg;
+        // Not on a pit-box move (SplineDriver.PitLateralPathActive): that is made at a crawl, where the slip angle is
+        // noise - a little sideways creep over almost no forward speed reads as a huge slide - and a slide cuts the
+        // throttle and winds on countersteer. A car pulling out of its box at full lock sat there for twenty seconds.
+        float slipDeg = _spline.PitLateralPathActive ? 0f : _car.SlipAngleDeg;
         float slide01 = Mathf.InverseLerp(slideStartDeg, Mathf.Max(slideFullDeg, slideStartDeg + 0.1f), Mathf.Abs(slipDeg));
 
         // --- Steering: pure-pursuit toward a point AHEAD on the racing line. Lookahead scales with speed, then
@@ -361,7 +368,12 @@ public class SplineInputDriver : MonoBehaviour
         if (radius < float.MaxValue)
             lookahead = Mathf.Min(lookahead, Mathf.Max(lookaheadMin, radius * radiusLookaheadFactor));
         if (_recovering) lookahead = lookaheadMin; // aim close: get back ON the line, not down the road
-        Vector2 aheadLocal = _spline.PathPointAhead(lookahead);
+        Vector2 aheadLocal;
+        // Turning into a pit box: aim pitBoxAimM down the lane from the car itself, on the move it is making.
+        if (_spline.PitLateralPathActive && _spline.ProjectOntoPit(transform.position, out float carPitD, out _))
+            aheadLocal = _spline.PitPathPoint(carPitD + pitBoxAimM);
+        else
+            aheadLocal = _spline.PathPointAhead(lookahead);
         Vector3 targetWorld = _spline.track.transform.TransformPoint(new Vector3(aheadLocal.x, aheadLocal.y, 0f));
         Vector2 toTarget = (Vector2)targetWorld - (Vector2)transform.position;
         float steerInput = 0f;
@@ -386,6 +398,9 @@ public class SplineInputDriver : MonoBehaviour
             // The low-speed ramp exists to stop wobble at crawl in normal running; a recovering car NEEDS lock
             // from near-standstill (the kinematic low-speed branch is stable), so keep most of the authority.
             if (_recovering) authority = Mathf.Max(authority, 0.6f);
+            // Turning into a pit box is done at a crawl and needs the lock: with the ramp a car making the cut
+            // across to its box had a third of its steering at 2 m/s and stopped half out of the box, on the lane.
+            if (_spline.PitLateralPathActive) authority = Mathf.Max(authority, pitBoxSteerAuthority);
             float maxSteer = Mathf.Max(_spline.vehicleInfo.maxSteeringAngle, 1f);
             // PD: the derivative term opposes the error's rate of change. Clamped so a one-frame target jump
             // (lane rejoin, recovery toggle) can't spike the steering; skipped on the first sample after a seed.
