@@ -174,6 +174,30 @@ public class PitStopController : MonoBehaviour
     // Stopped in its box after the race, and staying there.
     public bool IsParkedAfterRace => _state == State.Parked;
 
+    // Fitted only to take the car out of its box (Auto taking the player's car in practice or qualifying, where the
+    // stint controller owns pit road and the car has no pit brain): removed once the car is back on track, or when
+    // the player takes the car back.
+    [HideInInspector] public bool pullOutOnly;
+
+    // The car is standing on pit road - in its box - and the AI has just been handed it (Auto): leave as a car
+    // leaving after a stop does - wait in the box for a gap, pick a lane, and turn out on the box path the car can
+    // actually steer. No-op off pit road or with a stop of this controller's own under way.
+    public void PullOutOfBox()
+    {
+        if (_spline == null || !_spline.IsOnPit || IsPitting) return;
+        AcquireRefs();
+        if (_ai != null) _ai.enabled = false;     // don't race down the lane; the exit hands the car back to it
+        _spline.lateralOffset += _spline.tacticalLateralOffset;
+        _spline.tacticalLateralOffset = 0f;
+        _spline.AbsorbPitMergeIntoLateral();
+        _spline.ClearPitLateralPath();
+        _spline.pitParkDistance = -1f;
+        _spline.pitStopHold = true;               // held until the lane behind is clear (State.Leaving)
+        _cutting = _pullingOut = _pulledOut = _laneMoving = false;
+        _lane = -1;
+        _state = State.Leaving;
+    }
+
     void Awake() { _spline = GetComponent<SplineDriver>(); _ai = GetComponent<AIRacingBehaviour>(); }
 
     void Start()
@@ -485,6 +509,7 @@ public class PitStopController : MonoBehaviour
                     _laneMoving = false;
                     if (_ai != null) _ai.enabled = true;
                     _state = State.Racing;
+                    if (pullOutOnly) Destroy(this);
                 }
                 break;
         }
@@ -544,6 +569,7 @@ public class PitStopController : MonoBehaviour
     // a car that has gone. The next time Auto has the car it decides afresh. A park after the chequer is left alone.
     public void ReleaseForHuman()
     {
+        if (pullOutOnly) Destroy(this);
         if (_raceOver || _parking || _state == State.Racing || _state == State.Parked) return;
         if (_state == State.Servicing && _crew != null) _crew.EndService();
         _crew = null;

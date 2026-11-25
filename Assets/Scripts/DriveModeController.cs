@@ -722,6 +722,7 @@ public class DriveModeController : MonoBehaviour
             // In the train behind the safety car (formation lap, cautions) like every other car, and handed to the
             // racing brain at the green.
             FormationController.TakeOver(_spline, _pvc.GridPosition, dynamicModel: true);
+            PullOutIfInBox();
         }
         // The camera stays on the player's car, at driving zoom — the on-foot flow may have left the camera at
         // walking zoom if the player never climbed into the car this session.
@@ -746,6 +747,34 @@ public class DriveModeController : MonoBehaviour
         pit.forcedPit = false;
         pit.tyreStops = false;
         pit.greenRepairDamage = autoGreenRepairDamage;
+    }
+
+    // Auto taking the car where it stands in its box (practice and qualifying start there; in a race, after a stop
+    // the player made): the pit brain takes it out the way a field car leaves after a stop. Left to the handover's
+    // rejoin merge, the car crept across to the lane over ~100 m and drove into the car in the next box. Practice
+    // and qualifying have no pit brain on the player's car, so one is fitted for the pull-out only.
+    const float InBoxMaxMph = 3f;
+
+    void PullOutIfInBox()
+    {
+        if (playerCar == null || _spline == null || _pvc == null) return;
+        // Before the green (a pit start on the grid's formation) FormationController files the car out of the pits; the
+        // pit brain only runs under green or a caution, so a pull-out started here held the car in its box for good.
+        if (!RaceStart.IsRunning) return;
+        if (!_spline.IsOnPit || Mathf.Abs(_pvc.SpeedMph) > InBoxMaxMph) return;
+        var pit = playerCar.GetComponent<PitStopController>();
+        if (pit != null && pit.IsPitting) return;   // the AI is already partway through a stop of its own
+        if (pit == null)
+        {
+            pit = playerCar.AddComponent<PitStopController>();
+            pit.pullOutOnly = true;
+            pit.boxOverride = PitLane.PlayerBox;
+            pit.forcedPit = false;
+            pit.tyreStops = false;
+            pit.greenRepairDamage = 0f;
+            pit.parkAfterRace = false;
+        }
+        pit.PullOutOfBox();
     }
 
     void ResumeDriving()

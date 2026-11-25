@@ -286,6 +286,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _apronExitToGo;            // metres still to run to the back straight
     float _apronExitWaited;          // metres run past the start of the back straight waiting for a gap
 
+    // Down on the apron on the way out of the pits or in to them: paved, below the racing surface and outside the road's
+    // bounds, but road all the same - not the grass a car goes onto round a wreck (AIRacingBehaviour).
+    public bool OnApronRun => (_apronExitBlend > 0f || _apronEntryActive) && !_onPit;
+
     // True when this track sends pitting cars along the apron (an oval of a mile or more).
     public bool ApronPitRoad
     {
@@ -1782,6 +1786,19 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         CommandedSpeedMps = speed;
         externalActualSpeedMps = speed;
         _startSeeded = true;
+    }
+
+    // A car taken over standing on pit road (Auto with the car in its box): where it stands across pit road becomes
+    // its pit-road lateral, so the way out is the pit brain's to plan (PitStopController.PullOutOfBox) rather than
+    // EngageFromCurrentPose's rejoin merge - at most pitMergeMaxAngleDeg, ~100 m to cross from a box to the lane,
+    // which in qualifying drove the player's car straight on into the car parked in the next box.
+    public void AbsorbPitMergeIntoLateral()
+    {
+        if (!_onPit || !_mergeOnPit || !(_mergeLength > 0f)) return;
+        bool joined = _mergeJustJoined;
+        lateralOffset += MergeBiasAt(_distance);
+        ClearMerge();
+        _mergeJustJoined = joined;
     }
 
     // A racing-AI takeover mid-race (AIHandover.ToAI: Auto, a team switch): the car stays where it is across the

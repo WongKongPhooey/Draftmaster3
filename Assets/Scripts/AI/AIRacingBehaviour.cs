@@ -1271,7 +1271,11 @@ public class AIRacingBehaviour : MonoBehaviour
         bool grassAvoid = avoiding && _escapeGrass;
         if (grassAvoid) _grassHold = runOffHoldSeconds;
         else if (_grassHold > 0f) _grassHold -= dt;
-        bool onGrass = _spline.allowGrass && _spline.GetBoundsAhead(0f, true, false, out float paveLo, out float paveHi)
+        // The apron run in or out of the pits sits outside the road's bounds too, and is not grass: counted as grass, a
+        // car that once had the grass open was held at grassEscapeMaxMph the whole way round the apron - and the rest
+        // of the field out of the pits queued behind it at 30 mph (Daytona practice, 2026-11-25).
+        bool onGrass = _spline.allowGrass && !_spline.OnApronRun
+                       && _spline.GetBoundsAhead(0f, true, false, out float paveLo, out float paveHi)
                        && (_spline.LateralOnTrack < paveLo - 0.2f || _spline.LateralOnTrack > paveHi + 0.2f);
         _spline.allowGrass = grassToAvoid && !_spline.IsOnPit && (grassAvoid || _grassHold > 0f || onGrass);
         _offPavement = onGrass;
