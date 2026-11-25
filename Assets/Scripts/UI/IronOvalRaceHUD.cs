@@ -548,16 +548,20 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     static void DrawReadout(Rect dial, float dialKit, string text)
     {
-        if (_readoutFont == null) _readoutFont = Resources.Load<Font>("Fonts/PixelifySans-Bold");
-        // Pixelify Sans is drawn on a 20 px cell: anything else resamples it soft. Nearest whole cell to the
-        // design's size, never less than one.
-        int pt = Mathf.Max(1, Mathf.RoundToInt(14f * dialKit / 100f * PixelGUI.Scale / 20f)) * 20;
-        if (_readoutStyle == null || _readoutPt != pt)
+        // The kit's data face (monogram), not Pixelify Sans: Pixelify's 2, 5 and 8 are near enough the same shape at
+        // this size that the speed was a guess. A bitmap face is drawn on its own pixel cell (monogram 16) and any
+        // other size resamples it soft, so the nearest whole cell to the design's size, never less than one.
+        var face = PixelGUI.Data.font;
+        if (face == null) face = Resources.Load<Font>("Fonts/PixelifySans-Bold");
+        int cell = PixelGUI.FontCell(face, 16);
+        int pt = Mathf.Max(1, Mathf.RoundToInt(14f * dialKit / 100f * PixelGUI.Scale / cell)) * cell;
+        if (_readoutStyle == null || _readoutPt != pt || _readoutFont != face)
         {
             _readoutPt = pt;
+            _readoutFont = face;
             _readoutStyle = new GUIStyle
             {
-                font = _readoutFont != null ? _readoutFont : PixelGUI.Display.font,
+                font = face != null ? face : PixelGUI.Display.font,
                 fontSize = pt,
                 alignment = TextAnchor.MiddleCenter,
                 clipping = TextClipping.Overflow,
