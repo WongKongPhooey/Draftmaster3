@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 // Practice/qualifying session director. Active when RaceWeekend.IsPracticeLike: the track goes green
 // immediately (no formation lap or safety car — FormationDirector disables itself), the AI field
 // waits parked in their pit boxes, and this component cycles a handful of them out for lap stints
-// so the track never holds more than maxOnTrack cars. Also owns lap timing (LapTimingManager) and,
-// OUTSIDE a weekend, the standalone flow: Practice → QUALIFYING reloads into a timed qualifying session;
-// Qualifying → START RACE captures the best-lap order as the race grid (RaceWeekend.GridOrder) and reloads
-// into the race. Both steps are rows in the pause menu, alongside END SESSION for a session booked off the
-// weekend timetable — nothing is drawn over the windscreen.
+// so the track never holds more than maxOnTrack cars. Also owns lap timing (LapTimingManager). A session
+// ends in the scene it was driven in and hands back to the weekend timetable: the pause menu's END SESSION
+// row, or the clock running out. Qualifying captures the best-lap order as the race grid
+// (RaceWeekend.GridOrder) as it ends. There used to be a standalone flow here (Practice → QUALIFYING →
+// START RACE, each reloading the scene); a session that took it while the sheet still had qualifying live
+// just reloaded into qualifying again, so it is gone. Nothing is drawn over the windscreen but the clock.
 //
 // Both sessions run on a clock. When it runs out the field runs its last lap and comes in, and the player's
 // car is brought home by SessionEndPitIn: finish the lap and the AI drives it into the box, or pit yourself.
@@ -21,7 +21,7 @@ public class PracticeDirector : MonoBehaviour
     [Header("Session clock")]
     [Tooltip("Length (s) of a practice session. When it runs out a driver on track finishes their lap and is brought into their box (SessionEndPitIn); the session ends as they climb out.")]
     public float practiceSeconds = 1200f;
-    [Tooltip("Length (s) of the qualifying session. The lap a driver is on when it runs out still counts; the grid is captured as the session ends — when the driver climbs out in their box, or START RACE is chosen in the pause menu.")]
+    [Tooltip("Length (s) of the qualifying session. The lap a driver is on when it runs out still counts; the grid is captured as the session ends — when the driver climbs out in their box, or END SESSION is chosen in the pause menu.")]
     public float qualifyingSeconds = 600f;
 
     [Header("Track activity")]
@@ -201,12 +201,15 @@ public class PracticeDirector : MonoBehaviour
 
     // ---- Advancing the session ----
 
-    // Advance the weekend: practice → qualifying; qualifying → capture the grid → race. Each step
-    // reloads the scene; the race then runs the normal pre-grid → formation → green flow.
+    // End the session (the name is historical: it used to advance practice → qualifying → race by reloading
+    // the scene). Qualifying publishes its grid; the session reports back to the weekend timetable and the
+    // player's car is put away in its box. Nothing reloads.
     public void StartRace()
     {
-        // Once only: the clock's wrap-up and the pause menu can both end the session, and a second go would
-        // walk a routed session on into the standalone flow's next step.
+        // A co-op guest's session is the host's to end (SessionEndPitIn skips the guest for the same reason);
+        // the host's ending reaches the guest through CareerMirror.
+        if (Coop.IsGuest) return;
+        // Once only: the clock's wrap-up and the pause menu can both end the session.
         if (_ended) return;
         _ended = true;
         if (_wrapUp != null) _wrapUp.MarkClosed();
@@ -221,29 +224,16 @@ public class PracticeDirector : MonoBehaviour
         if (_isQualifying) CaptureGrid();
 
         // The weekend schedule sent us out here, so the session reports back to it and the player picks what
-        // to do with the rest of the day off the timetable. Without the schedule this is still the old
-        // straight line: practice to qualifying to race.
+        // to do with the rest of the day off the timetable.
         if (WeekendRouted)
-        {
             WeekendDirector.FinishRoutedSession(BuildSessionOutcome());
-            PutPlayerCarAway();
-            return;
-        }
-
         // A career session with no booking behind it: the save kept the track live but lost the route that put
-        // the player out. It still ends where it was driven. The old straight line below reloaded into the next
-        // session with the track still live and nothing booked, so the player woke in the RV for another session
-        // the sheet never booked, then another, and the weekend never got its result.
-        if (EndsInPlace)
-        {
+        // the player out. It still ends where it was driven and credits the booking if it is this kind of
+        // session.
+        else
             WeekendDirector.FinishUnroutedSession(
                 _isQualifying ? RaceWeekend.Session.Qualifying : RaceWeekend.Session.Practice, BuildSessionOutcome());
-            PutPlayerCarAway();
-            return;
-        }
-
-        RaceWeekend.Current = _isQualifying ? RaceWeekend.Session.Race : RaceWeekend.Session.Qualifying;
-        ReloadScene();
+        PutPlayerCarAway();
     }
 
     // A routed session ends in the scene it was driven in, so nothing reloads the car off the player: ended
@@ -263,37 +253,20 @@ public class PracticeDirector : MonoBehaviour
         start.EndRaceInBox();
     }
 
-    // A phone turned upright for the swing camera turns back to landscape before the scene goes.
-    static void ReloadScene()
-    {
-        if (DriveOrientationController.HoldSceneChangeForLandscape(ReloadScene)) return;
-        LoadingScreen.Load(SceneManager.GetActiveScene().name);
-    }
-
     // True when this session is a booking off the weekend timetable rather than the standalone flow.
     public static bool WeekendRouted => !string.IsNullOrEmpty(WeekendDirector.PendingRouteId);
 
-    // The session ends in the scene it was driven in and hands back to the timetable. Every career session
-    // ends this way, with or without a booking behind it. Only a co-op guest still has the standalone
-    // practice → qualifying → race reloads, and its session is the host's to end anyway.
-    static bool EndsInPlace => WeekendRouted || (GameSession.CareerActive && !Coop.IsGuest);
-
-    // What the pause menu's END SESSION row should say, or null when there is nothing to end: outside a
-    // weekend the session advances on its own button, and off a practice-like session there is no session
-    // to hand back at all.
-    // The row the pause menu offers for moving the session on. There used to be a red rectangle in the
-    // top-right corner of the windscreen saying QUALIFYING or START RACE for the whole hour; the pause
-    // menu is where every other way out of a session already lives, so this is the only one now.
-    //
-    // Routed sessions hand back to the timetable; the standalone flow walks practice -> qualifying ->
-    // race itself, and says which step it is offering.
+    // What the pause menu's END SESSION row should say, or null when there is nothing to end: off a
+    // practice-like session, once it has ended, or on a co-op guest (the host ends the session for both).
+    // Practice and qualifying both read End Session. Qualifying used to offer START RACE here, which flipped
+    // the session to the race and reloaded the scene. In a career the weekend sheet still had qualifying
+    // live, so the reload restarted qualifying instead of starting the race.
     public static string PauseMenuExitLabel
     {
         get
         {
-            if (Instance == null || !Instance.enabled || Instance._ended) return null;
-            if (EndsInPlace) return "End Session";
-            return Instance._isQualifying ? "Start Race" : "Qualifying";
+            if (Instance == null || !Instance.enabled || Instance._ended || Coop.IsGuest) return null;
+            return "End Session";
         }
     }
 
