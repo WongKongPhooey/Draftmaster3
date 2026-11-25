@@ -232,7 +232,18 @@ public class TrackMiniMap : MonoBehaviour
             float top = IronOvalRaceHUD.MetersBottom > 0f ? IronOvalRaceHUD.MetersBottom + gap : 0f;
             size = Mathf.Max(PixelGUI.Px(48f), Mathf.Min(size, bottom - top));
         }
-        var rect = new Rect(Screen.width - size - PixelGUI.Px(cornerMargin.x), bottom - size, size, size);
+        float right = Screen.width - PixelGUI.Px(cornerMargin.x);
+        // Held upright for the swing camera, the map stacks on the rev counter as one column: the dial's width
+        // and its right edge, so the two read as a pair down the right of a narrow screen. Still shrunk if the
+        // meter plate leaves less height than that, keeping the right edge on the dial's.
+        var dial = IronOvalRaceHUD.DialRect;
+        if (!stand && IronOvalRaceHUD.DrawsLapCount && Screen.height > Screen.width && dial.width > 0f)
+        {
+            float top = IronOvalRaceHUD.MetersBottom > 0f ? IronOvalRaceHUD.MetersBottom + PixelGUI.Px(4f) : 0f;
+            size = Mathf.Max(PixelGUI.Px(48f), Mathf.Min(dial.width, bottom - top));
+            right = dial.xMax;
+        }
+        var rect = new Rect(right - size, bottom - size, size, size);
 
         // No plate and no frame behind it: the map is a line drawing laid straight over the race, which
         // keeps the corner of the screen looking out at the track rather than at a box. What used to be

@@ -32,6 +32,9 @@ public class IronOvalRaceHUD : MonoBehaviour
     // itself between the two. 0 = not drawn.
     public static float MetersBottom { get; private set; }
     public static float SpeedTop { get; private set; }
+    // The rev counter's face on screen the last time it was drawn (screen pixels, IMGUI y-down); zero-sized when
+    // it was not (no gearbox: the numeral readout stands in). Held upright, TrackMiniMap lines up over it.
+    public static Rect DialRect { get; private set; }
 
     [Header("Caution flag")]
     [Tooltip("Side (design px) of the yellow flag box drawn in the top-right corner.")]
@@ -132,7 +135,7 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     void OnGUI()
     {
-        if (!show || _player == null) { MetersBottom = SpeedTop = 0f; return; }
+        if (!show || _player == null) { MetersBottom = SpeedTop = 0f; DialRect = default; return; }
         if (RacePauseMenu.IsPaused || PhoneUI.IsOpen) return;
 
         DrawPositionBlock();
@@ -238,6 +241,7 @@ public class IronOvalRaceHUD : MonoBehaviour
             float w = Measure(PixelGUI.Display, text) + PixelGUI.Px(2f) + Measure(PixelGUI.Row, "MPH");
             float ty = Screen.height - PixelGUI.Px(8f) - BlockH - TouchDriveControls.PedalsTopFromBottom;
             SpeedTop = ty;
+            DialRect = default;
             NumeralWithSuffix(Screen.width - PixelGUI.Px(8f) - w, ty, text, "MPH");
             return;
         }
@@ -257,6 +261,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         SpeedTop = y;
 
         var rect = new Rect(x, y, side, side);
+        DialRect = rect;
         var prevColour = GUI.color;
 
         // 3 px ink drop shadow: the face's own silhouette in ink, offset down-right.
