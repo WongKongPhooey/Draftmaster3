@@ -198,8 +198,8 @@ namespace Draftmaster.Sim
             if (tape < 0.15f) return "No tape: never runs hot, but slow on the straights.";
             if (tape < 0.4f) return "Light tape: runs cool, a touch slower on the straights.";
             if (tape < 0.65f) return "Half taped: race trim, runs warm in a pack.";
-            if (tape < 0.9f) return "Heavy tape: quick, cooks in traffic. Qualifying trim.";
-            return "Fully taped: fastest, overheats quick out of clean air.";
+            if (tape < 0.9f) return "Heavy tape: qualifying trim.";
+            return "Fully taped: single-lap qualifying.";
         }
     }
 }
