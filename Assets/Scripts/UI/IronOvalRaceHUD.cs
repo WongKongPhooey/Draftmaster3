@@ -2,7 +2,7 @@ using UnityEngine;
 using RevDialScale = Draftmaster.Sim.RevDialScale;
 
 // The in-race HUD from the Iron Oval design file's RACE HUD screen: position ("POS 7 /40") and lap ("LAP 12 /200")
-// stacked top left in big numerals with a hard shadow and a dim suffix, a rev counter scaled to the car's rev range
+// stacked top left in big numerals with a hard shadow and a smaller suffix, all white, a rev counter scaled to the car's rev range
 // bottom right (with road speed under the hub), and a tyre/draft/fuel meter plate on the right under the track map.
 //
 // It replaces three older readouts rather than sitting on top of them — the authored speedometer dial,
@@ -154,20 +154,45 @@ public class IronOvalRaceHUD : MonoBehaviour
         int field = tracker != null ? tracker.FieldSize : 0;
         if (pos <= 0) return;
 
-        float numeralX = PixelGUI.Px(10f) + LabelColumnW;
-        SmallLabel(PixelGUI.Px(10f), PixelGUI.Px(8f), "POS");
-        NumeralWithSuffix(numeralX, PixelGUI.Px(8f), pos.ToString(), "/" + Mathf.Max(field, pos));
+        DrawReadoutBlock(0, "POS", pos.ToString(), "/" + Mathf.Max(field, pos));
     }
 
     // The lap, in the position block's own layout directly under it: small "LAP", the lap in the big numerals,
-    // "/200" dim beside it. Practice and open-ended sessions have no total, so just the lap.
+    // "/200" beside it. Practice and open-ended sessions have no total, so just the lap.
     void DrawLapBlock()
     {
         int lap = CurrentLap(out int total);
         if (lap <= 0) return;
-        float numeralX = PixelGUI.Px(10f) + LabelColumnW;
-        SmallLabel(PixelGUI.Px(10f), PixelGUI.Px(44f), "LAP");
-        NumeralWithSuffix(numeralX, PixelGUI.Px(44f), lap.ToString(), total > 0 ? "/" + total : null);
+        DrawReadoutBlock(1, "LAP", lap.ToString(), total > 0 ? "/" + total : null);
+    }
+
+    // One of the two top-left readouts (row 0 = POS, row 1 = LAP). Caption, numerals and suffix are all pure white
+    // (not the theme's cream text or its dim beige), each on the ink hard shadow so the small text still reads
+    // over pale concrete.
+    //
+    // Desktop: the caption sits in a column to the left, level with the numerals' cap tops.
+    // Phone (PixelGUI.Handheld): everything is bigger — the 8 px Silkscreen caption was unreadable in the hand —
+    // so the caption goes ABOVE the numerals instead of beside them. Side by side at the phone sizes the LAP row
+    // ran ~140 kit px wide; stacked, the POS row stays under ~100 kit px, clear of the pit limiter / PIT button
+    // that starts ~112 kit px in on an upright phone (TouchLayout.limiter), and the LAP row is below that button row.
+    static void DrawReadoutBlock(int row, string caption, string numeral, string suffix)
+    {
+        float x = PixelGUI.Px(10f);
+        if (!PixelGUI.Handheld)
+        {
+            // Measured off a 1080p frame, the big monogram digits' tops sit Px(4) into their rect and Silkscreen's
+            // caps Px(3.7) into theirs, so drawing both at the same y puts them within a screen pixel of each other.
+            float y = PixelGUI.Px(row == 0 ? 8f : 44f);
+            Shadowed(x, y, caption, PixelGUI.HeadingSmall, PixelGUI.Px(1f));
+            NumeralWithSuffix(x + LabelColumnW, y, numeral, suffix);
+            return;
+        }
+
+        EnsureHandheldStyles();
+        float top = PixelGUI.Px(8f + row * HandheldRowPitch);
+        Shadowed(x, top, caption, _phoneCaption, PixelGUI.Px(2f));
+        NumeralWithSuffix(x, top + PixelGUI.Px(HandheldNumeralDrop), numeral, suffix,
+                          _phoneNumerals, _phoneSuffix, HandheldSuffixDrop, 3f);
     }
 
     // POS and LAP share one column, as wide as the wider of the two plus a gap, so the two numbers start at the
@@ -175,16 +200,32 @@ public class IronOvalRaceHUD : MonoBehaviour
     static float LabelColumnW =>
         Mathf.Max(Measure(PixelGUI.HeadingSmall, "POS"), Measure(PixelGUI.HeadingSmall, "LAP")) + PixelGUI.Px(3f);
 
-    // A small Silkscreen caption beside a numeral, its cap tops level with the numeral's. Drawn at the numeral's
-    // own rect y: measured off a 1080p frame, the big monogram digits' tops sit Px(4) into their rect and
-    // Silkscreen's caps Px(3.7) into theirs, so the same y puts them within a screen pixel of each other.
-    static void SmallLabel(float x, float y, string text)
+    // Phone sizes, all whole multiples of each face's own cell so nothing is resampled soft: the Silkscreen
+    // caption at two cells (16, the handheld body size — Docs/Type-Scale.md), the numerals at three cells of the
+    // display face (1.5x the desktop's two), the suffix at two cells of the data face (2x the desktop's one).
+    static GUIStyle _phoneCaption, _phoneNumerals, _phoneSuffix;
+    static int _phoneStylesKey = -1;
+    // Kit px, measured off the faces' glyph metrics (monogram 48: digits ~22 tall, baseline ~32 into the rect;
+    // Silkscreen 16: caps ~11 tall, baseline ~16 into the rect): numerals start under the caption with ~6 px clear,
+    // the suffix's baseline sits a touch below the numerals' (as on desktop), and the next block starts ~6 px below.
+    const float HandheldNumeralDrop = 12f;
+    const float HandheldSuffixDrop = 16f;
+    const float HandheldRowPitch = 52f;
+
+    static void EnsureHandheldStyles()
     {
-        var style = PixelGUI.HeadingSmall;
-        var prev = style.normal.textColor;
-        style.normal.textColor = PixelGUI.TextDim;
-        GUI.Label(new Rect(x, y, Measure(style, text) + PixelGUI.Px(2f), PixelGUI.LineH), text, style);
-        style.normal.textColor = prev;
+        var cap = PixelGUI.HeadingSmall;
+        var num = PixelGUI.Display;
+        var data = PixelGUI.Data;
+        // Rebuilt whenever PixelGUI rebuilds its own (theme or scale change): its font sizes key the cache.
+        int key = cap.fontSize * 1000003 ^ num.fontSize * 1009 ^ data.fontSize;
+        if (_phoneCaption != null && _phoneStylesKey == key && _phoneCaption.font == cap.font
+            && _phoneNumerals.font == num.font && _phoneSuffix.font == data.font) return;
+        _phoneStylesKey = key;
+        _phoneCaption = new GUIStyle(cap) { fontSize = cap.fontSize * 2, alignment = TextAnchor.UpperLeft, wordWrap = false };
+        // Display is two cells of its face; three cells is the same face 1.5x up, still on its grid.
+        _phoneNumerals = new GUIStyle(num) { fontSize = num.fontSize / 2 * 3, wordWrap = false };
+        _phoneSuffix = new GUIStyle(data) { fontSize = data.fontSize * 2, alignment = TextAnchor.UpperLeft, wordWrap = false };
     }
 
     // ------------------------------------------------------------------ rev counter
@@ -479,22 +520,25 @@ public class IronOvalRaceHUD : MonoBehaviour
         GUI.Label(new Rect(dial.x, dial.y + my - lh * 0.5f, dial.width, lh), "MPH", _numeralStyle);
     }
 
-    // Height of a numeral block: the big numerals' 30 px rect, with the dim suffix sitting low beside them.
+    // Height of a numeral block: the big numerals' 30 px rect, with the smaller suffix sitting low beside them.
     static float BlockH => PixelGUI.Px(14f) + PixelGUI.DataLineH;
 
-    // The HUD's one readout layout: big shadowed numerals, then a dim suffix sitting low beside them.
+    // The HUD's one readout layout: big shadowed numerals, then a smaller suffix sitting low beside them, both
+    // white. The desktop sizes by default; the phone's POS/LAP pass their own bigger styles.
     static void NumeralWithSuffix(float x, float y, string numeral, string suffix)
-    {
-        float bigW = Measure(PixelGUI.Display, numeral);
-        Shadowed(new Rect(x, y, bigW + PixelGUI.Px(4f), PixelGUI.Px(30f)), numeral, PixelGUI.Display);
-        if (string.IsNullOrEmpty(suffix)) return;
+        // Row is middle-anchored: its rect keeps the DataLineH height it was laid out with.
+        => NumeralWithSuffix(x, y, numeral, suffix, PixelGUI.Display, PixelGUI.Row, 14f, 2f, PixelGUI.DataLineH);
 
-        var style = PixelGUI.Row;
-        var prev = style.normal.textColor;
-        style.normal.textColor = PixelGUI.TextDim;
-        GUI.Label(new Rect(x + PixelGUI.Px(2f) + bigW, y + PixelGUI.Px(14f),
-                           Measure(style, suffix) + PixelGUI.Px(4f), PixelGUI.DataLineH), suffix, style);
-        style.normal.textColor = prev;
+    static void NumeralWithSuffix(float x, float y, string numeral, string suffix,
+                                  GUIStyle big, GUIStyle small, float suffixDropKit, float shadowKit,
+                                  float suffixRectH = 0f)
+    {
+        float bigW = Measure(big, numeral);
+        Shadowed(x, y, numeral, big, PixelGUI.Px(shadowKit));
+        if (string.IsNullOrEmpty(suffix)) return;
+        // Half the numerals' shadow: a thinner face wants a thinner shadow, but it still needs one in white.
+        Shadowed(x + PixelGUI.Px(2f) + bigW, y + PixelGUI.Px(suffixDropKit), suffix, small,
+                 PixelGUI.Px(Mathf.Max(1f, Mathf.Floor(shadowKit * 0.5f))), suffixRectH);
     }
 
     // Tyre life, draft, fuel and engine temperature, as the design's cell rows: alarm red for the rubber, telemetry blue for
@@ -664,14 +708,21 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     // ------------------------------------------------------------------ drawing helpers
 
-    // The design's 3px hard shadow. Two labels, no blur — TMP's underlay and GUI's shadow both soften.
-    static void Shadowed(Rect r, string text, GUIStyle style)
+    // The design's hard shadow under white text. Two labels, no blur — TMP's underlay and GUI's shadow both soften.
+    // The rect is sized off the text, as wide as it measures and as tall as one line of it (whole, or a clipped
+    // label drops the line), plus room for the shadow — or `height` when a middle-anchored style was laid out
+    // against a fixed one.
+    static void Shadowed(float x, float y, string text, GUIStyle style, float shadow, float height = 0f)
     {
+        var size = style.CalcSize(new GUIContent(text));
+        float h = height > 0f ? height : Mathf.Ceil(size.y) + shadow;
+        var r = new Rect(x, y, Mathf.Ceil(size.x) + shadow + PixelGUI.Px(2f), h);
         var prev = style.normal.textColor;
         style.normal.textColor = PixelGUI.Ink;
-        GUI.Label(new Rect(r.x + PixelGUI.Px(2f), r.y + PixelGUI.Px(2f), r.width, r.height), text, style);
-        style.normal.textColor = prev;
+        GUI.Label(new Rect(r.x + shadow, r.y + shadow, r.width, r.height), text, style);
+        style.normal.textColor = Color.white;
         GUI.Label(r, text, style);
+        style.normal.textColor = prev;
     }
 
     static float Measure(GUIStyle style, string text) => style.CalcSize(new GUIContent(text)).x;
