@@ -522,7 +522,14 @@ public class WeekendDirector : MonoBehaviour
     public static void ResumeRoutedSession()
     {
         string id = PendingRouteId;
-        if (string.IsNullOrEmpty(id)) return;
+        if (string.IsNullOrEmpty(id))
+        {
+            // The opposite leftover: the track live with nothing booked. CONTINUE would put the player in a car
+            // for a session the sheet never booked, and ending it would not count. The track goes dark, and the
+            // booked session starts from the motorhome as normal.
+            if (RaceWeekend.SessionLive) RaceWeekend.SessionLive = false;
+            return;
+        }
 
         // A route with the track dark is left over, not live: BeginOnTrack sets the two together and every
         // ending clears them together. Older saves can hold one (a weekend reset used to keep the route).
@@ -601,12 +608,13 @@ public class WeekendDirector : MonoBehaviour
     public static void FinishRoutedSession(WeekendOutcome outcome, bool showCard = true)
     {
         string id = PendingRouteId;
-        if (string.IsNullOrEmpty(id)) return;
-        ClearRoute();
 
         // Session over: the track empties and the car goes back to being parked scenery until the sheet
-        // sends the player out again.
+        // sends the player out again. Do this even with no booking to credit. A track left live with nothing
+        // routed puts the player straight back into another session on the next load.
         RaceWeekend.SessionLive = false;
+        if (string.IsNullOrEmpty(id)) return;
+        ClearRoute();
 
         var a = Timetable.ById(id);
         if (a == null) return;
@@ -616,6 +624,24 @@ public class WeekendDirector : MonoBehaviour
         if (a.appearanceFee > 0) outcome.money += a.appearanceFee;
         Scout(a, ref outcome);
         WeekendLedger.Complete(a, outcome);
+    }
+
+    // A practice or qualifying session has ended with no booking routed to it. The save kept the track live but
+    // lost the route that should have come with it. If the player is booked for this kind of session, the
+    // booking gets the result, because that is the session they drove. Either way the track goes dark and the
+    // sheet takes over. Nothing reloads.
+    public static void FinishUnroutedSession(RaceWeekend.Session kind, WeekendOutcome outcome)
+    {
+        var due = WeekendAppointment.Pending;
+        if (due != null && due.IsOnTrack && SessionFor(due.kind) == kind && WeekendLedger.CanDo(due, out _))
+        {
+            PendingRouteId = due.id;
+            FinishRoutedSession(outcome);
+            return;
+        }
+
+        ClearRoute();
+        RaceWeekend.SessionLive = false;
     }
 
     // A session driven or watched uncovers some of that field's stats on the RV laptop (DriverScouting).

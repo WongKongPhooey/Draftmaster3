@@ -230,6 +230,18 @@ public class PracticeDirector : MonoBehaviour
             return;
         }
 
+        // A career session with no booking behind it: the save kept the track live but lost the route that put
+        // the player out. It still ends where it was driven. The old straight line below reloaded into the next
+        // session with the track still live and nothing booked, so the player woke in the RV for another session
+        // the sheet never booked, then another, and the weekend never got its result.
+        if (EndsInPlace)
+        {
+            WeekendDirector.FinishUnroutedSession(
+                _isQualifying ? RaceWeekend.Session.Qualifying : RaceWeekend.Session.Practice, BuildSessionOutcome());
+            PutPlayerCarAway();
+            return;
+        }
+
         RaceWeekend.Current = _isQualifying ? RaceWeekend.Session.Race : RaceWeekend.Session.Qualifying;
         ReloadScene();
     }
@@ -261,6 +273,11 @@ public class PracticeDirector : MonoBehaviour
     // True when this session is a booking off the weekend timetable rather than the standalone flow.
     public static bool WeekendRouted => !string.IsNullOrEmpty(WeekendDirector.PendingRouteId);
 
+    // The session ends in the scene it was driven in and hands back to the timetable. Every career session
+    // ends this way, with or without a booking behind it. Only a co-op guest still has the standalone
+    // practice → qualifying → race reloads, and its session is the host's to end anyway.
+    static bool EndsInPlace => WeekendRouted || (GameSession.CareerActive && !Coop.IsGuest);
+
     // What the pause menu's END SESSION row should say, or null when there is nothing to end: outside a
     // weekend the session advances on its own button, and off a practice-like session there is no session
     // to hand back at all.
@@ -275,7 +292,7 @@ public class PracticeDirector : MonoBehaviour
         get
         {
             if (Instance == null || !Instance.enabled || Instance._ended) return null;
-            if (WeekendRouted) return "End Session";
+            if (EndsInPlace) return "End Session";
             return Instance._isQualifying ? "Start Race" : "Qualifying";
         }
     }
