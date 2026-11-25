@@ -22,6 +22,7 @@ public class ParkedCarPin : MonoBehaviour
 {
     PlayerVehicleController _car;
     Rigidbody2D _body;
+    SplineDriver _spline;
     Vector3 _pos;
     Quaternion _rot;
 
@@ -58,6 +59,15 @@ public class ParkedCarPin : MonoBehaviour
     {
         if (_car == null) { Retire(); return; }
         if (_car.enabled) { Retire(); return; }   // somebody is driving it: it is not parked any more
+        // ...or its own brain is, kinematically: behind the safety car (formation, a caution) FormationController
+        // switches the controller off and the SplineDriver writes the transform, so the controller never comes back
+        // on to release the pin. Left pinned, the car was put back in its box every step while the spline drove it
+        // round the track: two poses a frame, the camera drawing one then the other and the HUD flickering between
+        // them (a towed player car handed to the AI by a team switch, 2026-11-25).
+        if (_spline == null) _spline = GetComponent<SplineDriver>();
+        if (_spline != null && _spline.isActiveAndEnabled && !_spline.externalMotionController
+            && !_spline.IsHeldStill && !_spline.pitStopHold)
+        { Retire(); return; }
 
         if (_car.transform.position != _pos || _car.transform.rotation != _rot)
             _car.transform.SetPositionAndRotation(_pos, _rot);

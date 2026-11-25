@@ -186,7 +186,12 @@ public class BroadcastController : MonoBehaviour
         if (driveMode != null)
         {
             driveMode.suppressBroadcastCamera = true;
-            if (_wasInCar && driveMode.IsDriving) driveMode.SetDriving(false);
+            // A car parked where it was put - towed in and held in its box (ParkedCarPin) - stays parked: handed to
+            // the AI it was driven off the moment the safety car took the field, while the pin put it back in the box
+            // every frame (two cars on screen, the camera and HUD flickering between them, 2026-11-25).
+            bool parked = driveMode.PlayerCar != null && driveMode.PlayerCar.GetComponent<ParkedCarPin>() != null;
+            if (_wasInCar && driveMode.IsDriving && !parked) driveMode.SetDriving(false);
+            else if (parked) _wasDriving = false;   // nothing to give back on the way out: it never left the box
         }
 
         // Someone walking the paddock stands still while the camera is away, rather than wandering off unseen.

@@ -17,6 +17,10 @@ public static class AIHandover
 
         float mph = pvc.SpeedMph;
 
+        // The AI driving it off is moving a parked (towed, repaired) car on purpose. The pin only lets go when the
+        // controller comes back on, and behind the safety car FormationController switches it straight off again.
+        ParkedCarPin.Release(pvc);
+
         pvc.enabled = false;   // drops the RaceObstacles registration while we rewire
         if (spline.track == null) spline.track = pvc.track;
         if (spline.vehicleInfo == null) spline.vehicleInfo = pvc.vehicleInfo;

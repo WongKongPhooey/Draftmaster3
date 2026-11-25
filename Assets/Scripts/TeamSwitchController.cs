@@ -196,11 +196,16 @@ public class TeamSwitchController : MonoBehaviour
         var targetSpline = target.GetComponent<SplineDriver>();
         if (targetSpline != null && targetSpline.enabled && targetSpline.IsOnPit) return; // not mid-pit-lane
 
-        // Leave broadcast/crew-chief camera mode before swapping so control state is unambiguous.
+        // The car being left: already on Auto, the AI simply keeps it. Handing it back to the human first, to "leave
+        // Auto", took off the input driver Auto had added - with Destroy, at the end of the frame, after HandToAI
+        // below had picked that same driver up again - and the car was left with nothing steering it. It went into
+        // the wall or the car ahead on every cycle through the team.
         var dm = FindObjectOfType<DriveModeController>();
-        if (dm != null && !dm.IsDriving) dm.SetDriving(true);
+        bool leavingOnAI = AIDriving(_current);
+        if (dm != null && !dm.IsDriving && !leavingOnAI) dm.SetDriving(true);
 
-        if (!HandToAI(_current)) return;
+        if (!leavingOnAI && !HandToAI(_current)) return;
+        EnsureCautionBrain(_current);
         // The player arrives in the teammate's car on Auto: its AI keeps driving, and V / AUTO takes it over.
         // Without a drive-mode switch to take it back with, they get the wheel straight away.
         if (dm == null) TakeControl(target);
@@ -222,6 +227,21 @@ public class TeamSwitchController : MonoBehaviour
 
         RefreshButtonLabels();
         _hudLayoutDirty = true;   // the car just left gets a button, the one just taken loses its
+    }
+
+    // A car left to the AI mid-race has to fall in behind the safety car at the next caution like the rest of the
+    // field. A field car has its own FormationController from GridSpawner; the player's own car only gets one when
+    // Auto takes it (and Auto's is switched off again when the player takes the wheel back), so without this the
+    // player's original car raced on at full speed into the caution train.
+    static void EnsureCautionBrain(GameObject car)
+    {
+        if (car == null) return;
+        var spline = car.GetComponent<SplineDriver>();
+        if (spline == null) return;
+        var fc = car.GetComponent<FormationController>();
+        if (fc != null && fc.enabled) return;
+        var pvc = car.GetComponent<PlayerVehicleController>();
+        FormationController.TakeOver(spline, pvc != null ? pvc.GridPosition : 0, dynamicModel: true);
     }
 
     // Hand the car the human is leaving to the AI, without a teleport: the spline brain re-engages at the
