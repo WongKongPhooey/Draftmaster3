@@ -146,6 +146,7 @@ public class AIRetirement : MonoBehaviour
     float _waitBox = -1f;     // >= 0: going to its pit box, this far (m) down the pit lane, not over the wall
     float _waitingSince;
     bool _waitSinceCaution;   // retired under a caution as too damaged to restart: moved at the green at the latest
+    bool _brokeUnderCaution;  // broke down while the caution's queue was driving it (LeaveTheQueue)
     PracticeAIStint _stint;
     bool _towDue;             // practice: stopped long enough, waiting for the camera to look away before the tow
     int _layerMask;    // layers the car is drawn on; a camera that culls them all cannot see it
@@ -205,13 +206,16 @@ public class AIRetirement : MonoBehaviour
         // Under a caution the queue drives every car kinematically, so the check below never sees it: a car wrecked
         // past the breakdown line rode round behind the safety car and broke down the moment the restart handed it
         // back its own model - in the middle of the restarting pack (Daytona, 2026-11-21: damage 1.00 and 0.86 at the
-        // green). It is finished, so it is taken out of the queue now and retired out of shot.
+        // green). It is finished, so it breaks down now: taken out of the queue and handed back to its own model,
+        // where the engine is cut and it rolls to a stop and sits there until it is retired out of shot. Marked
+        // broken but left in the queue, the queue drove it on round behind the safety car as if nothing had
+        // happened until the out-of-shot wait ran out and it vanished from the middle of the train.
         if (!BrokenDown && RaceStart.IsCaution && !_spline.IsOnPit && _bodywork != null && (_input == null || !_input.enabled)
             && Wrecked())
         {
-            BrokenDown = true;
-            Debug.Log($"[AIRetire] {name} too damaged to restart (damage {_bodywork.DamageLevel:0.00}) - retiring under the caution");
-            if (BeginRetire() && _waiting) _waitSinceCaution = true;
+            BreakDown();
+            _brokeUnderCaution = true;
+            LeaveTheQueue();
             return;
         }
         if (queued) return;   // the rest is for a car on its own model
@@ -331,7 +335,29 @@ public class AIRetirement : MonoBehaviour
         if (breakdownDent > 0f && _bodywork.DentAmount >= breakdownDent) why += $"dents {_bodywork.DentAmount:0.00}, ";
         float crush = FrontCrush();
         if (breakdownFrontCrush > 0f && crush >= breakdownFrontCrush) why += $"nose in {crush:0.00} m, ";
-        Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m");
+        Debug.Log($"[AIRetire] {name} broke down ({why}damage {_bodywork.DamageLevel:0.00}) at {_spline.DistanceOnTrack:0} m" +
+                  (RaceStart.IsCaution ? " under the caution" : ""));
+    }
+
+    // A car that broke down while the caution's queue was driving it (model off, kinematic): BreakDown has switched
+    // the queue (FormationController) off, so the car goes back to its own model - seeded from the pose and speed
+    // the queue had it at, as FormationController does for a car that runs dry - where FixedUpdate holds the
+    // throttle shut and it rolls to a stop on the brakes. Left kinematic with nothing in charge of it, its
+    // SplineDriver would drive it on round at racing pace.
+    void LeaveTheQueue()
+    {
+        if (!_car.enabled)
+        {
+            Vector3 seed = _spline.track != null && _spline.TrackLength > 0f
+                ? _spline.track.transform.TransformPoint(new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f))
+                : transform.position;
+            _car.SeedPose(new Vector2(seed.x, seed.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
+            _car.enabled = true;
+        }
+        if (_input != null) _input.enabled = true;   // re-asserts externalMotionController + externalInput
+        else _spline.externalMotionController = true;
+        // This step's input too: the model runs later this step, before the input driver's next.
+        _car.SetInput(0f, 0f, breakdownBrake);
     }
 
     // Due out of the race: pick and hold a spot over the infield wall, then wait for the camera to look away
@@ -349,6 +375,7 @@ public class AIRetirement : MonoBehaviour
             _waitHeading = 0f;
             _waitBehindWall = false;
             _waitingSince = Time.fixedTime;
+            _waitSinceCaution = BrokenDown && _brokeUnderCaution;
             TickWaiting();
             if (_waiting)
                 Debug.Log($"[AIRetire] {name} retiring to its pit box ({(BrokenDown ? "broken down" : "stuck")}) — " +
@@ -374,6 +401,7 @@ public class AIRetirement : MonoBehaviour
         _waitHeading = headingDeg;
         _waitBehindWall = behindWall;
         _waitingSince = Time.fixedTime;
+        _waitSinceCaution = BrokenDown && _brokeUnderCaution;
         TickWaiting();
         if (_waiting)
             Debug.Log($"[AIRetire] {name} retiring ({(BrokenDown ? "broken down" : "stuck")}) — in shot, " +
